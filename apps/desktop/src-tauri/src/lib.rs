@@ -16,9 +16,16 @@ pub mod servicio_de_windi;
 pub mod servicio_del_planificador;
 pub mod tipos;
 
-/// Arranca la aplicación con la ventana principal vacía (P00, fundaciones).
+/// Arranca la aplicación con la ventana principal vacía (P00, fundaciones). Con la feature `spike`
+/// (solo en Windows) arranca además el prototipo del spike P01 (WorkerW y Raw Input, D-131 y D-186).
 pub fn run() {
-    if let Err(error) = tauri::Builder::default().run(tauri::generate_context!()) {
+    let builder = tauri::Builder::default();
+    #[cfg(all(windows, feature = "spike"))]
+    let builder = builder.setup(|app| {
+        host_del_wallpaper::spike::iniciar(app.handle())?;
+        Ok(())
+    });
+    if let Err(error) = builder.run(tauri::generate_context!()) {
         eprintln!("No se pudo iniciar Windgets: {error}");
         std::process::exit(1);
     }

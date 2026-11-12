@@ -4076,6 +4076,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "ts-rs",
+ "windows",
 ]
 
 [[package]]
