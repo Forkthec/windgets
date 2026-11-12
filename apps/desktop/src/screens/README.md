@@ -1,0 +1,1 @@
+Una carpeta por pantalla con su `ScreenId` de `tipos.ts` (`screens/planner_daily/`) y dentro el componente en PascalCase con su prueba (`PlannerDaily.tsx`, `PlannerDaily.test.tsx`), según `convenciones.md`, «Nombres».

@@ -15,8 +15,17 @@ En construcción. El plan de pasos está en [`docs/plan_construccion.md`](docs/p
 ## Estructura
 
 ```
-apps/desktop/        aplicación Tauri 2 (Núcleo en Rust en src-tauri/, vistas en React en src/)
-apps/landing/        landing page estática (Vite + TypeScript)
+apps/desktop/                aplicación Tauri 2
+  src-tauri/src/             Núcleo en Rust: un módulo por componente (servicio_de_sesion.rs, …),
+                             puente_ipc.rs (comandos IPC), messages.rs (textos) y tipos/ (contratos, ts-rs)
+  src-tauri/tests/           pruebas de integración del Núcleo (cargo test)
+  src/screens/<pantalla>/    una carpeta por pantalla
+  src/ui/<Componente>/       biblioteca de interfaz: un componente y su prueba por carpeta; tokens en ui/tema/
+  src/ipc/                   cliente IPC tipado y Núcleo simulado para pnpm --filter desktop dev
+  src/types/                 tipos generados por ts-rs (no se editan)
+  e2e/                       recorridos con Playwright
+  assets/, scripts/          activos del catálogo y scripts de generación y verificación
+apps/landing/        landing page estática (Vite + TypeScript); e2e/ con Playwright
 supabase/            migraciones, Edge Functions, seed.sql y config.toml
 installer/           plantilla NSIS del instalador
 docs/                especificación de construcción (fuente de verdad)
