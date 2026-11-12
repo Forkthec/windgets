@@ -1,0 +1,38 @@
+# Node y pnpm
+node_modules/
+.pnpm-store/
+npm-debug.log*
+pnpm-debug.log*
+
+# Vite y compilaciones
+dist/
+*.tsbuildinfo
+.vite/
+
+# Pruebas
+coverage/
+playwright-report/
+test-results/
+
+# Rust y Tauri
+target/
+apps/desktop/src-tauri/gen/
+
+# Secretos (D-192, secretos fuera del repositorio)
+.env
+.env.*
+!.env.example
+
+# Supabase
+supabase/.temp/
+supabase/.branches/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores
+.idea/
+.vscode/
+*.swp
