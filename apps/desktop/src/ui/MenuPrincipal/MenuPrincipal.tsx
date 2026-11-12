@@ -1,4 +1,4 @@
-import type { ScreenId } from '../types';
+import type { ScreenId } from '@/types';
 
 // Secciones y opciones en orden, con su texto literal (interfaz.md, «Inventario · 2. Menú principal»).
 export const SECCIONES_MENU: ReadonlyArray<{

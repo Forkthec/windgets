@@ -1,5 +1,5 @@
-import { Boton } from './Boton';
-import { VentanaEmergente } from './VentanaEmergente';
+import { Boton } from '@/ui/Boton/Boton';
+import { VentanaEmergente } from '@/ui/VentanaEmergente/VentanaEmergente';
 
 export interface ConfirmacionProps {
   titulo: string;
