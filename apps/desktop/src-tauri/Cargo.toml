@@ -26,3 +26,13 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+
+# Estilo de convenciones.md: sin unwrap() ni expect() fuera de pruebas (clippy.toml los permite en pruebas)
+# y sin unsafe salvo en el módulo de integración con Win32, que lo permitirá con un comentario por bloque.
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+undocumented_unsafe_blocks = "deny"
