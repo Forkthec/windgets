@@ -1,0 +1,174 @@
+<!doctype html>
+<!--
+  Capa del wallpaper del spike P01 (WorkerW y Raw Input, D-131 y D-186). No es una pantalla del producto:
+  solo muestra si la capa quedó detrás de los íconos y qué selecciones del mouse le reenvía el Núcleo.
+  El Núcleo llama a window.spikeConfigurar(...) y window.spikeSeleccion(...) con webview.eval.
+  Coordenadas en píxeles físicos relativas al origen del escritorio virtual; se dividen por devicePixelRatio.
+-->
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Windgets · capa del spike</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+      }
+      body {
+        background: linear-gradient(108deg, #1f3a5f 0%, #3c6e71 100%);
+        color: #ffffff;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 15px;
+      }
+      .monitor {
+        position: absolute;
+        box-sizing: border-box;
+        border: 2px dashed #d9d9d9;
+      }
+      .monitor .etiqueta {
+        position: absolute;
+        right: 12px;
+        bottom: 12px;
+        background: #1b1b1b;
+        padding: 6px 10px;
+      }
+      .widget {
+        position: absolute;
+        box-sizing: border-box;
+        padding: 12px;
+        background: #f4f1de;
+        color: #1b1b1b;
+        border: 3px solid #1b1b1b;
+      }
+      .widget h2 {
+        margin: 0 0 6px;
+        font-size: 16px;
+      }
+      .widget .cuenta {
+        font-size: 28px;
+        font-weight: 700;
+      }
+      .widget.recibido {
+        background: #81b29a;
+      }
+      #panel {
+        position: absolute;
+        left: 12px;
+        bottom: 12px;
+        max-width: 640px;
+        background: #1b1b1b;
+        color: #ffffff;
+        padding: 10px 14px;
+        line-height: 1.4;
+      }
+      #panel .error {
+        color: #ffb4a2;
+        font-weight: 700;
+      }
+      #registro {
+        margin: 6px 0 0;
+        padding-left: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="capas"></div>
+    <div id="panel">
+      <div><strong>Windgets · spike P01</strong> (WorkerW y Raw Input)</div>
+      <div id="anclaje">Esperando la configuración del Núcleo…</div>
+      <div id="vista"></div>
+      <ol id="registro"></ol>
+    </div>
+    <script>
+      const cuentas = new Map();
+      const textos = {
+        reenviado: 'Reenviado a la capa (sin ícono debajo)',
+        icono: 'Hay un ícono: el clic queda para el escritorio',
+        escritorio_sin_widget: 'Escritorio fuera de un widget: no se reenvía',
+        otra_ventana: 'Otra ventana bajo el cursor: no se reenvía',
+        sin_acceso_al_explorador: 'Sin acceso a la memoria del explorador: no se reenvía',
+        error: 'Error',
+      };
+      const css = (valor) => valor / (window.devicePixelRatio || 1);
+      const colocar = (elemento, rect) => {
+        elemento.style.left = css(rect.izquierda) + 'px';
+        elemento.style.top = css(rect.arriba) + 'px';
+        elemento.style.width = css(rect.derecha - rect.izquierda) + 'px';
+        elemento.style.height = css(rect.abajo - rect.arriba) + 'px';
+      };
+
+      window.spikeConfigurar = (config) => {
+        const capas = document.getElementById('capas');
+        capas.replaceChildren();
+        config.monitores.forEach((monitor, indice) => {
+          const marco = document.createElement('div');
+          marco.className = 'monitor';
+          colocar(marco, monitor.rect);
+          const etiqueta = document.createElement('div');
+          etiqueta.className = 'etiqueta';
+          etiqueta.textContent =
+            'Monitor ' + (indice + 1) + ' · escala ' + Math.round(monitor.escala * 100) + ' %';
+          marco.appendChild(etiqueta);
+          capas.appendChild(marco);
+        });
+        config.widgets.forEach((widget) => {
+          const caja = document.createElement('div');
+          caja.className = 'widget';
+          caja.id = 'widget-' + widget.id;
+          colocar(caja, widget.rect);
+          caja.innerHTML =
+            '<h2>Widget interactivo de prueba ' +
+            (widget.id + 1) +
+            '</h2>' +
+            '<div>Selecciones recibidas:</div><div class="cuenta">' +
+            (cuentas.get(widget.id) || 0) +
+            '</div>';
+          capas.appendChild(caja);
+        });
+        const anclaje = document.getElementById('anclaje');
+        if (config.anclaje.ok) {
+          anclaje.textContent = 'Anclada a WorkerW · forma: ' + config.anclaje.forma;
+        } else {
+          anclaje.innerHTML = '<span class="error">No se pudo anclar a WorkerW: </span>';
+          anclaje.appendChild(document.createTextNode(config.anclaje.error));
+        }
+        const v = config.escritorioVirtual;
+        document.getElementById('vista').textContent =
+          'Escritorio virtual: ' +
+          (v.derecha - v.izquierda) +
+          ' × ' +
+          (v.abajo - v.arriba) +
+          ' px físicos · ' +
+          config.monitores.length +
+          ' monitor(es) · devicePixelRatio ' +
+          window.devicePixelRatio;
+      };
+
+      window.spikeSeleccion = (evento) => {
+        if (evento.destino === 'reenviado') {
+          cuentas.set(evento.widget, (cuentas.get(evento.widget) || 0) + 1);
+          const caja = document.getElementById('widget-' + evento.widget);
+          if (caja) {
+            caja.querySelector('.cuenta').textContent = String(cuentas.get(evento.widget));
+            caja.classList.add('recibido');
+            setTimeout(() => caja.classList.remove('recibido'), 600);
+          }
+        }
+        const linea = document.createElement('li');
+        const hora = new Date().toLocaleTimeString('es-CO');
+        const punto = evento.punto ? ' (' + evento.punto.x + ', ' + evento.punto.y + ')' : '';
+        linea.textContent =
+          hora +
+          ' · ' +
+          (textos[evento.destino] || evento.destino) +
+          punto +
+          (evento.detalle ? ' · ' + evento.detalle : '');
+        const registro = document.getElementById('registro');
+        registro.prepend(linea);
+        while (registro.children.length > 6) registro.lastElementChild.remove();
+      };
+    </script>
+  </body>
+</html>
