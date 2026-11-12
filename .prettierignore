@@ -1,0 +1,9 @@
+docs/
+pnpm-lock.yaml
+apps/desktop/src/types/
+apps/desktop/src-tauri/
+apps/desktop/assets/
+installer/
+supabase/
+**/dist/
+**/*.md

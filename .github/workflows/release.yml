@@ -1,0 +1,37 @@
+name: release
+
+# Al crear una etiqueta v*: compila, genera el instalador NSIS y lo publica como
+# Windgets-Setup.exe (nombre fijo, D-194; la landing lo descarga, INT-12).
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Rust (versión de rust-toolchain.toml)
+        run: rustup show
+      - name: Generar el instalador
+        env:
+          WINDGETS_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          WINDGETS_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: pnpm --filter desktop tauri build --bundles nsis
+      - name: Renombrar a Windgets-Setup.exe
+        shell: bash
+        run: cp apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe Windgets-Setup.exe
+      - name: Publicar la release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" Windgets-Setup.exe --title "${{ github.ref_name }}" --generate-notes

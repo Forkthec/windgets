@@ -1,0 +1,196 @@
+/*
+ * Biblioteca de interfaz: estilos base.
+ * Los colores salen del tema aplicado (interfaz.md, «Tema a tokens»). El Núcleo calcula los tokens y la
+ * vista los escribe como variables CSS en :root; aquí no se fija ningún color de interfaz.
+ * Forma (R-06 a R-08): ángulo de 18°, esquina de un tercio con tope, capas sólidas sin transparencias.
+ * Toda medida es múltiplo o fracción de --wg-unidad (R-14).
+ */
+:root {
+  --wg-unidad: 4px; /* DUDA: P00 unidad base no definida (docs/DUDAS.md) */
+  --wg-grosor-control: calc(var(--wg-unidad) * 10);
+  --wg-radio: min(calc(var(--wg-grosor-control) / 3), calc(var(--wg-unidad) * 3));
+  --wg-borde-ancho: calc(var(--wg-unidad) / 4);
+  --wg-sombra: calc(var(--wg-unidad) * 0.31) calc(var(--wg-unidad) * 0.95) 0 var(--wg-borde);
+}
+
+body {
+  margin: 0;
+  background: var(--wg-superficie);
+  color: var(--wg-tinta);
+  font-family: var(--wg-fuente);
+  font-size: var(--wg-tamano-fuente);
+}
+
+.wg-fila {
+  display: flex;
+  align-items: center; /* RT-04: elementos de una línea alineados al centro */
+  gap: calc(var(--wg-unidad) * 2);
+}
+
+.wg-boton {
+  min-height: var(--wg-grosor-control);
+  padding: 0 calc(var(--wg-unidad) * 4);
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-radius: var(--wg-radio);
+  background: var(--wg-superficie-alta);
+  color: var(--wg-tinta);
+  font: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--wg-unidad) * 2);
+}
+.wg-boton--principal {
+  background: var(--wg-accion);
+  border-color: var(--wg-accion);
+  color: var(--wg-sobre-accion);
+}
+.wg-boton:disabled,
+.wg-deshabilitado {
+  background: var(--wg-superficie);
+  border-color: var(--wg-borde);
+  color: var(--wg-borde);
+  cursor: not-allowed;
+}
+.wg-boton:focus-visible,
+.wg-campo__entrada:focus-visible,
+.wg-interruptor:focus-visible {
+  outline: var(--wg-borde-ancho) solid var(--wg-accion);
+  outline-offset: calc(var(--wg-unidad) / 2);
+}
+.wg-motivo {
+  color: var(--wg-texto);
+}
+
+.wg-campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wg-unidad);
+}
+.wg-campo__etiqueta {
+  color: var(--wg-texto);
+}
+.wg-campo__entrada {
+  min-height: var(--wg-grosor-control);
+  padding: 0 calc(var(--wg-unidad) * 3);
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-radius: var(--wg-radio);
+  background: var(--wg-superficie-alta);
+  color: var(--wg-tinta);
+  font: inherit;
+}
+.wg-campo__entrada[aria-invalid='true'] {
+  border-color: var(--wg-estado-vencida);
+  border-width: calc(var(--wg-borde-ancho) * 2);
+}
+.wg-campo__mensaje {
+  color: var(--wg-tinta);
+}
+
+.wg-interruptor {
+  width: calc(var(--wg-unidad) * 11);
+  height: calc(var(--wg-unidad) * 6);
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-radius: calc(var(--wg-unidad) * 2);
+  background: var(--wg-superficie-alta);
+  padding: 0;
+  position: relative;
+  cursor: pointer;
+}
+.wg-interruptor::after {
+  content: '';
+  position: absolute;
+  top: calc(var(--wg-unidad) / 2);
+  left: calc(var(--wg-unidad) / 2);
+  width: calc(var(--wg-unidad) * 4.5);
+  height: calc(var(--wg-unidad) * 4.5);
+  border-radius: calc(var(--wg-unidad) * 1.5);
+  background: var(--wg-borde);
+}
+.wg-interruptor[aria-checked='true'] {
+  background: var(--wg-accion);
+  border-color: var(--wg-accion);
+}
+.wg-interruptor[aria-checked='true']::after {
+  left: calc(var(--wg-unidad) * 5.5);
+  background: var(--wg-sobre-accion);
+}
+
+.wg-fondo-emergente {
+  position: fixed;
+  inset: 0;
+  background: var(--wg-superficie);
+  display: grid;
+  place-items: center;
+}
+.wg-emergente {
+  min-width: calc(var(--wg-unidad) * 90);
+  max-width: calc(100vw - var(--wg-unidad) * 16);
+  padding: calc(var(--wg-unidad) * 6);
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-radius: var(--wg-radio);
+  background: var(--wg-superficie-alta);
+  box-shadow: var(--wg-sombra);
+}
+.wg-emergente__acciones {
+  justify-content: flex-end;
+  margin-top: calc(var(--wg-unidad) * 6);
+}
+
+.wg-resultado {
+  position: fixed;
+  right: calc(var(--wg-unidad) * 4);
+  bottom: calc(var(--wg-unidad) * 4);
+  padding: calc(var(--wg-unidad) * 2) calc(var(--wg-unidad) * 4);
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-radius: var(--wg-radio);
+  background: var(--wg-superficie-alta);
+  box-shadow: var(--wg-sombra);
+}
+
+.wg-aviso {
+  padding: calc(var(--wg-unidad) * 3) calc(var(--wg-unidad) * 4);
+  border: var(--wg-borde-ancho) solid var(--wg-estado-pendiente);
+  border-radius: var(--wg-radio);
+  background: var(--wg-relleno-pendiente);
+}
+
+.wg-vacio {
+  display: grid;
+  place-items: center;
+  min-height: calc(var(--wg-unidad) * 40);
+  color: var(--wg-texto);
+}
+
+.wg-miga {
+  display: flex;
+  align-items: center;
+  gap: var(--wg-unidad);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--wg-texto);
+}
+
+.wg-menu {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--wg-unidad) * 4);
+  padding: calc(var(--wg-unidad) * 4);
+  background: var(--wg-superficie-alta);
+}
+.wg-menu__seccion {
+  margin: 0 0 var(--wg-unidad);
+  color: var(--wg-texto);
+  font-size: inherit;
+}
+.wg-menu__opcion {
+  width: 100%;
+  border-color: var(--wg-superficie-alta);
+  background: var(--wg-superficie-alta);
+  justify-content: flex-start;
+}
+.wg-menu__opcion[aria-current='page'] {
+  border-color: var(--wg-accion);
+  border-left-width: var(--wg-unidad);
+}
