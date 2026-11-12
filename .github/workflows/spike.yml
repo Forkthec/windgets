@@ -1,0 +1,51 @@
+name: spike
+
+# P01 · Spike WorkerW y Raw Input (D-131: técnica WorkerW; D-186: reenvío del mouse con Raw Input).
+# Compila el prototipo en Windows (feature `spike`) y sube el .exe como artefacto para que una persona del
+# equipo lo pruebe en Windows 10 22H2 y en Windows 11 (plan_construccion.md, P01). Un runner de Linux no puede
+# compilar ni probar el código Win32. No publica nada: el artefacto queda solo en la corrida.
+on:
+  push:
+    branches: ['paso-01-*']
+  workflow_dispatch:
+
+concurrency:
+  group: spike-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  spike:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+      - name: Rust (versión de rust-toolchain.toml)
+        run: rustup show
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      - name: Compilar las vistas (las necesita el Núcleo)
+        run: pnpm --filter desktop build
+      - name: cargo clippy -D warnings en Windows (sin y con el spike)
+        run: |
+          cargo clippy --locked --manifest-path apps/desktop/src-tauri/Cargo.toml --all-targets -- -D warnings
+          cargo clippy --locked --manifest-path apps/desktop/src-tauri/Cargo.toml --all-targets --features spike -- -D warnings
+      - name: Compilar el prototipo del spike (sin instalador)
+        run: pnpm --filter desktop tauri build --no-bundle --features spike
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: windgets-spike
+          path: apps/desktop/src-tauri/target/release/windgets.exe
+          if-no-files-found: error
+          retention-days: 14
