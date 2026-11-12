@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="1017.5px" preserveAspectRatio="none" style="width:984px;height:1017px;background:#FFFFFF;" version="1.1" viewBox="0 0 984 1017" width="984.2708px" zoomAndPan="magnify"><defs/><g><rect fill="#FFFFFF" height="35.4671" id="_title" rx="3.4375" ry="3.4375" style="stroke:none;stroke-width:1.1458333333333333;" width="831.875" x="77.3438" y="11.4583"/><text fill="#12304D" font-family="DejaVu Sans" font-size="20.625" font-weight="bold" lengthAdjust="spacing" textLength="820.4167" x="83.0729" y="36.3321">Diagrama de secuencia: descarga del instalador desde la landing page</text><rect fill="#CFE3F6" height="637.9159" style="stroke:#12304D;stroke-width:1.1458333333333333;" width="11.4583" x="475.5208" y="175.5632"/><rect fill="#CFE3F6" height="264.7233" style="stroke:#12304D;stroke-width:1.1458333333333333;" width="11.4583" x="909.7917" y="548.7557"/><rect fill="none" height="174.0503" rx="3.4375" ry="3.4375" style="stroke:#12304D;stroke-width:1.71875;" width="533.9583" x="11.4583" y="309.0885"/><rect fill="none" height="239.515" rx="3.4375" ry="3.4375" style="stroke:#12304D;stroke-width:1.71875;" width="964.7917" x="11.4583" y="565.9432"/><line style="stroke:#12304D;stroke-width:0.5729166666666666;stroke-dasharray:5.0,5.0;" x1="58.4375" x2="58.4375" y1="139.8901" y2="879.8657"/><line style="stroke:#12304D;stroke-width:0.5729166666666666;stroke-dasharray:5.0,5.0;" x1="481.25" x2="481.25" y1="139.8901" y2="879.8657"/><line style="stroke:#12304D;stroke-width:0.5729166666666666;stroke-dasharray:5.0,5.0;" x1="915.5208" x2="915.5208" y1="139.8901" y2="879.8657"/><text fill="#000000" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="64.1667" x="22.9167" y="136.3771">Visitante</text><ellipse cx="58.4375" cy="63.54" fill="#FCEBD9" rx="9.1667" ry="9.1667" style="stroke:#12304D;stroke-width:0.5729166666666666;"/><path d="M58.4375,72.7067 L58.4375,103.6442 M43.5417,81.8734 L73.3333,81.8734 M58.4375,103.6442 L43.5417,120.8317 M58.4375,103.6442 L73.3333,120.8317 " fill="none" style="stroke:#12304D;stroke-width:0.5729166666666666;"/><text fill="#000000" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="98.5417" x="428.5417" y="136.3771">Landing page</text><path d="M457.7604,90.4671 L457.7604,117.9671 M457.7604,104.2171 L477.2396,104.2171 " fill="none" style="stroke:#12304D;stroke-width:0.5729166666666666;"/><ellipse cx="490.9896" cy="104.2171" fill="#E3EEF9" rx="13.75" ry="13.75" style="stroke:#12304D;stroke-width:0.5729166666666666;"/><rect fill="#FCEBD9" height="33.3813" rx="3.4375" ry="3.4375" style="stroke:#12304D;stroke-width:0.5729166666666666;" width="66.4583" x="882.2917" y="105.363"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="50.4167" x="890.3125" y="127.2104">GitHub</text><rect fill="#CFE3F6" height="637.9159" style="stroke:#12304D;stroke-width:1.1458333333333333;" width="11.4583" x="475.5208" y="175.5632"/><rect fill="#CFE3F6" height="264.7233" style="stroke:#12304D;stroke-width:1.1458333333333333;" width="11.4583" x="909.7917" y="548.7557"/><polygon fill="#12304D" points="461.7708,170.9798,473.2292,175.5632,461.7708,180.1465,466.3542,175.5632" style="stroke:#12304D;stroke-width:1.1458333333333333;"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="58.4375" x2="468.6458" y1="175.5632" y2="175.5632"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="10.3125" x="66.4583" y="169.7585">1</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="150.1042" x="81.3542" y="169.7585">Abre la landing page</text><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="59.5833" x2="71.0417" y1="226.2842" y2="221.7008"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="59.5833" x2="71.0417" y1="226.2842" y2="230.8675"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;stroke-dasharray:2.0,2.0;" x1="58.4375" x2="474.375" y1="226.2842" y2="226.2842"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="10.3125" x="77.9167" y="211.8096">2</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="336.875" x="92.8125" y="203.1398">Muestra la descripción, las funciones, el botón</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="311.6667" x="92.8125" y="220.4795">«Descargar para Windows» y los requisitos</text><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="486.9792" x2="535.1042" y1="277.0052" y2="277.0052"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="535.1042" x2="535.1042" y1="277.0052" y2="291.901"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="488.125" x2="535.1042" y1="291.901" y2="291.901"/><polygon fill="#12304D" points="499.5833,287.3177,488.125,291.901,499.5833,296.4844,495,291.901" style="stroke:#12304D;stroke-width:1.1458333333333333;"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="10.3125" x="495" y="262.5307">3</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="372.3958" x="509.8958" y="253.8608">Detecta el sistema con navigator.userAgentData o</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="148.9583" x="509.8958" y="271.2005">navigator.userAgent</text><path d="M14.8958,309.0885 L84.7917,309.0885 L84.7917,317.2616 L73.3333,328.7199 L11.4583,328.7199 L11.4583,312.526 A3.4375,3.4375 0 0 1 14.8958,309.0885 " fill="#FFFFFF" style="stroke:#12304D;stroke-width:1.71875;"/><rect fill="none" height="174.0503" rx="3.4375" ry="3.4375" style="stroke:#12304D;stroke-width:1.71875;" width="533.9583" x="11.4583" y="309.0885"/><text fill="#12304D" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="21.7708" x="28.6458" y="324.061">alt</text><text fill="#12304D" font-family="DejaVu Sans" font-size="13.75" font-weight="bold" lengthAdjust="spacing" textLength="222.2917" x="101.9792" y="324.1433">[El sistema no es Windows]</text><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="59.5833" x2="71.0417" y1="387.6139" y2="383.0306"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="59.5833" x2="71.0417" y1="387.6139" y2="392.1973"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;stroke-dasharray:2.0,2.0;" x1="58.4375" x2="474.375" y1="387.6139" y2="387.6139"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="10.3125" x="77.9167" y="364.4696">4</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="351.7708" x="92.8125" y="347.1299">«Windgets está disponible solo para Windows 10</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="363.2292" x="92.8125" y="364.4696">versión 22H2 y Windows 11, de 64 bits.» (el botón</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="120.3125" x="92.8125" y="381.8092">sigue habilitado)</text><line style="stroke:#12304D;stroke-width:1.1458333333333333;stroke-dasharray:2.0,2.0;" x1="11.4583" x2="545.4167" y1="397.9264" y2="397.9264"/><text fill="#12304D" font-family="DejaVu Sans" font-size="13.75" font-weight="bold" lengthAdjust="spacing" textLength="349.4792" x="17.1875" y="410.6895">[Windows con arquitectura distinta de x64]</text><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="59.5833" x2="71.0417" y1="473.9722" y2="469.3888"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="59.5833" x2="71.0417" y1="473.9722" y2="478.5555"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;stroke-dasharray:2.0,2.0;" x1="58.4375" x2="474.375" y1="473.9722" y2="473.9722"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="10.3125" x="77.9167" y="450.8278">5</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="374.6875" x="92.8125" y="433.4881">«Es posible que tu equipo no cumpla los requisitos.</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="341.4583" x="92.8125" y="450.8278">El instalador lo comprobará antes de instalar.»</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="154.6875" x="92.8125" y="468.1675">(descarga habilitada)</text><polygon fill="#12304D" points="461.7708,510.791,473.2292,515.3743,461.7708,519.9577,466.3542,515.3743" style="stroke:#12304D;stroke-width:1.1458333333333333;"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="58.4375" x2="468.6458" y1="515.3743" y2="515.3743"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="10.3125" x="66.4583" y="509.5697">6</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="281.875" x="81.3542" y="509.5697">Selecciona «Descargar para Windows»</text><polygon fill="#12304D" points="896.0417,544.1724,907.5,548.7557,896.0417,553.339,900.625,548.7557" style="stroke:#12304D;stroke-width:1.1458333333333333;"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="486.9792" x2="902.9167" y1="548.7557" y2="548.7557"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="10.3125" x="495" y="542.951">7</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="357.5" x="509.8958" y="542.951">GET /repos/organización/windgets/releases/latest</text><path d="M14.8958,565.9432 L84.7917,565.9432 L84.7917,574.1162 L73.3333,585.5745 L11.4583,585.5745 L11.4583,569.3807 A3.4375,3.4375 0 0 1 14.8958,565.9432 " fill="#FFFFFF" style="stroke:#12304D;stroke-width:1.71875;"/><rect fill="none" height="239.515" rx="3.4375" ry="3.4375" style="stroke:#12304D;stroke-width:1.71875;" width="964.7917" x="11.4583" y="565.9432"/><text fill="#12304D" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="21.7708" x="28.6458" y="580.9157">alt</text><text fill="#12304D" font-family="DejaVu Sans" font-size="13.75" font-weight="bold" lengthAdjust="spacing" textLength="354.0625" x="101.9792" y="580.9979">[Falla la consulta (403) o no existe el activo]</text><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="488.125" x2="499.5833" y1="609.7892" y2="605.2059"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="488.125" x2="499.5833" y1="609.7892" y2="614.3726"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;stroke-dasharray:2.0,2.0;" x1="486.9792" x2="908.6458" y1="609.7892" y2="609.7892"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="10.3125" x="506.4583" y="603.9845">8</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="252.0833" x="521.3542" y="603.9845">403 o lista sin Windgets-Setup.exe</text><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="59.5833" x2="71.0417" y1="660.5103" y2="655.9269"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="59.5833" x2="71.0417" y1="660.5103" y2="665.0936"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;stroke-dasharray:2.0,2.0;" x1="58.4375" x2="474.375" y1="660.5103" y2="660.5103"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="10.3125" x="77.9167" y="646.0357">9</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="317.3958" x="92.8125" y="637.3659">«No pudimos iniciar la descarga. Intenta de</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="253.2292" x="92.8125" y="654.7056">nuevo.» (el botón sigue habilitado)</text><line style="stroke:#12304D;stroke-width:1.1458333333333333;stroke-dasharray:2.0,2.0;" x1="11.4583" x2="976.25" y1="670.8228" y2="670.8228"/><text fill="#12304D" font-family="DejaVu Sans" font-size="13.75" font-weight="bold" lengthAdjust="spacing" textLength="131.7708" x="17.1875" y="683.5858">[El activo existe]</text><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="488.125" x2="499.5833" y1="712.1891" y2="707.6058"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="488.125" x2="499.5833" y1="712.1891" y2="716.7725"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;stroke-dasharray:2.0,2.0;" x1="486.9792" x2="908.6458" y1="712.1891" y2="712.1891"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="20.625" x="506.4583" y="706.3844">10</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="273.8542" x="531.6667" y="706.3844">200 con assets [Windgets-Setup.exe]</text><polygon fill="#12304D" points="896.0417,758.3268,907.5,762.9102,896.0417,767.4935,900.625,762.9102" style="stroke:#12304D;stroke-width:1.1458333333333333;"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="486.9792" x2="902.9167" y1="762.9102" y2="762.9102"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="20.625" x="495" y="748.4356">11</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="365.5208" x="520.2083" y="739.7658">GET releases/latest/download/Windgets-Setup.exe</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="220" x="520.2083" y="757.1055">(el navegador sigue el enlace)</text><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="59.5833" x2="71.0417" y1="796.2915" y2="791.7082"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="59.5833" x2="71.0417" y1="796.2915" y2="800.8748"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;stroke-dasharray:2.0,2.0;" x1="58.4375" x2="908.6458" y1="796.2915" y2="796.2915"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="20.625" x="77.9167" y="790.4868">12</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="360.9375" x="103.125" y="790.4868">302 al archivo y descarga de Windgets-Setup.exe</text><path d="M18.3333,822.6457 L18.3333,858.1665 A3.4375,3.4375 0 0 0 21.7708,861.604 L951.0417,861.604 A3.4375,3.4375 0 0 0 954.4792,858.1665 L954.4792,830.6665 L943.0208,819.2082 L21.7708,819.2082 A3.4375,3.4375 0 0 0 18.3333,822.6457 " fill="#FFF4D6" style="stroke:#181818;stroke-width:0.5729166666666666;"/><path d="M943.0208,819.2082 L943.0208,828.9478 A1.7188,1.7188 0 0 0 944.7396,830.6665 L954.4792,830.6665 L943.0208,819.2082 " fill="#FFF4D6" style="stroke:#181818;stroke-width:0.5729166666666666;"/><text fill="#111111" font-family="DejaVu Sans" font-size="13.75" lengthAdjust="spacing" textLength="442.2917" x="257.8125" y="837.7004">A continuación el visitante ejecuta el instalador (diagrama de</text><text fill="#111111" font-family="DejaVu Sans" font-size="13.75" lengthAdjust="spacing" textLength="88.2292" x="257.8125" y="853.7063">instalación).</text><rect fill="#FFFFFF" height="112.0768" id="_legend" rx="3.4375" ry="3.4375" style="stroke:#12304D;stroke-width:1.1458333333333333;" width="698.9583" x="143.8021" y="883.3032"/><text fill="#000000" font-family="DejaVu Sans" font-size="13.75" lengthAdjust="spacing" textLength="124.8958" x="154.1146" y="904.0871">Notación UML 2.5</text><text fill="#000000" font-family="DejaVu Sans" font-size="13.75" lengthAdjust="spacing" textLength="482.3958" x="154.1146" y="920.093">Mensaje síncrono: flecha llena, línea continua (quien llama espera)</text><text fill="#000000" font-family="DejaVu Sans" font-size="13.75" lengthAdjust="spacing" textLength="678.3333" x="154.1146" y="936.0988">Mensaje asíncrono: flecha abierta, línea continua (quien envía no espera; eventos del Núcleo)</text><text fill="#000000" font-family="DejaVu Sans" font-size="13.75" lengthAdjust="spacing" textLength="317.3958" x="154.1146" y="952.1047">Respuesta: flecha abierta, línea discontinua</text><text fill="#000000" font-family="DejaVu Sans" font-size="13.75" lengthAdjust="spacing" textLength="529.375" x="154.1146" y="968.1106">Barra: activación. Marco alt, opt, loop, par o break: fragmento combinado</text><text fill="#000000" font-family="DejaVu Sans" font-size="13.75" lengthAdjust="spacing" textLength="657.7083" x="154.1146" y="984.1164">Azul claro: elemento de Windgets. Naranja claro: sistema externo o persona. X: destrucción</text><line style="stroke:#000000;stroke-width:1.1458333333333333;" x1="149.5313" x2="837.0313" y1="891.3241" y2="891.3241"/><line style="stroke:#000000;stroke-width:1.1458333333333333;" x1="149.5313" x2="837.0313" y1="907.3299" y2="907.3299"/><line style="stroke:#000000;stroke-width:1.1458333333333333;" x1="149.5313" x2="837.0313" y1="923.3358" y2="923.3358"/><line style="stroke:#000000;stroke-width:1.1458333333333333;" x1="149.5313" x2="837.0313" y1="939.3416" y2="939.3416"/><line style="stroke:#000000;stroke-width:1.1458333333333333;" x1="149.5313" x2="837.0313" y1="955.3475" y2="955.3475"/><line style="stroke:#000000;stroke-width:1.1458333333333333;" x1="149.5313" x2="837.0313" y1="971.3534" y2="971.3534"/><line style="stroke:#000000;stroke-width:1.1458333333333333;" x1="149.5313" x2="837.0313" y1="987.3592" y2="987.3592"/><line style="stroke:#000000;stroke-width:1.1458333333333333;" x1="149.5313" x2="149.5313" y1="891.3241" y2="987.3592"/><line style="stroke:#000000;stroke-width:1.1458333333333333;" x1="837.0313" x2="837.0313" y1="891.3241" y2="987.3592"/><!--MD5=[b8b95058638393ede519c5aea0bf58e7]
+@startuml descarga_landing
+!include _estilo.iuml
+title Diagrama de secuencia: descarga del instalador desde la landing page
+
+actor "Visitante" as V #FCEBD9
+boundary "Landing page" as L
+participant "GitHub" as GH #FCEBD9
+
+V -> L ++ : Abre la landing page
+L - ->> V : Muestra la descripción, las funciones, el botón «Descargar para Windows» y los requisitos
+L -> L : Detecta el sistema con navigator.userAgentData o navigator.userAgent
+alt El sistema no es Windows
+  L - ->> V : «Windgets está disponible solo para Windows 10 versión 22H2 y Windows 11, de 64 bits.» (el botón sigue habilitado)
+else Windows con arquitectura distinta de x64
+  L - ->> V : «Es posible que tu equipo no cumpla los requisitos. El instalador lo comprobará antes de instalar.» (descarga habilitada)
+end
+V -> L : Selecciona «Descargar para Windows»
+L -> GH ++ : GET /repos/organización/windgets/releases/latest
+alt Falla la consulta (403) o no existe el activo
+  GH - ->> L : 403 o lista sin Windgets-Setup.exe
+  L - ->> V : «No pudimos iniciar la descarga. Intenta de nuevo.» (el botón sigue habilitado)
+else El activo existe
+  GH - ->> L : 200 con assets [Windgets-Setup.exe]
+  L -> GH : GET releases/latest/download/Windgets-Setup.exe (el navegador sigue el enlace)
+  GH - ->> V : 302 al archivo y descarga de Windgets-Setup.exe
+end
+deactivate GH
+deactivate L
+note over V, GH : A continuación el visitante ejecuta el instalador (diagrama de instalación).
+!include _leyenda.iuml
+@enduml
+
+@startuml descarga_landing
+autonumber
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontSize 13
+skinparam dpi 110
+skinparam shadowing false
+skinparam roundcorner 6
+skinparam maxMessageSize 330
+skinparam wrapWidth 420
+skinparam titleFontSize 18
+skinparam titleFontStyle bold
+skinparam titleFontColor #12304D
+skinparam SequenceMessageAlign left
+skinparam ParticipantPadding 14
+skinparam BoxPadding 8
+skinparam sequence {
+  ArrowColor #12304D
+  ArrowFontSize 13
+  ArrowFontColor #111111
+  ArrowThickness 1.3
+  LifeLineBorderColor #12304D
+  LifeLineBackgroundColor #CFE3F6
+  ParticipantBorderColor #12304D
+  ParticipantBackgroundColor #E3EEF9
+  ParticipantFontSize 13
+  ParticipantFontColor #111111
+  ActorBorderColor #12304D
+  ActorBackgroundColor #E3EEF9
+  ActorFontSize 13
+  GroupBorderColor #12304D
+  GroupBackgroundColor #FFFFFF
+  GroupHeaderFontColor #12304D
+  GroupHeaderFontSize 13
+  GroupFontSize 12
+  GroupFontColor #12304D
+  DividerBorderColor #12304D
+  DividerBackgroundColor #FFF4D6
+  DividerFontColor #111111
+  ReferenceBorderColor #12304D
+  ReferenceBackgroundColor #FFFFFF
+  BoxBorderColor #12304D
+  BoxBackgroundColor #FFFFFF
+}
+skinparam note {
+  BackgroundColor #FFF4D6
+  BorderColor #8A5A00
+  FontColor #111111
+  FontSize 12
+}
+skinparam legend {
+  BackgroundColor #FFFFFF
+  BorderColor #12304D
+  FontSize 12
+}
+skinparam boundary.BackgroundColor #E3EEF9
+skinparam boundary.BorderColor #12304D
+skinparam control.BackgroundColor #E3EEF9
+skinparam control.BorderColor #12304D
+skinparam database.BackgroundColor #E3EEF9
+skinparam database.BorderColor #12304D
+skinparam entity.BackgroundColor #E3EEF9
+skinparam entity.BorderColor #12304D
+hide footbox
+title Diagrama de secuencia: descarga del instalador desde la landing page
+
+actor "Visitante" as V #FCEBD9
+boundary "Landing page" as L
+participant "GitHub" as GH #FCEBD9
+
+V -> L ++ : Abre la landing page
+L - ->> V : Muestra la descripción, las funciones, el botón «Descargar para Windows» y los requisitos
+L -> L : Detecta el sistema con navigator.userAgentData o navigator.userAgent
+alt El sistema no es Windows
+  L - ->> V : «Windgets está disponible solo para Windows 10 versión 22H2 y Windows 11, de 64 bits.» (el botón sigue habilitado)
+else Windows con arquitectura distinta de x64
+  L - ->> V : «Es posible que tu equipo no cumpla los requisitos. El instalador lo comprobará antes de instalar.» (descarga habilitada)
+end
+V -> L : Selecciona «Descargar para Windows»
+L -> GH ++ : GET /repos/organización/windgets/releases/latest
+alt Falla la consulta (403) o no existe el activo
+  GH - ->> L : 403 o lista sin Windgets-Setup.exe
+  L - ->> V : «No pudimos iniciar la descarga. Intenta de nuevo.» (el botón sigue habilitado)
+else El activo existe
+  GH - ->> L : 200 con assets [Windgets-Setup.exe]
+  L -> GH : GET releases/latest/download/Windgets-Setup.exe (el navegador sigue el enlace)
+  GH - ->> V : 302 al archivo y descarga de Windgets-Setup.exe
+end
+deactivate GH
+deactivate L
+note over V, GH : A continuación el visitante ejecuta el instalador (diagrama de instalación).
+legend bottom
+  | Notación UML 2.5 |
+  | Mensaje síncrono: flecha llena, línea continua (quien llama espera) |
+  | Mensaje asíncrono: flecha abierta, línea continua (quien envía no espera; eventos del Núcleo) |
+  | Respuesta: flecha abierta, línea discontinua |
+  | Barra: activación. Marco alt, opt, loop, par o break: fragmento combinado |
+  | Azul claro: elemento de Windgets. Naranja claro: sistema externo o persona. X: destrucción |
+endlegend
+@enduml
+
+PlantUML version 1.2022.12(Sun Oct 23 13:12:26 COT 2022)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

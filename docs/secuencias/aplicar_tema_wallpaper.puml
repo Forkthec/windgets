@@ -1,0 +1,46 @@
+@startuml aplicar_tema_wallpaper
+!include _estilo.iuml
+title Diagrama de secuencia: aplicar un tema al wallpaper
+
+actor "Usuario" as U #FCEBD9
+boundary "Ventana principal" as VP
+control "Núcleo" as N
+database "Base de datos local" as BL
+boundary "Capa del wallpaper y los widgets" as C
+participant "API de datos" as API
+database "Base de datos en la nube" as DB
+
+U -> VP : Selecciona «Aplicar» en la pantalla Personalización
+VP -> N ++ : theme_draft_apply(mode: apply)
+alt El tema ya está aplicado
+  N -->> VP : error theme.already_applied «Este tema ya está aplicado.»
+else El tema aún no está aplicado
+  opt Hay cambios sin guardar
+    N -->> VP : error draft.unsaved_changes_on_apply «Tienes cambios sin guardar en el tema “<nombre del tema>”. ¿Qué deseas hacer?» con «Guardar y aplicar», «Aplicar sin guardar» y «Cancelar»
+    U -> VP : Elige «Guardar y aplicar» o «Aplicar sin guardar»
+    VP -> N : theme_draft_apply(mode: save_and_apply o apply_without_saving)
+  end
+  N -> BL : Transacción: copia el contenido del borrador en applied_theme y encola el pending_change
+  N -->> VP : {theme_id} y el mensaje de resultado (por ejemplo «Tema “<nombre del tema>” aplicado.»)
+  N ->> C : evento applied_theme_changed {theme_id, origin: local, has_unsaved_draft}
+  N ->> VP : evento applied_theme_changed {theme_id, origin: local, has_unsaved_draft}
+  C -> N ++ : theme_get_applied()
+  N -->> C -- : ThemeContent (plantilla, fondo, colores y tipografía)
+  C -> N ++ : asset_resolve(kind: catalog_image o uploaded_image, id)
+  N -->> C -- : {url, state: ready}
+  C -> C : Dibuja el wallpaper y los widgets en cada monitor (máximo 5 s, RNF-01)
+  opt Falla la visualización
+    N ->> VP : evento wallpaper_status_changed {state: fallback_default}
+    VP -> VP : Muestra «No pudimos mostrar tu wallpaper. Se aplicó el wallpaper por defecto.»
+  end
+  note over N, API : 2 s después de guardar, el Núcleo envía el cambio agrupado (D-189)
+  N -> API ++ : RPC sync_push(p_device_id, p_clock_offset_ms, p_changes)
+  API -> DB ++ : Combina por campo con la hora del servidor (D-048) y guarda applied_theme
+  DB -->> API -- : fila combinada
+  API -->> N -- : results [applied] y max_seq
+  N -> BL : Borra el pending_change confirmado
+  N ->> VP : evento sync_status_changed {status: synced}
+end
+deactivate N
+!include _leyenda.iuml
+@enduml

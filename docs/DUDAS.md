@@ -1,0 +1,10 @@
+# Dudas
+
+Datos «NO DEFINIDO» y contradicciones encontradas al construir (AGENTS.md, «Cómo tratar NO DEFINIDO»). Una línea por duda: paso o HU (historia de usuario), qué falta y qué valor neutro se usó.
+
+- **P00 (Fundaciones)** · Falta el identificador de la aplicación de Tauri (`identifier` en `tauri.conf.json`). Valor usado: `com.forktech.windgets`.
+- **P00 (Fundaciones)** · Falta el valor de la unidad base de medida de R-14 (toda medida es múltiplo o fracción de una unidad base) y el tope del radio de R-07 (esquina de un tercio). Valor usado: unidad de 4 px y tope de 3 unidades (`apps/desktop/src/ui/tokens.css`).
+- **P00 (Fundaciones)** · Falta el color de una opción deshabilitada («se ve en gris», RT-04-ET09: regla transversal de mensajes) entre los tokens de `interfaz.md`. Valor usado: texto y borde con el token `borde` sobre `superficie`.
+- **P00 (Fundaciones)** · Contradicción: `convenciones.md` («Activos del catálogo») pide 6 imágenes y 3 animaciones de catálogo, cada una con su fila en `seed.sql`; `supabase/seed.sql` dice que esos catálogos no tienen elementos hasta que el equipo cargue los archivos. Ganó `seed.sql` (modelo de datos): los 9 archivos se generaron en `apps/desktop/assets/catalog/` y no se agregaron filas.
+- **P00 (Fundaciones)** · Faltan los colores de los degradados de las imágenes y animaciones de catálogo. Valor usado: pares de colores de la marca y del catálogo de colores (`apps/desktop/scripts/generar_activos.mjs`).
+- **P00 (Fundaciones)** · El isotipo de `marca/` no es cuadrado y `tauri icon` lo rechaza con el comando de `convenciones.md`. Valor usado: `--fit contain`; los tamaños de 16 a 32 px salen de `marca/isotipo/tamanos/`.

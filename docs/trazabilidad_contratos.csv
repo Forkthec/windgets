@@ -1,0 +1,314 @@
+﻿contrato,tipo,HU,CA,entidad
+IPC-AUTH-01 auth_register_start,ipc,HE-01-HU01,HE-01-HU01-CA01;HE-01-HU01-CA02;HE-01-HU01-CA03;HE-01-HU01-CA05;HE-01-HU01-CA06;HE-01-HU01-CA07;HE-01-HU01-CA08;HE-01-HU01-CA12,Escribe: cuenta de Supabase Auth (sin verificar). Lee: RPC-05
+IPC-AUTH-01 auth_register_start,ipc,HE-01-HU02,HE-01-HU02-CA03;HE-01-HU02-CA04;HE-01-HU02-CA05;HE-01-HU02-CA06;HE-01-HU02-CA07,Escribe: cuenta de Supabase Auth (sin verificar). Lee: RPC-05
+IPC-AUTH-02 auth_register_verify,ipc,HE-01-HU03,HE-01-HU03-CA01;HE-01-HU03-CA02;HE-01-HU03-CA03;HE-01-HU03-CA04;HE-01-HU03-CA05;HE-01-HU03-CA09,"Escribe: auth.users, profile, user_preference, kanban_column, theme, applied_theme, widget, theme_widget (semilla de la cuenta), session.bin, sync_state"
+IPC-AUTH-02 auth_register_verify,ipc,RT-01,RT-01-CA01,"Escribe: auth.users, profile, user_preference, kanban_column, theme, applied_theme, widget, theme_widget (semilla de la cuenta), session.bin, sync_state"
+IPC-AUTH-03 auth_register_resend,ipc,HE-01-HU03,HE-01-HU03-CA06;HE-01-HU03-CA07,Escribe: código de verificación en Supabase Auth
+IPC-AUTH-04 auth_register_cancel,ipc,HE-01-HU03,HE-01-HU03-CA08,Memoria del Núcleo (registro pendiente)
+IPC-AUTH-05 auth_sign_in,ipc,HE-01-HU04,HE-01-HU04-CA03;HE-01-HU04-CA04;HE-01-HU04-CA05;HE-01-HU04-CA06;HE-01-HU04-CA07;HE-01-HU04-CA08;HE-01-HU04-CA09;HE-01-HU04-CA10,"Escribe: session.bin, sync_state. Lee: auth.users"
+IPC-AUTH-05 auth_sign_in,ipc,RT-01,RT-01-CA01,"Escribe: session.bin, sync_state. Lee: auth.users"
+IPC-AUTH-06 auth_google_start,ipc,HE-01-HU05,HE-01-HU05-CA01,"Escribe: session.bin, sync_state, profile (cuenta nueva)"
+IPC-AUTH-07 auth_google_cancel,ipc,HE-01-HU05,HE-01-HU05-CA05,Memoria del Núcleo (espera de Google)
+IPC-AUTH-08 auth_recovery_request,ipc,HE-01-HU06,HE-01-HU06-CA01;HE-01-HU06-CA02;HE-01-HU06-CA03;HE-01-HU06-CA04;HE-01-HU06-CA05;HE-01-HU06-CA06,Escribe: código de recuperación en Supabase Auth
+IPC-AUTH-09 auth_recovery_verify,ipc,HE-01-HU07,HE-01-HU07-CA02;HE-01-HU07-CA03;HE-01-HU07-CA04;HE-01-HU07-CA05;HE-01-HU07-CA09,Memoria del Núcleo (sesión de recuperación)
+IPC-AUTH-10 auth_recovery_resend,ipc,HE-01-HU07,HE-01-HU07-CA06;HE-01-HU07-CA07,Escribe: código de recuperación en Supabase Auth
+IPC-AUTH-11 auth_recovery_set_password,ipc,HE-01-HU08,HE-01-HU08-CA01;HE-01-HU08-CA02;HE-01-HU08-CA03;HE-01-HU08-CA04;HE-01-HU08-CA05;HE-01-HU08-CA06;HE-01-HU08-CA07,Escribe: contraseña en auth.users
+IPC-AUTH-12 auth_get_session,ipc,HE-01-HU04,HE-01-HU04-CA02,"Lee: session.bin, profile"
+IPC-AUTH-12 auth_get_session,ipc,HE-02-HU01,HE-02-HU01-CA05,"Lee: session.bin, profile"
+IPC-AUTH-13 auth_get_sign_out_info,ipc,HE-16-HU03,HE-16-HU03-CA03,Lee: pending_change
+IPC-AUTH-14 auth_sign_out,ipc,HE-16-HU03,HE-16-HU03-CA01;HE-16-HU03-CA04,"Borra: base local, local_file, session.bin"
+IPC-CARD-01 card_create,ipc,HE-07-HU01,HE-07-HU01-CA01;HE-07-HU01-CA02;HE-07-HU01-CA04;HE-07-HU01-CA05;HE-07-HU01-CA06;HE-07-HU01-CA07;HE-07-HU01-CA08;HE-07-HU01-CA09;HE-07-HU01-CA10;HE-07-HU01-CA12,"Escribe: card, card_label, pending_change. Lee: kanban_column, label"
+IPC-CARD-01 card_create,ipc,HE-07-HU02,HE-07-HU02-CA02,"Escribe: card, card_label, pending_change. Lee: kanban_column, label"
+IPC-CARD-01 card_create,ipc,HE-10-HU04,HE-10-HU04-CA01,"Escribe: card, card_label, pending_change. Lee: kanban_column, label"
+IPC-CARD-02 card_update,ipc,HE-07-HU02,HE-07-HU02-CA03;HE-07-HU02-CA04;HE-07-HU02-CA05,"Escribe: card, card_label, pending_change"
+IPC-CARD-02 card_update,ipc,HE-07-HU04,HE-07-HU04-CA01;HE-07-HU04-CA11,"Escribe: card, card_label, pending_change"
+IPC-CARD-03 card_delete,ipc,HE-07-HU05,HE-07-HU05-CA01;HE-07-HU05-CA02,"Escribe: card, card_label (eliminación), pending_change"
+IPC-CARD-04 card_get,ipc,HE-07-HU03,HE-07-HU03-CA01,"Lee: card, card_label, label, kanban_column"
+IPC-CARD-05 card_list_board,ipc,HE-06-HU05,HE-06-HU05-CA03;HE-06-HU05-CA04,"Lee: kanban_column, card"
+IPC-CARD-05 card_list_board,ipc,HE-09-HU01,HE-09-HU01-CA01,"Lee: kanban_column, card"
+IPC-CARD-06 card_move,ipc,HE-06-HU04,HE-06-HU04-CA01,"Escribe: card, pending_change. Lee: kanban_column"
+IPC-CARD-06 card_move,ipc,HE-06-HU06,HE-06-HU06-CA02,"Escribe: card, pending_change. Lee: kanban_column"
+IPC-CARD-06 card_move,ipc,HE-09-HU02,HE-09-HU02-CA02;HE-09-HU02-CA06;HE-09-HU02-CA07;HE-09-HU02-CA08,"Escribe: card, pending_change. Lee: kanban_column"
+IPC-CARD-07 card_set_completed,ipc,HE-06-HU03,HE-06-HU03-CA01;HE-06-HU03-CA02,Escribe: card. Lee: kanban_column
+IPC-CARD-07 card_set_completed,ipc,HE-12-HU02,HE-12-HU02-CA01,Escribe: card. Lee: kanban_column
+IPC-CARD-08 planner_get_today,ipc,HE-06-HU02,HE-06-HU02-CA01,"Lee: card, kanban_column"
+IPC-CARD-08 planner_get_today,ipc,HE-12-HU01,HE-12-HU01-CA03,"Lee: card, kanban_column"
+IPC-CARD-08 planner_get_today,ipc,HE-12-HU03,HE-12-HU03-CA04,"Lee: card, kanban_column"
+IPC-CARD-09 agenda_get_day,ipc,HE-11-HU01,HE-11-HU01-CA04,Lee: card
+IPC-CARD-10 card_assign_time_block,ipc,HE-11-HU02,HE-11-HU02-CA01;HE-11-HU02-CA03;HE-11-HU02-CA04;HE-11-HU02-CA05,"Escribe: card (scheduled_date, scheduled_hour)"
+IPC-CARD-11 card_unassign_time_block,ipc,HE-11-HU03,HE-11-HU03-CA01,"Escribe: card (scheduled_date, scheduled_hour)"
+IPC-CARD-12 calendar_get_month,ipc,HE-06-HU07,HE-06-HU07-CA01,Lee: card
+IPC-CARD-12 calendar_get_month,ipc,HE-10-HU01,HE-10-HU01-CA02,Lee: card
+IPC-CARD-12 calendar_get_month,ipc,HE-10-HU05,HE-10-HU05-CA01,Lee: card
+IPC-CARD-13 calendar_get_week,ipc,HE-10-HU02,HE-10-HU02-CA01,Lee: card
+IPC-CARD-14 calendar_get_day,ipc,HE-10-HU03,HE-10-HU03-CA03,"Lee: card, kanban_column"
+IPC-CARD-14 calendar_get_day,ipc,HE-10-HU04,HE-10-HU04-CA04,"Lee: card, kanban_column"
+IPC-CARD-15 kanban_widget_get,ipc,HE-06-HU05,HE-06-HU05-CA01;HE-06-HU05-CA03,"Lee: kanban_column, card"
+IPC-LABEL-01 label_list,ipc,HE-07-HU02,HE-07-HU02-CA03,"Lee: label, card_label"
+IPC-LABEL-01 label_list,ipc,HE-08-HU01,HE-08-HU01-CA02,"Lee: label, card_label"
+IPC-LABEL-01 label_list,ipc,HE-13-HU05,HE-13-HU05-CA01,"Lee: label, card_label"
+IPC-LABEL-02 label_create,ipc,HE-08-HU02,HE-08-HU02-CA01;HE-08-HU02-CA02;HE-08-HU02-CA03;HE-08-HU02-CA04;HE-08-HU02-CA05;HE-08-HU02-CA06;HE-08-HU02-CA08,Escribe: label
+IPC-LABEL-03 label_update,ipc,HE-08-HU03,HE-08-HU03-CA01;HE-08-HU03-CA02;HE-08-HU03-CA03;HE-08-HU03-CA04;HE-08-HU03-CA05,Escribe: label
+IPC-LABEL-04 label_get_delete_info,ipc,HE-08-HU04,HE-08-HU04-CA01;HE-08-HU04-CA03;HE-08-HU04-CA04,"Lee: label, card_label"
+IPC-LABEL-05 label_delete,ipc,HE-08-HU04,HE-08-HU04-CA02;HE-08-HU04-CA05,"Escribe: label, card_label"
+IPC-LABEL-05 label_delete,ipc,HE-13-HU05,HE-13-HU05-CA06,"Escribe: label, card_label"
+IPC-COL-01 column_list,ipc,HE-06-HU04,HE-06-HU04-CA02,Lee: kanban_column
+IPC-COL-01 column_list,ipc,HE-09-HU01,HE-09-HU01-CA01,Lee: kanban_column
+IPC-COL-02 column_create,ipc,HE-09-HU03,HE-09-HU03-CA01;HE-09-HU03-CA02;HE-09-HU03-CA03;HE-09-HU03-CA04;HE-09-HU03-CA05;HE-09-HU03-CA06,Escribe: kanban_column
+IPC-COL-03 column_update,ipc,HE-09-HU04,HE-09-HU04-CA01;HE-09-HU04-CA02;HE-09-HU04-CA03;HE-09-HU04-CA04;HE-09-HU04-CA05;HE-09-HU04-CA06,Escribe: kanban_column
+IPC-COL-04 column_reorder,ipc,HE-09-HU05,HE-09-HU05-CA01,Escribe: kanban_column (position)
+IPC-COL-05 column_get_delete_info,ipc,HE-09-HU06,HE-09-HU06-CA01;HE-09-HU06-CA03;HE-09-HU06-CA07,"Lee: kanban_column, card"
+IPC-COL-06 column_delete,ipc,HE-09-HU06,HE-09-HU06-CA02;HE-09-HU06-CA04;HE-09-HU06-CA05,"Escribe: kanban_column, card"
+IPC-REP-01 report_resolve_range,ipc,HE-13-HU01,HE-13-HU01-CA03;HE-13-HU01-CA04;HE-13-HU01-CA05;HE-13-HU01-CA06;HE-13-HU01-CA07;HE-13-HU01-CA08,Sin entidad (calcula el rango)
+IPC-REP-01 report_resolve_range,ipc,HE-13-HU02,HE-13-HU01-CA02;HE-13-HU02-CA01;HE-13-HU02-CA06,Sin entidad (calcula el rango)
+IPC-REP-02 report_get_meta,ipc,HE-13-HU02,HE-13-HU02-CA05;HE-13-HU02-CA06,"Lee: card, label"
+IPC-REP-02 report_get_meta,ipc,HE-13-HU05,HE-13-HU05-CA05,"Lee: card, label"
+IPC-REP-03 report_get_completed,ipc,HE-13-HU02,HE-13-HU02-CA01,"Lee: card, card_label"
+IPC-REP-04 report_get_compliance,ipc,HE-13-HU03,HE-13-HU03-CA01;HE-13-HU03-CA02,"Lee: card, card_label"
+IPC-REP-05 report_get_status_breakdown,ipc,HE-13-HU04,HE-13-HU04-CA01,"Lee: card, card_label"
+IPC-THEME-01 theme_list,ipc,HE-03-HU01,HE-03-HU01-CA02,"Lee: theme, applied_theme"
+IPC-THEME-02 theme_get_applied,ipc,HE-02-HU01,HE-02-HU01-CA01,Lee: applied_theme
+IPC-THEME-02 theme_get_applied,ipc,HE-03-HU06,HE-03-HU06-CA01;HE-03-HU06-CA05;HE-03-HU06-CA07,Lee: applied_theme
+IPC-THEME-03 theme_draft_open,ipc,HE-02-HU10,HE-02-HU10-CA01,"Lee: theme, applied_theme, catalog_*. Memoria: borrador"
+IPC-THEME-04 theme_draft_select,ipc,HE-02-HU10,HE-02-HU10-CA03;HE-02-HU10-CA04;HE-02-HU10-CA06,Lee: theme. Memoria: borrador
+IPC-THEME-05 theme_draft_update,ipc,HE-02-HU02,HE-02-HU02-CA01,"Lee: catalog_*, uploaded_image. Memoria: borrador"
+IPC-THEME-05 theme_draft_update,ipc,HE-02-HU03,HE-02-HU03-CA01,"Lee: catalog_*, uploaded_image. Memoria: borrador"
+IPC-THEME-05 theme_draft_update,ipc,HE-02-HU04,HE-02-HU04-CA02,"Lee: catalog_*, uploaded_image. Memoria: borrador"
+IPC-THEME-05 theme_draft_update,ipc,HE-02-HU05,HE-02-HU05-CA03;HE-02-HU05-CA05,"Lee: catalog_*, uploaded_image. Memoria: borrador"
+IPC-THEME-05 theme_draft_update,ipc,HE-02-HU06,HE-02-HU06-CA01,"Lee: catalog_*, uploaded_image. Memoria: borrador"
+IPC-THEME-05 theme_draft_update,ipc,HE-02-HU07,HE-02-HU07-CA01,"Lee: catalog_*, uploaded_image. Memoria: borrador"
+IPC-THEME-05 theme_draft_update,ipc,HE-02-HU09,HE-02-HU09-CA01,"Lee: catalog_*, uploaded_image. Memoria: borrador"
+IPC-THEME-06 theme_draft_reset,ipc,HE-02-HU08,HE-02-HU08-CA01;HE-02-HU08-CA02,Lee: catalog_template. Memoria: borrador
+IPC-THEME-07 theme_draft_save,ipc,HE-02-HU11,HE-02-HU11-CA01;HE-02-HU11-CA02;HE-02-HU11-CA03,"Escribe: theme, pending_change"
+IPC-THEME-08 theme_draft_save_as,ipc,HE-03-HU02,HE-03-HU02-CA01;HE-03-HU02-CA03;HE-03-HU02-CA04;HE-03-HU02-CA05,"Escribe: theme, pending_change"
+IPC-THEME-09 theme_draft_apply,ipc,HE-02-HU12,HE-02-HU12-CA01;HE-02-HU12-CA02;HE-02-HU12-CA03;HE-02-HU12-CA04;HE-02-HU12-CA06,"Escribe: applied_theme, theme"
+IPC-THEME-10 theme_draft_get_status,ipc,HE-02-HU13,HE-02-HU13-CA02;HE-02-HU13-CA05,Memoria: borrador
+IPC-THEME-10 theme_draft_get_status,ipc,HE-17-HU03,HE-17-HU03-CA02,Memoria: borrador
+IPC-THEME-11 theme_draft_discard,ipc,HE-02-HU13,HE-02-HU13-CA01,Memoria: borrador. Lee: theme
+IPC-THEME-12 theme_apply,ipc,HE-03-HU03,HE-03-HU03-CA01;HE-03-HU03-CA03;HE-03-HU03-CA04;HE-03-HU03-CA05,Escribe: applied_theme. Lee: theme
+IPC-THEME-13 theme_rename,ipc,HE-03-HU04,HE-03-HU04-CA01;HE-03-HU04-CA03;HE-03-HU04-CA04;HE-03-HU04-CA06,Escribe: theme
+IPC-THEME-14 theme_delete,ipc,HE-03-HU05,HE-03-HU05-CA01;HE-03-HU05-CA02,"Escribe: theme (eliminación), theme_widget"
+IPC-CAT-01 catalog_list,ipc,HE-02-HU02,HE-02-HU02-CA01,"Lee: catalog_template, catalog_font, catalog_palette, catalog_image, catalog_animation, catalog_color"
+IPC-CAT-01 catalog_list,ipc,HE-02-HU03,HE-02-HU03-CA01,"Lee: catalog_template, catalog_font, catalog_palette, catalog_image, catalog_animation, catalog_color"
+IPC-CAT-01 catalog_list,ipc,HE-02-HU06,HE-02-HU06-CA01,"Lee: catalog_template, catalog_font, catalog_palette, catalog_image, catalog_animation, catalog_color"
+IPC-CAT-01 catalog_list,ipc,HE-02-HU07,HE-02-HU07-CA01,"Lee: catalog_template, catalog_font, catalog_palette, catalog_image, catalog_animation, catalog_color"
+IPC-CAT-01 catalog_list,ipc,HE-04-HU09,HE-04-HU09-CA01,"Lee: catalog_template, catalog_font, catalog_palette, catalog_image, catalog_animation, catalog_color"
+IPC-CAT-01 catalog_list,ipc,HE-08-HU02,HE-08-HU02-CA01,"Lee: catalog_template, catalog_font, catalog_palette, catalog_image, catalog_animation, catalog_color"
+IPC-CAT-01 catalog_list,ipc,HE-09-HU03,HE-09-HU03-CA01,"Lee: catalog_template, catalog_font, catalog_palette, catalog_image, catalog_animation, catalog_color"
+IPC-CAT-02 catalog_refresh,ipc,HE-02-HU02,HE-02-HU02-CA01,"Escribe: catálogos locales, sync_state.catalog_version, local_file"
+IPC-CAT-03 image_import,ipc,HE-02-HU03,HE-02-HU03-CA05;HE-02-HU03-CA06;HE-02-HU03-CA07,"Escribe: uploaded_image, local_file, file_upload_queue"
+IPC-CAT-03 image_import,ipc,HE-04-HU07,HE-04-HU07-CA03,"Escribe: uploaded_image, local_file, file_upload_queue"
+IPC-CAT-03 image_import,ipc,HE-04-HU08,HE-04-HU08-CA05,"Escribe: uploaded_image, local_file, file_upload_queue"
+IPC-CAT-04 asset_resolve,ipc,HE-02-HU01,HE-02-HU01-CA01,"Lee: local_file, catalog_*, uploaded_image"
+IPC-CAT-04 asset_resolve,ipc,HE-04-HU07,HE-04-HU07-CA01,"Lee: local_file, catalog_*, uploaded_image"
+IPC-WID-01 widget_list,ipc,HE-04-HU01,HE-04-HU01-CA02,"Lee: widget, theme_widget"
+IPC-WID-02 widget_catalog_get,ipc,HE-04-HU04,HE-04-HU04-CA01;HE-04-HU04-CA02,Lee: widget
+IPC-WID-03 widget_set_active,ipc,HE-04-HU02,HE-04-HU02-CA02,Escribe: theme_widget (is_active)
+IPC-WID-04 widget_add,ipc,HE-04-HU04,HE-04-HU04-CA02,"Escribe: widget, theme_widget, widget_carousel_item. Lee: uploaded_image"
+IPC-WID-04 widget_add,ipc,HE-04-HU05,HE-04-HU05-CA04;HE-04-HU05-CA09,"Escribe: widget, theme_widget, widget_carousel_item. Lee: uploaded_image"
+IPC-WID-04 widget_add,ipc,HE-04-HU06,HE-04-HU06-CA01,"Escribe: widget, theme_widget, widget_carousel_item. Lee: uploaded_image"
+IPC-WID-04 widget_add,ipc,HE-04-HU07,HE-04-HU07-CA01,"Escribe: widget, theme_widget, widget_carousel_item. Lee: uploaded_image"
+IPC-WID-04 widget_add,ipc,HE-04-HU08,HE-04-HU08-CA03,"Escribe: widget, theme_widget, widget_carousel_item. Lee: uploaded_image"
+IPC-WID-04 widget_add,ipc,HE-04-HU09,HE-04-HU09-CA01,"Escribe: widget, theme_widget, widget_carousel_item. Lee: uploaded_image"
+IPC-WID-04 widget_add,ipc,HE-04-HU10,HE-04-HU10-CA03,"Escribe: widget, theme_widget, widget_carousel_item. Lee: uploaded_image"
+IPC-WID-04 widget_add,ipc,HE-04-HU11,HE-04-HU11-CA01,"Escribe: widget, theme_widget, widget_carousel_item. Lee: uploaded_image"
+IPC-WID-04 widget_add,ipc,RT-04,RT-04-CA01,"Escribe: widget, theme_widget, widget_carousel_item. Lee: uploaded_image"
+IPC-WID-05 widget_configure,ipc,HE-04-HU05,HE-04-HU05-CA09,"Escribe: widget, widget_carousel_item"
+IPC-WID-05 widget_configure,ipc,HE-04-HU10,HE-04-HU10-CA03,"Escribe: widget, widget_carousel_item"
+IPC-WID-05 widget_configure,ipc,HE-04-HU12,HE-04-HU12-CA04;HE-04-HU12-CA05,"Escribe: widget, widget_carousel_item"
+IPC-WID-06 widget_delete,ipc,HE-04-HU13,HE-04-HU13-CA01;HE-04-HU13-CA02;HE-04-HU13-CA04;HE-04-HU13-CA05;HE-04-HU13-CA06,"Escribe: widget, theme_widget, widget_carousel_item (eliminación)"
+IPC-WID-07 widget_get_data,ipc,HE-04-HU05,HE-04-HU05-CA07;HE-04-HU05-CA08,Lee: external_widget_cache
+IPC-WID-07 widget_get_data,ipc,HE-04-HU06,HE-04-HU06-CA03;HE-04-HU06-CA04,Lee: external_widget_cache
+IPC-WID-07 widget_get_data,ipc,HE-15-HU02,HE-15-HU02-CA06,Lee: external_widget_cache
+IPC-LAY-01 layout_edit_open,ipc,HE-05-HU01,HE-05-HU01-CA02,Lee: theme_widget
+IPC-LAY-02 layout_edit_move,ipc,HE-05-HU02,HE-05-HU02-CA02,Memoria: distribución en edición
+IPC-LAY-03 layout_edit_resize,ipc,HE-05-HU03,HE-05-HU03-CA02,Memoria: distribución en edición
+IPC-LAY-04 layout_edit_get_status,ipc,HE-05-HU05,HE-05-HU05-CA02,Memoria: distribución en edición
+IPC-LAY-05 layout_edit_save,ipc,HE-05-HU04,HE-05-HU04-CA01;HE-05-HU04-CA02;HE-05-HU04-CA03;HE-05-HU04-CA04,"Escribe: theme_widget, pending_change"
+IPC-LAY-06 layout_edit_cancel,ipc,HE-05-HU05,HE-05-HU05-CA01;HE-05-HU05-CA03;HE-05-HU05-CA05,Memoria: distribución en edición
+IPC-DESK-01 layer_get_initial_state,ipc,HE-02-HU01,HE-02-HU01-CA01,"Lee: applied_theme, theme_widget"
+IPC-DESK-01 layer_get_initial_state,ipc,HE-15-HU04,HE-15-HU04-CA03,"Lee: applied_theme, theme_widget"
+IPC-DESK-02 wallpaper_get_status,ipc,HE-02-HU01,HE-02-HU01-CA04,Estado del Host del wallpaper
+IPC-DESK-03 app_open_screen,ipc,HE-06-HU08,HE-06-HU08-CA07,Sin entidad (navegación)
+IPC-DESK-04 app_get_last_screen,ipc,HE-17-HU02,HE-17-HU02-CA01,Lee: device_setting
+IPC-DESK-05 app_set_last_screen,ipc,HE-17-HU02,HE-17-HU02-CA01;HE-17-HU02-CA02;HE-17-HU02-CA03,Escribe: device_setting
+IPC-DESK-06 app_hide_main_window,ipc,HE-17-HU01,HE-17-HU01-CA01,Sin entidad
+IPC-DESK-07 app_request_exit,ipc,HE-17-HU03,HE-17-HU03-CA02;HE-17-HU03-CA04,Lee: borrador del tema y de la distribución (memoria)
+IPC-DESK-08 app_exit,ipc,HE-17-HU03,HE-17-HU03-CA01;HE-17-HU03-CA03,Sin entidad (cierra el proceso)
+IPC-DESK-09 system_open_url,ipc,HE-06-HU10,HE-06-HU10-CA01,Sin entidad
+IPC-DESK-10 autostart_get,ipc,HE-16-HU02,HE-16-HU02-CA03,"Lee: registro de Windows (Run, StartupApproved)"
+IPC-DESK-11 autostart_set,ipc,HE-16-HU02,HE-16-HU02-CA01;HE-16-HU02-CA02;HE-16-HU02-CA04;HE-16-HU02-CA05,Escribe: registro de Windows (Run)
+IPC-DESK-12 preference_get,ipc,HE-09-HU07,HE-09-HU07-CA01,Lee: user_preference
+IPC-DESK-13 preference_set,ipc,HE-09-HU07,HE-09-HU07-CA03,Escribe: user_preference
+IPC-DESK-14 connectivity_get,ipc,HE-15-HU02,HE-15-HU02-CA01,Lee: estado de red (memoria)
+IPC-MED-01 media_get_session,ipc,HE-04-HU11,HE-04-HU11-CA03,Sin entidad (sesión de Windows)
+IPC-MED-02 media_toggle_play_pause,ipc,HE-06-HU09,HE-06-HU09-CA01,Sin entidad (sesión de Windows)
+IPC-MED-03 media_skip_next,ipc,HE-06-HU09,HE-06-HU09-CA01,Sin entidad (sesión de Windows)
+IPC-MED-04 media_skip_previous,ipc,HE-06-HU09,HE-06-HU09-CA01,Sin entidad (sesión de Windows)
+IPC-WIN-01 windi_get_conversation,ipc,HE-14-HU01,HE-14-HU01-CA07,Memoria: historial de la sesión
+IPC-WIN-02 windi_send_message,ipc,HE-14-HU01,HE-14-HU01-CA05;HE-14-HU01-CA07;HE-14-HU01-CA08,"Lee: card, label, kanban_column. Memoria: historial y propuesta"
+IPC-WIN-02 windi_send_message,ipc,HE-14-HU02,HE-14-HU02-CA01,"Lee: card, label, kanban_column. Memoria: historial y propuesta"
+IPC-WIN-02 windi_send_message,ipc,HE-14-HU03,HE-14-HU03-CA04;HE-14-HU04-CA06,"Lee: card, label, kanban_column. Memoria: historial y propuesta"
+IPC-WIN-02 windi_send_message,ipc,HE-14-HU04,HE-14-HU04-CA01,"Lee: card, label, kanban_column. Memoria: historial y propuesta"
+IPC-WIN-02 windi_send_message,ipc,HE-14-HU05,HE-14-HU05-CA01,"Lee: card, label, kanban_column. Memoria: historial y propuesta"
+IPC-WIN-02 windi_send_message,ipc,HE-14-HU06,HE-14-HU06-CA01,"Lee: card, label, kanban_column. Memoria: historial y propuesta"
+IPC-WIN-02 windi_send_message,ipc,HE-14-HU07,HE-14-HU07-CA01,"Lee: card, label, kanban_column. Memoria: historial y propuesta"
+IPC-WIN-02 windi_send_message,ipc,HE-14-HU08,HE-14-HU08-CA01,"Lee: card, label, kanban_column. Memoria: historial y propuesta"
+IPC-WIN-02 windi_send_message,ipc,HE-14-HU09,HE-14-HU09-CA01,"Lee: card, label, kanban_column. Memoria: historial y propuesta"
+IPC-WIN-03 windi_confirm_proposal,ipc,HE-14-HU03,HE-14-HU03-CA01;HE-14-HU03-CA02;HE-14-HU03-CA03,"Escribe: card, card_label. Lee: kanban_column"
+IPC-WIN-03 windi_confirm_proposal,ipc,HE-14-HU04,HE-14-HU04-CA07,"Escribe: card, card_label. Lee: kanban_column"
+IPC-WIN-03 windi_confirm_proposal,ipc,HE-14-HU05,HE-14-HU05-CA01,"Escribe: card, card_label. Lee: kanban_column"
+IPC-WIN-03 windi_confirm_proposal,ipc,HE-14-HU06,HE-14-HU06-CA01,"Escribe: card, card_label. Lee: kanban_column"
+IPC-WIN-03 windi_confirm_proposal,ipc,HE-14-HU07,HE-14-HU07-CA01,"Escribe: card, card_label. Lee: kanban_column"
+IPC-WIN-04 windi_reject_proposal,ipc,HE-14-HU03,HE-14-HU03-CA01,Memoria: propuesta
+IPC-SYNC-01 sync_get_status,ipc,HE-16-HU01,HE-16-HU01-CA01;HE-16-HU01-CA02;HE-16-HU01-CA03;HE-16-HU01-CA04;HE-16-HU01-CA05,"Lee: sync_state, pending_change"
+EV-01 session_changed,evento,HE-01-HU04,HE-01-HU04-CA01,"session.bin, sync_state"
+EV-01 session_changed,evento,HE-02-HU01,HE-02-HU01-CA05,"session.bin, sync_state"
+EV-01 session_changed,evento,HE-16-HU03,HE-16-HU03-CA01,"session.bin, sync_state"
+EV-02 auth_google_result,evento,HE-01-HU05,HE-01-HU05-CA01;HE-01-HU05-CA03;HE-01-HU05-CA04;HE-01-HU05-CA05;HE-01-HU05-CA06;HE-01-HU05-CA08,session.bin
+EV-03 connectivity_changed,evento,HE-15-HU02,HE-15-HU02-CA01,estado de red
+EV-04 sync_status_changed,evento,HE-15-HU02,HE-15-HU02-CA02;HE-15-HU02-CA03,"sync_state, pending_change"
+EV-04 sync_status_changed,evento,HE-16-HU01,HE-16-HU01-CA01,"sync_state, pending_change"
+EV-05 sync_completed,evento,HE-15-HU03,HE-15-HU03-CA01,sync_state
+EV-06 sync_conflicts_resolved,evento,HE-15-HU03,HE-15-HU03-CA02;HE-15-HU03-CA05;HE-15-HU03-CA06,card
+EV-07 cards_changed,evento,HE-06-HU02,HE-06-HU02-CA01,card
+EV-07 cards_changed,evento,HE-07-HU01,HE-07-HU01-CA01,card
+EV-07 cards_changed,evento,HE-07-HU04,HE-07-HU04-CA01,card
+EV-07 cards_changed,evento,HE-07-HU05,HE-07-HU05-CA01,card
+EV-07 cards_changed,evento,HE-08-HU04,HE-08-HU04-CA01,card
+EV-07 cards_changed,evento,HE-09-HU02,HE-09-HU02-CA01,card
+EV-07 cards_changed,evento,HE-09-HU06,HE-09-HU06-CA01,card
+EV-07 cards_changed,evento,HE-11-HU02,HE-11-HU02-CA01,card
+EV-07 cards_changed,evento,HE-11-HU03,HE-11-HU03-CA01,card
+EV-07 cards_changed,evento,HE-12-HU02,HE-12-HU02-CA01,card
+EV-07 cards_changed,evento,HE-15-HU03,HE-15-HU03-CA01,card
+EV-08 labels_changed,evento,HE-08-HU02,HE-08-HU02-CA01,label
+EV-08 labels_changed,evento,HE-08-HU03,HE-08-HU03-CA01,label
+EV-08 labels_changed,evento,HE-08-HU04,HE-08-HU04-CA01,label
+EV-08 labels_changed,evento,HE-13-HU05,HE-13-HU05-CA06;HE-13-HU05-CA07,label
+EV-09 columns_changed,evento,HE-06-HU05,HE-06-HU05-CA01,kanban_column
+EV-09 columns_changed,evento,HE-09-HU03,HE-09-HU03-CA01,kanban_column
+EV-09 columns_changed,evento,HE-09-HU04,HE-09-HU04-CA01,kanban_column
+EV-09 columns_changed,evento,HE-09-HU05,HE-09-HU05-CA01,kanban_column
+EV-09 columns_changed,evento,HE-09-HU06,HE-09-HU06-CA01,kanban_column
+EV-10 themes_changed,evento,HE-03-HU02,HE-03-HU02-CA01,theme
+EV-10 themes_changed,evento,HE-03-HU03,HE-03-HU03-CA01,theme
+EV-10 themes_changed,evento,HE-03-HU04,HE-03-HU04-CA01,theme
+EV-10 themes_changed,evento,HE-03-HU05,HE-03-HU05-CA01,theme
+EV-10 themes_changed,evento,HE-15-HU04,HE-15-HU04-CA01,theme
+EV-11 applied_theme_changed,evento,HE-02-HU12,HE-02-HU12-CA01,applied_theme
+EV-11 applied_theme_changed,evento,HE-03-HU06,HE-03-HU06-CA01,applied_theme
+EV-11 applied_theme_changed,evento,HE-15-HU04,HE-15-HU04-CA08,applied_theme
+EV-12 widgets_changed,evento,HE-04-HU02,HE-04-HU02-CA01,"widget, theme_widget"
+EV-12 widgets_changed,evento,HE-04-HU05,HE-04-HU05-CA01,"widget, theme_widget"
+EV-12 widgets_changed,evento,HE-04-HU06,HE-04-HU06-CA01,"widget, theme_widget"
+EV-12 widgets_changed,evento,HE-04-HU07,HE-04-HU07-CA01,"widget, theme_widget"
+EV-12 widgets_changed,evento,HE-04-HU08,HE-04-HU08-CA01,"widget, theme_widget"
+EV-12 widgets_changed,evento,HE-04-HU09,HE-04-HU09-CA01,"widget, theme_widget"
+EV-12 widgets_changed,evento,HE-04-HU10,HE-04-HU10-CA01,"widget, theme_widget"
+EV-12 widgets_changed,evento,HE-04-HU11,HE-04-HU11-CA01,"widget, theme_widget"
+EV-12 widgets_changed,evento,HE-04-HU12,HE-04-HU12-CA01,"widget, theme_widget"
+EV-12 widgets_changed,evento,HE-04-HU13,HE-04-HU13-CA01,"widget, theme_widget"
+EV-13 layout_changed,evento,HE-05-HU04,HE-05-HU04-CA01,theme_widget
+EV-13 layout_changed,evento,HE-15-HU04,HE-15-HU04-CA04;HE-15-HU04-CA05,theme_widget
+EV-14 draft_changed,evento,HE-02-HU09,HE-02-HU09-CA01,borrador del tema
+EV-14 draft_changed,evento,HE-02-HU13,HE-02-HU13-CA01,borrador del tema
+EV-15 layout_edit_state_changed,evento,HE-05-HU02,HE-05-HU02-CA01,distribución en edición
+EV-15 layout_edit_state_changed,evento,HE-05-HU03,HE-05-HU03-CA01,distribución en edición
+EV-15 layout_edit_state_changed,evento,HE-05-HU04,HE-05-HU04-CA01,distribución en edición
+EV-15 layout_edit_state_changed,evento,HE-05-HU05,HE-05-HU05-CA01,distribución en edición
+EV-16 wallpaper_status_changed,evento,HE-02-HU01,HE-02-HU01-CA04,estado del wallpaper
+EV-17 monitors_changed,evento,HE-02-HU01,HE-02-HU01-CA06,estado de monitores
+EV-18 pointer_forwarded,evento,HE-06-HU01,HE-06-HU01-CA01,theme_widget (rectángulos)
+EV-19 media_session_changed,evento,HE-04-HU11,HE-04-HU11-CA04,sesión de Windows (SMTC)
+EV-19 media_session_changed,evento,HE-06-HU09,HE-06-HU09-CA01,sesión de Windows (SMTC)
+EV-20 widget_data_changed,evento,HE-04-HU05,HE-04-HU05-CA07,external_widget_cache
+EV-20 widget_data_changed,evento,HE-04-HU06,HE-04-HU06-CA03,external_widget_cache
+EV-21 animation_pause_changed,evento,HE-04-HU09,HE-04-HU09-CA04,widget (animation)
+EV-22 day_changed,evento,HE-06-HU02,HE-06-HU02-CA06,card
+EV-22 day_changed,evento,HE-10-HU05,HE-10-HU05-CA07,card
+EV-23 navigate_requested,evento,HE-06-HU08,HE-06-HU08-CA01,sin entidad
+EV-23 navigate_requested,evento,HE-17-HU02,HE-17-HU02-CA01,sin entidad
+EV-24 exit_requested,evento,HE-17-HU03,HE-17-HU03-CA01,sin entidad
+EV-25 catalog_updated,evento,HE-02-HU02,HE-02-HU02-CA01,catalog_*
+EV-25 catalog_updated,evento,HE-02-HU03,HE-02-HU03-CA01,catalog_*
+EV-26 preference_changed,evento,HE-09-HU07,HE-09-HU07-CA01,user_preference
+RPC-01 server_time,rpc,HE-15-HU03,HE-15-HU03-CA08,sync_state (clock_offset_ms)
+RPC-02 sync_push,rpc,HE-15-HU01,HE-15-HU01-CA01;HE-15-HU01-CA02;HE-15-HU01-CA03,todas las entidades sincronizadas (escritura)
+RPC-02 sync_push,rpc,HE-15-HU03,HE-15-HU03-CA01,todas las entidades sincronizadas (escritura)
+RPC-02 sync_push,rpc,HE-15-HU04,HE-15-HU04-CA01,todas las entidades sincronizadas (escritura)
+RPC-03 sync_pull,rpc,HE-15-HU03,HE-15-HU03-CA01;HE-15-HU03-CA02;HE-15-HU03-CA03;HE-15-HU03-CA07;HE-15-HU03-CA08,todas las entidades sincronizadas y profile (lectura)
+RPC-03 sync_pull,rpc,HE-15-HU04,HE-15-HU04-CA01,todas las entidades sincronizadas y profile (lectura)
+RPC-04 catalog_pull,rpc,HE-02-HU01,HE-02-HU01-CA01,"catalog_*, catalog_meta"
+RPC-04 catalog_pull,rpc,HE-02-HU02,HE-02-HU02-CA01,"catalog_*, catalog_meta"
+RPC-04 catalog_pull,rpc,HE-02-HU03,HE-02-HU03-CA01,"catalog_*, catalog_meta"
+RPC-04 catalog_pull,rpc,HE-02-HU06,HE-02-HU06-CA01,"catalog_*, catalog_meta"
+RPC-04 catalog_pull,rpc,HE-02-HU07,HE-02-HU07-CA01,"catalog_*, catalog_meta"
+RPC-05 email_is_registered,rpc,HE-01-HU01,HE-01-HU01-CA08,auth.users
+RPC-05 email_is_registered,rpc,HE-01-HU06,HE-01-HU06-CA01;HE-01-HU06-CA02,auth.users
+RPC-06 keepalive,rpc,HE-15-HU01,HE-15-HU01-CA01,catalog_meta
+EF-01 windi,edge,HE-14-HU01,HE-14-HU01-CA08,"card, label, kanban_column (contexto)"
+EF-01 windi,edge,HE-14-HU02,HE-14-HU02-CA01,"card, label, kanban_column (contexto)"
+EF-01 windi,edge,HE-14-HU03,HE-14-HU03-CA01,"card, label, kanban_column (contexto)"
+EF-01 windi,edge,HE-14-HU04,HE-14-HU04-CA01,"card, label, kanban_column (contexto)"
+EF-01 windi,edge,HE-14-HU05,HE-14-HU05-CA01,"card, label, kanban_column (contexto)"
+EF-01 windi,edge,HE-14-HU06,HE-14-HU06-CA01,"card, label, kanban_column (contexto)"
+EF-01 windi,edge,HE-14-HU07,HE-14-HU07-CA01,"card, label, kanban_column (contexto)"
+EF-01 windi,edge,HE-14-HU09,HE-14-HU09-CA01,"card, label, kanban_column (contexto)"
+EF-02 weather,edge,HE-04-HU05,HE-04-HU05-CA04,external_cache
+EF-02 weather,edge,HE-04-HU12,HE-04-HU12-CA01,external_cache
+EF-03 weather,edge,HE-04-HU05,HE-04-HU05-CA07,external_cache
+EF-04 news,edge,HE-04-HU06,HE-04-HU06-CA03,external_cache
+INT-01 Supabase Auth,integracion,HE-01-HU01,HE-01-HU01-CA01,"auth.users, profile, session.bin"
+INT-01 Supabase Auth,integracion,HE-01-HU02,HE-01-HU02-CA01;HE-01-HU02-CA04;HE-01-HU02-CA05;HE-01-HU02-CA06,"auth.users, profile, session.bin"
+INT-01 Supabase Auth,integracion,HE-01-HU03,HE-01-HU01-CA01;HE-01-HU03-CA01;HE-01-HU03-CA04;HE-01-HU03-CA06;HE-01-HU03-CA07,"auth.users, profile, session.bin"
+INT-01 Supabase Auth,integracion,HE-01-HU04,HE-01-HU04-CA01,"auth.users, profile, session.bin"
+INT-01 Supabase Auth,integracion,HE-01-HU05,HE-01-HU05-CA01;HE-01-HU05-CA09,"auth.users, profile, session.bin"
+INT-01 Supabase Auth,integracion,HE-01-HU06,HE-01-HU06-CA01;HE-01-HU06-CA02,"auth.users, profile, session.bin"
+INT-01 Supabase Auth,integracion,HE-01-HU07,HE-01-HU07-CA01,"auth.users, profile, session.bin"
+INT-01 Supabase Auth,integracion,HE-01-HU08,HE-01-HU08-CA06;HE-01-HU08-CA07,"auth.users, profile, session.bin"
+INT-01 Supabase Auth,integracion,HE-15-HU02,HE-15-HU02-CA01,"auth.users, profile, session.bin"
+INT-01 Supabase Auth,integracion,HE-16-HU03,HE-16-HU03-CA01,"auth.users, profile, session.bin"
+INT-01 Supabase Auth,integracion,RT-01,RT-01-CA01,"auth.users, profile, session.bin"
+INT-02 Gmail,integracion,HE-01-HU03,HE-01-HU03-CA01,auth.users (correo de código)
+INT-02 Gmail,integracion,HE-01-HU06,HE-01-HU06-CA01,auth.users (correo de código)
+INT-02 Gmail,integracion,HE-01-HU07,HE-01-HU07-CA01,auth.users (correo de código)
+INT-03 Gemini,integracion,HE-14-HU01,HE-14-HU01-CA08,card (propuesta)
+INT-03 Gemini,integracion,HE-14-HU02,HE-14-HU02-CA01,card (propuesta)
+INT-03 Gemini,integracion,HE-14-HU03,HE-14-HU03-CA01,card (propuesta)
+INT-03 Gemini,integracion,HE-14-HU04,HE-14-HU04-CA05,card (propuesta)
+INT-03 Gemini,integracion,HE-14-HU05,HE-14-HU05-CA05,card (propuesta)
+INT-03 Gemini,integracion,HE-14-HU06,HE-14-HU06-CA01,card (propuesta)
+INT-03 Gemini,integracion,HE-14-HU07,HE-14-HU07-CA01,card (propuesta)
+INT-03 Gemini,integracion,HE-14-HU08,HE-14-HU08-CA01,card (propuesta)
+INT-03 Gemini,integracion,HE-14-HU09,HE-14-HU09-CA01,card (propuesta)
+INT-04 Clima,integracion,HE-04-HU05,HE-04-HU05-CA01;HE-04-HU05-CA04;HE-04-HU05-CA07,"widget (weather), external_widget_cache"
+INT-04 Clima,integracion,HE-04-HU12,HE-04-HU12-CA01,"widget (weather), external_widget_cache"
+INT-05 Noticias,integracion,HE-04-HU06,HE-04-HU06-CA01;HE-04-HU06-CA03,external_widget_cache
+INT-05 Noticias,integracion,HE-06-HU10,HE-06-HU10-CA01,external_widget_cache
+INT-06 Controles multimedia de Windows,integracion,HE-04-HU11,HE-04-HU11-CA03,sesión de Windows (SMTC)
+INT-06 Controles multimedia de Windows,integracion,HE-06-HU09,HE-06-HU09-CA01,sesión de Windows (SMTC)
+"INT-07 Win32: wallpaper detrás de los íconos, entrada del mouse, monitores y energía",integracion,HE-02-HU01,HE-02-HU01-CA04,"applied_theme, theme_widget (capa en WorkerW)"
+"INT-07 Win32: wallpaper detrás de los íconos, entrada del mouse, monitores y energía",integracion,HE-04-HU09,HE-04-HU09-CA04,"applied_theme, theme_widget (capa en WorkerW)"
+"INT-07 Win32: wallpaper detrás de los íconos, entrada del mouse, monitores y energía",integracion,HE-05-HU01,HE-05-HU01-CA01,"applied_theme, theme_widget (capa en WorkerW)"
+"INT-07 Win32: wallpaper detrás de los íconos, entrada del mouse, monitores y energía",integracion,HE-06-HU01,HE-06-HU01-CA04,"applied_theme, theme_widget (capa en WorkerW)"
+"INT-07 Win32: wallpaper detrás de los íconos, entrada del mouse, monitores y energía",integracion,HE-15-HU04,HE-15-HU04-CA04,"applied_theme, theme_widget (capa en WorkerW)"
+"INT-07 Win32: wallpaper detrás de los íconos, entrada del mouse, monitores y energía",integracion,HE-17-HU01,HE-17-HU01-CA01,"applied_theme, theme_widget (capa en WorkerW)"
+"INT-07 Win32: wallpaper detrás de los íconos, entrada del mouse, monitores y energía",integracion,HE-17-HU02,HE-17-HU02-CA01,"applied_theme, theme_widget (capa en WorkerW)"
+"INT-07 Win32: wallpaper detrás de los íconos, entrada del mouse, monitores y energía",integracion,HE-17-HU03,HE-17-HU03-CA04,"applied_theme, theme_widget (capa en WorkerW)"
+INT-08 Inicio automático con Windows,integracion,CD-02-HU02,CD-02-HU02-CA01,registro de Windows (Run)
+INT-08 Inicio automático con Windows,integracion,HE-16-HU02,HE-16-HU02-CA03;HE-16-HU02-CA05,registro de Windows (Run)
+INT-09 Almacenamiento de archivos,integracion,HE-02-HU03,HE-02-HU03-CA01,"uploaded_image, local_file, catalog_*"
+INT-09 Almacenamiento de archivos,integracion,HE-04-HU07,HE-04-HU07-CA01,"uploaded_image, local_file, catalog_*"
+INT-09 Almacenamiento de archivos,integracion,HE-04-HU08,HE-04-HU08-CA01,"uploaded_image, local_file, catalog_*"
+INT-09 Almacenamiento de archivos,integracion,HE-15-HU01,HE-15-HU01-CA01,"uploaded_image, local_file, catalog_*"
+INT-10 Registro del esquema `windgets://` e instancia única,integracion,CD-02-HU01,CD-02-HU01-CA01,registro de Windows (esquema windgets)
+INT-10 Registro del esquema `windgets://` e instancia única,integracion,HE-01-HU05,HE-01-HU05-CA01,registro de Windows (esquema windgets)
+INT-11 DPAPI y archivos de la aplicación,integracion,HE-01-HU04,HE-01-HU04-CA01,"session.bin, windgets.db"
+INT-11 DPAPI y archivos de la aplicación,integracion,HE-16-HU03,HE-16-HU03-CA01,"session.bin, windgets.db"
+"INT-12 GitHub Releases, GitHub Actions y landing page",integracion,CD-01-HU01,CD-01-HU01-CA01;CD-01-HU01-CA02;CD-01-HU01-CA03,releases de GitHub
+"INT-12 GitHub Releases, GitHub Actions y landing page",integracion,CD-01-HU02,CD-01-HU02-CA02,releases de GitHub
+"INT-12 GitHub Releases, GitHub Actions y landing page",integracion,HE-15-HU01,HE-15-HU01-CA01,releases de GitHub
+INT-13 Instalador .exe todo en uno,integracion,CD-02-HU01,CD-02-HU01-CA01;CD-02-HU01-CA02;CD-02-HU01-CA03;CD-02-HU01-CA04;CD-02-HU01-CA05;CD-02-HU01-CA06;CD-02-HU01-CA07;CD-02-HU01-CA08;CD-02-HU01-CA09;CD-02-HU01-CA10;CD-02-HU01-CA11;CD-02-HU01-CA12,instalación (archivos y registro)
+INT-13 Instalador .exe todo en uno,integracion,CD-02-HU02,CD-02-HU02-CA01;CD-02-HU02-CA02,instalación (archivos y registro)
+INT-13 Instalador .exe todo en uno,integracion,CD-02-HU03,CD-02-HU03-CA01;CD-02-HU03-CA02;CD-02-HU03-CA03;CD-02-HU03-CA04;CD-02-HU03-CA05;CD-02-HU03-CA06,instalación (archivos y registro)

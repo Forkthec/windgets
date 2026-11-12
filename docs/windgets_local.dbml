@@ -1,0 +1,532 @@
+// Windgets · base local (SQLite)
+// Generado por scripts/sql_a_dbml.py desde el esquema SQL real; importable en dbdiagram.io.
+Project windgets {
+  database_type: 'SQLite'
+  Note: 'Windgets · base local (SQLite)'
+}
+
+Table "catalog_font" {
+  "id" TEXT [pk]
+  "family_name" TEXT [not null]
+  "display_name" TEXT [not null]
+  "file_path" TEXT [not null]
+  "license" TEXT [not null]
+  "sort_order" integer [not null, default: 0]
+  "is_active" integer [not null, default: 1]
+  "fetched_at" TEXT [not null]
+
+  Note: 'Catálogo de tipografías'
+}
+
+Table "catalog_template" {
+  "id" TEXT [pk]
+  "name" TEXT [not null]
+  "thumbnail_path" TEXT [not null]
+  "bundle_path" TEXT [not null]
+  "default_background_path" TEXT [not null]
+  "default_color_primary" TEXT [not null]
+  "default_color_secondary" TEXT [not null]
+  "default_color_text" TEXT [not null]
+  "default_font_id" TEXT [not null]
+  "is_default" integer [not null, default: 0]
+  "sort_order" integer [not null, default: 0]
+  "is_active" integer [not null, default: 1]
+  "bundle_version" integer [not null, default: 1]
+  "fetched_at" TEXT [not null]
+
+  Indexes {
+    is_default [unique, name: "uq_catalog_template_default"]
+  }
+
+  Note: 'Catálogo de plantillas'
+}
+
+Table "catalog_palette" {
+  "id" TEXT [pk]
+  "name" TEXT [not null]
+  "color_primary" TEXT [not null]
+  "color_secondary" TEXT [not null]
+  "color_text" TEXT [not null]
+  "sort_order" integer [not null, default: 0]
+  "is_active" integer [not null, default: 1]
+  "fetched_at" TEXT [not null]
+
+  Note: 'Catálogo de paletas'
+}
+
+Table "catalog_image" {
+  "id" TEXT [pk]
+  "name" TEXT [not null]
+  "storage_path" TEXT [not null]
+  "thumbnail_path" TEXT [not null]
+  "width" integer [not null]
+  "height" integer [not null]
+  "sort_order" integer [not null, default: 0]
+  "is_active" integer [not null, default: 1]
+  "fetched_at" TEXT [not null]
+
+  Note: 'Catálogo de imágenes'
+}
+
+Table "catalog_animation" {
+  "id" TEXT [pk]
+  "name" TEXT [not null]
+  "storage_path" TEXT [not null]
+  "thumbnail_path" TEXT [not null]
+  "format" TEXT [not null]
+  "sort_order" integer [not null, default: 0]
+  "is_active" integer [not null, default: 1]
+  "fetched_at" TEXT [not null]
+
+  Note: 'Catálogo de animaciones'
+}
+
+Table "catalog_color" {
+  "id" TEXT [pk]
+  "name" TEXT [not null]
+  "hex" TEXT [not null]
+  "sort_order" integer [not null, default: 0]
+  "is_active" integer [not null, default: 1]
+  "fetched_at" TEXT [not null]
+
+  Note: 'Catálogo de colores'
+}
+
+Table "profile" {
+  "user_id" TEXT [pk]
+  "alias" TEXT [not null]
+  "auth_provider" TEXT [not null, default: 'email']
+  "created_at" TEXT [not null]
+  "updated_seq" integer [not null, default: 0]
+
+  Note: 'Perfil de la cuenta (Alias)'
+}
+
+Table "user_preference" {
+  "id" TEXT [pk]
+  "user_id" TEXT [not null]
+  "created_at" TEXT [not null]
+  "field_mods" TEXT [not null, default: '{}']
+  "updated_seq" integer [not null, default: 0]
+  "board_card_view" TEXT [not null, default: 'compact']
+
+  Note: 'Preferencias'
+}
+
+Table "kanban_column" {
+  "id" TEXT [pk]
+  "user_id" TEXT [not null]
+  "created_at" TEXT [not null]
+  "field_mods" TEXT [not null, default: '{}']
+  "updated_seq" integer [not null, default: 0]
+  "name" TEXT [not null]
+  "color_id" TEXT [not null]
+  "role" TEXT [not null, default: 'custom']
+  "position" REAL [not null]
+
+  Indexes {
+    (user_id, `lower(trim(name))`) [unique, name: "uq_kanban_column_name"]
+    (user_id, role) [unique, name: "uq_kanban_column_role"]
+    (user_id, position) [name: "ix_kanban_column_pos"]
+  }
+
+  Note: 'Columna'
+}
+
+Table "card" {
+  "id" TEXT [pk]
+  "user_id" TEXT [not null]
+  "created_at" TEXT [not null]
+  "field_mods" TEXT [not null, default: '{}']
+  "updated_seq" integer [not null, default: 0]
+  "type" TEXT [not null, default: 'task']
+  "title" TEXT [not null]
+  "description" TEXT
+  "priority" TEXT
+  "due_date" TEXT [not null]
+  "column_id" TEXT [not null]
+  "position" REAL [not null]
+  "previous_column_id" TEXT
+  "completed_on" TEXT
+  "scheduled_date" TEXT
+  "scheduled_hour" integer
+
+  Indexes {
+    (user_id, column_id, position) [name: "ix_card_column"]
+    (user_id, due_date) [name: "ix_card_due"]
+    (user_id, scheduled_date, scheduled_hour) [name: "ix_card_schedule"]
+    (user_id, completed_on) [name: "ix_card_completed"]
+  }
+
+  Note: 'Tarjeta'
+}
+
+Table "label" {
+  "id" TEXT [pk]
+  "user_id" TEXT [not null]
+  "created_at" TEXT [not null]
+  "field_mods" TEXT [not null, default: '{}']
+  "updated_seq" integer [not null, default: 0]
+  "name" TEXT [not null]
+  "color_id" TEXT [not null]
+
+  Indexes {
+    (user_id, `lower(trim(name))`) [unique, name: "uq_label_name"]
+  }
+
+  Note: 'Etiqueta'
+}
+
+Table "card_label" {
+  "id" TEXT [pk]
+  "user_id" TEXT [not null]
+  "created_at" TEXT [not null]
+  "field_mods" TEXT [not null, default: '{}']
+  "updated_seq" integer [not null, default: 0]
+  "card_id" TEXT [not null]
+  "label_id" TEXT [not null]
+
+  Indexes {
+    (card_id, label_id) [unique]
+    label_id [name: "ix_card_label_label"]
+  }
+
+  Note: 'Etiqueta de la tarjeta'
+}
+
+Table "uploaded_image" {
+  "id" TEXT [pk]
+  "user_id" TEXT [not null]
+  "created_at" TEXT [not null]
+  "field_mods" TEXT [not null, default: '{}']
+  "updated_seq" integer [not null, default: 0]
+  "storage_path" TEXT [unique, not null]
+  "mime_type" TEXT [not null]
+  "extension" TEXT [not null]
+  "size_bytes" integer [not null]
+  "width" integer [not null]
+  "height" integer [not null]
+  "sha256" TEXT [not null]
+
+  Note: 'Imagen propia'
+}
+
+Table "theme" {
+  "id" TEXT [pk]
+  "user_id" TEXT [not null]
+  "created_at" TEXT [not null]
+  "field_mods" TEXT [not null, default: '{}']
+  "updated_seq" integer [not null, default: 0]
+  "name" TEXT [not null]
+  "template_id" TEXT [not null]
+  "background_source" TEXT [not null, default: 'template_default']
+  "background_catalog_image_id" TEXT
+  "background_uploaded_image_id" TEXT
+  "color_primary" TEXT [not null]
+  "color_secondary" TEXT [not null]
+  "color_text" TEXT [not null]
+  "palette_id" TEXT
+  "font_id" TEXT [not null]
+  "font_size" TEXT [not null, default: 'medium']
+  "last_modified_at" TEXT [not null]
+
+  Indexes {
+    (user_id, `lower(trim(name))`) [unique, name: "uq_theme_name"]
+    (user_id, last_modified_at) [name: "ix_theme_recent"]
+  }
+
+  Note: 'Tema'
+}
+
+Table "applied_theme" {
+  "id" TEXT [pk]
+  "user_id" TEXT [not null]
+  "created_at" TEXT [not null]
+  "field_mods" TEXT [not null, default: '{}']
+  "updated_seq" integer [not null, default: 0]
+  "theme_id" TEXT [not null]
+  "template_id" TEXT [not null]
+  "background_source" TEXT [not null, default: 'template_default']
+  "background_catalog_image_id" TEXT
+  "background_uploaded_image_id" TEXT
+  "color_primary" TEXT [not null]
+  "color_secondary" TEXT [not null]
+  "color_text" TEXT [not null]
+  "font_id" TEXT [not null]
+  "font_size" TEXT [not null, default: 'medium']
+  "applied_at" TEXT [not null]
+
+  Note: 'Tema aplicado'
+}
+
+Table "widget" {
+  "id" TEXT [pk]
+  "user_id" TEXT [not null]
+  "created_at" TEXT [not null]
+  "field_mods" TEXT [not null, default: '{}']
+  "updated_seq" integer [not null, default: 0]
+  "type" TEXT [not null]
+  "is_default" integer [not null, default: 0]
+  "weather_city" TEXT
+  "weather_geo_id" TEXT
+  "weather_latitude" REAL
+  "weather_longitude" REAL
+  "text_content" TEXT
+  "static_image_source" TEXT
+  "static_catalog_image_id" TEXT
+  "static_uploaded_image_id" TEXT
+  "animation_id" TEXT
+  "carousel_interval_seconds" integer
+
+  Indexes {
+    (user_id, type) [unique, name: "uq_widget_singleton"]
+    (user_id, weather_geo_id) [unique, name: "uq_widget_weather_city"]
+    (user_id, type) [name: "ix_widget_type"]
+  }
+
+  Note: 'Widget'
+}
+
+Table "theme_widget" {
+  "id" TEXT [pk]
+  "user_id" TEXT [not null]
+  "created_at" TEXT [not null]
+  "field_mods" TEXT [not null, default: '{}']
+  "updated_seq" integer [not null, default: 0]
+  "theme_id" TEXT [not null]
+  "widget_id" TEXT [not null]
+  "is_active" integer [not null, default: 1]
+  "x" integer [not null]
+  "y" integer [not null]
+  "width" integer [not null]
+  "height" integer [not null]
+  "ref_width" integer [not null]
+  "ref_height" integer [not null]
+
+  Indexes {
+    (theme_id, widget_id) [unique]
+    widget_id [name: "ix_theme_widget_widget"]
+  }
+
+  Note: 'Widget del tema'
+}
+
+Table "widget_carousel_item" {
+  "id" TEXT [pk]
+  "user_id" TEXT [not null]
+  "created_at" TEXT [not null]
+  "field_mods" TEXT [not null, default: '{}']
+  "updated_seq" integer [not null, default: 0]
+  "widget_id" TEXT [not null]
+  "source" TEXT [not null]
+  "catalog_image_id" TEXT
+  "uploaded_image_id" TEXT
+  "position" REAL [not null]
+
+  Indexes {
+    (widget_id, position) [name: "ix_carousel_item_pos"]
+  }
+
+  Note: 'Imagen del Carrusel de imágenes'
+}
+
+Table "file_upload_queue" {
+  "id" integer [pk, increment]
+  "uploaded_image_id" TEXT [not null]
+  "local_path" TEXT [not null]
+  "status" TEXT [not null, default: 'queued']
+  "attempts" integer [not null, default: 0]
+  "last_error" TEXT
+  "created_at" TEXT [not null]
+
+  Note: 'Cola de subida de imágenes'
+}
+
+Table "pending_change" {
+  "id" integer [pk, increment]
+  "entity_kind" TEXT [not null]
+  "entity_id" TEXT [not null]
+  "op" TEXT [not null]
+  "fields" TEXT [not null, default: '{}']
+  "modified_at" TEXT [not null]
+  "created_at" TEXT [not null]
+  "attempts" integer [not null, default: 0]
+  "last_attempt_at" TEXT
+  "last_error" TEXT
+  "depends_on_upload_id" integer
+
+  Indexes {
+    (entity_kind, entity_id) [unique]
+  }
+
+  Note: 'Cambios pendientes (cola)'
+}
+
+Table "sync_state" {
+  "id" integer [pk, default: 1]
+  "user_id" TEXT [not null]
+  "device_id" TEXT [not null]
+  "last_pulled_seq" integer [not null, default: 0]
+  "clock_offset_ms" integer [not null, default: 0]
+  "clock_calibrated_at" TEXT
+  "last_sync_at" TEXT
+  "status" TEXT [not null, default: 'synced']
+  "last_error_code" TEXT
+  "catalog_version" integer [not null, default: 0]
+
+  Note: 'Estado de la sincronización'
+}
+
+Table "device_setting" {
+  "key" TEXT [pk]
+  "value" TEXT [not null]
+  "updated_at" TEXT [not null]
+
+  Note: 'Preferencias del computador'
+}
+
+Table "local_file" {
+  "id" TEXT [pk]
+  "kind" TEXT [not null]
+  "ref_id" TEXT [not null]
+  "remote_path" TEXT [not null]
+  "local_path" TEXT [not null]
+  "size_bytes" integer [not null]
+  "sha256" TEXT [not null]
+  "downloaded_at" TEXT [not null]
+  "last_used_at" TEXT [not null]
+  "pinned" integer [not null, default: 0]
+
+  Indexes {
+    (kind, ref_id) [unique]
+  }
+
+  Note: 'Archivos locales'
+}
+
+Table "external_widget_cache" {
+  "widget_id" TEXT [pk]
+  "payload" TEXT [not null]
+  "fetched_at" TEXT [not null]
+  "status" TEXT [not null]
+  "error_code" TEXT
+
+  Note: 'Último dato de Clima y Noticias'
+}
+
+Ref:"catalog_font"."id" < "catalog_template"."default_font_id"
+
+Ref:"profile"."user_id" - "user_preference"."user_id" [delete: cascade]
+
+Ref:"profile"."user_id" < "kanban_column"."user_id" [delete: cascade]
+
+Ref:"catalog_color"."id" < "kanban_column"."color_id"
+
+Ref:"profile"."user_id" < "card"."user_id" [delete: cascade]
+
+Ref:"kanban_column"."id" < "card"."column_id"
+
+Ref:"kanban_column"."id" < "card"."previous_column_id"
+
+Ref:"profile"."user_id" < "label"."user_id" [delete: cascade]
+
+Ref:"catalog_color"."id" < "label"."color_id"
+
+Ref:"profile"."user_id" < "card_label"."user_id" [delete: cascade]
+
+Ref:"card"."id" < "card_label"."card_id" [delete: cascade]
+
+Ref:"label"."id" < "card_label"."label_id" [delete: cascade]
+
+Ref:"profile"."user_id" < "uploaded_image"."user_id" [delete: cascade]
+
+Ref:"profile"."user_id" < "theme"."user_id" [delete: cascade]
+
+Ref:"catalog_template"."id" < "theme"."template_id"
+
+Ref:"catalog_image"."id" < "theme"."background_catalog_image_id"
+
+Ref:"uploaded_image"."id" < "theme"."background_uploaded_image_id"
+
+Ref:"catalog_palette"."id" < "theme"."palette_id"
+
+Ref:"catalog_font"."id" < "theme"."font_id"
+
+Ref:"profile"."user_id" - "applied_theme"."user_id" [delete: cascade]
+
+Ref:"theme"."id" < "applied_theme"."theme_id"
+
+Ref:"catalog_template"."id" < "applied_theme"."template_id"
+
+Ref:"catalog_image"."id" < "applied_theme"."background_catalog_image_id"
+
+Ref:"uploaded_image"."id" < "applied_theme"."background_uploaded_image_id"
+
+Ref:"catalog_font"."id" < "applied_theme"."font_id"
+
+Ref:"profile"."user_id" < "widget"."user_id" [delete: cascade]
+
+Ref:"catalog_image"."id" < "widget"."static_catalog_image_id"
+
+Ref:"uploaded_image"."id" < "widget"."static_uploaded_image_id"
+
+Ref:"catalog_animation"."id" < "widget"."animation_id"
+
+Ref:"profile"."user_id" < "theme_widget"."user_id" [delete: cascade]
+
+Ref:"theme"."id" < "theme_widget"."theme_id" [delete: cascade]
+
+Ref:"widget"."id" < "theme_widget"."widget_id" [delete: cascade]
+
+Ref:"profile"."user_id" < "widget_carousel_item"."user_id" [delete: cascade]
+
+Ref:"widget"."id" < "widget_carousel_item"."widget_id" [delete: cascade]
+
+Ref:"catalog_image"."id" < "widget_carousel_item"."catalog_image_id"
+
+Ref:"uploaded_image"."id" < "widget_carousel_item"."uploaded_image_id"
+
+Ref:"uploaded_image"."id" < "file_upload_queue"."uploaded_image_id" [delete: cascade]
+
+Ref:"file_upload_queue"."id" < "pending_change"."depends_on_upload_id" [delete: set null]
+
+Ref:"widget"."id" - "external_widget_cache"."widget_id" [delete: cascade]
+
+TableGroup Cuenta {
+  profile
+  user_preference
+}
+
+TableGroup Planificador {
+  kanban_column
+  card
+  label
+  card_label
+}
+
+TableGroup Personalizacion {
+  uploaded_image
+  theme
+  applied_theme
+  widget
+  theme_widget
+  widget_carousel_item
+}
+
+TableGroup Catalogos {
+  catalog_template
+  catalog_font
+  catalog_palette
+  catalog_image
+  catalog_animation
+  catalog_color
+}
+
+TableGroup Sincronizacion_local {
+  pending_change
+  file_upload_queue
+  sync_state
+  device_setting
+  local_file
+  external_widget_cache
+}

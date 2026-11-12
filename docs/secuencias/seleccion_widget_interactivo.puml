@@ -1,0 +1,54 @@
+@startuml seleccion_widget_interactivo
+!include _estilo.iuml
+title Diagrama de secuencia: selección con el mouse sobre un widget interactivo
+
+actor "Usuario" as U #FCEBD9
+participant "Windows 10 22H2 / 11" as W #FCEBD9
+control "Host del wallpaper" as H
+control "Puente IPC" as IPC
+control "Servicio del planificador" as PL
+boundary "Capa del wallpaper y los widgets" as C
+boundary "Ventana principal" as VP
+participant "Navegador predeterminado" as B #FCEBD9
+
+note over H, W : Al iniciar, el Host del wallpaper registra Raw Input con RIDEV_INPUTSINK (D-186). La capa no recibe entrada directa.
+U -> W : Selecciona con el botón principal del mouse
+W ->> H : WM_INPUT (mouse, botón principal presionado)
+H -> W ++ : GetCursorPos y WindowFromPoint
+W -->> H -- : ventana bajo el cursor
+alt La ventana bajo el cursor no es el escritorio
+  H -> H : Descarta la selección (otra aplicación la recibe)
+else Es el escritorio (SHELLDLL_DefView)
+  H -> H : Busca el rectángulo de un widget interactivo que contenga el punto
+  alt Fuera de todo widget interactivo
+    H -> H : Descarta la selección
+  else Dentro de un widget interactivo
+    H -> W ++ : LVM_HITTEST con LVHITTESTINFO sobre SysListView32 (VirtualAllocEx y ReadProcessMemory)
+    W -->> H -- : índice del ícono, o -1 si no hay ícono
+    alt Hay un ícono en ese punto
+      H -> H : No reenvía: la selección queda para el escritorio
+    else No hay ícono
+      H ->> C : evento pointer_forwarded {x, y, monitor_id, button: primary}
+      C -> C : Prueba de impacto del widget y de su elemento
+      alt Casilla de una tarjeta (widget Tareas del día)
+        C -> IPC ++ : card_set_completed(card_id, completed)
+        IPC -> PL ++ : Aplica la regla y guarda la tarjeta
+        PL -->> IPC -- : Card
+        IPC -->> C -- : Card actualizada
+        IPC ->> C : evento cards_changed {ids, op: upsert, origin: local}
+        IPC ->> VP : evento cards_changed {ids, op: upsert, origin: local}
+      else Elemento que abre una pantalla
+        C -> IPC ++ : app_open_screen(screen, params)
+        IPC -->> C -- : void
+        IPC ->> VP : evento navigate_requested {screen, params}
+        VP -> VP : Muestra la ventana principal al frente en esa pantalla
+      else Titular de noticia
+        C -> IPC ++ : system_open_url(url)
+        IPC ->> B : Abre la URL
+        IPC -->> C -- : void
+      end
+    end
+  end
+end
+!include _leyenda.iuml
+@enduml

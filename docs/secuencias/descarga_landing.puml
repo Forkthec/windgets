@@ -1,0 +1,31 @@
+@startuml descarga_landing
+!include _estilo.iuml
+title Diagrama de secuencia: descarga del instalador desde la landing page
+
+actor "Visitante" as V #FCEBD9
+boundary "Landing page" as L
+participant "GitHub" as GH #FCEBD9
+
+V -> L ++ : Abre la landing page
+L -->> V : Muestra la descripción, las funciones, el botón «Descargar para Windows» y los requisitos
+L -> L : Detecta el sistema con navigator.userAgentData o navigator.userAgent
+alt El sistema no es Windows
+  L -->> V : «Windgets está disponible solo para Windows 10 versión 22H2 y Windows 11, de 64 bits.» (el botón sigue habilitado)
+else Windows con arquitectura distinta de x64
+  L -->> V : «Es posible que tu equipo no cumpla los requisitos. El instalador lo comprobará antes de instalar.» (descarga habilitada)
+end
+V -> L : Selecciona «Descargar para Windows»
+L -> GH ++ : GET /repos/organización/windgets/releases/latest
+alt Falla la consulta (403) o no existe el activo
+  GH -->> L : 403 o lista sin Windgets-Setup.exe
+  L -->> V : «No pudimos iniciar la descarga. Intenta de nuevo.» (el botón sigue habilitado)
+else El activo existe
+  GH -->> L : 200 con assets [Windgets-Setup.exe]
+  L -> GH : GET releases/latest/download/Windgets-Setup.exe (el navegador sigue el enlace)
+  GH -->> V : 302 al archivo y descarga de Windgets-Setup.exe
+end
+deactivate GH
+deactivate L
+note over V, GH : A continuación el visitante ejecuta el instalador (diagrama de instalación).
+!include _leyenda.iuml
+@enduml
