@@ -1,0 +1,487 @@
+// Windgets · base en la nube (PostgreSQL de Supabase)
+// Generado por scripts/sql_a_dbml.py desde el esquema SQL real; importable en dbdiagram.io.
+Project windgets {
+  database_type: 'PostgreSQL'
+  Note: 'Windgets · base en la nube (PostgreSQL de Supabase)'
+}
+
+Table "auth"."users" {
+  "id" uuid [pk]
+
+  Note: 'Cuenta de acceso (Supabase Auth)'
+}
+
+Table "catalog_font" {
+  "id" text [pk]
+  "family_name" text [not null]
+  "display_name" text [not null]
+  "file_path" text [not null]
+  "license" text [not null]
+  "sort_order" integer [not null, default: 0]
+  "is_active" boolean [not null, default: true]
+
+  Note: 'Catálogo de tipografías'
+}
+
+Table "catalog_template" {
+  "id" text [pk]
+  "name" text [not null]
+  "thumbnail_path" text [not null]
+  "bundle_path" text [not null]
+  "default_background_path" text [not null]
+  "default_color_primary" hex_color [not null]
+  "default_color_secondary" hex_color [not null]
+  "default_color_text" hex_color [not null]
+  "default_font_id" text [not null]
+  "is_default" boolean [not null, default: false]
+  "sort_order" integer [not null, default: 0]
+  "is_active" boolean [not null, default: true]
+  "bundle_version" integer [not null, default: 1]
+
+  Indexes {
+    `(true)` [unique, name: "uq_catalog_template_default"]
+  }
+
+  Note: 'Catálogo de plantillas'
+}
+
+Table "catalog_palette" {
+  "id" text [pk]
+  "name" text [not null]
+  "color_primary" hex_color [not null]
+  "color_secondary" hex_color [not null]
+  "color_text" hex_color [not null]
+  "sort_order" integer [not null, default: 0]
+  "is_active" boolean [not null, default: true]
+
+  Note: 'Catálogo de paletas'
+}
+
+Table "catalog_image" {
+  "id" text [pk]
+  "name" text [not null]
+  "storage_path" text [not null]
+  "thumbnail_path" text [not null]
+  "width" integer [not null]
+  "height" integer [not null]
+  "sort_order" integer [not null, default: 0]
+  "is_active" boolean [not null, default: true]
+
+  Note: 'Catálogo de imágenes'
+}
+
+Table "catalog_animation" {
+  "id" text [pk]
+  "name" text [not null]
+  "storage_path" text [not null]
+  "thumbnail_path" text [not null]
+  "format" text [not null]
+  "sort_order" integer [not null, default: 0]
+  "is_active" boolean [not null, default: true]
+
+  Note: 'Catálogo de animaciones'
+}
+
+Table "catalog_color" {
+  "id" text [pk]
+  "name" text [not null]
+  "hex" hex_color [not null]
+  "sort_order" integer [not null, default: 0]
+  "is_active" boolean [not null, default: true]
+
+  Note: 'Catálogo de colores'
+}
+
+Table "catalog_meta" {
+  "id" smallint [pk]
+  "version" integer [not null, default: 1]
+
+  Note: 'Versión de los catálogos'
+}
+
+Table "external_cache" {
+  "key" text [pk]
+  "payload" jsonb [not null]
+  "fetched_at" timestamptz [not null, default: `now()`]
+  "expires_at" timestamptz [not null]
+
+  Note: 'Caché de clima y noticias (servidor)'
+}
+
+Table "profile" {
+  "user_id" uuid [pk]
+  "alias" text [not null]
+  "auth_provider" text [not null, default: 'email']
+  "created_at" timestamptz [not null, default: `now()`]
+  "updated_seq" bigint [not null, default: 0]
+
+  Note: 'Perfil de la cuenta (Alias)'
+}
+
+Table "user_preference" {
+  "id" uuid [pk]
+  "user_id" uuid [not null, default: `auth.uid()`]
+  "created_at" timestamptz [not null, default: `now()`]
+  "field_mods" jsonb [not null, default: `'{}'::jsonb`]
+  "deleted_at" timestamptz
+  "updated_seq" bigint [not null, default: 0]
+  "board_card_view" text [not null, default: 'compact']
+
+  Note: 'Preferencias'
+}
+
+Table "kanban_column" {
+  "id" uuid [pk]
+  "user_id" uuid [not null, default: `auth.uid()`]
+  "created_at" timestamptz [not null, default: `now()`]
+  "field_mods" jsonb [not null, default: `'{}'::jsonb`]
+  "deleted_at" timestamptz
+  "updated_seq" bigint [not null, default: 0]
+  "name" text [not null]
+  "color_id" text [not null]
+  "role" text [not null, default: 'custom']
+  "position" "double precision" [not null]
+
+  Indexes {
+    (user_id, `lower(btrim(name))`) [unique, name: "uq_kanban_column_name"]
+    (user_id, role) [unique, name: "uq_kanban_column_role"]
+    (user_id, position) [name: "ix_kanban_column_pos"]
+    (user_id, updated_seq) [name: "ix_kanban_column_sync"]
+  }
+
+  Note: 'Columna'
+}
+
+Table "card" {
+  "id" uuid [pk]
+  "user_id" uuid [not null, default: `auth.uid()`]
+  "created_at" timestamptz [not null, default: `now()`]
+  "field_mods" jsonb [not null, default: `'{}'::jsonb`]
+  "deleted_at" timestamptz
+  "updated_seq" bigint [not null, default: 0]
+  "type" text [not null, default: 'task']
+  "title" text [not null]
+  "description" text
+  "priority" text
+  "due_date" date [not null]
+  "column_id" uuid [not null]
+  "position" "double precision" [not null]
+  "previous_column_id" uuid
+  "completed_on" date
+  "scheduled_date" date
+  "scheduled_hour" smallint
+
+  Indexes {
+    (user_id, column_id, position) [name: "ix_card_column"]
+    (user_id, due_date) [name: "ix_card_due"]
+    (user_id, scheduled_date, scheduled_hour) [name: "ix_card_schedule"]
+    (user_id, completed_on) [name: "ix_card_completed"]
+    (user_id, updated_seq) [name: "ix_card_sync"]
+  }
+
+  Note: 'Tarjeta'
+}
+
+Table "label" {
+  "id" uuid [pk]
+  "user_id" uuid [not null, default: `auth.uid()`]
+  "created_at" timestamptz [not null, default: `now()`]
+  "field_mods" jsonb [not null, default: `'{}'::jsonb`]
+  "deleted_at" timestamptz
+  "updated_seq" bigint [not null, default: 0]
+  "name" text [not null]
+  "color_id" text [not null]
+
+  Indexes {
+    (user_id, `lower(btrim(name))`) [unique, name: "uq_label_name"]
+    (user_id, updated_seq) [name: "ix_label_sync"]
+  }
+
+  Note: 'Etiqueta'
+}
+
+Table "card_label" {
+  "id" uuid [pk]
+  "user_id" uuid [not null, default: `auth.uid()`]
+  "created_at" timestamptz [not null, default: `now()`]
+  "field_mods" jsonb [not null, default: `'{}'::jsonb`]
+  "deleted_at" timestamptz
+  "updated_seq" bigint [not null, default: 0]
+  "card_id" uuid [not null]
+  "label_id" uuid [not null]
+
+  Indexes {
+    (card_id, label_id) [unique, name: "uq_card_label_pair"]
+    card_id [name: "ix_card_label_card"]
+    label_id [name: "ix_card_label_label"]
+    (user_id, updated_seq) [name: "ix_card_label_sync"]
+  }
+
+  Note: 'Etiqueta de la tarjeta'
+}
+
+Table "uploaded_image" {
+  "id" uuid [pk]
+  "user_id" uuid [not null, default: `auth.uid()`]
+  "created_at" timestamptz [not null, default: `now()`]
+  "field_mods" jsonb [not null, default: `'{}'::jsonb`]
+  "deleted_at" timestamptz
+  "updated_seq" bigint [not null, default: 0]
+  "storage_path" text [not null]
+  "mime_type" text [not null]
+  "extension" text [not null]
+  "size_bytes" integer [not null]
+  "width" integer [not null]
+  "height" integer [not null]
+  "sha256" text [not null]
+
+  Indexes {
+    storage_path [unique, name: "uq_uploaded_image_path"]
+    (user_id, updated_seq) [name: "ix_uploaded_image_sync"]
+  }
+
+  Note: 'Imagen propia'
+}
+
+Table "theme" {
+  "id" uuid [pk]
+  "user_id" uuid [not null, default: `auth.uid()`]
+  "created_at" timestamptz [not null, default: `now()`]
+  "field_mods" jsonb [not null, default: `'{}'::jsonb`]
+  "deleted_at" timestamptz
+  "updated_seq" bigint [not null, default: 0]
+  "name" text [not null]
+  "template_id" text [not null]
+  "background_source" text [not null, default: 'template_default']
+  "background_catalog_image_id" text
+  "background_uploaded_image_id" uuid
+  "color_primary" hex_color [not null]
+  "color_secondary" hex_color [not null]
+  "color_text" hex_color [not null]
+  "palette_id" text
+  "font_id" text [not null]
+  "font_size" text [not null, default: 'medium']
+  "last_modified_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (user_id, `lower(btrim(name))`) [unique, name: "uq_theme_name"]
+    (user_id, last_modified_at) [name: "ix_theme_recent"]
+    (user_id, updated_seq) [name: "ix_theme_sync"]
+  }
+
+  Note: 'Tema'
+}
+
+Table "applied_theme" {
+  "id" uuid [pk]
+  "user_id" uuid [not null, default: `auth.uid()`]
+  "created_at" timestamptz [not null, default: `now()`]
+  "field_mods" jsonb [not null, default: `'{}'::jsonb`]
+  "deleted_at" timestamptz
+  "updated_seq" bigint [not null, default: 0]
+  "theme_id" uuid [not null]
+  "template_id" text [not null]
+  "background_source" text [not null, default: 'template_default']
+  "background_catalog_image_id" text
+  "background_uploaded_image_id" uuid
+  "color_primary" hex_color [not null]
+  "color_secondary" hex_color [not null]
+  "color_text" hex_color [not null]
+  "font_id" text [not null]
+  "font_size" text [not null, default: 'medium']
+  "applied_at" timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (user_id, updated_seq) [name: "ix_applied_theme_sync"]
+  }
+
+  Note: 'Tema aplicado'
+}
+
+Table "widget" {
+  "id" uuid [pk]
+  "user_id" uuid [not null, default: `auth.uid()`]
+  "created_at" timestamptz [not null, default: `now()`]
+  "field_mods" jsonb [not null, default: `'{}'::jsonb`]
+  "deleted_at" timestamptz
+  "updated_seq" bigint [not null, default: 0]
+  "type" text [not null]
+  "is_default" boolean [not null, default: false]
+  "weather_city" text
+  "weather_geo_id" text
+  "weather_latitude" "double precision"
+  "weather_longitude" "double precision"
+  "text_content" text
+  "static_image_source" text
+  "static_catalog_image_id" text
+  "static_uploaded_image_id" uuid
+  "animation_id" text
+  "carousel_interval_seconds" smallint
+
+  Indexes {
+    (user_id, type) [unique, name: "uq_widget_singleton"]
+    (user_id, weather_geo_id) [unique, name: "uq_widget_weather_city"]
+    (user_id, type) [name: "ix_widget_type"]
+    (user_id, updated_seq) [name: "ix_widget_sync"]
+  }
+
+  Note: 'Widget'
+}
+
+Table "theme_widget" {
+  "id" uuid [pk]
+  "user_id" uuid [not null, default: `auth.uid()`]
+  "created_at" timestamptz [not null, default: `now()`]
+  "field_mods" jsonb [not null, default: `'{}'::jsonb`]
+  "deleted_at" timestamptz
+  "updated_seq" bigint [not null, default: 0]
+  "theme_id" uuid [not null]
+  "widget_id" uuid [not null]
+  "is_active" boolean [not null, default: true]
+  "x" integer [not null]
+  "y" integer [not null]
+  "width" integer [not null]
+  "height" integer [not null]
+  "ref_width" integer [not null]
+  "ref_height" integer [not null]
+
+  Indexes {
+    (theme_id, widget_id) [unique, name: "uq_theme_widget_pair"]
+    theme_id [name: "ix_theme_widget_theme"]
+    widget_id [name: "ix_theme_widget_widget"]
+    (user_id, updated_seq) [name: "ix_theme_widget_sync"]
+  }
+
+  Note: 'Widget del tema'
+}
+
+Table "widget_carousel_item" {
+  "id" uuid [pk]
+  "user_id" uuid [not null, default: `auth.uid()`]
+  "created_at" timestamptz [not null, default: `now()`]
+  "field_mods" jsonb [not null, default: `'{}'::jsonb`]
+  "deleted_at" timestamptz
+  "updated_seq" bigint [not null, default: 0]
+  "widget_id" uuid [not null]
+  "source" text [not null]
+  "catalog_image_id" text
+  "uploaded_image_id" uuid
+  "position" "double precision" [not null]
+
+  Indexes {
+    (widget_id, position) [name: "ix_carousel_item_pos"]
+    (user_id, updated_seq) [name: "ix_carousel_item_sync"]
+  }
+
+  Note: 'Imagen del Carrusel de imágenes'
+}
+
+Ref:"catalog_font"."id" < "catalog_template"."default_font_id"
+
+Ref:"auth"."users"."id" < "profile"."user_id" [delete: cascade]
+
+Ref:"profile"."user_id" - "user_preference"."user_id" [delete: cascade]
+
+Ref:"profile"."user_id" < "kanban_column"."user_id" [delete: cascade]
+
+Ref:"catalog_color"."id" < "kanban_column"."color_id"
+
+Ref:"profile"."user_id" < "card"."user_id" [delete: cascade]
+
+Ref:"kanban_column"."id" < "card"."column_id"
+
+Ref:"kanban_column"."id" < "card"."previous_column_id"
+
+Ref:"profile"."user_id" < "label"."user_id" [delete: cascade]
+
+Ref:"catalog_color"."id" < "label"."color_id"
+
+Ref:"profile"."user_id" < "card_label"."user_id" [delete: cascade]
+
+Ref:"card"."id" < "card_label"."card_id"
+
+Ref:"label"."id" < "card_label"."label_id"
+
+Ref:"profile"."user_id" < "uploaded_image"."user_id" [delete: cascade]
+
+Ref:"profile"."user_id" < "theme"."user_id" [delete: cascade]
+
+Ref:"catalog_template"."id" < "theme"."template_id"
+
+Ref:"catalog_image"."id" < "theme"."background_catalog_image_id"
+
+Ref:"uploaded_image"."id" < "theme"."background_uploaded_image_id"
+
+Ref:"catalog_palette"."id" < "theme"."palette_id"
+
+Ref:"catalog_font"."id" < "theme"."font_id"
+
+Ref:"profile"."user_id" - "applied_theme"."user_id" [delete: cascade]
+
+Ref:"theme"."id" < "applied_theme"."theme_id"
+
+Ref:"catalog_template"."id" < "applied_theme"."template_id"
+
+Ref:"catalog_image"."id" < "applied_theme"."background_catalog_image_id"
+
+Ref:"uploaded_image"."id" < "applied_theme"."background_uploaded_image_id"
+
+Ref:"catalog_font"."id" < "applied_theme"."font_id"
+
+Ref:"profile"."user_id" < "widget"."user_id" [delete: cascade]
+
+Ref:"catalog_image"."id" < "widget"."static_catalog_image_id"
+
+Ref:"uploaded_image"."id" < "widget"."static_uploaded_image_id"
+
+Ref:"catalog_animation"."id" < "widget"."animation_id"
+
+Ref:"profile"."user_id" < "theme_widget"."user_id" [delete: cascade]
+
+Ref:"theme"."id" < "theme_widget"."theme_id"
+
+Ref:"widget"."id" < "theme_widget"."widget_id"
+
+Ref:"profile"."user_id" < "widget_carousel_item"."user_id" [delete: cascade]
+
+Ref:"widget"."id" < "widget_carousel_item"."widget_id"
+
+Ref:"catalog_image"."id" < "widget_carousel_item"."catalog_image_id"
+
+Ref:"uploaded_image"."id" < "widget_carousel_item"."uploaded_image_id"
+
+TableGroup Cuenta {
+  auth.users
+  profile
+  user_preference
+}
+
+TableGroup Planificador {
+  kanban_column
+  card
+  label
+  card_label
+}
+
+TableGroup Personalizacion {
+  uploaded_image
+  theme
+  applied_theme
+  widget
+  theme_widget
+  widget_carousel_item
+}
+
+TableGroup Catalogos {
+  catalog_template
+  catalog_font
+  catalog_palette
+  catalog_image
+  catalog_animation
+  catalog_color
+  catalog_meta
+}
+
+TableGroup Solo_servidor {
+  external_cache
+}

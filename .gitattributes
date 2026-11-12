@@ -1,0 +1,12 @@
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.icns binary
+*.webm binary
+*.woff2 binary
+*.ttf binary
+*.exe binary
+
+# docs/ se guarda byte a byte, igual al original (D-200, docs/ como copia exacta)
+docs/** -text

@@ -1,0 +1,67 @@
+@startuml instalacion_exe
+!include _estilo.iuml
+title Diagrama de secuencia: instalación con el instalador .exe
+
+actor "Visitante" as V #FCEBD9
+boundary "Instalador .exe todo en uno" as I
+participant "Windows 10 22H2 / 11" as W #FCEBD9
+participant "Proceso Windgets.exe" as AD
+
+V -> I ++ : Abre Windgets-Setup.exe
+I -> I : Verifica la integridad del archivo
+alt Archivo incompleto o dañado
+  I -->> V : «El instalador está incompleto o dañado. Descárgalo de nuevo desde la landing page.» (salida 3)
+else Archivo íntegro
+  I -> W ++ : Comprobación previa: Windows 10 22H2 (compilación 19045) o Windows 11 (compilación 22000 o posterior), 64 bits x64
+  W -->> I -- : versión y arquitectura
+  alt Computador no compatible
+    I -->> V : «Este computador no es compatible. Necesitas Windows 10 versión 22H2 o Windows 11, de 64 bits (x64).» (salida 2)
+  else Computador compatible
+    I -> W ++ : Busca una instalación previa en el disco
+    W -->> I -- : sin instalación, instalación completa o incompleta
+    alt Windgets ya está instalada
+      I -->> V : «Windgets ya está instalada. ¿Deseas reinstalarla?» con «Reinstalar» y «Cancelar»
+      V -> I : Selecciona «Reinstalar» (repite la instalación completa) o «Cancelar» (se cierra sin cambios)
+    else Instalación incompleta
+      I -->> V : «Encontramos una instalación incompleta. Vamos a repararla.» con «Reparar» y «Cancelar»
+      V -> I : Selecciona «Reparar» o «Cancelar»
+      I -> W : Borra los archivos incompletos (con «Reparar»)
+    end
+    I -->> V : Paso Opciones: casilla «Abrir la aplicación al iniciar Windows» (marcada), espacio disponible y requerido
+    opt Hay menos de 500 MB libres
+      I -->> V : «No hay suficiente espacio en disco. Libera al menos 500 MB e intenta de nuevo.» con «Instalar» deshabilitado
+    end
+    opt El visitante selecciona «Cancelar»
+      I -->> V : «¿Deseas cancelar la instalación?» con «Cancelar instalación» y «Seguir instalando»
+      V -> I : Selecciona «Cancelar instalación»
+      I -->> V : Se cierra sin cambios porque todavía no se instaló nada (salida 1)
+    end
+    V -> I : Selecciona «Instalar»
+    I -->> V : Paso Instalación en curso
+    opt Falta WebView2
+      I -> W : Ejecuta en silencio el instalador completo de WebView2
+    end
+    I -> W : Copia a %LOCALAPPDATA%\Programs\Windgets
+    I -> W : Crea los accesos directos en el escritorio y en el menú Inicio
+    I -> W : Registra el esquema windgets:// (HKCU\Software\Classes\windgets)
+    opt Casilla «Abrir la aplicación al iniciar Windows» marcada
+      I -> W : Escribe Windgets en HKCU\...\CurrentVersion\Run con --autostart
+    end
+    I -> W : Registra la entrada de desinstalación del usuario
+    alt Falla un paso
+      I -> W : Revierte los cambios, sin archivos ni entradas residuales
+      I -->> V : «No pudimos completar la instalación. No se hicieron cambios en tu computador.» con «Reintentar» y «Cerrar» (salida 4)
+    else Todo correcto
+      I -->> V : «Instalación completada.» con «Abrir Windgets» y «Ya puedes eliminar el archivo del instalador que descargaste.»
+      V -> I : Selecciona «Abrir Windgets»
+      I -> W : Inicia Windgets.exe
+      create AD
+      W -> AD : crea el proceso
+      destroy I
+      AD -->> V : Muestra la pantalla Inicio de sesión con el fondo original de Windows
+    end
+  end
+end
+note over V, I : Durante la instalación, «Cancelar» muestra «¿Deseas cancelar la instalación?». Con «Cancelar instalación» revierte los cambios y muestra «La instalación se canceló.» (salida 1).
+!include _leyenda.iuml
+@enduml

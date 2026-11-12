@@ -1,0 +1,38 @@
+@startuml consulta_windi_propuesta_b
+!include _estilo.iuml
+title Diagrama de secuencia: confirmar o rechazar la propuesta de Windi
+
+actor "Usuario" as U #FCEBD9
+boundary "Ventana principal" as VP
+control "Núcleo" as N
+participant "API de datos" as API
+database "Base de datos local" as BL
+
+alt El usuario confirma
+  U -> VP : Selecciona «Confirmar»
+  VP -> N ++ : windi_confirm_proposal(proposal_id)
+  note over N, API : Consulta inmediata a la nube antes de aplicar (D-047)
+  alt Se perdió la conexión
+    N -->> VP : error net.offline «Se perdió la conexión. No se hizo ningún cambio.»
+  else Hay conexión
+    N -> API ++ : RPC sync_pull(p_since_seq)
+    API -->> N -- : rows, next_seq, has_more
+    N -> N : Compara el estado actual de las tarjetas con el de la propuesta
+    alt Las tarjetas cambiaron
+      N -->> VP : {outcome: stale, reply, new_proposal}
+      VP -> VP : El agente explica qué cambió y propone de nuevo si aún es posible
+    else El estado sigue vigente
+      N -> BL : Ejecuta card_create con las mismas reglas de card_* (transacción con pending_change)
+      N ->> VP : evento cards_changed {ids, op: upsert, origin: local}
+      N -->> VP : {outcome: applied, reply}
+      VP -> VP : El agente confirma el cambio en el chat
+    end
+  end
+  deactivate N
+else El usuario rechaza
+  U -> VP : Selecciona «Rechazar»
+  VP -> N ++ : windi_reject_proposal(proposal_id)
+  N -->> VP -- : {reply} (no aplica cambios)
+end
+!include _leyenda.iuml
+@enduml

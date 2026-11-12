@@ -1,0 +1,40 @@
+@startuml consulta_windi_propuesta_a
+!include _estilo.iuml
+title Diagrama de secuencia: consulta a Windi y propuesta de cambio
+
+actor "Usuario" as U #FCEBD9
+boundary "Ventana principal" as VP
+control "Núcleo" as N
+database "Base de datos local" as BL
+participant "Edge Functions" as EF
+participant "Gemini" as G #FCEBD9
+
+U -> VP : Escribe «Crea una tarea para entregar el informe el viernes» y selecciona «Enviar»
+VP -> N ++ : windi_send_message(message)
+alt Más de 2000 caracteres
+  N -->> VP : error message.too_long «Tu mensaje no puede superar los 2000 caracteres.»
+else Sin conexión
+  N -->> VP : error net.offline «El agente de IA necesita conexión a internet. Podrás conversar con él cuando te reconectes.»
+else Mensaje válido
+  N -> BL : Elige solo las tarjetas y etiquetas necesarias, incluidos los cambios sin sincronizar (D-193)
+  BL -->> N : tarjetas, etiquetas y columnas
+  N -> EF ++ : POST /functions/v1/windi-chat {client_request_id, message, history, context} con JWT (máximo 15 s)
+  EF -> EF : Verifica el JWT y valida la entrada
+  EF -> G ++ : generateContent con systemInstruction, contents, tools y temperature 0.4
+  alt Respuesta correcta
+    G -->> EF : texto y functionCall propose_create_cards
+    EF -->> N : {reply, intent: propose, proposal: {action: create, items}}
+    N -> N : Vuelve a validar (fecha límite no anterior a hoy, título de 1 a 100, etiquetas existentes) y agrega los avisos
+    N -->> VP : {reply, proposal}
+    VP -> VP : Muestra la propuesta con «Confirmar» y «Rechazar»
+  else Cuota agotada, error del servicio o tiempo agotado
+    G -->> EF : 429, error 5xx o sin respuesta (la función corta a los 13 s)
+    EF -->> N : error quota_exceeded, provider_error o timeout
+    N -->> VP : error windi.unavailable «No pude responder en este momento. Intenta de nuevo.» con «Reintentar»
+  end
+  deactivate G
+  deactivate EF
+end
+deactivate N
+!include _leyenda.iuml
+@enduml

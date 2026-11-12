@@ -1,0 +1,72 @@
+name: ci
+
+# Cada push y pull request (convenciones.md, «CI con GitHub Actions»).
+on:
+  push:
+  pull_request:
+
+# Cancela la corrida anterior de la misma rama cuando llega un push nuevo.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: docs/ sin cambios en archivos existentes (D-200)
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --depth=1 origin "${{ github.base_ref }}"
+          if git diff --name-status FETCH_HEAD HEAD -- docs/ | grep -v '^A' | grep -v 'docs/DUDAS.md$'; then
+            echo "::error::Solo se pueden agregar archivos a docs/ o editar docs/DUDAS.md."; exit 1
+          fi
+
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Dependencias de Tauri en Linux
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libsoup-3.0-dev
+      - name: Rust (versión de rust-toolchain.toml)
+        run: rustup show
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      - name: Lint de TypeScript (ESLint y Prettier)
+        run: pnpm lint
+      - name: Compilar las vistas (las necesita el Núcleo)
+        run: pnpm --filter desktop build
+      - name: cargo fmt --check
+        run: cargo fmt --manifest-path apps/desktop/src-tauri/Cargo.toml --check
+      - name: cargo clippy -D warnings
+        run: cargo clippy --locked --manifest-path apps/desktop/src-tauri/Cargo.toml --all-targets -- -D warnings
+      - name: cargo test (exporta los tipos con ts-rs)
+        run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml
+      - name: Tipos generados versionados e iguales a docs/tipos.ts
+        run: |
+          git diff --exit-code -- apps/desktop/src/types
+          pnpm --filter desktop types:check
+
+      - name: Vitest
+        run: pnpm --filter desktop test
+
+      - name: Playwright de la landing
+        run: |
+          pnpm --filter landing exec playwright install --with-deps chromium
+          pnpm --filter landing test:e2e
+
+      - name: Pruebas SQL
+        run: bash docs/pruebas/ejecutar_pruebas.sh

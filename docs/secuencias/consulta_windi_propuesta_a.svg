@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="1265px" preserveAspectRatio="none" style="width:1992px;height:1265px;background:#FFFFFF;" version="1.1" viewBox="0 0 1992 1265" width="1992.6042px" zoomAndPan="magnify"><defs/><g><rect fill="#FFFFFF" height="35.4671" id="_title" rx="3.4375" ry="3.4375" style="stroke:none;stroke-width:1.1458333333333333;" width="760.8333" x="617.0313" y="11.4583"/><text fill="#12304D" font-family="DejaVu Sans" font-size="20.625" font-weight="bold" lengthAdjust="spacing" textLength="749.375" x="622.7604" y="36.3321">Diagrama de secuencia: consulta a Windi y propuesta de cambio</text><rect fill="#CFE3F6" height="888.8892" style="stroke:#12304D;stroke-width:1.1458333333333333;" width="11.4583" x="886.3021" y="226.2842"/><rect fill="#CFE3F6" height="563.016" style="stroke:#12304D;stroke-width:1.1458333333333333;" width="11.4583" x="1482.1354" y="544.1366"/><rect fill="#CFE3F6" height="464.0177" style="stroke:#12304D;stroke-width:1.1458333333333333;" width="11.4583" x="1906.0937" y="643.1348"/><rect fill="none" height="863.6808" rx="3.4375" ry="3.4375" style="stroke:#12304D;stroke-width:1.71875;" width="1617.9167" x="366.6667" y="243.4717"/><rect fill="none" height="438.8094" rx="3.4375" ry="3.4375" style="stroke:#12304D;stroke-width:1.71875;" width="1595" x="378.125" y="660.3223"/><line style="stroke:#12304D;stroke-width:0.5729166666666666;stroke-dasharray:5.0,5.0;" x1="36.6667" x2="36.6667" y1="139.8901" y2="1126.6317"/><line style="stroke:#12304D;stroke-width:0.5729166666666666;stroke-dasharray:5.0,5.0;" x1="456.0417" x2="456.0417" y1="139.8901" y2="1126.6317"/><line style="stroke:#12304D;stroke-width:0.5729166666666666;stroke-dasharray:5.0,5.0;" x1="892.0312" x2="892.0312" y1="139.8901" y2="1126.6317"/><line style="stroke:#12304D;stroke-width:0.5729166666666666;stroke-dasharray:5.0,5.0;" x1="1321.1458" x2="1321.1458" y1="139.8901" y2="1126.6317"/><line style="stroke:#12304D;stroke-width:0.5729166666666666;stroke-dasharray:5.0,5.0;" x1="1487.2917" x2="1487.2917" y1="139.8901" y2="1126.6317"/><line style="stroke:#12304D;stroke-width:0.5729166666666666;stroke-dasharray:5.0,5.0;" x1="1911.25" x2="1911.25" y1="139.8901" y2="1126.6317"/><text fill="#000000" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="56.1458" x="5.7292" y="136.3771">Usuario</text><ellipse cx="37.2396" cy="63.54" fill="#FCEBD9" rx="9.1667" ry="9.1667" style="stroke:#12304D;stroke-width:0.5729166666666666;"/><path d="M37.2396,72.7067 L37.2396,103.6442 M22.3438,81.8734 L52.1354,81.8734 M37.2396,103.6442 L22.3438,120.8317 M37.2396,103.6442 L52.1354,120.8317 " fill="none" style="stroke:#12304D;stroke-width:0.5729166666666666;"/><text fill="#000000" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="127.1875" x="389.5833" y="136.3771">Ventana principal</text><path d="M433.125,90.4671 L433.125,117.9671 M433.125,104.2171 L452.6042,104.2171 " fill="none" style="stroke:#12304D;stroke-width:0.5729166666666666;"/><ellipse cx="466.3542" cy="104.2171" fill="#E3EEF9" rx="13.75" ry="13.75" style="stroke:#12304D;stroke-width:0.5729166666666666;"/><text fill="#000000" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="50.4167" x="863.3854" y="136.3771">Núcleo</text><ellipse cx="892.0312" cy="104.2171" fill="#E3EEF9" rx="13.75" ry="13.75" style="stroke:#12304D;stroke-width:0.5729166666666666;"/><polygon fill="#12304D" points="887.4479,90.4671,894.3229,84.738,892.0312,90.4671,894.3229,96.1963,887.4479,90.4671" style="stroke:#12304D;stroke-width:1.1458333333333333;"/><text fill="#000000" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="143.2292" x="1246.6667" y="136.3771">Base de datos local</text><path d="M1301.0938,81.3005 C1301.0938,69.8421 1321.7188,69.8421 1321.7188,69.8421 C1321.7188,69.8421 1342.3438,69.8421 1342.3438,81.3005 L1342.3438,111.0921 C1342.3438,122.5505 1321.7188,122.5505 1321.7188,122.5505 C1321.7188,122.5505 1301.0938,122.5505 1301.0938,111.0921 L1301.0938,81.3005 " fill="#E3EEF9" style="stroke:#12304D;stroke-width:1.71875;"/><path d="M1301.0938,81.3005 C1301.0938,92.7588 1321.7188,92.7588 1321.7188,92.7588 C1321.7188,92.7588 1342.3438,92.7588 1342.3438,81.3005 " fill="none" style="stroke:#12304D;stroke-width:1.71875;"/><rect fill="#E3EEF9" height="33.3813" rx="3.4375" ry="3.4375" style="stroke:#12304D;stroke-width:0.5729166666666666;" width="127.1875" x="1424.2708" y="105.363"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="111.1458" x="1432.2917" y="127.2104">Edge Functions</text><rect fill="#FCEBD9" height="33.3813" rx="3.4375" ry="3.4375" style="stroke:#12304D;stroke-width:0.5729166666666666;" width="67.6042" x="1878.0208" y="105.363"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="51.5625" x="1886.0417" y="127.2104">Gemini</text><rect fill="#CFE3F6" height="888.8892" style="stroke:#12304D;stroke-width:1.1458333333333333;" width="11.4583" x="886.3021" y="226.2842"/><rect fill="#CFE3F6" height="563.016" style="stroke:#12304D;stroke-width:1.1458333333333333;" width="11.4583" x="1482.1354" y="544.1366"/><rect fill="#CFE3F6" height="464.0177" style="stroke:#12304D;stroke-width:1.1458333333333333;" width="11.4583" x="1906.0937" y="643.1348"/><polygon fill="#12304D" points="442.8646,188.3195,454.3229,192.9028,442.8646,197.4862,447.4479,192.9028" style="stroke:#12304D;stroke-width:1.1458333333333333;"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="37.2396" x2="449.7396" y1="192.9028" y2="192.9028"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="10.3125" x="45.2604" y="178.4283">1</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="376.9792" x="60.1562" y="169.7585">Escribe «Crea una tarea para entregar el informe el</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="223.4375" x="60.1562" y="187.0981">viernes» y selecciona «Enviar»</text><polygon fill="#12304D" points="872.5521,221.7008,884.0104,226.2842,872.5521,230.8675,877.1354,226.2842" style="stroke:#12304D;stroke-width:1.1458333333333333;"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="456.6146" x2="879.4271" y1="226.2842" y2="226.2842"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="10.3125" x="464.6354" y="220.4795">2</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="233.75" x="479.5312" y="220.4795">windi_send_message(message)</text><path d="M370.1042,243.4717 L440,243.4717 L440,251.6447 L428.5417,263.103 L366.6667,263.103 L366.6667,246.9092 A3.4375,3.4375 0 0 1 370.1042,243.4717 " fill="#FFFFFF" style="stroke:#12304D;stroke-width:1.71875;"/><rect fill="none" height="863.6808" rx="3.4375" ry="3.4375" style="stroke:#12304D;stroke-width:1.71875;" width="1617.9167" x="366.6667" y="243.4717"/><text fill="#12304D" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="21.7708" x="383.8542" y="258.4442">alt</text><text fill="#12304D" font-family="DejaVu Sans" font-size="13.75" font-weight="bold" lengthAdjust="spacing" textLength="202.8125" x="457.1875" y="258.5264">[Más de 2000 caracteres]</text><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="457.7604" x2="469.2187" y1="304.6574" y2="300.0741"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="457.7604" x2="469.2187" y1="304.6574" y2="309.2407"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;stroke-dasharray:2.0,2.0;" x1="456.6146" x2="885.1562" y1="304.6574" y2="304.6574"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="10.3125" x="476.0937" y="290.1829">3</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="347.1875" x="490.9896" y="281.513">error message.too_long «Tu mensaje no puede</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="218.8542" x="490.9896" y="298.8527">superar los 2000 caracteres.»</text><line style="stroke:#12304D;stroke-width:1.1458333333333333;stroke-dasharray:2.0,2.0;" x1="366.6667" x2="1984.5833" y1="314.9699" y2="314.9699"/><text fill="#12304D" font-family="DejaVu Sans" font-size="13.75" font-weight="bold" lengthAdjust="spacing" textLength="113.4375" x="372.3958" y="327.733">[Sin conexión]</text><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="457.7604" x2="469.2187" y1="391.0156" y2="386.4323"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="457.7604" x2="469.2187" y1="391.0156" y2="395.599"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;stroke-dasharray:2.0,2.0;" x1="456.6146" x2="885.1562" y1="391.0156" y2="391.0156"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="10.3125" x="476.0937" y="367.8712">4</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="372.3958" x="490.9896" y="350.5316">error net.offline «El agente de IA necesita conexión</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="333.4375" x="490.9896" y="367.8712">a internet. Podrás conversar con él cuando te</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="95.1042" x="490.9896" y="385.2109">reconectes.»</text><line style="stroke:#12304D;stroke-width:1.1458333333333333;stroke-dasharray:2.0,2.0;" x1="366.6667" x2="1984.5833" y1="401.3281" y2="401.3281"/><text fill="#12304D" font-family="DejaVu Sans" font-size="13.75" font-weight="bold" lengthAdjust="spacing" textLength="132.9167" x="372.3958" y="414.0912">[Mensaje válido]</text><polygon fill="#12304D" points="1307.9688,455.4508,1319.4271,460.0342,1307.9688,464.6175,1312.5521,460.0342" style="stroke:#12304D;stroke-width:1.1458333333333333;"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="897.7604" x2="1314.8438" y1="460.0342" y2="460.0342"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="10.3125" x="905.7812" y="445.5596">5</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="328.8542" x="920.6771" y="436.8898">Elige solo las tarjetas y etiquetas necesarias,</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="324.2708" x="920.6771" y="454.2295">incluidos los cambios sin sincronizar (D-193)</text><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="898.9062" x2="910.3646" y1="493.4155" y2="488.8322"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="898.9062" x2="910.3646" y1="493.4155" y2="497.9989"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;stroke-dasharray:2.0,2.0;" x1="897.7604" x2="1320.5729" y1="493.4155" y2="493.4155"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="10.3125" x="917.2396" y="487.6108">6</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="222.2917" x="932.1354" y="487.6108">tarjetas, etiquetas y columnas</text><polygon fill="#12304D" points="1468.3854,539.5532,1479.8438,544.1366,1468.3854,548.7199,1472.9688,544.1366" style="stroke:#12304D;stroke-width:1.1458333333333333;"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="897.7604" x2="1475.2604" y1="544.1366" y2="544.1366"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="10.3125" x="905.7812" y="529.662">7</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="356.3542" x="920.6771" y="520.9922">POST /functions/v1/windi-chat {client_request_id,</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="370.1042" x="920.6771" y="538.3319">message, history, context} con JWT (máximo 15 s)</text><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="1493.5938" x2="1541.7188" y1="577.5179" y2="577.5179"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="1541.7188" x2="1541.7188" y1="577.5179" y2="592.4137"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="1494.7396" x2="1541.7188" y1="592.4137" y2="592.4137"/><polygon fill="#12304D" points="1506.1979,587.8304,1494.7396,592.4137,1506.1979,596.9971,1501.6146,592.4137" style="stroke:#12304D;stroke-width:1.1458333333333333;"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="10.3125" x="1501.6146" y="571.7132">8</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="238.3333" x="1516.5104" y="571.7132">Verifica el JWT y valida la entrada</text><polygon fill="#12304D" points="1892.3437,638.5514,1903.8021,643.1348,1892.3437,647.7181,1896.9271,643.1348" style="stroke:#12304D;stroke-width:1.1458333333333333;"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="1493.5938" x2="1899.2187" y1="643.1348" y2="643.1348"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="10.3125" x="1501.6146" y="628.6602">9</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="368.9583" x="1516.5104" y="619.9904">generateContent con systemInstruction, contents,</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="173.0208" x="1516.5104" y="637.3301">tools y temperature 0.4</text><path d="M381.5625,660.3223 L451.4583,660.3223 L451.4583,668.4953 L440,679.9536 L378.125,679.9536 L378.125,663.7598 A3.4375,3.4375 0 0 1 381.5625,660.3223 " fill="#FFFFFF" style="stroke:#12304D;stroke-width:1.71875;"/><rect fill="none" height="438.8094" rx="3.4375" ry="3.4375" style="stroke:#12304D;stroke-width:1.71875;" width="1595" x="378.125" y="660.3223"/><text fill="#12304D" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="21.7708" x="395.3125" y="675.2947">alt</text><text fill="#12304D" font-family="DejaVu Sans" font-size="13.75" font-weight="bold" lengthAdjust="spacing" textLength="170.7292" x="468.6458" y="675.377">[Respuesta correcta]</text><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="1494.7396" x2="1506.1979" y1="704.1683" y2="699.585"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="1494.7396" x2="1506.1979" y1="704.1683" y2="708.7516"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;stroke-dasharray:2.0,2.0;" x1="1493.5938" x2="1904.9479" y1="704.1683" y2="704.1683"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="20.625" x="1513.0729" y="698.3636">10</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="307.0833" x="1538.2813" y="698.3636">texto y functionCall propose_create_cards</text><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="898.9062" x2="910.3646" y1="754.8893" y2="750.306"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="898.9062" x2="910.3646" y1="754.8893" y2="759.4727"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;stroke-dasharray:2.0,2.0;" x1="897.7604" x2="1480.9896" y1="754.8893" y2="754.8893"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="20.625" x="917.2396" y="740.4148">11</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="360.9375" x="942.4479" y="731.7449">{reply, intent: propose, proposal: {action: create,</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="59.5833" x="942.4479" y="749.0846">items}}</text><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="897.7604" x2="945.8854" y1="822.95" y2="822.95"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="945.8854" x2="945.8854" y1="822.95" y2="837.8459"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="898.9062" x2="945.8854" y1="837.8459" y2="837.8459"/><polygon fill="#12304D" points="910.3646,833.2625,898.9062,837.8459,910.3646,842.4292,905.7812,837.8459" style="stroke:#12304D;stroke-width:1.1458333333333333;"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="20.625" x="905.7812" y="799.8057">12</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="344.8958" x="930.9896" y="782.466">Vuelve a validar (fecha límite no anterior a hoy,</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="376.9792" x="930.9896" y="799.8057">título de 1 a 100, etiquetas existentes) y agrega los</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="45.8333" x="930.9896" y="817.1453">avisos</text><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="457.7604" x2="469.2187" y1="871.2272" y2="866.6439"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="457.7604" x2="469.2187" y1="871.2272" y2="875.8105"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;stroke-dasharray:2.0,2.0;" x1="456.6146" x2="885.1562" y1="871.2272" y2="871.2272"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="20.625" x="476.0937" y="865.4225">13</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="126.0417" x="501.3021" y="865.4225">{reply, proposal}</text><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="456.6146" x2="504.7396" y1="921.9482" y2="921.9482"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="504.7396" x2="504.7396" y1="921.9482" y2="936.8441"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="457.7604" x2="504.7396" y1="936.8441" y2="936.8441"/><polygon fill="#12304D" points="469.2187,932.2607,457.7604,936.8441,469.2187,941.4274,464.6354,936.8441" style="stroke:#12304D;stroke-width:1.1458333333333333;"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="20.625" x="464.6354" y="907.4737">14</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="294.4792" x="489.8437" y="898.8039">Muestra la propuesta con «Confirmar» y</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="85.9375" x="489.8437" y="916.1435">«Rechazar»</text><line style="stroke:#12304D;stroke-width:1.1458333333333333;stroke-dasharray:2.0,2.0;" x1="378.125" x2="1973.125" y1="947.1566" y2="947.1566"/><text fill="#12304D" font-family="DejaVu Sans" font-size="13.75" font-weight="bold" lengthAdjust="spacing" textLength="429.6875" x="383.8542" y="959.9196">[Cuota agotada, error del servicio o tiempo agotado]</text><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="1494.7396" x2="1506.1979" y1="1005.8626" y2="1001.2793"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="1494.7396" x2="1506.1979" y1="1005.8626" y2="1010.446"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;stroke-dasharray:2.0,2.0;" x1="1493.5938" x2="1904.9479" y1="1005.8626" y2="1005.8626"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="20.625" x="1513.0729" y="991.3881">15</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="355.2083" x="1538.2813" y="982.7183">429, error 5xx o sin respuesta (la función corta a</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="61.875" x="1538.2813" y="1000.0579">los 13 s)</text><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="898.9062" x2="910.3646" y1="1039.244" y2="1034.6606"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="898.9062" x2="910.3646" y1="1039.244" y2="1043.8273"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;stroke-dasharray:2.0,2.0;" x1="897.7604" x2="1480.9896" y1="1039.244" y2="1039.244"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="20.625" x="917.2396" y="1033.4393">16</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="349.4792" x="942.4479" y="1033.4393">error quota_exceeded, provider_error o timeout</text><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="457.7604" x2="469.2187" y1="1089.965" y2="1085.3817"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;" x1="457.7604" x2="469.2187" y1="1089.965" y2="1094.5483"/><line style="stroke:#12304D;stroke-width:1.4895833333333333;stroke-dasharray:2.0,2.0;" x1="456.6146" x2="885.1562" y1="1089.965" y2="1089.965"/><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" font-weight="bold" lengthAdjust="spacing" textLength="20.625" x="476.0937" y="1075.4905">17</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="376.9792" x="501.3021" y="1066.8206">error windi.unavailable «No pude responder en este</text><text fill="#111111" font-family="DejaVu Sans" font-size="14.8958" lengthAdjust="spacing" textLength="348.3333" x="501.3021" y="1084.1603">momento. Intenta de nuevo.» con «Reintentar»</text><rect fill="#FFFFFF" height="112.0768" id="_legend" rx="3.4375" ry="3.4375" style="stroke:#12304D;stroke-width:1.1458333333333333;" width="698.9583" x="647.9688" y="1130.0692"/><text fill="#000000" font-family="DejaVu Sans" font-size="13.75" lengthAdjust="spacing" textLength="124.8958" x="658.2813" y="1150.8531">Notación UML 2.5</text><text fill="#000000" font-family="DejaVu Sans" font-size="13.75" lengthAdjust="spacing" textLength="482.3958" x="658.2813" y="1166.8589">Mensaje síncrono: flecha llena, línea continua (quien llama espera)</text><text fill="#000000" font-family="DejaVu Sans" font-size="13.75" lengthAdjust="spacing" textLength="678.3333" x="658.2813" y="1182.8648">Mensaje asíncrono: flecha abierta, línea continua (quien envía no espera; eventos del Núcleo)</text><text fill="#000000" font-family="DejaVu Sans" font-size="13.75" lengthAdjust="spacing" textLength="317.3958" x="658.2813" y="1198.8706">Respuesta: flecha abierta, línea discontinua</text><text fill="#000000" font-family="DejaVu Sans" font-size="13.75" lengthAdjust="spacing" textLength="529.375" x="658.2813" y="1214.8765">Barra: activación. Marco alt, opt, loop, par o break: fragmento combinado</text><text fill="#000000" font-family="DejaVu Sans" font-size="13.75" lengthAdjust="spacing" textLength="657.7083" x="658.2813" y="1230.8824">Azul claro: elemento de Windgets. Naranja claro: sistema externo o persona. X: destrucción</text><line style="stroke:#000000;stroke-width:1.1458333333333333;" x1="653.6979" x2="1341.1979" y1="1138.09" y2="1138.09"/><line style="stroke:#000000;stroke-width:1.1458333333333333;" x1="653.6979" x2="1341.1979" y1="1154.0959" y2="1154.0959"/><line style="stroke:#000000;stroke-width:1.1458333333333333;" x1="653.6979" x2="1341.1979" y1="1170.1017" y2="1170.1017"/><line style="stroke:#000000;stroke-width:1.1458333333333333;" x1="653.6979" x2="1341.1979" y1="1186.1076" y2="1186.1076"/><line style="stroke:#000000;stroke-width:1.1458333333333333;" x1="653.6979" x2="1341.1979" y1="1202.1134" y2="1202.1134"/><line style="stroke:#000000;stroke-width:1.1458333333333333;" x1="653.6979" x2="1341.1979" y1="1218.1193" y2="1218.1193"/><line style="stroke:#000000;stroke-width:1.1458333333333333;" x1="653.6979" x2="1341.1979" y1="1234.1252" y2="1234.1252"/><line style="stroke:#000000;stroke-width:1.1458333333333333;" x1="653.6979" x2="653.6979" y1="1138.09" y2="1234.1252"/><line style="stroke:#000000;stroke-width:1.1458333333333333;" x1="1341.1979" x2="1341.1979" y1="1138.09" y2="1234.1252"/><!--MD5=[ff465ef05c9c32351d7cc9aa22e042e1]
+@startuml consulta_windi_propuesta_a
+!include _estilo.iuml
+title Diagrama de secuencia: consulta a Windi y propuesta de cambio
+
+actor "Usuario" as U #FCEBD9
+boundary "Ventana principal" as VP
+control "Núcleo" as N
+database "Base de datos local" as BL
+participant "Edge Functions" as EF
+participant "Gemini" as G #FCEBD9
+
+U -> VP : Escribe «Crea una tarea para entregar el informe el viernes» y selecciona «Enviar»
+VP -> N ++ : windi_send_message(message)
+alt Más de 2000 caracteres
+  N - ->> VP : error message.too_long «Tu mensaje no puede superar los 2000 caracteres.»
+else Sin conexión
+  N - ->> VP : error net.offline «El agente de IA necesita conexión a internet. Podrás conversar con él cuando te reconectes.»
+else Mensaje válido
+  N -> BL : Elige solo las tarjetas y etiquetas necesarias, incluidos los cambios sin sincronizar (D-193)
+  BL - ->> N : tarjetas, etiquetas y columnas
+  N -> EF ++ : POST /functions/v1/windi-chat {client_request_id, message, history, context} con JWT (máximo 15 s)
+  EF -> EF : Verifica el JWT y valida la entrada
+  EF -> G ++ : generateContent con systemInstruction, contents, tools y temperature 0.4
+  alt Respuesta correcta
+    G - ->> EF : texto y functionCall propose_create_cards
+    EF - ->> N : {reply, intent: propose, proposal: {action: create, items}}
+    N -> N : Vuelve a validar (fecha límite no anterior a hoy, título de 1 a 100, etiquetas existentes) y agrega los avisos
+    N - ->> VP : {reply, proposal}
+    VP -> VP : Muestra la propuesta con «Confirmar» y «Rechazar»
+  else Cuota agotada, error del servicio o tiempo agotado
+    G - ->> EF : 429, error 5xx o sin respuesta (la función corta a los 13 s)
+    EF - ->> N : error quota_exceeded, provider_error o timeout
+    N - ->> VP : error windi.unavailable «No pude responder en este momento. Intenta de nuevo.» con «Reintentar»
+  end
+  deactivate G
+  deactivate EF
+end
+deactivate N
+!include _leyenda.iuml
+@enduml
+
+@startuml consulta_windi_propuesta_a
+autonumber
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontSize 13
+skinparam dpi 110
+skinparam shadowing false
+skinparam roundcorner 6
+skinparam maxMessageSize 330
+skinparam wrapWidth 420
+skinparam titleFontSize 18
+skinparam titleFontStyle bold
+skinparam titleFontColor #12304D
+skinparam SequenceMessageAlign left
+skinparam ParticipantPadding 14
+skinparam BoxPadding 8
+skinparam sequence {
+  ArrowColor #12304D
+  ArrowFontSize 13
+  ArrowFontColor #111111
+  ArrowThickness 1.3
+  LifeLineBorderColor #12304D
+  LifeLineBackgroundColor #CFE3F6
+  ParticipantBorderColor #12304D
+  ParticipantBackgroundColor #E3EEF9
+  ParticipantFontSize 13
+  ParticipantFontColor #111111
+  ActorBorderColor #12304D
+  ActorBackgroundColor #E3EEF9
+  ActorFontSize 13
+  GroupBorderColor #12304D
+  GroupBackgroundColor #FFFFFF
+  GroupHeaderFontColor #12304D
+  GroupHeaderFontSize 13
+  GroupFontSize 12
+  GroupFontColor #12304D
+  DividerBorderColor #12304D
+  DividerBackgroundColor #FFF4D6
+  DividerFontColor #111111
+  ReferenceBorderColor #12304D
+  ReferenceBackgroundColor #FFFFFF
+  BoxBorderColor #12304D
+  BoxBackgroundColor #FFFFFF
+}
+skinparam note {
+  BackgroundColor #FFF4D6
+  BorderColor #8A5A00
+  FontColor #111111
+  FontSize 12
+}
+skinparam legend {
+  BackgroundColor #FFFFFF
+  BorderColor #12304D
+  FontSize 12
+}
+skinparam boundary.BackgroundColor #E3EEF9
+skinparam boundary.BorderColor #12304D
+skinparam control.BackgroundColor #E3EEF9
+skinparam control.BorderColor #12304D
+skinparam database.BackgroundColor #E3EEF9
+skinparam database.BorderColor #12304D
+skinparam entity.BackgroundColor #E3EEF9
+skinparam entity.BorderColor #12304D
+hide footbox
+title Diagrama de secuencia: consulta a Windi y propuesta de cambio
+
+actor "Usuario" as U #FCEBD9
+boundary "Ventana principal" as VP
+control "Núcleo" as N
+database "Base de datos local" as BL
+participant "Edge Functions" as EF
+participant "Gemini" as G #FCEBD9
+
+U -> VP : Escribe «Crea una tarea para entregar el informe el viernes» y selecciona «Enviar»
+VP -> N ++ : windi_send_message(message)
+alt Más de 2000 caracteres
+  N - ->> VP : error message.too_long «Tu mensaje no puede superar los 2000 caracteres.»
+else Sin conexión
+  N - ->> VP : error net.offline «El agente de IA necesita conexión a internet. Podrás conversar con él cuando te reconectes.»
+else Mensaje válido
+  N -> BL : Elige solo las tarjetas y etiquetas necesarias, incluidos los cambios sin sincronizar (D-193)
+  BL - ->> N : tarjetas, etiquetas y columnas
+  N -> EF ++ : POST /functions/v1/windi-chat {client_request_id, message, history, context} con JWT (máximo 15 s)
+  EF -> EF : Verifica el JWT y valida la entrada
+  EF -> G ++ : generateContent con systemInstruction, contents, tools y temperature 0.4
+  alt Respuesta correcta
+    G - ->> EF : texto y functionCall propose_create_cards
+    EF - ->> N : {reply, intent: propose, proposal: {action: create, items}}
+    N -> N : Vuelve a validar (fecha límite no anterior a hoy, título de 1 a 100, etiquetas existentes) y agrega los avisos
+    N - ->> VP : {reply, proposal}
+    VP -> VP : Muestra la propuesta con «Confirmar» y «Rechazar»
+  else Cuota agotada, error del servicio o tiempo agotado
+    G - ->> EF : 429, error 5xx o sin respuesta (la función corta a los 13 s)
+    EF - ->> N : error quota_exceeded, provider_error o timeout
+    N - ->> VP : error windi.unavailable «No pude responder en este momento. Intenta de nuevo.» con «Reintentar»
+  end
+  deactivate G
+  deactivate EF
+end
+deactivate N
+legend bottom
+  | Notación UML 2.5 |
+  | Mensaje síncrono: flecha llena, línea continua (quien llama espera) |
+  | Mensaje asíncrono: flecha abierta, línea continua (quien envía no espera; eventos del Núcleo) |
+  | Respuesta: flecha abierta, línea discontinua |
+  | Barra: activación. Marco alt, opt, loop, par o break: fragmento combinado |
+  | Azul claro: elemento de Windgets. Naranja claro: sistema externo o persona. X: destrucción |
+endlegend
+@enduml
+
+PlantUML version 1.2022.12(Sun Oct 23 13:12:26 COT 2022)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

@@ -1,0 +1,58 @@
+@startuml inicio_sesion_google_pkce
+!include _estilo.iuml
+title Diagrama de secuencia: inicio de sesión con Google (PKCE y windgets://)
+
+actor "Usuario" as U #FCEBD9
+boundary "Ventana principal" as VP
+control "Núcleo" as N
+database "Archivos locales" as AL
+participant "Windows 10 22H2 / 11" as W #FCEBD9
+participant "Navegador predeterminado" as B #FCEBD9
+participant "Supabase Auth" as A
+participant "Google" as G #FCEBD9
+
+U -> VP : Selecciona «Iniciar sesión con Google»
+VP -> N ++ : auth_google_start()
+N -> N : Genera code_verifier y state, y calcula code_challenge = BASE64URL(SHA256(code_verifier))
+N ->> B : Abre /auth/v1/authorize?provider=google&redirect_to=windgets://auth/callback&code_challenge=…&code_challenge_method=s256&scopes=openid email profile
+N -->> VP : {expires_at}
+deactivate N
+VP -> VP : Muestra la espera con la opción de cancelar
+B -> A ++ : GET /auth/v1/authorize
+A ->> B : Redirige al consentimiento de Google (openid, email, profile)
+B -> G ++ : Solicita el consentimiento
+note over B, G : El Usuario elige la cuenta y acepta los permisos en la página de Google.
+G -->> A : Código de autorización de Google
+deactivate G
+A ->> B : 302 windgets://auth/callback?code=auth_code
+deactivate A
+B ->> W : Abre la URL con el esquema windgets (registrado por el instalador en HKCU)
+W ->> N : Segunda ejecución entrega la URL a la instancia en ejecución (instancia única)
+
+alt Acceso denegado, ventana cerrada, auth_google_cancel o espera de 5 min agotada
+  N ->> VP : evento auth_google_result {status: cancelled} «Se canceló el inicio de sesión con Google.»
+else Regreso con código
+  N -> N : Acepta solo la ruta auth/callback, con inicio en espera y state válido
+  N -> A ++ : POST /auth/v1/token?grant_type=pkce {auth_code, code_verifier}
+  alt Cuenta nueva con correo de más de 64 caracteres
+    A -> A : validate_new_user rechaza el alta
+    A -->> N : Alta rechazada
+    N ->> VP : evento auth_google_result {status: email_too_long} «No pudimos crear tu cuenta: tu correo de Google supera los 64 caracteres. Regístrate con otro correo electrónico.»
+  else Otro fallo del proveedor o invalid_grant
+    A -->> N : error
+    N ->> VP : evento auth_google_result {status: error} «No fue posible iniciar sesión con Google. Intenta de nuevo.»
+  else Sesión creada
+    opt Cuenta nueva
+      A -> A : on_account_confirmed crea la cuenta verificada, sin código
+    end
+    A -->> N : 200 access_token, refresh_token
+    N -> N : Cifra la sesión con DPAPI (CryptProtectData)
+    N -> AL : Guarda session.bin
+    N ->> VP : evento auth_google_result {status: success, is_new_account, alias}
+    N ->> VP : evento session_changed {state: signed_in, alias, reason: sign_in}
+    VP -> VP : Abre el Planificador diario (RT-01-CA02)
+  end
+  deactivate A
+end
+!include _leyenda.iuml
+@enduml

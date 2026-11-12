@@ -1,0 +1,49 @@
+@startuml inicio_sesion_correo
+!include _estilo.iuml
+title Diagrama de secuencia: inicio de sesión con correo y contraseña
+
+actor "Usuario" as U #FCEBD9
+boundary "Ventana principal" as VP
+control "Núcleo" as N
+participant "Supabase Auth" as A
+participant "API de datos" as API
+database "Base de datos en la nube" as DB
+database "Archivos locales" as AL
+database "Base de datos local" as BL
+
+note over VP, N : Al abrir la aplicación con una sesión guardada, auth_get_session evita pedir las credenciales (HE-01-HU04-CA02).
+U -> VP : Diligencia correo y contraseña, y selecciona «Iniciar sesión»
+VP -> VP : Valida los campos y muestra los mensajes al instante
+VP -> N ++ : auth_sign_in(email, password)
+N -> N : Valida de nuevo (email.required, email.invalid, password.required)
+N -> A ++ : POST /auth/v1/token?grant_type=password {email, password}
+alt Credenciales incorrectas
+  A -->> N : 400 invalid_credentials
+  N -->> VP : error auth.invalid_credentials «Correo electrónico o contraseña incorrectos.»
+else Exceso de intentos
+  A -->> N : 429
+  N -->> VP : error auth.rate_limited «Demasiados intentos. Espera unos minutos e intenta de nuevo.»
+else Sin conexión
+  N -->> VP : error net.offline «No hay conexión a internet. Conéctate para iniciar sesión.»
+else Servicio sin respuesta o error 5xx
+  N -->> VP : error service.unavailable «No pudimos completar la operación. Intenta de nuevo más tarde.»
+else Credenciales correctas
+  A -->> N : 200 access_token, refresh_token, expires_in, user
+  N -> N : Cifra la sesión con DPAPI (CryptProtectData)
+  N -> AL : Guarda session.bin
+  N -> BL : Abre la base local
+  N -->> VP : SessionInfo {user_id, alias}
+  N ->> VP : evento session_changed {state: signed_in, alias, reason: sign_in}
+  VP -> VP : Abre el Planificador diario con el menú principal (RT-01-CA01)
+  note over N, API : Consulta en segundo plano
+  N -> API ++ : RPC sync_pull(p_since_seq, p_limit: 500)
+  API -> DB ++ : Lee los cambios de la cuenta (RLS)
+  DB -->> API -- : filas nuevas
+  API -->> N -- : rows, next_seq, has_more
+  N -> BL : Aplica los cambios de otros computadores
+  N ->> VP : evento sync_status_changed {status: synced}
+end
+deactivate A
+deactivate N
+!include _leyenda.iuml
+@enduml

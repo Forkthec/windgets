@@ -1,0 +1,50 @@
+@startuml registro_codigo_correo_b
+!include _estilo.iuml
+title Diagrama de secuencia: registro con código por correo, verificación y apertura de la sesión
+
+actor "Usuario" as U #FCEBD9
+boundary "Ventana principal" as VP
+control "Núcleo" as N
+participant "Supabase Auth" as A
+participant "API de datos" as API
+database "Base de datos en la nube" as DB
+database "Archivos locales" as AL
+database "Base de datos local" as BL
+
+U -> VP : Diligencia el código y selecciona «Verificar»
+VP -> N ++ : auth_register_verify(code)
+N -> A ++ : POST /auth/v1/verify {type: signup, email, token}
+alt Código incorrecto o vencido
+  A -->> N : 403 otp_expired
+  N -> N : Compara el momento actual con el expires_at guardado al enviar el código
+  alt El código ya venció
+    N -->> VP : error code.expired «El código venció. Solicita uno nuevo.»
+  else El código sigue vigente
+    N -->> VP : error code.incorrect «El código no es correcto. Revísalo e intenta de nuevo.»
+  end
+else Exceso de intentos
+  A -->> N : 429
+  N -->> VP : error auth.rate_limited «Demasiados intentos. Espera unos minutos e intenta de nuevo.»
+else Sin conexión
+  N -->> VP : error net.offline «No hay conexión a internet. Conéctate para crear tu cuenta.»
+else Código correcto
+  A ->> DB : Dispara on_account_confirmed (crea el perfil y los datos semilla)
+  A -->> N : 200 access_token, refresh_token, expires_in, user
+  N -> N : Cifra la sesión con DPAPI (CryptProtectData)
+  N -> AL : Guarda session.bin
+  N -> BL : Crea la base local
+  N -->> VP : {alias} y «¡Bienvenido, <alias>! Tu cuenta fue creada correctamente.»
+  N ->> VP : evento session_changed {state: signed_in, alias, reason: registered}
+  VP -> VP : Abre el Planificador diario (RT-01)
+  note over N, API : Primera descarga en segundo plano
+  N -> API ++ : RPC sync_pull(p_since_seq: 0, p_limit: 500)
+  API -> DB ++ : Lee las filas de la cuenta (RLS)
+  DB -->> API -- : filas de la cuenta
+  API -->> N -- : rows, next_seq, has_more
+  N -> BL : Aplica las filas descargadas
+  N ->> VP : evento sync_status_changed {status: synced}
+end
+deactivate A
+deactivate N
+!include _leyenda.iuml
+@enduml

@@ -1,0 +1,63 @@
+@startuml registro_codigo_correo_a
+!include _estilo.iuml
+title Diagrama de secuencia: registro con código por correo, envío y reenvío del código
+
+actor "Usuario" as U #FCEBD9
+boundary "Ventana principal" as VP
+control "Núcleo" as N
+participant "API de datos" as API
+database "Base de datos en la nube" as DB
+participant "Supabase Auth" as A
+participant "Gmail" as R #FCEBD9
+
+U -> VP : Diligencia alias, correo, contraseña y confirmación, y selecciona «Crear cuenta»
+VP -> VP : Valida los campos y muestra los mensajes al instante
+VP -> N ++ : auth_register_start(alias, email, password, password_confirmation)
+N -> N : Valida de nuevo los campos (alias.*, email.*, password.*)
+alt Algún campo no es válido
+  N -->> VP : error email.invalid «Diligencia un correo electrónico válido.» (o el código del campo que falla)
+else Campos válidos
+  N -> API ++ : RPC email_is_registered(p_email)
+  API -> DB ++ : Busca una cuenta con ese correo verificado
+  DB -->> API -- : existe o no existe
+  API -->> N -- : true o false
+  alt Correo ya registrado (true)
+    N -->> VP : error email.already_registered «Este correo electrónico ya está registrado.»
+  else Correo nuevo (false)
+    N -> A ++ : POST /auth/v1/signup {email, password, data: {alias}}
+    alt Sin conexión
+      N -->> VP : error net.offline «No hay conexión a internet. Conéctate para crear tu cuenta.»
+    else Exceso de solicitudes de correo
+      A -->> N : 429 over_email_send_rate_limit
+      N -->> VP : error auth.rate_limited «Demasiados intentos. Espera unos minutos e intenta de nuevo.»
+    else Servicio sin respuesta o error 5xx
+      N -->> VP : error service.unavailable «No pudimos completar la operación. Intenta de nuevo más tarde.»
+    else Solicitud aceptada
+      A ->> R : SMTP: correo con el código de 6 dígitos (vigencia de 600 s)
+      note right of R : Gmail entrega el correo con el código al Usuario.
+      A -->> N : 200 con el usuario sin verificar
+      N -->> VP : {resend_available_at, expires_at} y «Te enviamos un código de verificación a tu correo. Diligéncialo para crear tu cuenta.»
+      VP -> VP : Muestra el paso Código de verificación
+    end
+    deactivate A
+  end
+end
+deactivate N
+
+opt El código no llegó
+  U -> VP : Selecciona «Reenviar código»
+  VP -> N ++ : auth_register_resend()
+  N -> A ++ : POST /auth/v1/resend {type: signup, email}
+  alt Antes de 60 s desde el último envío
+    A -->> N : 429 over_email_send_rate_limit
+    N -->> VP : error code.resend_too_soon «Puedes pedir un nuevo código en <segundos restantes> s.»
+  else Reenvío aceptado
+    A ->> R : SMTP: correo con un código nuevo (el anterior queda invalidado)
+    A -->> N : 200
+    N -->> VP : {resend_available_at} y «Te enviamos un nuevo código.»
+  end
+  deactivate A
+  deactivate N
+end
+!include _leyenda.iuml
+@enduml

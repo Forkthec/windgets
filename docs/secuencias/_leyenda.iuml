@@ -1,0 +1,8 @@
+legend bottom
+  | Notación UML 2.5 |
+  | Mensaje síncrono: flecha llena, línea continua (quien llama espera) |
+  | Mensaje asíncrono: flecha abierta, línea continua (quien envía no espera; eventos del Núcleo) |
+  | Respuesta: flecha abierta, línea discontinua |
+  | Barra: activación. Marco alt, opt, loop, par o break: fragmento combinado |
+  | Azul claro: elemento de Windgets. Naranja claro: sistema externo o persona. X: destrucción |
+endlegend

@@ -1,0 +1,55 @@
+@startuml sincronizacion_sin_conexion
+!include _estilo.iuml
+title Diagrama de secuencia: sincronización tras trabajar sin conexión
+
+boundary "Ventana principal\n(computador A)" as PA
+control "Núcleo\n(computador A)" as NA
+database "Base de datos local\n(computador A)" as LA
+participant "API de datos" as API
+database "Base de datos en la nube" as DB
+control "Núcleo\n(computador B)" as NB
+boundary "Ventana principal\n(computador B)" as PB
+
+note over PA, NA : El computador A está sin conexión
+PA -> NA ++ : card_update(id, patch)
+NA -> LA : Transacción: actualiza la tarjeta y guarda el pending_change con la hora de modificación de cada campo
+NA -->> PA -- : Card y «Tarjeta actualizada.»
+NA ->> PA : evento sync_status_changed {status: offline, pending_count: 1}
+PA -> PA : Muestra «Sin conexión» y «1 cambio pendiente de sincronizar»
+
+note over API, NB : Mientras tanto, el computador B edita el mismo campo y otro campo, con conexión. Envía 2 s después de guardar (D-189).
+NB -> API ++ : RPC sync_push(p_device_id, p_clock_offset_ms, p_changes)
+API -> DB ++ : Combina por campo con la hora del servidor (D-048)
+DB -->> API -- : filas combinadas
+API -->> NB -- : results [applied] y max_seq
+
+note over PA, NA : A recupera la conexión
+NA ->> PA : evento connectivity_changed {online: true}
+NA -> API ++ : RPC server_time()
+API -->> NA -- : hora del servidor
+NA -> NA : Calcula p_clock_offset_ms = hora del servidor menos hora del computador
+NA -> API ++ : RPC sync_push(p_device_id, p_clock_offset_ms, p_changes)
+API -> DB ++ : Corrige la hora de cada campo y combina por campo (D-048): gana la más reciente en el mismo campo y los campos distintos se conservan
+DB -->> API -- : fila ganadora
+API -->> NA -- : results [merged o superseded, conflict: true, row] y max_seq
+NA -> LA : Adopta la fila ganadora y borra el pending_change confirmado
+NA ->> PA : evento sync_conflicts_resolved {count: 1}
+PA -> PA : Muestra «Algunas tarjetas se actualizaron con cambios más recientes de otro computador.»
+NA -> API ++ : RPC sync_pull(p_since_seq, p_limit: 500)
+API -> DB ++ : Lee las filas con updated_seq mayor
+DB -->> API -- : filas nuevas
+API -->> NA -- : rows, next_seq y has_more: false
+NA -> LA : Aplica las filas descargadas (padres antes que hijos)
+NA ->> PA : evento cards_changed {ids, op: upsert, origin: remote}
+NA ->> PA : evento sync_completed {pushed: 1, pulled, after_reconnect: true}
+PA -> PA : Muestra «Sincronizado» y «Tus cambios se sincronizaron.»
+
+loop Cada 60 s (D-189)
+  NB -> API ++ : RPC sync_pull(p_since_seq)
+  API -> DB ++ : Lee las filas con updated_seq mayor
+  DB -->> API -- : filas con la combinación final
+  API -->> NB -- : rows, next_seq y has_more
+  NB ->> PB : evento cards_changed {ids, op: upsert, origin: remote}
+end
+!include _leyenda.iuml
+@enduml

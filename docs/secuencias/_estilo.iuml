@@ -1,0 +1,64 @@
+' Estilo común de los diagramas de secuencia de Windgets (UML 2.5).
+autonumber
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontSize 13
+skinparam dpi 110
+skinparam shadowing false
+skinparam roundcorner 6
+skinparam maxMessageSize 330
+skinparam wrapWidth 420
+skinparam titleFontSize 18
+skinparam titleFontStyle bold
+skinparam titleFontColor #12304D
+skinparam SequenceMessageAlign left
+skinparam ParticipantPadding 14
+skinparam BoxPadding 8
+skinparam sequence {
+  ArrowColor #12304D
+  ArrowFontSize 13
+  ArrowFontColor #111111
+  ArrowThickness 1.3
+  LifeLineBorderColor #12304D
+  LifeLineBackgroundColor #CFE3F6
+  ParticipantBorderColor #12304D
+  ParticipantBackgroundColor #E3EEF9
+  ParticipantFontSize 13
+  ParticipantFontColor #111111
+  ActorBorderColor #12304D
+  ActorBackgroundColor #E3EEF9
+  ActorFontSize 13
+  GroupBorderColor #12304D
+  GroupBackgroundColor #FFFFFF
+  GroupHeaderFontColor #12304D
+  GroupHeaderFontSize 13
+  GroupFontSize 12
+  GroupFontColor #12304D
+  DividerBorderColor #12304D
+  DividerBackgroundColor #FFF4D6
+  DividerFontColor #111111
+  ReferenceBorderColor #12304D
+  ReferenceBackgroundColor #FFFFFF
+  BoxBorderColor #12304D
+  BoxBackgroundColor #FFFFFF
+}
+skinparam note {
+  BackgroundColor #FFF4D6
+  BorderColor #8A5A00
+  FontColor #111111
+  FontSize 12
+}
+skinparam legend {
+  BackgroundColor #FFFFFF
+  BorderColor #12304D
+  FontSize 12
+}
+skinparam boundary.BackgroundColor #E3EEF9
+skinparam boundary.BorderColor #12304D
+skinparam control.BackgroundColor #E3EEF9
+skinparam control.BorderColor #12304D
+skinparam database.BackgroundColor #E3EEF9
+skinparam database.BorderColor #12304D
+skinparam entity.BackgroundColor #E3EEF9
+skinparam entity.BorderColor #12304D
+hide footbox
