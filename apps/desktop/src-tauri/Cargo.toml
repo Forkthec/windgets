@@ -20,6 +20,25 @@ serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = "=1.0.154"
 ts-rs = { version = "=12.0.1", features = ["no-serde-warnings"] }
 
+# API de Windows para el Host del wallpaper (INT-07, contratos.md): la misma versión que ya trae Tauri.
+[target.'cfg(windows)'.dependencies]
+windows = { version = "=0.62.2", features = [
+  "Win32_Foundation",
+  "Win32_Graphics_Gdi",
+  "Win32_System_Diagnostics_Debug",
+  "Win32_System_LibraryLoader",
+  "Win32_System_Memory",
+  "Win32_System_Threading",
+  "Win32_UI_Controls",
+  "Win32_UI_HiDpi",
+  "Win32_UI_Input",
+  "Win32_UI_WindowsAndMessaging",
+] }
+
+[features]
+# Prototipo del spike P01 (WorkerW y Raw Input, D-131 y D-186). Solo lo compila el flujo spike.yml.
+spike = []
+
 [profile.release]
 codegen-units = 1
 lto = true
