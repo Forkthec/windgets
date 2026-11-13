@@ -13,9 +13,10 @@ import { escuchar as escucharNucleo, type Escuchar } from '@/ipc/eventos';
 import type { Invoke, ScreenId } from '@/types';
 import { ProveedorDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { MenuPrincipal, SECCIONES_MENU } from '@/ui/MenuPrincipal/MenuPrincipal';
+import { ContextoDeBloqueo } from '@/ui/VentanaEmergente/VentanaEmergente';
 
-// Ventana principal (C-01, interfaz.md): RT-01 (menú principal y pantalla principal). Las pantallas de cada
-// HU se registran en `pantallas` a medida que se construyen.
+// Ventana principal (C-01, interfaz.md): RT-01 (menú principal y pantalla principal) y el bloqueo del fondo de
+// RT-02 (ventanas emergentes). Las pantallas de cada HU se registran en `pantallas` a medida que se construyen.
 
 /** La pantalla principal (RT-01-ET04, D-014). */
 export const PANTALLA_PRINCIPAL: ScreenId = 'planner_daily';
@@ -86,7 +87,9 @@ export function VentanaPrincipal({
   const [sesion, setSesion] = useState<Sesion>('consultando');
   const [pantalla, setPantalla] = useState<ScreenId>(PANTALLA_PRINCIPAL);
   const [cuenta, setCuenta] = useState<PantallaDeCuenta>('sign_in');
+  const [emergentes, setEmergentes] = useState(0);
   const guardia = useRef<GuardiaDeSalida | null>(null);
+  const fondo = useRef<HTMLDivElement>(null);
 
   const iniciada = useCallback(() => {
     guardia.current = null;
@@ -119,6 +122,15 @@ export function VentanaPrincipal({
     [cerrada, escuchar, iniciada],
   );
 
+  // RT-02-ET08: con una ventana emergente abierta, la pantalla de fondo y el menú no responden.
+  useEffect(() => {
+    fondo.current?.toggleAttribute('inert', emergentes > 0);
+  }, [emergentes, sesion]);
+  const bloquear = useCallback(
+    (abierta: boolean) => setEmergentes((n) => Math.max(0, n + (abierta ? 1 : -1))),
+    [],
+  );
+
   const navegacion = useMemo<Navegacion>(
     () => ({
       abrir: async (destino) => {
@@ -142,7 +154,7 @@ export function VentanaPrincipal({
   if (sesion === 'con_sesion') {
     const Pantalla = pantallas[pantalla];
     contenido = (
-      <div className="wg-ventana-principal">
+      <div ref={fondo} className="wg-ventana-principal">
         <MenuPrincipal actual={pantalla} alElegir={(p) => void navegacion.abrir(p)} />
         <div className="wg-ventana-principal__pantalla">
           {Pantalla ? <Pantalla /> : <PantallaSinConstruir nombre={NOMBRE_DE_PANTALLA[pantalla]} />}
@@ -152,12 +164,18 @@ export function VentanaPrincipal({
   } else if (sesion === 'sin_sesion') {
     // Sin sesión no hay menú principal (RT-01-ET06).
     const Cuenta = pantallasDeCuenta[cuenta];
-    contenido = <div>{Cuenta ? <Cuenta /> : <PantallaSinConstruir nombre={NOMBRE_DE_CUENTA[cuenta]} />}</div>;
+    contenido = (
+      <div ref={fondo}>
+        {Cuenta ? <Cuenta /> : <PantallaSinConstruir nombre={NOMBRE_DE_CUENTA[cuenta]} />}
+      </div>
+    );
   }
 
   return (
     <ContextoDeNavegacion.Provider value={navegacion}>
-      <ProveedorDeResultado>{contenido}</ProveedorDeResultado>
+      <ContextoDeBloqueo.Provider value={bloquear}>
+        <ProveedorDeResultado>{contenido}</ProveedorDeResultado>
+      </ContextoDeBloqueo.Provider>
     </ContextoDeNavegacion.Provider>
   );
 }

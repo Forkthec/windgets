@@ -116,10 +116,11 @@ body {
   background: var(--wg-sobre-accion);
 }
 
+/* RT-02: la pantalla de fondo sigue visible (sin color ni transparencia en la capa) y no responde. */
 .wg-fondo-emergente {
   position: fixed;
   inset: 0;
-  background: var(--wg-superficie);
+  background: none;
   display: grid;
   place-items: center;
 }
