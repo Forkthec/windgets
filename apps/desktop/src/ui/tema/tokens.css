@@ -172,6 +172,26 @@ body {
   color: var(--wg-texto);
 }
 
+.wg-miga__nivel {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--wg-tinta);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.wg-miga__nivel:focus-visible {
+  outline: var(--wg-borde-ancho) solid var(--wg-accion);
+  outline-offset: calc(var(--wg-unidad) / 2);
+}
+
+/* RT-03: miga de pan y «Regresar» en la parte superior de la pantalla, subpantalla o paso. */
+.wg-encabezado-ruta {
+  justify-content: space-between;
+  margin-bottom: calc(var(--wg-unidad) * 4);
+}
+
 .wg-menu {
   display: flex;
   flex-direction: column;
