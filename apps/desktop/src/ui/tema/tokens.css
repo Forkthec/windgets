@@ -214,3 +214,14 @@ body {
   border-color: var(--wg-accion);
   border-left-width: var(--wg-unidad);
 }
+
+/* RT-01: ventana principal con el menú principal a la izquierda de la pantalla actual. */
+.wg-ventana-principal {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  min-height: 100vh;
+}
+.wg-ventana-principal__pantalla {
+  overflow: auto;
+  padding: calc(var(--wg-unidad) * 6);
+}
