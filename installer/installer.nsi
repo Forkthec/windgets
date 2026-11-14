@@ -463,6 +463,9 @@ FunctionEnd
 ; ---------------------------------------------------------------------------------------------------------
 Function Revertir
   ; La carpeta de instalación es siempre $LOCALAPPDATA\Programs\Windgets (no hay paso para elegirla).
+  ; SetOutPath la deja como carpeta de trabajo del instalador y Windows no borra una carpeta en uso: se sale
+  ; de ella antes de borrarla (CD-02-HU03-CA02, RNF-15).
+  SetOutPath "$TEMP"
   ${If} ${FileExists} "$INSTDIR\*.*"
     RMDir /r "$INSTDIR"
   ${EndIf}
