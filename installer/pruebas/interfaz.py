@@ -215,6 +215,20 @@ def dialogos():
     return encontrados
 
 
+def cerrar_avisos_del_sistema():
+    """Cierra los avisos de Windows que no son del instalador y le quitan el foco (p. ej. el del archivo de
+    paginación que aparece tras crear el disco pequeño en el CI). Devuelve cuántos cerró."""
+    cerrados = 0
+    for h in dialogos():
+        try:
+            if win32gui.GetWindowText(h) == "System Properties" and not es_principal(h):
+                aceptar(h)
+                cerrados += 1
+        except (win32gui.error, Falla):
+            pass
+    return cerrados
+
+
 def hijos(h):
     encontrados = []
     try:
@@ -532,6 +546,7 @@ def pruebas_compatible(inf: Informe, instalador: Path, temporal: Path, disco_peq
 
     def cancelar_en_curso_una_vez():
         """Un intento. Lanza Carrera si la instalación termina antes de que «Cancelar» alcance a atenderse."""
+        cerrar_avisos_del_sistema()
         proceso = abrir(instalador)
         h = esperar(en_opciones, "el paso Opciones")
         pulsar(h, ID_SIGUIENTE)
@@ -550,8 +565,10 @@ def pruebas_compatible(inf: Informe, instalador: Path, temporal: Path, disco_peq
         try:
             m = mensaje_con_opciones(CONFIRMAR_CANCELAR, "Cancelar instalación", "Seguir instalando", 15)
         except Falla:
-            # Si la instalación ya terminó, «Cancelar» llegó tarde: es la carrera de la prueba, no una falla del instalador.
-            if any(en_completada(x) for x in dialogos()):
+            # Si la instalación ya terminó (paso «Instalación completada») o el instalador ya no tiene ventana,
+            # «Cancelar» llegó tarde: es la carrera de la prueba, no una falla del instalador.
+            vivos = dialogos()
+            if any(en_completada(x) for x in vivos) or not any(es_principal(x) for x in vivos):
                 raise Carrera("La instalación terminó antes de que se atendiera «Cancelar».")
             raise
         return proceso, h, m
