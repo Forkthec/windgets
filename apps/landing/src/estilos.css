@@ -1,0 +1,116 @@
+/*
+ * Landing page (C-04). Usa los tokens del tema por defecto (interfaz.md, «Tema por defecto» y «Tema a tokens»:
+ * P #00D9E2, S #DC026C, X #FFFFFF), calculados con las fórmulas de la tabla, porque la landing no tiene tema
+ * propio. Forma: esquina de un tercio con tope y sombra sólida desplazada (R-07, R-08); medidas en múltiplos
+ * de la unidad base (R-14).
+ */
+:root {
+  --unidad: 4px;
+  --superficie: #10262a;
+  --superficie-alta: #0e3a3f;
+  --tinta: #ffffff;
+  --texto: #c3c9ca;
+  --accion: #dc026c;
+  --sobre-accion: #ffffff;
+  --borde: #647275;
+  --estado-pendiente: #d9ac26;
+  --grosor-control: calc(var(--unidad) * 12);
+  --radio: min(calc(var(--grosor-control) / 3), calc(var(--unidad) * 3));
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--superficie);
+  color: var(--tinta);
+  font-family: Inter, 'Segoe UI', system-ui, sans-serif;
+  font-size: calc(var(--unidad) * 4);
+  line-height: 1.5;
+}
+
+.landing {
+  max-width: calc(var(--unidad) * 240);
+  margin: 0 auto;
+  padding: calc(var(--unidad) * 16) calc(var(--unidad) * 6);
+  display: grid;
+  gap: calc(var(--unidad) * 12);
+}
+
+.landing__nombre {
+  margin: 0;
+  font-size: calc(var(--unidad) * 14);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.landing__descripcion {
+  margin: calc(var(--unidad) * 4) 0 0;
+  max-width: calc(var(--unidad) * 160);
+  color: var(--texto);
+  font-size: calc(var(--unidad) * 5);
+}
+
+.landing__funciones {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(calc(var(--unidad) * 64), 1fr));
+  gap: calc(var(--unidad) * 4);
+}
+
+.landing__funcion {
+  padding: calc(var(--unidad) * 5);
+  background: var(--superficie-alta);
+  border: calc(var(--unidad) / 4) solid var(--borde);
+  border-radius: var(--radio);
+  box-shadow: calc(var(--unidad) * 0.31) calc(var(--unidad) * 0.95) 0 var(--borde);
+  color: var(--texto);
+}
+
+.landing__descarga {
+  display: grid;
+  gap: calc(var(--unidad) * 4);
+  justify-items: start;
+}
+
+.landing__boton {
+  min-height: var(--grosor-control);
+  padding: 0 calc(var(--unidad) * 6);
+  border: calc(var(--unidad) / 4) solid var(--accion);
+  border-radius: var(--radio);
+  background: var(--accion);
+  color: var(--sobre-accion);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center; /* RT-04: alineación vertical al centro */
+}
+.landing__boton:focus-visible {
+  outline: calc(var(--unidad) / 4) solid var(--tinta);
+  outline-offset: calc(var(--unidad) / 2);
+}
+
+.landing__requisitos {
+  margin: 0;
+  max-width: calc(var(--unidad) * 160);
+  color: var(--texto);
+}
+
+.landing__avisos {
+  display: grid;
+  gap: calc(var(--unidad) * 2);
+}
+
+/* RT-04 (aviso): dice qué ocurrió y qué puede hacer el visitante; no bloquea la página. */
+.landing__aviso {
+  margin: 0;
+  padding: calc(var(--unidad) * 3) calc(var(--unidad) * 4);
+  border: calc(var(--unidad) / 4) solid var(--estado-pendiente);
+  border-radius: var(--radio);
+  background: var(--superficie-alta);
+}
