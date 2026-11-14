@@ -23,13 +23,13 @@ const T = {
   trazo: { inicio: 0, paso: 300, dura: 720 },
   viaje: { inicio: 1500, dura: 1100 },
   palabra: { inicio: 1800, dura: 900 },
-  // El texto espera al momento de marca: la zona de descarga, tercer bloque, termina a los 2900 ms.
-  texto: { inicio: 1500, paso: 150, dura: 1100 },
-  marco: { inicio: 1900, dura: 1200 },
-  fondo: { inicio: 2500, dura: 1100 },
-  capas: { inicio: 2700, paso: 170, dura: 1400 },
-  piezas: { inicio: 3500, paso: 130, dura: 2000 },
-  chat: { inicio: 5900, paso: 520, dura: 800 },
+  // El texto espera al momento de marca: la zona de descarga, tercer bloque, termina a los 3700 ms.
+  texto: { inicio: 2300, paso: 150, dura: 1100 },
+  marco: { inicio: 2700, dura: 1200 },
+  fondo: { inicio: 3300, dura: 1100 },
+  capas: { inicio: 3500, paso: 170, dura: 1400 },
+  piezas: { inicio: 4300, paso: 130, dura: 2000 },
+  chat: { inicio: 6700, paso: 520, dura: 800 },
 } as const;
 
 // Isotipo con las medidas de la guía de identidad, con w = 24: trazos de ancho w y radio w/3; exteriores de
@@ -60,12 +60,15 @@ const escalaDe = (panel: Panel) => panel.lienzo.getBoundingClientRect().width / 
  * Destapar: fotogramas de un barrido a 18° sobre el elemento. El borde inclinado lo recorre de izquierda a
  * derecha; el recorte deja un margen para que la sombra y el foco no queden cortados al final.
  */
-function destapar(ancho: number, alto: number, desde = 0) {
+function destapar(ancho: number, alto: number, desde?: number) {
   const m = 24;
+  // Con `desde`, lo que queda a su izquierda no se descubre nunca (en el logo, el lugar del isotipo).
+  const borde = desde ?? -m;
   const caida = TAN_18 * (alto + 2 * m);
+  // El pie del borde inclinado no retrocede más allá del borde izquierdo: al empezar no asoma nada.
   const forma = (x: number) =>
-    `polygon(${desde - m}px ${-m}px, ${x + caida}px ${-m}px, ${x}px ${alto + m}px, ${desde - m}px ${alto + m}px)`;
-  return [{ clipPath: forma(desde - m - caida) }, { clipPath: forma(ancho + m) }];
+    `polygon(${borde}px ${-m}px, ${x + caida}px ${-m}px, ${Math.max(x, borde)}px ${alto + m}px, ${borde}px ${alto + m}px)`;
+  return [{ clipPath: forma(borde - caida) }, { clipPath: forma(ancho + m) }];
 }
 
 function barra({ x, y, largo, giro }: (typeof TRAZOS)[number], i: number, clase: string, color: string) {

@@ -113,7 +113,7 @@ test.describe('escritorio', () => {
     await expect(funciones(page)).toHaveCount(5);
   });
 
-  test('CD-01-HU01 · El botón queda listo antes de 3 s desde que empieza la entrada', async ({ page }) => {
+  test('CD-01-HU01 · El botón queda listo antes de 4 s desde que empieza la entrada', async ({ page }) => {
     await abrir(page, 'no-preference');
     // Fin de la animación de la zona de descarga (espera más duración), medido desde el inicio de la entrada.
     const fin = await page
@@ -122,7 +122,7 @@ test.describe('escritorio', () => {
         Math.max(...zona.getAnimations().map((a) => Number(a.effect?.getComputedTiming().endTime))),
       );
     expect(fin).toBeGreaterThan(0);
-    expect(fin).toBeLessThan(3000);
+    expect(fin).toBeLessThan(4000);
     // Y el botón responde: `trial` espera a que esté quieto y reciba el puntero, sin pulsarlo.
     await boton(page).click({ trial: true });
     expect(await estilo(page, '#descarga')).toEqual([QUIETO]);
