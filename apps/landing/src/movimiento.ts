@@ -1,27 +1,34 @@
 // Movimiento de la landing (CD-01-HU01). Solo CSS, la API de animación del navegador y este archivo: sin
 // librerías. Solo se animan `transform` y `clip-path`. Todo cuelga de la clase `con-movimiento` de `<html>`,
 // que se pone solo si `prefers-reduced-motion` no es `reduce`. El botón y el aviso se animan en estilos.css.
+//
+// La página cuenta una sola secuencia, lenta y encadenada, con dos gestos que se repiten en todo:
+//   · destapar: una capa se descubre con un barrido a 18°, el ángulo de la marca;
+//   · acomodar: una capa se desliza hasta su sitio y se apoya, como al cambiar de tema.
+// El logo se construye trazo a trazo en su sitio, como quien escribe la W; mientras tanto se destapa el
+// texto, y el escritorio se arma en el orden de la marca: wallpaper, widgets, información.
 import { aplicarTema, type Panel, type Tema } from './panel';
 
 const CLASE = 'con-movimiento';
-const CURVA = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
-// Caída con un solo rebote. Si el navegador no entiende `linear()`, cae sin rebotar.
-const CON_REBOTE = 'linear(0, 0.12 20%, 0.5 38%, 1 52%, 0.84 68%, 1 86%, 1)';
-const REBOTE = CSS.supports('animation-timing-function', CON_REBOTE) ? CON_REBOTE : 'ease-in';
+/** Destapar: sale rápido y frena largo. */
+const SUAVE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+/** Acomodar: arranca y frena despacio. */
+const DESLIZ = 'cubic-bezier(0.65, 0, 0.35, 1)';
+const TAN_18 = Math.tan((18 * Math.PI) / 180);
 
-// Tiempos de la entrada, en milisegundos desde la carga.
-const TRAZO = 300;
-const ANCLAJE = 4 * TRAZO; // Termina el momento de marca (1200 ms) y empiezan el anclaje y el texto.
-const DURACION_ANCLAJE = 600;
-const CAPAS = ANCLAJE + DURACION_ANCLAJE; // Empiezan las capas del escritorio.
-
-// Barrido a 18°: el borde inclinado recorre el lienzo de izquierda a derecha (tan 18° × 750 ≈ 21 % del ancho).
-const BARRIDO = [
-  { clipPath: 'polygon(0 0, 0% 0, -21% 100%, 0 100%)' },
-  { clipPath: 'polygon(0 0, 121% 0, 100% 100%, 0 100%)' },
-];
-// Fuera del borde quedan la sombra y el foco: el recorte final los deja ver.
-const SIN_RECORTE = 'inset(-12px)';
+// Tiempos de la entrada, en milisegundos desde que empieza. Cada tramo arranca antes de que termine el
+// anterior, para que se lea como un solo movimiento.
+const T = {
+  trazo: { inicio: 0, paso: 300, dura: 720 },
+  palabra: { inicio: 1000, dura: 1100 },
+  // La zona de descarga es el tercer bloque: termina a los 1750 ms, antes de 1,8 s.
+  texto: { inicio: 350, paso: 150, dura: 1100 },
+  marco: { inicio: 700, dura: 1200 },
+  fondo: { inicio: 1300, dura: 1100 },
+  capas: { inicio: 1500, paso: 170, dura: 1400 },
+  piezas: { inicio: 2300, paso: 130, dura: 2000 },
+  chat: { inicio: 4700, paso: 520, dura: 800 },
+} as const;
 
 // Isotipo con las medidas de la guía de identidad, con w = 24: trazos de ancho w y radio w/3; exteriores de
 // 4w y interiores de 3,25w; ±18° alternados; centros a ±1,625w y ±0,5w; el magenta baja 0,75w.
@@ -34,12 +41,11 @@ const TRAZOS = [
 ] as const;
 // Cada cruce es un color sólido propio: la parte del trazo que se apoya sobre el de su izquierda.
 const CRUCES = ['#D6258C', '#F7B212', '#7A14E3'] as const;
-/** Parte del ancho del logo horizontal oficial que ocupa el isotipo (695 de 2400 px). */
-const ISOTIPO_EN_LOGO = 695 / 2400;
 
 export interface Escena {
+  identificador: HTMLElement;
   logo: HTMLImageElement;
-  /** Bloques de texto en orden de lectura: suben escalonados al terminar el momento de marca. */
+  /** Bloques de texto en orden de lectura. */
   texto: HTMLElement[];
   /** Las cinco funciones, en el orden de FUNCIONES. */
   funciones: HTMLElement[];
@@ -47,14 +53,26 @@ export interface Escena {
 }
 
 const conMovimiento = () => document.documentElement.classList.contains(CLASE);
+const escalaDe = (panel: Panel) => panel.lienzo.getBoundingClientRect().width / panel.lienzo.offsetWidth || 1;
 
-function barra({ x, y, largo, giro }: (typeof TRAZOS)[number], clase: string, color: string) {
+/**
+ * Destapar: fotogramas de un barrido a 18° sobre el elemento. El borde inclinado lo recorre de izquierda a
+ * derecha; el recorte deja un margen para que la sombra y el foco no queden cortados al final.
+ */
+function destapar(ancho: number, alto: number, desde = 0) {
+  const m = 24;
+  const caida = TAN_18 * (alto + 2 * m);
+  const forma = (x: number) =>
+    `polygon(${desde - m}px ${-m}px, ${x + caida}px ${-m}px, ${x}px ${alto + m}px, ${desde - m}px ${alto + m}px)`;
+  return [{ clipPath: forma(desde - m - caida) }, { clipPath: forma(ancho + m) }];
+}
+
+function barra({ x, y, largo, giro }: (typeof TRAZOS)[number], i: number, clase: string, color: string) {
   const posicion = `translate(${x * W} ${y * W}) rotate(${giro})`;
   const forma = `x="${-W / 2}" y="${(-largo * W) / 2}" width="${W}" height="${largo * W}" rx="${W / 3}"`;
-  // Dentro de un `<clipPath>` no cabe un grupo: ahí la posición va en el propio rectángulo. En los demás va
-  // en el grupo, para que la animación del rectángulo se mueva a lo largo del eje del trazo.
+  // Dentro de un `<clipPath>` no cabe un grupo: ahí la posición va en el propio rectángulo.
   if (!clase) return `<rect transform="${posicion}" ${forma}/>`;
-  return `<g transform="${posicion}"><rect class="${clase}" ${forma} fill="${color}"/></g>`;
+  return `<g transform="${posicion}"><rect class="${clase}" data-trazo="${i}" ${forma} fill="${color}"/></g>`;
 }
 
 function crearIsotipo() {
@@ -65,120 +83,173 @@ function crearIsotipo() {
   svg.innerHTML = TRAZOS.map((trazo, i) => {
     const anterior = TRAZOS[i - 1];
     const cruce = CRUCES[i - 1];
-    if (!anterior || !cruce) return barra(trazo, 'isotipo-animado__trazo', trazo.color);
-    const recorte = `<clipPath id="apoyo-${i}">${barra(anterior, '', '')}</clipPath>`;
-    const apoyo = `<g clip-path="url(#apoyo-${i})">${barra(trazo, 'isotipo-animado__cruce', cruce)}</g>`;
-    return barra(trazo, 'isotipo-animado__trazo', trazo.color) + recorte + apoyo;
+    const propio = barra(trazo, i, 'isotipo-animado__trazo', trazo.color);
+    if (!anterior || !cruce) return propio;
+    const recorte = `<clipPath id="apoyo-${i}">${barra(anterior, i, '', '')}</clipPath>`;
+    return `${propio}${recorte}<g clip-path="url(#apoyo-${i})">${barra(trazo, i, 'isotipo-animado__trazo', cruce)}</g>`;
   }).join('');
   return svg;
 }
 
 /**
- * Animaciones 1 a 4, una sola vez por carga: el isotipo se construye en el centro de la página en blanco,
- * viaja a su lugar en el logo, sube el texto y el escritorio aparece capa por capa (wallpaper, widgets,
- * información). Lo que aún no entra queda recortado por el primer cuadro de su animación (`fill: backwards`);
- * al terminar, cada elemento vuelve a su estilo propio, sin `transform` ni `clip-path`.
+ * La entrada, una sola vez por carga. Lo que aún no entra queda oculto por el primer fotograma de su
+ * animación (`fill: backwards`); al terminar, cada elemento vuelve a su estilo propio, sin `transform` ni
+ * `clip-path`.
  */
-function entrada({ logo, texto, panel }: Escena) {
-  const svg = crearIsotipo();
-  document.body.append(svg);
+function entrada({ identificador, logo, texto, panel }: Escena) {
   const antes = { fill: 'backwards' } as const;
 
-  // 1 · Momento de marca: cada trazo cae 1w a lo largo de su eje y rebota una vez; su cruce aparece como
-  // forma sólida cuando el trazo llega.
-  svg.querySelectorAll('.isotipo-animado__trazo').forEach((trazo, i) => {
-    const caida = [{ transform: `translateY(${-W}px)` }, { transform: 'translateY(0)' }];
-    trazo.animate(caida, { duration: TRAZO, delay: i * TRAZO, easing: REBOTE, fill: 'forwards' });
+  // El logo se construye en su sitio. Los trazos se escriben como una W, en un solo gesto: el cian baja, el
+  // magenta sube, el amarillo baja y el púrpura sube. El cruce de cada trazo crece con él, así que aparece
+  // justo cuando se apoya en el anterior. Después la palabra se destapa a 18°.
+  const svg = crearIsotipo();
+  identificador.append(svg);
+  svg.querySelectorAll<SVGElement>('[data-trazo]').forEach((trazo) => {
+    const i = Number(trazo.dataset.trazo);
+    trazo.style.transformOrigin = i % 2 === 0 ? '50% 0' : '50% 100%';
+    trazo.animate([{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], {
+      duration: T.trazo.dura,
+      delay: T.trazo.inicio + i * T.trazo.paso,
+      easing: SUAVE,
+      fill: 'forwards',
+    });
   });
-  svg.querySelectorAll('.isotipo-animado__cruce').forEach((cruce, i) => {
-    const quieto = [{ transform: 'none' }, { transform: 'none' }];
-    cruce.animate(quieto, { duration: 1, delay: (i + 1.52) * TRAZO, fill: 'forwards' });
+  const caja = logo.getBoundingClientRect();
+  // La palabra empieza al 30 % del ancho del logo: lo anterior es el isotipo, que por ahora dibuja el SVG.
+  const palabra = logo.animate(destapar(caja.width, caja.height, caja.width * 0.3), {
+    duration: T.palabra.dura,
+    delay: T.palabra.inicio,
+    easing: SUAVE,
+    ...antes,
+  });
+  // Al terminar se retira el SVG y queda solo la imagen oficial, que es idéntica.
+  const retirar = () => svg.remove();
+  palabra.finished.then(retirar, retirar);
+
+  // El texto se destapa con el mismo barrido mientras el logo se escribe, y se apoya subiendo 12 px.
+  texto.forEach((bloque, i) => {
+    const [oculto, visible] = destapar(bloque.offsetWidth, bloque.offsetHeight);
+    bloque.animate(
+      [
+        { ...oculto, transform: 'translateY(12px)' },
+        { ...visible, transform: 'none' },
+      ],
+      {
+        duration: T.texto.dura,
+        delay: T.texto.inicio + i * T.texto.paso,
+        easing: SUAVE,
+        ...antes,
+      },
+    );
   });
 
-  // 2 · Anclaje: el isotipo viaja y se reduce hasta su lugar en el logo; la palabra se descubre de izquierda
-  // a derecha. Al terminar se retira el SVG y queda solo la imagen oficial.
-  const destino = logo.getBoundingClientRect();
-  const origen = svg.getBoundingClientRect();
-  const dx = destino.left + (destino.width * ISOTIPO_EN_LOGO) / 2 - (origen.left + origen.width / 2);
-  const dy = destino.top + destino.height / 2 - (origen.top + origen.height / 2);
-  const viaje = svg.animate(
-    [
-      { transform: 'none' },
-      { transform: `translate(${dx}px, ${dy}px) scale(${destino.height / origen.height})` },
-    ],
-    { duration: DURACION_ANCLAJE, delay: ANCLAJE, easing: CURVA, fill: 'forwards' },
-  );
-  const retirar = () => svg.remove();
-  viaje.finished.then(retirar, retirar);
-  logo.animate([{ clipPath: 'inset(0 100% 0 30%)' }, { clipPath: 'inset(0 0 0 30%)' }], {
-    duration: DURACION_ANCLAJE,
-    delay: ANCLAJE,
-    easing: CURVA,
+  // El escritorio se arma por capas. Primero el marco, vacío.
+  const { raiz, lienzo } = panel;
+  raiz.animate(destapar(raiz.offsetWidth, raiz.offsetHeight), {
+    duration: T.marco.dura,
+    delay: T.marco.inicio,
+    easing: SUAVE,
     ...antes,
   });
 
-  // 3 · Texto: sube 16 px, escalonado cada 60 ms. Dura 460 ms y no 500: con 500, la zona de descarga
-  // (tercera del escalón) terminaría a los 1820 ms y el botón debe quedar listo antes de 1,8 s.
-  const subida = [
-    { clipPath: 'inset(0 0 100% 0)', transform: 'translateY(16px)' },
-    { clipPath: SIN_RECORTE, offset: 0.6 },
-    { clipPath: SIN_RECORTE, transform: 'none' },
-  ];
-  texto.forEach((bloque, i) => {
-    bloque.animate(subida, { duration: 460, delay: ANCLAJE + i * 60, easing: CURVA, ...antes });
+  // Capa 1 · Wallpaper: el cielo se destapa y cada forma del paisaje sube desde abajo, una tras otra, cada
+  // una por delante de la anterior. La barra de tareas sube con ellas.
+  const alto = lienzo.offsetHeight;
+  const fondo = panel.fondo(raiz.dataset.tema as Tema);
+  fondo.animate(destapar(lienzo.offsetWidth, alto), {
+    duration: T.fondo.dura,
+    delay: T.fondo.inicio,
+    easing: SUAVE,
+    ...antes,
+  });
+  [...fondo.children].slice(1).forEach((forma, i) => {
+    const escondida = `translateY(${alto - (forma as SVGGraphicsElement).getBBox().y}px)`;
+    forma.animate([{ transform: escondida }, { transform: 'none' }], {
+      duration: T.capas.dura,
+      delay: T.capas.inicio + i * T.capas.paso,
+      easing: SUAVE,
+      ...antes,
+    });
+  });
+  panel.barra.animate([{ transform: 'translateY(100%)' }, { transform: 'none' }], {
+    duration: T.capas.dura,
+    delay: T.capas.inicio,
+    easing: SUAVE,
+    ...antes,
   });
 
-  // 4 · Capas del escritorio: el panel entra en diagonal desde abajo a la derecha, el wallpaper lo cubre con
-  // un barrido a 18° y aterrizan los widgets y, al final, la ventana, cada 90 ms.
-  panel.raiz.animate(
-    [
-      { clipPath: 'inset(100% -12px -12px 100%)', transform: 'translate(48px, 72px)' },
-      { clipPath: SIN_RECORTE, transform: 'none' },
-    ],
-    { duration: 400, delay: CAPAS, easing: CURVA, ...antes },
-  );
-  const tema = panel.raiz.dataset.tema as Tema;
-  panel.fondo(tema).animate(BARRIDO, { duration: 450, delay: CAPAS + 200, easing: CURVA, ...antes });
-  const aterrizaje = [
-    { clipPath: 'inset(0 0 100% 0)', transform: `translateY(${-W}px)` },
-    { clipPath: SIN_RECORTE, transform: 'none' },
-  ];
+  // Capa 2 · Widgets: suben juntos, apilados como capas (cada uno apoyado a 18° sobre el anterior), y
+  // después cada uno se desliza a su lugar en la plantilla. La ventana es la última.
+  const centro = (panel.piezas.length - 1) / 2;
   panel.piezas.forEach((pieza, i) => {
-    pieza.animate(aterrizaje, { duration: 240, delay: CAPAS + 600 + i * 90, easing: CURVA, ...antes });
+    const dx = lienzo.offsetWidth / 2 - (pieza.offsetLeft + pieza.offsetWidth / 2) + (i - centro) * 10;
+    const dy = alto / 2 - (pieza.offsetTop + pieza.offsetHeight / 2) - (i - centro) * 30;
+    const pila = `translate(${dx}px, ${dy}px) scale(0.72)`;
+    pieza.animate(
+      [
+        { transform: `translateY(${alto}px) ${pila}`, easing: SUAVE },
+        { transform: pila, offset: 0.4, easing: DESLIZ },
+        { transform: 'none' },
+      ],
+      { duration: T.piezas.dura, delay: T.piezas.inicio + i * T.piezas.paso, ...antes },
+    );
+  });
+
+  // Capa 3 · Información: la conversación con Windi se escribe mensaje a mensaje.
+  panel.chat.forEach((mensaje, i) => {
+    mensaje.animate(
+      [
+        { clipPath: 'inset(0 0 100% 0)', transform: 'translateY(10px)' },
+        { clipPath: 'inset(-8px)', transform: 'none' },
+      ],
+      { duration: T.chat.dura, delay: T.chat.inicio + i * T.chat.paso, easing: SUAVE, ...antes },
+    );
   });
 }
 
 /**
- * 5 · Cambio de tema: el wallpaper nuevo barre a 18° y los widgets se deslizan a la posición de su
- * plantilla. Con «reducir movimiento», el cambio es inmediato.
+ * Acomodar: aplica un cambio de posición y desliza cada elemento desde donde estaba hasta donde queda. Con
+ * «reducir movimiento», el cambio es inmediato.
  */
+export function deslizar<R>(panel: Panel, elementos: HTMLElement[], cambio: () => R, duracion = 520): R {
+  const partida = elementos.map((elemento) => elemento.getBoundingClientRect());
+  const resultado = cambio();
+  if (!conMovimiento()) return resultado;
+  // El lienzo está escalado: el desplazamiento medido en pantalla se pasa a medidas del lienzo.
+  const escala = escalaDe(panel);
+  elementos.forEach((elemento, i) => {
+    const llegada = elemento.getBoundingClientRect();
+    const dx = ((partida[i]?.left ?? llegada.left) - llegada.left) / escala;
+    const dy = ((partida[i]?.top ?? llegada.top) - llegada.top) / escala;
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+    elemento.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], {
+      duration: duracion,
+      delay: i * 30,
+      easing: DESLIZ,
+      fill: 'backwards',
+    });
+  });
+  return resultado;
+}
+
+/** Cambio de tema: el wallpaper nuevo se destapa a 18° y los widgets se deslizan a su plantilla. */
 function cambiarTema(panel: Panel, tema: Tema) {
-  const piezas = [...panel.piezas];
-  const partida = piezas.map((pieza) => pieza.getBoundingClientRect());
-  const { entrante, saliente } = aplicarTema(panel, tema);
-  const retirar = () => saliente?.classList.remove('fondo--saliente');
-  if (!conMovimiento() || !saliente) {
+  const fondos = deslizar(panel, panel.piezas, () => aplicarTema(panel, tema), 900);
+  const retirar = () => fondos.saliente?.classList.remove('fondo--saliente');
+  if (!conMovimiento() || !fondos.saliente) {
     retirar();
     return;
   }
-  const opciones = { duration: 700, easing: CURVA };
-  entrante.animate(BARRIDO, opciones).finished.then(retirar, retirar);
-  // El lienzo está escalado: el desplazamiento medido en pantalla se pasa a medidas del lienzo.
-  const escala = panel.lienzo.getBoundingClientRect().width / panel.lienzo.offsetWidth || 1;
-  piezas.forEach((pieza, i) => {
-    const llegada = pieza.getBoundingClientRect();
-    const dx = ((partida[i]?.left ?? llegada.left) - llegada.left) / escala;
-    const dy = ((partida[i]?.top ?? llegada.top) - llegada.top) / escala;
-    if (dx !== 0 || dy !== 0) {
-      pieza.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], opciones);
-    }
-  });
+  const { offsetWidth: ancho, offsetHeight: alto } = panel.lienzo;
+  fondos.entrante
+    .animate(destapar(ancho, alto), { duration: 1000, easing: SUAVE })
+    .finished.then(retirar, retirar);
 }
 
 /**
- * 6 · Pieza activa. En escritorio, la pieza del panel ligada a la función que tiene el puntero encima o, si
- * no hay ninguna, a la más cercana al centro de la ventana. Aquí solo se marca la pieza con una clase; cómo
- * se nota (sube y pasa a sombra de nivel 2, o borde de 3 px con «reducir movimiento») lo decide estilos.css.
+ * Pieza activa. En escritorio, la pieza del panel ligada a la función que tiene el puntero encima o, si no
+ * hay ninguna, a la más cercana al centro de la ventana. Aquí solo se marca la pieza con una clase; cómo se
+ * nota (sube y pasa a sombra de nivel 2, o borde de 3 px con «reducir movimiento») lo decide estilos.css.
  */
 function seguirPiezaActiva({ funciones, panel }: Escena) {
   const [reloj, tareas, calendario, kanban, ventana] = panel.piezas;

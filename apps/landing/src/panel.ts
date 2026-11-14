@@ -1,7 +1,9 @@
-// Panel del escritorio (CD-01-HU01): una ilustración hecha con HTML y CSS, no una imagen, para poder moverla
-// y cambiarle el tema. Es decorativa (`aria-hidden`): nada dentro es enfocable ni tiene rol. No lleva logo,
-// isotipo ni ícono de la aplicación. Los textos son los de los mockups WG-MK-01, aprobados por Paula el
-// 14-nov-2026.
+// Panel del escritorio (CD-01-HU01): un escritorio de ejemplo hecho con HTML y CSS, no una imagen, para poder
+// moverlo, cambiarle el tema y usarlo (interaccion.ts): las tareas, los días, las tarjetas, las pestañas y la
+// propuesta de Windi son controles nativos. No lleva logo, isotipo ni ícono de la aplicación. Los textos
+// visibles son los de los mockups WG-MK-01, aprobados por Paula el 14-nov-2026.
+// DUDA: CD-01-HU01 los nombres accesibles que no se ven («Escritorio de ejemplo», «Tarjeta» y «Tema») no
+// están en ningún CA ni mockup; están por confirmar.
 
 export const TEMAS = [
   { id: 'windgets', nombre: 'Windgets' },
@@ -22,7 +24,7 @@ const FONDOS: Record<Tema, string> = {
 };
 
 const ICONO = (grosor: string, dibujo: string) =>
-  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${grosor}" stroke-linecap="round" stroke-linejoin="round">${dibujo}</svg>`;
+  `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${grosor}" stroke-linecap="round" stroke-linejoin="round">${dibujo}</svg>`;
 // «Pendiente» y «Completada» llevan ícono además de la palabra (R-12).
 const RELOJ = ICONO('2.4', '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>');
 const HECHA = ICONO('2.8', '<path d="M5 13l4 4 10-11"/>');
@@ -31,19 +33,28 @@ const NUBE = ICONO(
   '<path d="M7 18a4 4 0 0 1 0-8 5.5 5.5 0 0 1 10.6 1.2A3.5 3.5 0 0 1 17 18z"/><path d="M9.5 14l2 2 3.5-4"/>',
 );
 
+/** Estado de una tarea: ícono y palabra (R-12). */
+export const estadoDeTarea = (completada: boolean) =>
+  `${completada ? HECHA : RELOJ}<span>${completada ? 'Completada' : 'Pendiente'}</span>`;
+
 const tarea = (nombre: string, completada = false) =>
-  `<div class="tarea${completada ? ' tarea--completada' : ''}"><span class="tarea__nombre">${nombre}</span><span class="tarea__estado">${completada ? HECHA : RELOJ}<span>${completada ? 'Completada' : 'Pendiente'}</span></span></div>`;
+  `<button type="button" class="tarea" aria-pressed="${completada}"><span class="tarea__nombre">${nombre}</span><span class="tarea__estado">${estadoDeTarea(completada)}</span></button>`;
 
 // Octubre de 2026 empieza en jueves; el día 5 (lunes) es el de hoy en la ilustración.
 const DIAS = [
   ...['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((d) => `<span class="dia dia--nombre">${d}</span>`),
   '<span class="dia"></span>'.repeat(3),
-  ...Array.from({ length: 31 }, (_, i) => `<span class="dia${i === 4 ? ' dia--hoy' : ''}">${i + 1}</span>`),
+  // Un solo día entra en el orden de tabulación; entre días se pasa con las flechas (interaccion.ts).
+  ...Array.from(
+    { length: 31 },
+    (_, i) =>
+      `<button type="button" class="dia dia--numero${i === 4 ? ' dia--hoy' : ''}" aria-pressed="${i === 4}" tabindex="${i === 4 ? 0 : -1}">${i + 1}</button>`,
+  ),
 ].join('');
 
 // Las tres columnas por defecto del CA. Las tarjetas son bloques sin texto.
 const columna = (nombre: string, tarjetas: number) =>
-  `<div class="columna"><span class="columna__nombre">${nombre}</span>${'<span class="tarjeta"></span>'.repeat(tarjetas)}</div>`;
+  `<div class="columna"><span class="columna__nombre">${nombre}</span>${'<button type="button" class="tarjeta" aria-label="Tarjeta"></button>'.repeat(tarjetas)}</div>`;
 
 const windi = (clase: string, contenido: string) =>
   `<div class="chat__fila ${clase}"><span class="chat__avatar">W</span><div class="chat__mensaje">${contenido}</div></div>`;
@@ -71,17 +82,23 @@ const PIEZAS = `
 </div>
 <div class="pieza ventana" data-pieza="ventana">
   <div class="ventana__barra">
-    <div class="ventana__pestanas"><span class="pestana pestana--activa">Planificador</span><span class="pestana">Personalización</span></div>
+    <div class="ventana__pestanas" role="tablist"><button type="button" class="pestana" role="tab" id="pestana-planificador" aria-controls="vista-planificador" aria-selected="true">Planificador</button><button type="button" class="pestana" role="tab" id="pestana-personalizacion" aria-controls="vista-personalizacion" aria-selected="false" tabindex="-1">Personalización</button></div>
     <span class="sincronizado" data-pieza="sincronizado">${NUBE}<span>Sincronizado</span></span>
   </div>
-  <div class="ventana__cuerpo">
+  <div class="ventana__cuerpo" role="tabpanel" id="vista-planificador" aria-labelledby="pestana-planificador">
     <span class="ventana__titulo">Agente de IA</span>
     ${windi('chat__saludo', '¡Hola! Soy Windi, el agente de IA de Windgets. ¿Qué organizamos hoy?')}
     <div class="chat__mensaje chat__mensaje--usuario">Mueve la mensualidad del gimnasio a Por hacer</div>
     ${windi(
       'chat__propuesta',
-      '<span>¿Muevo "Pagar la mensualidad del gimnasio" a "Por hacer"?</span><span class="chat__acciones"><span class="chat__accion chat__accion--principal">Confirmar</span><span class="chat__accion">Rechazar</span></span>',
+      '<span>¿Muevo "Pagar la mensualidad del gimnasio" a "Por hacer"?</span><span class="chat__acciones"><button type="button" class="chat__accion chat__accion--principal" data-respuesta="confirmar">Confirmar</button><button type="button" class="chat__accion" data-respuesta="rechazar">Rechazar</button></span>',
     )}
+  </div>
+  <div class="ventana__cuerpo" role="tabpanel" id="vista-personalizacion" aria-labelledby="pestana-personalizacion" hidden>
+    <div class="ventana__temas" role="group" aria-label="Tema">${TEMAS.map(
+      ({ id, nombre }, i) =>
+        `<button type="button" class="ventana__tema" data-elegir="${id}" aria-pressed="${i === 0}"><span class="tema__muestra" data-muestra="${id}"></span><span>${nombre}</span></button>`,
+    ).join('')}</div>
   </div>
 </div>`;
 
@@ -91,19 +108,23 @@ export interface Panel {
   /** Las cinco piezas, en el orden en que aterrizan: Reloj, Tareas del día, Calendario, Kanban y ventana. */
   piezas: HTMLElement[];
   sincronizado: HTMLElement;
+  barra: HTMLElement;
+  /** Los mensajes de la conversación con Windi, en orden. */
+  chat: HTMLElement[];
   fondo(tema: Tema): SVGElement;
 }
 
 export function crearPanel(): Panel {
   const raiz = document.createElement('div');
   raiz.className = 'panel';
-  raiz.setAttribute('aria-hidden', 'true');
+  raiz.setAttribute('role', 'group');
+  raiz.setAttribute('aria-label', 'Escritorio de ejemplo');
   raiz.dataset.tema = TEMAS[0].id;
   const fondos = TEMAS.map(
     ({ id }, i) =>
-      `<svg class="fondo${i === 0 ? ' fondo--activo' : ''}" data-fondo="${id}" viewBox="0 0 1200 750" preserveAspectRatio="xMidYMid slice">${FONDOS[id]}</svg>`,
+      `<svg class="fondo${i === 0 ? ' fondo--activo' : ''}" aria-hidden="true" data-fondo="${id}" viewBox="0 0 1200 750" preserveAspectRatio="xMidYMid slice">${FONDOS[id]}</svg>`,
   ).join('');
-  const barra = `<div class="barra">${'<span class="barra__icono"></span>'.repeat(4)}<span class="barra__hora">10:20</span></div>`;
+  const barra = `<div class="barra" aria-hidden="true">${'<span class="barra__icono"></span>'.repeat(4)}<span class="barra__hora">10:20</span></div>`;
   raiz.innerHTML = `<div class="lienzo">${fondos}<div class="rejilla">${PIEZAS}</div>${barra}</div>`;
 
   const uno = <T extends Element>(selector: string) => raiz.querySelector<T>(selector) as T;
@@ -116,6 +137,8 @@ export function crearPanel(): Panel {
       uno<HTMLElement>(`[data-pieza="${p}"]`),
     ),
     sincronizado: uno<HTMLElement>('[data-pieza="sincronizado"]'),
+    barra: uno<HTMLElement>('.barra'),
+    chat: [...raiz.querySelectorAll<HTMLElement>('#vista-planificador > :not(.ventana__titulo)')],
     fondo: (tema) => uno<SVGElement>(`[data-fondo="${tema}"]`),
   };
 }
@@ -146,6 +169,9 @@ export function aplicarTema(panel: Panel, tema: Tema): { entrante: SVGElement; s
   saliente?.classList.replace('fondo--activo', 'fondo--saliente');
   entrante.classList.add('fondo--activo');
   panel.raiz.dataset.tema = tema;
+  panel.raiz.querySelectorAll<HTMLElement>('[data-elegir]').forEach((opcion) => {
+    opcion.setAttribute('aria-pressed', String(opcion.dataset.elegir === tema));
+  });
   document.documentElement.dataset.tema = tema;
   return { entrante, saliente };
 }

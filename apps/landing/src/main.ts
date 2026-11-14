@@ -3,8 +3,9 @@ import './estilos.css';
 import { enlaceDeDescarga, instaladorDisponible, repositorioValido } from './descarga';
 import { ICONO_DESCARGA, ICONO_VERIFICACION, MINIATURAS } from './iconos';
 import logo from './marca/logo_horizontal.png';
+import { activarPanel } from './interaccion';
 import { iniciarMovimiento } from './movimiento';
-import { crearPanel, TEMAS } from './panel';
+import { crearPanel, TEMAS, type Tema } from './panel';
 import { detectarCompatibilidad, type Navegador } from './sistema';
 import {
   AVISO_ARQUITECTURA,
@@ -126,15 +127,21 @@ function dibujar(raiz: HTMLElement) {
   const { lista, elementos } = listaDeFunciones();
   const pie = cierre();
 
-  // El orden del DOM es el orden de lectura; el panel, decorativo, va al final y se coloca con CSS.
+  // El orden del DOM es el orden de lectura; el panel va al final y se coloca con CSS.
   raiz.append(h1, titular, descripcion, descarga, selector, lista, pie, panel.raiz);
   const cambiarTema = iniciarMovimiento({
+    identificador: h1,
     logo: imagen,
     texto: [titular, descripcion, descarga, selector, lista, pie],
     funciones: elementos,
     panel,
   });
   for (const { id, radio } of radios) radio.addEventListener('change', () => cambiarTema(id));
+  // Elegir un tema en la pestaña «Personalización» del panel es lo mismo que elegirlo en «Elige un tema».
+  activarPanel(panel, (tema: Tema) => {
+    for (const { id, radio } of radios) radio.checked = id === tema;
+    cambiarTema(tema);
+  });
   return { boton, avisos };
 }
 
