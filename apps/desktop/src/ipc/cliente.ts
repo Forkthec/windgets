@@ -6,4 +6,4 @@ import { invocarSimulado } from './simulado';
 // aquí (convenciones.md, «Estilo»; D-188, reparto entre Rust y React). Cada comando recibe un único argumento
 // `params` (docs/DUDAS.md). Fuera de Tauri responde el Núcleo simulado.
 export const invocar: Invoke = <K extends CommandName>(comando: K, params: CommandMap[K]['params']) =>
-  isTauri() ? invoke<Result<CommandMap[K]['result']>>(comando, { params }) : invocarSimulado();
+  isTauri() ? invoke<Result<CommandMap[K]['result']>>(comando, { params }) : invocarSimulado(comando, params);
