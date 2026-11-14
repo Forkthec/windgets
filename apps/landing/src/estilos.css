@@ -101,6 +101,11 @@ body {
   color: var(--texto);
 }
 
+.landing__avisos {
+  display: grid;
+  gap: calc(var(--unidad) * 2);
+}
+
 /* RT-04 (aviso): dice qué ocurrió y qué puede hacer el visitante; no bloquea la página. */
 .landing__aviso {
   margin: 0;
