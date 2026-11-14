@@ -923,7 +923,7 @@ BEGIN
   PERFORM t.eq((r->>'unchanged')::boolean, false, 'catalog_pull: versión distinta -> trae los catálogos');
   PERFORM t.eq(jsonb_array_length(r->'colors'), 9, 'catalog_pull: 9 colores activos (el inactivo no se entrega)');
   PERFORM t.eq(jsonb_array_length(r->'templates'), 1, 'catalog_pull: 1 plantilla');
-  PERFORM t.eq(jsonb_array_length(r->'fonts'), 4, 'catalog_pull: 4 tipografías');
+  PERFORM t.eq(jsonb_array_length(r->'fonts'), 5, 'catalog_pull: 5 tipografías (con Nunito, WG-MK-01)');
   PERFORM t.eq(jsonb_array_length(r->'palettes'), 3, 'catalog_pull: 3 paletas');
   PERFORM t.eq(jsonb_array_length(r->'images'), 1, 'catalog_pull: 1 imagen');
   PERFORM t.eq((SELECT count(*) FROM catalog_color WHERE id = 'oculto'), 0::bigint, 'RLS: el color inactivo no se ve');
