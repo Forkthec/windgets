@@ -286,6 +286,14 @@ def pulsar(h, id_boton):
     win32api.PostMessage(h, win32con.WM_COMMAND, id_boton, win32gui.GetDlgItem(h, id_boton))
 
 
+def aceptar(h):
+    """Pulsa el único botón de un mensaje simple (en un MessageBox con solo «Aceptar», su ID no es IDOK)."""
+    botones = [c for c in hijos(h) if win32gui.GetClassName(c) == "Button" and win32gui.IsWindowVisible(c)]
+    if len(botones) != 1:
+        raise Falla(f"El mensaje tiene {len(botones)} botones; se esperaba uno. Muestra: {textos(h)}")
+    pulsar_control(botones[0])
+
+
 def pulsar_control(c):
     padre = win32gui.GetParent(c)
     win32api.PostMessage(padre, win32con.WM_COMMAND, win32gui.GetDlgCtrlID(c), c)
@@ -468,7 +476,7 @@ def pruebas_compatible(inf: Informe, instalador: Path, temporal: Path, disco_peq
         h = esperar(con_texto(DANADO), f"el mensaje «{DANADO}»")
         inf.nota(f"Título del mensaje: «{win32gui.GetWindowText(h)}»")
         inf.captura("descarga-incompleta")
-        pulsar(h, win32con.IDOK)
+        aceptar(h)
         proceso.wait(30)
         inf.nota(f"Código de salida: {proceso.returncode}")
         if proceso.returncode == 0:
@@ -485,7 +493,7 @@ def pruebas_compatible(inf: Informe, instalador: Path, temporal: Path, disco_peq
         proceso = abrir(archivo)
         h = esperar(con_texto(DANADO), f"el mensaje «{DANADO}»")
         inf.captura("descarga-danada")
-        pulsar(h, win32con.IDOK)
+        aceptar(h)
         salida(proceso, 3)
         sin_residuos()
 
@@ -543,7 +551,7 @@ def pruebas_compatible(inf: Informe, instalador: Path, temporal: Path, disco_peq
         elegir(m, OPCION_1)
         aviso = esperar(con_texto(CANCELADA), f"el mensaje «{CANCELADA}»", 120)
         inf.captura("instalacion-cancelada")
-        pulsar(aviso, win32con.IDOK)
+        aceptar(aviso)
         salida(proceso, 1)
         sin_residuos()
 
@@ -744,7 +752,7 @@ def pruebas_no_compatible(inf: Informe, instalador: Path):
         proceso = abrir(instalador)
         h = esperar(con_texto(NO_COMPATIBLE), f"el mensaje «{NO_COMPATIBLE}»")
         inf.captura("no-compatible")
-        pulsar(h, win32con.IDOK)
+        aceptar(h)
         salida(proceso, 2)
         sin_residuos()
 
