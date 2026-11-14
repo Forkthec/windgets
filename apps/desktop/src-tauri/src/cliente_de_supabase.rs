@@ -80,6 +80,50 @@ pub trait AuthDeSupabase: Send + Sync {
         contrasena: &str,
         alias: &str,
     ) -> impl Future<Output = Result<(), FallaDeAuth>> + Send;
+    /// `POST /resend` `{ type: 'signup', email }`: envía un código nuevo e invalida el anterior.
+    fn reenviar_registro(
+        &self,
+        correo: &str,
+    ) -> impl Future<Output = Result<(), FallaDeAuth>> + Send;
+    /// `POST /verify` `{ type: 'signup', email, token }`: verifica el correo, crea la cuenta y abre la sesión.
+    fn verificar_registro(
+        &self,
+        correo: &str,
+        codigo: &str,
+    ) -> impl Future<Output = Result<SesionDeAuth, FallaDeAuth>> + Send;
+}
+
+/// Sesión que entrega Supabase Auth (`access_token`, `refresh_token`, `expires_in`, `user`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SesionDeAuth {
+    pub access_token: String,
+    pub refresh_token: String,
+    /// Segundos de vigencia del token de acceso.
+    pub expires_in: i64,
+    pub user_id: String,
+    /// Alias guardado al registrarse (`user.user_metadata.alias`, de `data: { alias }` en `/signup`).
+    pub alias: String,
+}
+
+/// Lee la sesión del cuerpo de `/verify` o `/token`. Un cuerpo sin tokens se trata como servicio sin respuesta.
+pub fn leer_sesion(cuerpo: &str) -> Result<SesionDeAuth, FallaDeAuth> {
+    let json: serde_json::Value =
+        serde_json::from_str(cuerpo).map_err(|_| FallaDeAuth::SinRespuesta)?;
+    let texto = |ruta: &str| {
+        json.pointer(ruta)
+            .and_then(|v| v.as_str())
+            .map(str::to_string)
+    };
+    Ok(SesionDeAuth {
+        access_token: texto("/access_token").ok_or(FallaDeAuth::SinRespuesta)?,
+        refresh_token: texto("/refresh_token").ok_or(FallaDeAuth::SinRespuesta)?,
+        expires_in: json
+            .get("expires_in")
+            .and_then(|v| v.as_i64())
+            .unwrap_or_default(),
+        user_id: texto("/user/id").ok_or(FallaDeAuth::SinRespuesta)?,
+        alias: texto("/user/user_metadata/alias").unwrap_or_default(),
+    })
 }
 
 /// Límite de espera de cada llamada a la nube. DUDA: P05 el valor no está definido (docs/DUDAS.md).
@@ -193,6 +237,25 @@ impl AuthDeSupabase for ClienteDeSupabase {
             .await
             .map(|_| ())
     }
+
+    async fn reenviar_registro(&self, correo: &str) -> Result<(), FallaDeAuth> {
+        let cuerpo = serde_json::json!({ "type": "signup", "email": correo });
+        self.enviar(reqwest::Method::POST, "/auth/v1/resend", Some(cuerpo))
+            .await
+            .map(|_| ())
+    }
+
+    async fn verificar_registro(
+        &self,
+        correo: &str,
+        codigo: &str,
+    ) -> Result<SesionDeAuth, FallaDeAuth> {
+        let cuerpo = serde_json::json!({ "type": "signup", "email": correo, "token": codigo });
+        let texto = self
+            .enviar(reqwest::Method::POST, "/auth/v1/verify", Some(cuerpo))
+            .await?;
+        leer_sesion(&texto)
+    }
 }
 
 #[cfg(test)]
@@ -258,6 +321,27 @@ mod pruebas {
                 codigo: String::new()
             })
         );
+    }
+
+    #[test]
+    fn leer_la_sesion_de_auth() {
+        // INT-01, ejemplo de /verify: tokens, vigencia, usuario y el alias de los metadatos del registro.
+        let cuerpo = r#"{ "access_token": "eyJ", "token_type": "bearer", "expires_in": 3600, "refresh_token": "r1",
+            "user": { "id": "0b6e", "email": "estef@example.com", "user_metadata": { "alias": "Estef" } } }"#;
+        let sesion = leer_sesion(cuerpo).unwrap();
+        assert_eq!(
+            (sesion.access_token.as_str(), sesion.refresh_token.as_str()),
+            ("eyJ", "r1")
+        );
+        assert_eq!(
+            (
+                sesion.expires_in,
+                sesion.user_id.as_str(),
+                sesion.alias.as_str()
+            ),
+            (3600, "0b6e", "Estef")
+        );
+        assert_eq!(leer_sesion("{}"), Err(FallaDeAuth::SinRespuesta));
     }
 
     #[test]

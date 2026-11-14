@@ -10,6 +10,7 @@ import { useNavegacion, useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { useConexion } from '../cuenta/conexion';
 import { Hipervinculo } from '../cuenta/Hipervinculo';
 import { MarcoDeCuenta } from '../cuenta/MarcoDeCuenta';
+import { VerificarCorreo } from './VerificarCorreo';
 import { TEXTOS } from '../cuenta/textos';
 import { validarAlias, validarConfirmacion, validarContrasena, validarCorreo } from '../cuenta/validaciones';
 
@@ -31,8 +32,7 @@ export function Register() {
     password: '',
     password_confirmation: '',
   });
-  const [paso, setPaso] = useState<'formulario' | 'verificar'>('formulario');
-  const [, setEnvio] = useState<AuthRegisterStartResult | null>(null);
+  const [envio, setEnvio] = useState<AuthRegisterStartResult | null>(null);
   const [registrado, setRegistrado] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   // Confirmar contraseña se compara con la contraseña diligenciada (HE-01-HU02-ET05).
@@ -69,16 +69,28 @@ export function Register() {
     if (!campos.validarTodo(valores)) return;
     const r = await invocar('auth_register_start', valores);
     if (!r.ok) return fallo(r.error);
-    setEnvio(r.value);
     if (r.result_message) mostrarResultado(r.result_message.message);
-    setPaso('verificar');
+    setEnvio(r.value);
   }, [campos, fallo, invocar, mostrarResultado, valores]);
   const { ejecutar, enCurso } = useEnvioUnico(crear);
 
   const correo = valores.email.trim();
 
-  if (paso === 'verificar') {
-    return <MarcoDeCuenta nombre="Registro">{null}</MarcoDeCuenta>;
+  if (envio) {
+    // HE-01-HU03-CA08: «Regresar» descarta el registro pendiente en el Núcleo y conserva lo diligenciado.
+    const regresar = () => {
+      void invocar('auth_register_cancel', {});
+      setEnvio(null);
+    };
+    return (
+      <MarcoDeCuenta nombre="Registro">
+        <VerificarCorreo
+          correo={correo}
+          reenvioDisponible={envio.resend_available_at}
+          alRegresar={regresar}
+        />
+      </MarcoDeCuenta>
+    );
   }
 
   return (

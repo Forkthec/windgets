@@ -1,7 +1,7 @@
-// HE-01-HU01 · Registrar una cuenta con alias y correo electrónico. Una prueba por CA (criterio de aceptación)
-// en la vista; las reglas del Núcleo tienen su prueba ca_he_01_hu01_* en servicio_de_sesion.rs.
+// HE-01-HU01 a HU03 · Registro: formulario, contraseña y verificación del correo. Una prueba por CA (criterio
+// de aceptación) en la vista; las reglas del Núcleo tienen su prueba ca_he_01_hu0n_* en servicio_de_sesion.rs.
 import { act, cleanup, fireEvent, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { abrirCuenta, Destino, llamadasA } from '../cuenta/pruebas';
 import { Register } from './Register';
 
@@ -281,5 +281,177 @@ describe('HE-01-HU02 · Contraseña del registro', () => {
       'Confirmar contraseña',
       'Las contraseñas no coinciden.',
     );
+  });
+});
+
+/** Llega al paso Verificar correo con el código enviado; el reenvío queda disponible en `reenvioEnMs`. */
+async function enVerificar(conectado = true, reenvioEnMs = 60_000) {
+  const nucleo = await registro();
+  const ahora = Date.now();
+  nucleo.responder('auth_register_start', () => ({
+    ok: true,
+    value: {
+      resend_available_at: new Date(ahora + reenvioEnMs).toISOString(),
+      expires_at: new Date(ahora + 600_000).toISOString(),
+    },
+  }));
+  nucleo.responder('auth_register_verify', () => ({
+    ok: true,
+    value: { alias: 'Ana' },
+    result_message: {
+      code: 'auth_register_verify',
+      message: '¡Bienvenido, Ana! Tu cuenta fue creada correctamente.',
+      params: { alias: 'Ana' },
+    },
+  }));
+  diligenciar({});
+  await crearCuenta();
+  if (!conectado) nucleo.emitir('connectivity_changed', { online: false });
+  return nucleo;
+}
+
+function escribirCodigo(codigo: string) {
+  fireEvent.change(screen.getByLabelText('Código de verificación'), { target: { value: codigo } });
+}
+
+async function seleccionar(nombre: string, rol: 'button' | 'link' = 'button') {
+  await act(async () => {
+    fireEvent.click(screen.getByRole(rol, { name: nombre }));
+  });
+}
+
+type Nucleo = Awaited<ReturnType<typeof enVerificar>>;
+
+function errorAlVerificar(nucleo: Nucleo, code: 'code.incorrect' | 'code.expired', message: string) {
+  nucleo.responder('auth_register_verify', () => ({ ok: false, error: { code, message, field: 'code' } }));
+}
+
+describe('HE-01-HU03 · Verificar el correo', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('HE-01-HU03-CA01 · Verificar el correo y crear la cuenta', async () => {
+    const nucleo = await enVerificar();
+    // ET01: correo, campo, «Verificar», «Reenviar código» y «Regresar».
+    const paso = screen.getByRole('region', { name: 'Verificar correo' });
+    expect(within(paso).getByText('ana@example.com')).toBeTruthy();
+    expect(within(paso).getByRole('link', { name: 'Reenviar código' })).toBeTruthy();
+    expect(within(paso).getByRole('button', { name: 'Regresar' })).toBeTruthy();
+    escribirCodigo('482913');
+    await seleccionar('Verificar');
+    expect(llamadasA(nucleo, 'auth_register_verify')[0]?.params).toEqual({ code: '482913' });
+    // RT-01: abre la pantalla principal (Planificador diario) con el mensaje de bienvenida.
+    expect(screen.getByRole('main', { name: 'Planificador diario' })).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toContain(
+      '¡Bienvenido, Ana! Tu cuenta fue creada correctamente.',
+    );
+  });
+
+  it('HE-01-HU03-CA02 · Código de verificación vacío', async () => {
+    const nucleo = await enVerificar();
+    await seleccionar('Verificar');
+    expect(textoDebajoDe('Código de verificación')).toBe('Este campo es obligatorio.');
+    expect(llamadasA(nucleo, 'auth_register_verify')).toHaveLength(0);
+  });
+
+  it('HE-01-HU03-CA03 · Código de verificación incorrecto', async () => {
+    const nucleo = await enVerificar();
+    errorAlVerificar(nucleo, 'code.incorrect', 'El código no es correcto. Revísalo e intenta de nuevo.');
+    escribirCodigo('000000');
+    await seleccionar('Verificar');
+    expect(textoDebajoDe('Código de verificación')).toBe(
+      'El código no es correcto. Revísalo e intenta de nuevo.',
+    );
+    expect(screen.getByRole('region', { name: 'Verificar correo' })).toBeTruthy();
+  });
+
+  it('HE-01-HU03-CA04 · Código de verificación vencido', async () => {
+    const nucleo = await enVerificar();
+    errorAlVerificar(nucleo, 'code.expired', 'El código venció. Solicita uno nuevo.');
+    escribirCodigo('482913');
+    await seleccionar('Verificar');
+    expect(textoDebajoDe('Código de verificación')).toBe('El código venció. Solicita uno nuevo.');
+    expect(screen.getByRole('region', { name: 'Verificar correo' })).toBeTruthy();
+  });
+
+  it('HE-01-HU03-CA05 · Superar el límite de intentos de verificación', async () => {
+    const nucleo = await enVerificar();
+    nucleo.responder('auth_register_verify', () => ({
+      ok: false,
+      error: {
+        code: 'auth.rate_limited',
+        message: 'Demasiados intentos. Espera unos minutos e intenta de nuevo.',
+      },
+    }));
+    escribirCodigo('482913');
+    await seleccionar('Verificar');
+    expect(screen.getByRole('alert').textContent).toBe(
+      'Demasiados intentos. Espera unos minutos e intenta de nuevo.',
+    );
+    expect(screen.getByRole('region', { name: 'Verificar correo' })).toBeTruthy();
+  });
+
+  it('HE-01-HU03-CA06 · Reenviar el código de verificación', async () => {
+    const nucleo = await enVerificar(true, 0);
+    nucleo.responder('auth_register_resend', () => ({
+      ok: true,
+      value: { resend_available_at: new Date(Date.now() + 60_000).toISOString() },
+      result_message: { code: 'auth_register_resend', message: 'Te enviamos un nuevo código.' },
+    }));
+    await seleccionar('Reenviar código', 'link');
+    expect(llamadasA(nucleo, 'auth_register_resend')).toHaveLength(1);
+    expect(screen.getByRole('status').textContent).toContain('Te enviamos un nuevo código.');
+    // Tras el reenvío vuelve la espera de 60 s (ET05).
+    expect(screen.getByText(/^Puedes pedir un nuevo código en (60|59) s\.$/)).toBeTruthy();
+  });
+
+  it('HE-01-HU03-CA07 · Reenviar antes de 60 segundos', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
+    const nucleo = await enVerificar(true, 3_000);
+    const enlace = screen.getByRole('link', { name: 'Reenviar código' });
+    expect(enlace.getAttribute('aria-disabled')).toBe('true');
+    expect(screen.getByText('Puedes pedir un nuevo código en 3 s.')).toBeTruthy();
+    await seleccionar('Reenviar código', 'link');
+    expect(llamadasA(nucleo, 'auth_register_resend')).toHaveLength(0);
+    // ET13: los segundos se actualizan cada segundo y el hipervínculo se habilita al llegar a 0.
+    await act(async () => {
+      vi.advanceTimersByTime(1_000);
+    });
+    expect(screen.getByText('Puedes pedir un nuevo código en 2 s.')).toBeTruthy();
+    await act(async () => {
+      vi.advanceTimersByTime(2_000);
+    });
+    expect(screen.queryByText(/Puedes pedir un nuevo código/)).toBeNull();
+    expect(enlace.getAttribute('aria-disabled')).toBeNull();
+  });
+
+  it('HE-01-HU03-CA08 · Regresar al formulario para corregir los datos', async () => {
+    const nucleo = await enVerificar();
+    await seleccionar('Regresar');
+    expect(llamadasA(nucleo, 'auth_register_cancel')).toHaveLength(1);
+    expect(screen.getByRole('form', { name: 'Formulario' })).toBeTruthy();
+    expect(screen.getByLabelText('Alias')).toHaveProperty('value', 'Ana');
+    expect(screen.getByLabelText('Correo electrónico')).toHaveProperty('value', 'ana@example.com');
+  });
+
+  it('HE-01-HU03-CA09 · Verificar el correo sin conexión', async () => {
+    const nucleo = await enVerificar(false, 0);
+    escribirCodigo('482913');
+    const paso = screen.getByRole('region', { name: 'Verificar correo' });
+    // ET14: el aviso en la parte superior del paso, debajo de «Regresar».
+    const aviso = within(paso).getByRole('alert');
+    expect(aviso.textContent).toBe('No hay conexión a internet. Conéctate para crear tu cuenta.');
+    expect(paso.children[1]).toBe(aviso);
+    expect(screen.getByRole('button', { name: 'Verificar' }).hasAttribute('disabled')).toBe(true);
+    expect(screen.getByRole('link', { name: 'Reenviar código' }).getAttribute('aria-disabled')).toBe('true');
+    await seleccionar('Verificar');
+    await seleccionar('Reenviar código', 'link');
+    expect(llamadasA(nucleo, 'auth_register_verify')).toHaveLength(0);
+    expect(llamadasA(nucleo, 'auth_register_resend')).toHaveLength(0);
+    // ET15: no avanza y conserva lo diligenciado hasta que vuelve la conexión.
+    expect(screen.getByLabelText('Código de verificación')).toHaveProperty('value', '482913');
+    nucleo.emitir('connectivity_changed', { online: true });
+    expect(screen.getByRole('button', { name: 'Verificar' }).hasAttribute('disabled')).toBe(false);
   });
 });

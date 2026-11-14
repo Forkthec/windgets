@@ -1,13 +1,18 @@
 {
   "ALIAS_MUY_LARGO": "El alias no puede superar los 30 caracteres.",
+  "BIENVENIDA": "¡Bienvenido, <alias>! Tu cuenta fue creada correctamente.",
   "CAMPO_OBLIGATORIO": "Este campo es obligatorio.",
   "CODIGO_ENVIADO": "Te enviamos un código de verificación a tu correo. Diligéncialo para crear tu cuenta.",
+  "CODIGO_INCORRECTO": "El código no es correcto. Revísalo e intenta de nuevo.",
+  "CODIGO_REENVIADO": "Te enviamos un nuevo código.",
+  "CODIGO_VENCIDO": "El código venció. Solicita uno nuevo.",
   "CONTRASENAS_NO_COINCIDEN": "Las contraseñas no coinciden.",
   "CONTRASENA_INVALIDA": "La contraseña debe tener entre 8 y 64 caracteres e incluir una mayúscula, una minúscula y un número.",
   "CORREO_INVALIDO": "Diligencia un correo electrónico válido.",
   "CORREO_MUY_LARGO": "El correo electrónico no puede superar los 64 caracteres.",
   "CORREO_YA_REGISTRADO": "Este correo electrónico ya está registrado.",
   "DEMASIADOS_INTENTOS": "Demasiados intentos. Espera unos minutos e intenta de nuevo.",
+  "REENVIO_EN_SEGUNDOS": "Puedes pedir un nuevo código en <segundos restantes> s.",
   "SERVICIO_NO_DISPONIBLE": "No pudimos completar la operación. Intenta de nuevo más tarde.",
   "SIN_CONEXION_REGISTRO": "No hay conexión a internet. Conéctate para crear tu cuenta."
 }

@@ -37,6 +37,19 @@ pub const CONTRASENA_INVALIDA: &str = "La contraseña debe tener entre 8 y 64 ca
 /// `password_confirmation.mismatch` (HE-01-HU02-CA08).
 pub const CONTRASENAS_NO_COINCIDEN: &str = "Las contraseñas no coinciden.";
 
+// HE-01-HU03 · Verificar el correo electrónico con un código de verificación (IPC-AUTH-02 a IPC-AUTH-04).
+
+/// Resultado de `auth_register_verify` (HE-01-HU03-CA01); `<alias>` va en `params.alias`.
+pub const BIENVENIDA: &str = "¡Bienvenido, <alias>! Tu cuenta fue creada correctamente.";
+/// `code.incorrect` (HE-01-HU03-CA03).
+pub const CODIGO_INCORRECTO: &str = "El código no es correcto. Revísalo e intenta de nuevo.";
+/// `code.expired` (HE-01-HU03-CA04).
+pub const CODIGO_VENCIDO: &str = "El código venció. Solicita uno nuevo.";
+/// Resultado de `auth_register_resend` (HE-01-HU03-CA06).
+pub const CODIGO_REENVIADO: &str = "Te enviamos un nuevo código.";
+/// `code.resend_too_soon` (HE-01-HU03-CA07); `<segundos restantes>` va en `params.seconds`.
+pub const REENVIO_EN_SEGUNDOS: &str = "Puedes pedir un nuevo código en <segundos restantes> s.";
+
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
     ("SERVICIO_NO_DISPONIBLE", SERVICIO_NO_DISPONIBLE),
@@ -50,6 +63,11 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("DEMASIADOS_INTENTOS", DEMASIADOS_INTENTOS),
     ("CONTRASENA_INVALIDA", CONTRASENA_INVALIDA),
     ("CONTRASENAS_NO_COINCIDEN", CONTRASENAS_NO_COINCIDEN),
+    ("BIENVENIDA", BIENVENIDA),
+    ("CODIGO_INCORRECTO", CODIGO_INCORRECTO),
+    ("CODIGO_VENCIDO", CODIGO_VENCIDO),
+    ("CODIGO_REENVIADO", CODIGO_REENVIADO),
+    ("REENVIO_EN_SEGUNDOS", REENVIO_EN_SEGUNDOS),
 ];
 
 #[cfg(test)]

@@ -6,13 +6,16 @@
 //! instante y el Núcleo las vuelve a comprobar. `Err` trae un solo `AppError` (tipos.ts), así que el Núcleo
 //! devuelve el primer error en el orden de la pantalla; la vista muestra todos a la vez (RT-04).
 
+use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::cliente_de_supabase::{AuthDeSupabase, FallaDeAuth};
+use crate::cliente_de_supabase::{AuthDeSupabase, FallaDeAuth, SesionDeAuth};
 use crate::messages;
+use crate::repositorios_y_archivos_locales::{AlmacenDeSesion, SesionGuardada};
 use crate::tipos::{
-    AppError, AuthRegisterStartParams, AuthRegisterStartResult, CodeSent, ErrorCode, Instant,
+    AppError, AuthRegisterStartParams, AuthRegisterStartResult, AuthRegisterVerifyParams,
+    AuthRegisterVerifyResult, CodeSent, ErrorCode, ErrorParams, ErrorParamsValue, Instant,
     ResultMessage,
 };
 
@@ -246,24 +249,48 @@ fn inesperado() -> AppError {
     error(ErrorCode::InternalUnexpected, "", None)
 }
 
-/// Servicio de sesión con su cliente de Supabase Auth y su reloj.
+fn con_params(mut e: AppError, clave: &str, valor: ErrorParamsValue) -> AppError {
+    e.params = Some(ErrorParams(HashMap::from([(clave.to_string(), valor)])));
+    e
+}
+
+/// Servicio de sesión con su cliente de Supabase Auth, su reloj y el almacén de `session.bin`.
 pub struct ServicioDeSesion<A, R> {
     auth: A,
     reloj: R,
+    almacen: Box<dyn AlmacenDeSesion>,
     pendiente: Mutex<Option<RegistroPendiente>>,
 }
 
 impl<A: AuthDeSupabase, R: Reloj> ServicioDeSesion<A, R> {
-    pub fn nuevo(auth: A, reloj: R) -> Self {
+    pub fn nuevo(auth: A, reloj: R, almacen: Box<dyn AlmacenDeSesion>) -> Self {
         Self {
             auth,
             reloj,
+            almacen,
             pendiente: Mutex::new(None),
         }
     }
 
     pub fn auth(&self) -> &A {
         &self.auth
+    }
+
+    /// La sesión guardada (`session.bin`).
+    pub fn sesion_guardada(&self) -> Option<SesionGuardada> {
+        self.almacen.leer()
+    }
+
+    /// Guarda la sesión que entregó Supabase Auth. DUDA: P05 si no se puede escribir `session.bin`, la sesión
+    /// sigue abierta en esta ejecución y se pedirá iniciar sesión la próxima vez (docs/DUDAS.md).
+    fn guardar_sesion(&self, sesion: &SesionDeAuth, alias: &str) {
+        let _ = self.almacen.guardar(&SesionGuardada {
+            access_token: sesion.access_token.clone(),
+            refresh_token: sesion.refresh_token.clone(),
+            expires_at: self.reloj.ahora_ms() + sesion.expires_in * 1_000,
+            user_id: sesion.user_id.clone(),
+            alias: alias.to_string(),
+        });
     }
 
     pub fn registro_pendiente(&self) -> Option<RegistroPendiente> {
@@ -317,6 +344,116 @@ impl<A: AuthDeSupabase, R: Reloj> ServicioDeSesion<A, R> {
             mensaje: resultado("auth_register_start", messages::CODIGO_ENVIADO),
         })
     }
+
+    /// Registro pendiente para verificar o reenviar. Sin él (la aplicación se reinició en el paso Verificar
+    /// correo) no hay código vigente: `code.expired`. DUDA: P05 ningún CA lo define (docs/DUDAS.md).
+    fn pendiente_o_vencido(&self) -> Result<RegistroPendiente, AppError> {
+        self.registro_pendiente().ok_or_else(|| {
+            error(
+                ErrorCode::CodeExpired,
+                messages::CODIGO_VENCIDO,
+                Some("code"),
+            )
+        })
+    }
+
+    /// IPC-AUTH-02 `auth_register_verify`: verifica el código, crea la cuenta, guarda la sesión y devuelve el
+    /// alias con el mensaje de bienvenida (HE-01-HU03-CA01, ET08, ET09). La cuenta y sus datos semilla los crea
+    /// el servidor al confirmar el correo (`on_account_confirmed`).
+    pub async fn registrar_verificar(
+        &self,
+        params: AuthRegisterVerifyParams,
+    ) -> Result<ConMensaje<AuthRegisterVerifyResult>, AppError> {
+        let codigo = params.code.trim();
+        if codigo.is_empty() {
+            return Err(error(
+                ErrorCode::CodeRequired,
+                messages::CAMPO_OBLIGATORIO,
+                Some("code"),
+            ));
+        }
+        let pendiente = self.pendiente_o_vencido()?;
+        let vencido = self.reloj.ahora_ms() > pendiente.enviado_ms + VIGENCIA_DEL_CODIGO_MS;
+        let sesion = self
+            .auth
+            .verificar_registro(&pendiente.correo, codigo)
+            .await
+            .map_err(|f| {
+                falla_comun(&f, messages::SIN_CONEXION_REGISTRO).unwrap_or_else(|| {
+                    // Auth no distingue entre código incorrecto y vencido (otp_expired): decide la hora del envío.
+                    if vencido {
+                        error(
+                            ErrorCode::CodeExpired,
+                            messages::CODIGO_VENCIDO,
+                            Some("code"),
+                        )
+                    } else {
+                        error(
+                            ErrorCode::CodeIncorrect,
+                            messages::CODIGO_INCORRECTO,
+                            Some("code"),
+                        )
+                    }
+                })
+            })?;
+        self.guardar_sesion(&sesion, &pendiente.alias);
+        self.fijar_pendiente(None);
+        let mut mensaje = resultado(
+            "auth_register_verify",
+            &messages::BIENVENIDA.replace("<alias>", &pendiente.alias),
+        );
+        mensaje.params = Some(ErrorParams(HashMap::from([(
+            "alias".to_string(),
+            ErrorParamsValue::Text(pendiente.alias.clone()),
+        )])));
+        Ok(ConMensaje {
+            valor: AuthRegisterVerifyResult {
+                alias: pendiente.alias,
+            },
+            mensaje,
+        })
+    }
+
+    /// IPC-AUTH-03 `auth_register_resend`: antes de 60 s desde el último envío responde `code.resend_too_soon`
+    /// con los segundos restantes (CA07); después pide un código nuevo, que invalida el anterior (CA06, ET06).
+    pub async fn registrar_reenviar(&self) -> Result<ConMensaje<CodeSent>, AppError> {
+        let pendiente = self.pendiente_o_vencido()?;
+        let ahora = self.reloj.ahora_ms();
+        let faltan_ms = pendiente.enviado_ms + ESPERA_DE_REENVIO_MS - ahora;
+        if faltan_ms > 0 {
+            let segundos = (faltan_ms + 999) / 1_000;
+            let texto = messages::REENVIO_EN_SEGUNDOS
+                .replace("<segundos restantes>", &segundos.to_string());
+            return Err(con_params(
+                error(ErrorCode::CodeResendTooSoon, &texto, None),
+                "seconds",
+                ErrorParamsValue::Number(segundos),
+            ));
+        }
+        self.auth
+            .reenviar_registro(&pendiente.correo)
+            .await
+            .map_err(|f| {
+                falla_comun(&f, messages::SIN_CONEXION_REGISTRO).unwrap_or_else(inesperado)
+            })?;
+        let enviado_ms = self.reloj.ahora_ms();
+        self.fijar_pendiente(Some(RegistroPendiente {
+            enviado_ms,
+            ..pendiente
+        }));
+        Ok(ConMensaje {
+            valor: CodeSent {
+                resend_available_at: instante(enviado_ms + ESPERA_DE_REENVIO_MS),
+            },
+            mensaje: resultado("auth_register_resend", messages::CODIGO_REENVIADO),
+        })
+    }
+
+    /// IPC-AUTH-04 `auth_register_cancel`: al «Regresar» al paso Formulario descarta el registro pendiente; el
+    /// código enviado ya no se puede verificar desde la aplicación (HE-01-HU03-ET10).
+    pub fn registrar_cancelar(&self) {
+        self.fijar_pendiente(None);
+    }
 }
 
 #[cfg(test)]
@@ -361,14 +498,21 @@ pub(crate) mod pruebas {
         pub verificados: Vec<String>,
         pub falla: Mutex<Option<FallaDeAuth>>,
         pub llamadas: Mutex<Vec<String>>,
+        /// Códigos enviados, del primero al último.
+        pub codigos: Mutex<Vec<String>>,
     }
 
     impl AuthDePrueba {
         pub(crate) fn con_verificado(correo: &str) -> Self {
             Self {
                 verificados: vec![correo.to_string()],
+                codigos: Mutex::new(vec![CODIGO.to_string()]),
                 ..Self::default()
             }
+        }
+
+        pub(crate) fn sin_falla(&self) {
+            *self.falla.lock().unwrap() = None;
         }
 
         pub(crate) fn fallar(&self, falla: FallaDeAuth) {
@@ -402,7 +546,42 @@ pub(crate) mod pruebas {
         ) -> Result<(), FallaDeAuth> {
             self.anotar(format!("signup {correo} {alias}"))
         }
+
+        async fn reenviar_registro(&self, correo: &str) -> Result<(), FallaDeAuth> {
+            self.anotar(format!("resend {correo}"))?;
+            self.codigos
+                .lock()
+                .unwrap()
+                .push(CODIGO_REENVIADO.to_string());
+            Ok(())
+        }
+
+        async fn verificar_registro(
+            &self,
+            correo: &str,
+            codigo: &str,
+        ) -> Result<SesionDeAuth, FallaDeAuth> {
+            self.anotar(format!("verify {correo} {codigo}"))?;
+            // Solo el último código enviado es válido (ET06, ET08); Auth responde otp_expired para todo lo demás.
+            let ultimo = self.codigos.lock().unwrap().last().cloned();
+            if ultimo.as_deref() != Some(codigo) {
+                return Err(FallaDeAuth::Rechazo {
+                    estado: 403,
+                    codigo: "otp_expired".into(),
+                });
+            }
+            Ok(SesionDeAuth {
+                access_token: "acceso".into(),
+                refresh_token: "renovacion".into(),
+                expires_in: 3_600,
+                user_id: "0b6e7f3a-1111-4222-8333-444455556666".into(),
+                alias: String::new(),
+            })
+        }
     }
+
+    pub(crate) const CODIGO: &str = "482913";
+    pub(crate) const CODIGO_REENVIADO: &str = "730518";
 
     pub(crate) const REGISTRADO: &str = "usuario.prueba@example.com";
 
@@ -410,9 +589,213 @@ pub(crate) mod pruebas {
         let reloj = RelojDePrueba::default();
         reloj.adelantar(1_794_663_000_000); // 2026-11-14T13:30:00.000Z
         (
-            ServicioDeSesion::nuevo(AuthDePrueba::con_verificado(REGISTRADO), reloj.clone()),
+            ServicioDeSesion::nuevo(
+                AuthDePrueba::con_verificado(REGISTRADO),
+                reloj.clone(),
+                Box::new(crate::repositorios_y_archivos_locales::SesionEnMemoria::default()),
+            ),
             reloj,
         )
+    }
+
+    /// Servicio en el paso Verificar correo: «Ana» con ana@example.com pidió el código.
+    pub(crate) fn en_verificar() -> (ServicioDeSesion<AuthDePrueba, RelojDePrueba>, RelojDePrueba) {
+        let (servicio, reloj) = servicio();
+        esperar(servicio.registrar_inicio(formulario("Ana", "ana@example.com"))).unwrap();
+        (servicio, reloj)
+    }
+
+    fn verificar(
+        servicio: &ServicioDeSesion<AuthDePrueba, RelojDePrueba>,
+        codigo: &str,
+    ) -> Result<ConMensaje<AuthRegisterVerifyResult>, AppError> {
+        esperar(servicio.registrar_verificar(AuthRegisterVerifyParams {
+            code: codigo.to_string(),
+        }))
+    }
+
+    /// La verificación falló con este código y mensaje, y no se creó la cuenta ni se guardó la sesión.
+    fn no_crea_la_cuenta(
+        r: Result<ConMensaje<AuthRegisterVerifyResult>, AppError>,
+        code: ErrorCode,
+        message: &str,
+    ) {
+        let error = r.unwrap_err();
+        assert_eq!((error.code, error.message.as_str()), (code, message));
+    }
+
+    #[test]
+    fn ca_he_01_hu03_ca01() {
+        // HE-01-HU03-CA01 · Código de 6 dígitos vigente y correcto: crea la cuenta, guarda la sesión y da la
+        // bienvenida con el alias (ET02, ET08, ET09).
+        let (servicio, _) = en_verificar();
+        assert_eq!(servicio.sesion_guardada(), None);
+        let r = verificar(&servicio, CODIGO).unwrap();
+        assert_eq!(r.valor.alias, "Ana");
+        assert_eq!(
+            r.mensaje.message,
+            "¡Bienvenido, Ana! Tu cuenta fue creada correctamente."
+        );
+        let json = serde_json::to_value(&r.mensaje).unwrap();
+        assert_eq!(json["params"]["alias"], "Ana");
+        let sesion = servicio.sesion_guardada().unwrap();
+        assert_eq!(
+            (sesion.alias.as_str(), sesion.access_token.as_str()),
+            ("Ana", "acceso")
+        );
+        assert_eq!(servicio.registro_pendiente(), None);
+    }
+
+    #[test]
+    fn ca_he_01_hu03_ca02() {
+        // HE-01-HU03-CA02 · Código vacío (ET07): mensaje debajo del campo y sin llamar a Supabase.
+        let (servicio, _) = en_verificar();
+        for codigo in ["", "   "] {
+            let error = verificar(&servicio, codigo).unwrap_err();
+            assert_eq!(
+                (error.code, error.message.as_str(), error.field.as_deref()),
+                (
+                    ErrorCode::CodeRequired,
+                    "Este campo es obligatorio.",
+                    Some("code")
+                )
+            );
+        }
+        assert!(
+            !servicio
+                .auth()
+                .llamadas()
+                .iter()
+                .any(|l| l.starts_with("verify"))
+        );
+        assert_eq!(servicio.sesion_guardada(), None);
+    }
+
+    #[test]
+    fn ca_he_01_hu03_ca03() {
+        // HE-01-HU03-CA03 · Código incorrecto, dentro de la vigencia.
+        let (servicio, _) = en_verificar();
+        no_crea_la_cuenta(
+            verificar(&servicio, "000000"),
+            ErrorCode::CodeIncorrect,
+            "El código no es correcto. Revísalo e intenta de nuevo.",
+        );
+        assert_eq!(servicio.sesion_guardada(), None);
+    }
+
+    #[test]
+    fn ca_he_01_hu03_ca04() {
+        // HE-01-HU03-CA04 · Más de 10 minutos desde el envío (ET03, RNF-25): el código venció.
+        let (servicio, reloj) = en_verificar();
+        reloj.adelantar(VIGENCIA_DEL_CODIGO_MS + 1);
+        servicio.auth().fallar(FallaDeAuth::Rechazo {
+            estado: 403,
+            codigo: "otp_expired".into(),
+        });
+        no_crea_la_cuenta(
+            verificar(&servicio, CODIGO),
+            ErrorCode::CodeExpired,
+            "El código venció. Solicita uno nuevo.",
+        );
+        assert_eq!(servicio.sesion_guardada(), None);
+    }
+
+    #[test]
+    fn ca_he_01_hu03_ca05() {
+        // HE-01-HU03-CA05 · Límite de intentos superado (ET04, RNF-24): Supabase responde 429.
+        let (servicio, _) = en_verificar();
+        servicio.auth().fallar(FallaDeAuth::Rechazo {
+            estado: 429,
+            codigo: "over_request_rate_limit".into(),
+        });
+        no_crea_la_cuenta(
+            verificar(&servicio, CODIGO),
+            ErrorCode::AuthRateLimited,
+            "Demasiados intentos. Espera unos minutos e intenta de nuevo.",
+        );
+        assert_eq!(servicio.sesion_guardada(), None);
+    }
+
+    #[test]
+    fn ca_he_01_hu03_ca06() {
+        // HE-01-HU03-CA06 · Reenviar a los 60 s (ET05): código nuevo, el anterior queda invalidado (ET06).
+        let (servicio, reloj) = en_verificar();
+        reloj.adelantar(ESPERA_DE_REENVIO_MS);
+        let r = esperar(servicio.registrar_reenviar()).unwrap();
+        assert_eq!(r.mensaje.message, "Te enviamos un nuevo código.");
+        assert_eq!(r.valor.resend_available_at.0, "2026-11-14T13:32:00.000Z");
+        assert!(
+            servicio
+                .auth()
+                .llamadas()
+                .contains(&"resend ana@example.com".to_string())
+        );
+        no_crea_la_cuenta(
+            verificar(&servicio, CODIGO),
+            ErrorCode::CodeIncorrect,
+            "El código no es correcto. Revísalo e intenta de nuevo.",
+        );
+        assert!(verificar(&servicio, CODIGO_REENVIADO).is_ok());
+    }
+
+    #[test]
+    fn ca_he_01_hu03_ca07() {
+        // HE-01-HU03-CA07 · Antes de 60 s: code.resend_too_soon con los segundos restantes, sin pedir código.
+        let (servicio, reloj) = en_verificar();
+        reloj.adelantar(17_500);
+        let error = esperar(servicio.registrar_reenviar()).unwrap_err();
+        assert_eq!(error.code, ErrorCode::CodeResendTooSoon);
+        assert_eq!(error.message, "Puedes pedir un nuevo código en 43 s.");
+        assert_eq!(
+            serde_json::to_value(&error).unwrap()["params"]["seconds"],
+            43
+        );
+        assert!(
+            !servicio
+                .auth()
+                .llamadas()
+                .iter()
+                .any(|l| l.starts_with("resend"))
+        );
+    }
+
+    #[test]
+    fn ca_he_01_hu03_ca08() {
+        // HE-01-HU03-CA08 · Regresar al formulario: se descarta el registro pendiente y el código ya no se
+        // puede verificar (ET10); la vista conserva alias y correo.
+        let (servicio, _) = en_verificar();
+        servicio.registrar_cancelar();
+        assert_eq!(servicio.registro_pendiente(), None);
+        no_crea_la_cuenta(
+            verificar(&servicio, CODIGO),
+            ErrorCode::CodeExpired,
+            "El código venció. Solicita uno nuevo.",
+        );
+        assert!(
+            !servicio
+                .auth()
+                .llamadas()
+                .iter()
+                .any(|l| l.starts_with("verify"))
+        );
+    }
+
+    #[test]
+    fn ca_he_01_hu03_ca09() {
+        // HE-01-HU03-CA09 · Sin conexión: net.offline con el texto de Registro; no avanza ni descarta el registro.
+        let (servicio, reloj) = en_verificar();
+        servicio.auth().fallar(FallaDeAuth::SinConexion);
+        no_crea_la_cuenta(
+            verificar(&servicio, CODIGO),
+            ErrorCode::NetOffline,
+            "No hay conexión a internet. Conéctate para crear tu cuenta.",
+        );
+        reloj.adelantar(ESPERA_DE_REENVIO_MS);
+        let error = esperar(servicio.registrar_reenviar()).unwrap_err();
+        assert_eq!(error.code, ErrorCode::NetOffline);
+        assert!(servicio.registro_pendiente().is_some());
+        servicio.auth().sin_falla();
+        assert!(verificar(&servicio, CODIGO).is_ok());
     }
 
     pub(crate) fn formulario(alias: &str, email: &str) -> AuthRegisterStartParams {

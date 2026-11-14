@@ -36,6 +36,22 @@ const respuestas: Respuestas = {
       result_message: { code: 'auth_register_start', message: textos.CODIGO_ENVIADO },
     };
   },
+  // Cualquier código se acepta: el simulado no envía correos.
+  auth_register_verify: () => ({
+    ok: true,
+    value: { alias: 'Prueba' },
+    result_message: {
+      code: 'auth_register_verify',
+      message: textos.BIENVENIDA.replace('<alias>', 'Prueba'),
+      params: { alias: 'Prueba' },
+    },
+  }),
+  auth_register_resend: () => ({
+    ok: true,
+    value: { resend_available_at: new Date(Date.now() + ESPERA_DE_REENVIO_MS).toISOString() },
+    result_message: { code: 'auth_register_resend', message: textos.CODIGO_REENVIADO },
+  }),
+  auth_register_cancel: () => ({ ok: true, value: null }),
 };
 
 export async function invocarSimulado<K extends CommandName>(

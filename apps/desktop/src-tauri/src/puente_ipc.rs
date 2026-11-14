@@ -10,10 +10,13 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::cliente_de_supabase::ClienteDeSupabase;
+use crate::repositorios_y_archivos_locales::almacen_de_la_aplicacion;
 use crate::servicio_de_sesion::{ConMensaje, RelojDelSistema, ServicioDeSesion};
 use crate::tipos::{
-    AppError, AuthRegisterStartParams, AuthRegisterStartResult, Connectivity,
-    EventMapConnectivityChanged, IpcErr, IpcOk, IpcResult, NoParams,
+    AppError, AuthRegisterStartParams, AuthRegisterStartResult, AuthRegisterVerifyParams,
+    AuthRegisterVerifyResult, CodeSent, Connectivity, EventMapConnectivityChanged,
+    EventMapSessionChanged, EventMapSessionChangedReason, EventMapSessionChangedState, IpcErr,
+    IpcOk, IpcResult, NoParams,
 };
 
 /// El Núcleo que ven los comandos.
@@ -27,9 +30,22 @@ impl Nucleo {
             sesion: ServicioDeSesion::nuevo(
                 ClienteDeSupabase::desde_compilacion(),
                 RelojDelSistema,
+                almacen_de_la_aplicacion(),
             ),
         }
     }
+}
+
+/// EV-01 `session_changed` con la sesión iniciada: la ventana principal abre la pantalla principal (RT-01).
+fn avisar_sesion_iniciada(app: &AppHandle, alias: &str, reason: EventMapSessionChangedReason) {
+    let _ = app.emit(
+        "session_changed",
+        EventMapSessionChanged {
+            state: EventMapSessionChangedState::SignedIn,
+            alias: Some(alias.to_string()),
+            reason,
+        },
+    );
 }
 
 /// Cada cuánto se comprueba si volvió la conexión mientras no la hay. DUDA: P05 el valor no está definido.
@@ -106,4 +122,47 @@ pub async fn auth_register_start(
     let r = nucleo.sesion.registrar_inicio(params).await;
     avisar_conectividad(&app, antes);
     Ok(con_mensaje(r))
+}
+
+/// IPC-AUTH-02 `auth_register_verify` (HE-01-HU03). Al crear la cuenta emite `session_changed` con
+/// `reason: 'registered'`. La primera descarga de los datos de la cuenta llega con la sincronización (P10).
+#[tauri::command]
+pub async fn auth_register_verify(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: AuthRegisterVerifyParams,
+) -> Result<IpcResult<AuthRegisterVerifyResult>, ()> {
+    let antes = nucleo.sesion.auth().en_linea();
+    let r = nucleo.sesion.registrar_verificar(params).await;
+    avisar_conectividad(&app, antes);
+    if let Ok(creada) = &r {
+        avisar_sesion_iniciada(
+            &app,
+            &creada.valor.alias,
+            EventMapSessionChangedReason::Registered,
+        );
+    }
+    Ok(con_mensaje(r))
+}
+
+/// IPC-AUTH-03 `auth_register_resend` (HE-01-HU03).
+#[tauri::command]
+pub async fn auth_register_resend(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<CodeSent>, ()> {
+    let _ = params;
+    let antes = nucleo.sesion.auth().en_linea();
+    let r = nucleo.sesion.registrar_reenviar().await;
+    avisar_conectividad(&app, antes);
+    Ok(con_mensaje(r))
+}
+
+/// IPC-AUTH-04 `auth_register_cancel` (HE-01-HU03-CA08).
+#[tauri::command]
+pub fn auth_register_cancel(nucleo: State<'_, Nucleo>, params: NoParams) -> IpcResult<()> {
+    let _ = params;
+    nucleo.sesion.registrar_cancelar();
+    correcto(())
 }
