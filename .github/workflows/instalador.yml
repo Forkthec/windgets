@@ -1,0 +1,65 @@
+name: instalador
+
+# P04 · Instalador (CD-02). Genera el instalador NSIS con la plantilla de installer/, lo sella para su
+# verificación de integridad (CD-02-HU01-CA12) y lo prueba en Windows en modo silencioso
+# (installer/pruebas/instalador.ps1). Sube el .exe como artefacto para la prueba manual en máquina virtual con
+# Windows 10 22H2 y Windows 11 (plan_construccion.md, P04). No publica nada: eso lo hace release.yml.
+on:
+  push:
+    branches: ['paso-*']
+    paths:
+      - 'installer/**'
+      - 'apps/desktop/src-tauri/tauri.conf.json'
+      - '.github/workflows/instalador.yml'
+  pull_request:
+    paths:
+      - 'installer/**'
+      - 'apps/desktop/src-tauri/tauri.conf.json'
+      - '.github/workflows/instalador.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: instalador-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  instalador:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+      - name: Rust (versión de rust-toolchain.toml)
+        run: rustup show
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      - name: Pruebas del sello de integridad
+        run: node --test installer/sellar.test.mjs
+      - name: Generar el instalador
+        run: pnpm --filter desktop tauri build --bundles nsis
+      - name: Sellar el instalador
+        shell: bash
+        run: |
+          cp apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe Windgets-Setup.exe
+          node installer/sellar.mjs Windgets-Setup.exe
+      - name: Pruebas del instalador en Windows (modo silencioso)
+        shell: pwsh
+        run: ./installer/pruebas/instalador.ps1 -Instalador Windgets-Setup.exe
+
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: windgets-instalador
+          path: Windgets-Setup.exe
+          if-no-files-found: warn
+          retention-days: 14
