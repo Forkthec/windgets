@@ -634,6 +634,8 @@ Section Install
     WriteRegStr HKCU "${RUNKEY}" "${PRODUCTNAME}" "$\"$INSTDIR\${MAINBINARYNAME}.exe$\" --autostart"
   ${Else}
     DeleteRegValue HKCU "${RUNKEY}" "${PRODUCTNAME}"
+    ; Si el valor no existía, DeleteRegValue marca error; no es una falla de la instalación.
+    ClearErrors
   ${EndIf}
 
   ; Entrada de desinstalación del usuario (INT-13).

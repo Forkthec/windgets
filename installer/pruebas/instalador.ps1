@@ -90,7 +90,10 @@ Prueba 'CD-02-HU01-CA12 · Instalador descargado incompleto' {
   $archivo = [IO.File]::Open($incompleto, 'Open', 'ReadWrite')
   $archivo.SetLength($archivo.Length - 4096)
   $archivo.Close()
-  Comprobar ((Ejecutar $incompleto) -eq 3) 'el código de salida es 3 (instalador dañado)'
+  # Sin el final del archivo, NSIS lo rechaza antes de abrir el instalador (código 2), con el mensaje de CA12 que
+  # pone installer/sellar.mjs; si NSIS alcanza a abrirlo, lo rechaza VerificarIntegridad (código 3).
+  $codigo = Ejecutar $incompleto
+  Comprobar ($codigo -in @(2, 3)) "el instalador no se abre (código de salida $codigo)"
   SinResiduos
 }
 
@@ -100,7 +103,8 @@ Prueba 'CD-02-HU01-CA12 · Instalador descargado dañado' {
   $medio = [int]($bytes.Length / 2)
   $bytes[$medio] = $bytes[$medio] -bxor 0xFF
   [IO.File]::WriteAllBytes($danado, $bytes)
-  Comprobar ((Ejecutar $danado) -eq 3) 'el código de salida es 3 (instalador dañado)'
+  $codigo = Ejecutar $danado
+  Comprobar ($codigo -eq 3) "el código de salida es 3, instalador dañado (fue $codigo)"
   SinResiduos
 }
 
