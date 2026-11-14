@@ -50,6 +50,14 @@ pub const CODIGO_REENVIADO: &str = "Te enviamos un nuevo código.";
 /// `code.resend_too_soon` (HE-01-HU03-CA07); `<segundos restantes>` va en `params.seconds`.
 pub const REENVIO_EN_SEGUNDOS: &str = "Puedes pedir un nuevo código en <segundos restantes> s.";
 
+// HE-01-HU04 · Iniciar sesión con correo electrónico y contraseña (IPC-AUTH-05).
+
+/// `auth.invalid_credentials` (HE-01-HU04-CA08): el mismo texto para correo no registrado y contraseña
+/// incorrecta (ET06).
+pub const CREDENCIALES_INCORRECTAS: &str = "Correo electrónico o contraseña incorrectos.";
+/// `net.offline` en Inicio de sesión (HE-01-HU04-CA10).
+pub const SIN_CONEXION_INICIO: &str = "No hay conexión a internet. Conéctate para iniciar sesión.";
+
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
     ("SERVICIO_NO_DISPONIBLE", SERVICIO_NO_DISPONIBLE),
@@ -68,6 +76,8 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("CODIGO_VENCIDO", CODIGO_VENCIDO),
     ("CODIGO_REENVIADO", CODIGO_REENVIADO),
     ("REENVIO_EN_SEGUNDOS", REENVIO_EN_SEGUNDOS),
+    ("CREDENCIALES_INCORRECTAS", CREDENCIALES_INCORRECTAS),
+    ("SIN_CONEXION_INICIO", SIN_CONEXION_INICIO),
 ];
 
 #[cfg(test)]

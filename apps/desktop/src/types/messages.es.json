@@ -11,8 +11,10 @@
   "CORREO_INVALIDO": "Diligencia un correo electrónico válido.",
   "CORREO_MUY_LARGO": "El correo electrónico no puede superar los 64 caracteres.",
   "CORREO_YA_REGISTRADO": "Este correo electrónico ya está registrado.",
+  "CREDENCIALES_INCORRECTAS": "Correo electrónico o contraseña incorrectos.",
   "DEMASIADOS_INTENTOS": "Demasiados intentos. Espera unos minutos e intenta de nuevo.",
   "REENVIO_EN_SEGUNDOS": "Puedes pedir un nuevo código en <segundos restantes> s.",
   "SERVICIO_NO_DISPONIBLE": "No pudimos completar la operación. Intenta de nuevo más tarde.",
+  "SIN_CONEXION_INICIO": "No hay conexión a internet. Conéctate para iniciar sesión.",
   "SIN_CONEXION_REGISTRO": "No hay conexión a internet. Conéctate para crear tu cuenta."
 }

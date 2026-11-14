@@ -10,6 +10,8 @@ import textos from '@/types/messages.es.json';
 /** Cuenta ya verificada del simulado (datos de prueba mínimos de HE-01-HU04). */
 export const CUENTA_SIMULADA = { email: 'usuario.prueba@example.com', alias: 'Prueba' };
 
+export const CONTRASENA_SIMULADA = 'Clave123';
+
 const ESPERA_DE_REENVIO_MS = 60_000;
 const VIGENCIA_DEL_CODIGO_MS = 600_000;
 
@@ -52,6 +54,11 @@ const respuestas: Respuestas = {
     result_message: { code: 'auth_register_resend', message: textos.CODIGO_REENVIADO },
   }),
   auth_register_cancel: () => ({ ok: true, value: null }),
+  // HE-01-HU04: solo la cuenta de prueba entra, con la contraseña de los datos de prueba mínimos.
+  auth_sign_in: ({ email, password }) =>
+    email.trim().toLowerCase() === CUENTA_SIMULADA.email && password === CONTRASENA_SIMULADA
+      ? { ok: true, value: { user_id: 'simulado', alias: CUENTA_SIMULADA.alias } }
+      : error({ code: 'auth.invalid_credentials', message: textos.CREDENCIALES_INCORRECTAS }),
 };
 
 export async function invocarSimulado<K extends CommandName>(

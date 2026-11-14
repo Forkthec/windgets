@@ -15,8 +15,9 @@ use crate::messages;
 use crate::repositorios_y_archivos_locales::{AlmacenDeSesion, SesionGuardada};
 use crate::tipos::{
     AppError, AuthRegisterStartParams, AuthRegisterStartResult, AuthRegisterVerifyParams,
-    AuthRegisterVerifyResult, CodeSent, ErrorCode, ErrorParams, ErrorParamsValue, Instant,
-    ResultMessage,
+    AuthRegisterVerifyResult, AuthSessionState, AuthSessionStateState, AuthSessionStateToken,
+    AuthSignInParams, CodeSent, ErrorCode, ErrorParams, ErrorParamsValue, Instant, ResultMessage,
+    SessionInfo, Uuid,
 };
 
 /// Largo máximo del alias (HE-01-HU01-ET03, D-023).
@@ -200,6 +201,23 @@ pub fn validar_registro(params: &AuthRegisterStartParams) -> Vec<AppError> {
     .into_iter()
     .flatten()
     .collect()
+}
+
+/// Reglas del formulario de Inicio de sesión (HE-01-HU04-ET02 a ET05), en el orden de la pantalla. La
+/// contraseña solo es obligatoria: sus límites son «NO DEFINIDO» en la HU y la regla de HE-01-HU02 no aplica a
+/// cuentas ya creadas.
+pub fn validar_inicio(params: &AuthSignInParams) -> Vec<AppError> {
+    let contrasena = vacio(&params.password).then(|| {
+        error(
+            ErrorCode::PasswordRequired,
+            messages::CAMPO_OBLIGATORIO,
+            Some("password"),
+        )
+    });
+    [validar_correo(&params.email), contrasena]
+        .into_iter()
+        .flatten()
+        .collect()
 }
 
 /// Registro que espera el código de verificación (IPC-AUTH-04: vive solo en la memoria del Núcleo).
@@ -449,6 +467,65 @@ impl<A: AuthDeSupabase, R: Reloj> ServicioDeSesion<A, R> {
         })
     }
 
+    /// IPC-AUTH-05 `auth_sign_in`: valida, abre la sesión con Supabase Auth y la guarda (HE-01-HU04-CA01, ET08).
+    /// Correo no registrado y contraseña incorrecta dan el mismo error (ET06).
+    pub async fn iniciar_sesion(&self, params: AuthSignInParams) -> Result<SessionInfo, AppError> {
+        if let Some(primero) = validar_inicio(&params).into_iter().next() {
+            return Err(primero);
+        }
+        let correo = params.email.trim();
+        let sesion = self
+            .auth
+            .iniciar_con_contrasena(correo, &params.password)
+            .await
+            .map_err(|f| {
+                falla_comun(&f, messages::SIN_CONEXION_INICIO).unwrap_or_else(|| match &f {
+                    // DUDA: P05 una cuenta que pidió el código y no lo verificó responde `email_not_confirmed`;
+                    // para la aplicación esa cuenta no existe (HE-01-HU03-ET09), así que da el mismo resultado
+                    // que un correo no registrado (ET06; docs/DUDAS.md).
+                    FallaDeAuth::Rechazo {
+                        estado: 400,
+                        codigo,
+                    } if codigo == "invalid_credentials" || codigo == "email_not_confirmed" => {
+                        error(
+                            ErrorCode::AuthInvalidCredentials,
+                            messages::CREDENCIALES_INCORRECTAS,
+                            None,
+                        )
+                    }
+                    _ => inesperado(),
+                })
+            })?;
+        self.guardar_sesion(&sesion, &sesion.alias);
+        Ok(SessionInfo {
+            user_id: Uuid(sesion.user_id),
+            alias: sesion.alias,
+        })
+    }
+
+    /// IPC-AUTH-12 `auth_get_session`: con la sesión guardada no pide credenciales, con o sin conexión
+    /// (HE-01-HU04-CA02, ET08). Un token vencido queda `refresh_pending`: la renovación no tiene CA en P05.
+    pub fn estado_de_sesion(&self) -> AuthSessionState {
+        match self.sesion_guardada() {
+            Some(sesion) => AuthSessionState {
+                state: AuthSessionStateState::SignedIn,
+                user_id: Some(Uuid(sesion.user_id)),
+                alias: Some(sesion.alias),
+                token: if sesion.expires_at > self.reloj.ahora_ms() {
+                    AuthSessionStateToken::Valid
+                } else {
+                    AuthSessionStateToken::RefreshPending
+                },
+            },
+            None => AuthSessionState {
+                state: AuthSessionStateState::SignedOut,
+                user_id: None,
+                alias: None,
+                token: AuthSessionStateToken::Valid,
+            },
+        }
+    }
+
     /// IPC-AUTH-04 `auth_register_cancel`: al «Regresar» al paso Formulario descarta el registro pendiente; el
     /// código enviado ya no se puede verificar desde la aplicación (HE-01-HU03-ET10).
     pub fn registrar_cancelar(&self) {
@@ -570,13 +647,41 @@ pub(crate) mod pruebas {
                     codigo: "otp_expired".into(),
                 });
             }
-            Ok(SesionDeAuth {
+            Ok(Self::sesion(""))
+        }
+
+        async fn iniciar_con_contrasena(
+            &self,
+            correo: &str,
+            contrasena: &str,
+        ) -> Result<SesionDeAuth, FallaDeAuth> {
+            self.anotar(format!("token {correo}"))?;
+            let registrado = self
+                .verificados
+                .iter()
+                .any(|v| v.eq_ignore_ascii_case(correo));
+            if !registrado || contrasena != CLAVE {
+                return Err(FallaDeAuth::Rechazo {
+                    estado: 400,
+                    codigo: "invalid_credentials".into(),
+                });
+            }
+            Ok(Self::sesion("Prueba"))
+        }
+    }
+
+    /// Contraseña de la cuenta de prueba `REGISTRADO`.
+    pub(crate) const CLAVE: &str = "Clave123";
+
+    impl AuthDePrueba {
+        fn sesion(alias: &str) -> SesionDeAuth {
+            SesionDeAuth {
                 access_token: "acceso".into(),
                 refresh_token: "renovacion".into(),
                 expires_in: 3_600,
                 user_id: "0b6e7f3a-1111-4222-8333-444455556666".into(),
-                alias: String::new(),
-            })
+                alias: alias.into(),
+            }
         }
     }
 
@@ -1141,6 +1246,254 @@ pub(crate) mod pruebas {
             ErrorCode::PasswordConfirmationMismatch,
             "Las contraseñas no coinciden.",
             Some("password_confirmation"),
+        );
+    }
+
+    // HE-01-HU04 · Iniciar sesión con correo electrónico y contraseña (IPC-AUTH-05, IPC-AUTH-12).
+
+    fn inicio(email: &str, password: &str) -> AuthSignInParams {
+        AuthSignInParams {
+            email: email.to_string(),
+            password: password.to_string(),
+        }
+    }
+
+    /// El inicio falla con este error, sin llamar a Supabase Auth y sin guardar la sesión.
+    fn no_inicia_sin_enviar(params: AuthSignInParams, code: ErrorCode, message: &str, field: &str) {
+        let (servicio, _) = servicio();
+        let e = esperar(servicio.iniciar_sesion(params)).unwrap_err();
+        assert_eq!(
+            (e.code, e.message.as_str(), e.field.as_deref()),
+            (code, message, Some(field))
+        );
+        assert!(servicio.auth().llamadas().is_empty());
+        assert_eq!(servicio.sesion_guardada(), None);
+    }
+
+    /// El inicio llega a Supabase Auth y falla con este error, sin campo y sin guardar la sesión.
+    fn no_inicia(
+        params: AuthSignInParams,
+        falla: Option<FallaDeAuth>,
+        code: ErrorCode,
+        message: &str,
+    ) {
+        let (servicio, _) = servicio();
+        if let Some(falla) = falla {
+            servicio.auth().fallar(falla);
+        }
+        let e = esperar(servicio.iniciar_sesion(params)).unwrap_err();
+        assert_eq!((e.code, e.message.as_str(), e.field), (code, message, None));
+        assert_eq!(servicio.auth().llamadas().len(), 1);
+        assert_eq!(servicio.sesion_guardada(), None);
+    }
+
+    #[test]
+    fn ca_he_01_hu04_ca01() {
+        // HE-01-HU04-CA01 · Datos válidos: abre la sesión y la guarda cifrada (INT-11). El tema aplicado en el
+        // escritorio (ET11) llega con la capa del wallpaper (P06).
+        let (servicio, _) = servicio();
+        let r = esperar(servicio.iniciar_sesion(inicio(" usuario.prueba@example.com ", CLAVE)))
+            .unwrap();
+        assert_eq!(r.alias, "Prueba");
+        assert_eq!(r.user_id.0, "0b6e7f3a-1111-4222-8333-444455556666");
+        assert_eq!(
+            servicio.auth().llamadas(),
+            vec![format!("token {REGISTRADO}")]
+        );
+        let sesion = servicio.sesion_guardada().unwrap();
+        assert_eq!(
+            (
+                sesion.alias.as_str(),
+                sesion.access_token.as_str(),
+                sesion.refresh_token.as_str()
+            ),
+            ("Prueba", "acceso", "renovacion")
+        );
+        assert_eq!(sesion.expires_at, 1_794_663_000_000 + 3_600_000);
+    }
+
+    #[test]
+    fn ca_he_01_hu04_ca02() {
+        // HE-01-HU04-CA02 · Sesión recordada: sin sesión guardada pide credenciales; con ella no, aunque no haya
+        // conexión ni token vigente (ET08).
+        let (servicio, reloj) = servicio();
+        let sin_sesion = servicio.estado_de_sesion();
+        assert_eq!(
+            (sin_sesion.state, sin_sesion.user_id),
+            (AuthSessionStateState::SignedOut, None)
+        );
+        esperar(servicio.iniciar_sesion(inicio(REGISTRADO, CLAVE))).unwrap();
+        servicio.auth().fallar(FallaDeAuth::SinConexion);
+        let llamadas = servicio.auth().llamadas().len();
+        let con_sesion = servicio.estado_de_sesion();
+        assert_eq!(con_sesion.state, AuthSessionStateState::SignedIn);
+        assert_eq!(con_sesion.alias.as_deref(), Some("Prueba"));
+        assert_eq!(con_sesion.token, AuthSessionStateToken::Valid);
+        assert_eq!(servicio.auth().llamadas().len(), llamadas);
+        reloj.adelantar(3_600_001);
+        let vencida = servicio.estado_de_sesion();
+        assert_eq!(
+            (vencida.state, vencida.token),
+            (
+                AuthSessionStateState::SignedIn,
+                AuthSessionStateToken::RefreshPending
+            )
+        );
+    }
+
+    #[test]
+    fn ca_he_01_hu04_ca03() {
+        // HE-01-HU04-CA03 · Ningún campo diligenciado: los dos campos obligatorios, en el orden de la pantalla.
+        let errores = validar_inicio(&inicio("", ""));
+        let campos: Vec<_> = errores
+            .iter()
+            .map(|e| (e.code.clone(), e.message.as_str(), e.field.as_deref()))
+            .collect();
+        assert_eq!(
+            campos,
+            vec![
+                (
+                    ErrorCode::EmailRequired,
+                    "Este campo es obligatorio.",
+                    Some("email")
+                ),
+                (
+                    ErrorCode::PasswordRequired,
+                    "Este campo es obligatorio.",
+                    Some("password")
+                ),
+            ]
+        );
+        no_inicia_sin_enviar(
+            inicio("", ""),
+            ErrorCode::EmailRequired,
+            "Este campo es obligatorio.",
+            "email",
+        );
+    }
+
+    #[test]
+    fn ca_he_01_hu04_ca04() {
+        // HE-01-HU04-CA04 · Correo electrónico vacío (también solo espacios, RT-04-ET21).
+        no_inicia_sin_enviar(
+            inicio("   ", CLAVE),
+            ErrorCode::EmailRequired,
+            "Este campo es obligatorio.",
+            "email",
+        );
+    }
+
+    #[test]
+    fn ca_he_01_hu04_ca05() {
+        // HE-01-HU04-CA05 · Contraseña vacía.
+        no_inicia_sin_enviar(
+            inicio(REGISTRADO, ""),
+            ErrorCode::PasswordRequired,
+            "Este campo es obligatorio.",
+            "password",
+        );
+    }
+
+    #[test]
+    fn ca_he_01_hu04_ca06() {
+        // HE-01-HU04-CA06 · Correo con formato inválido (ET04).
+        for correo in ["usuario", "usuario@dominio", "@dominio.com"] {
+            no_inicia_sin_enviar(
+                inicio(correo, CLAVE),
+                ErrorCode::EmailInvalid,
+                "Diligencia un correo electrónico válido.",
+                "email",
+            );
+        }
+    }
+
+    #[test]
+    fn ca_he_01_hu04_ca07() {
+        // HE-01-HU04-CA07 · Correo de más de 64 caracteres (ET05); el de 64 pasa la validación.
+        let local = "a".repeat(52);
+        let de_64 = format!("{local}@example.com");
+        let de_65 = format!("{local}b@example.com");
+        assert_eq!((de_64.chars().count(), de_65.chars().count()), (64, 65));
+        no_inicia_sin_enviar(
+            inicio(&de_65, CLAVE),
+            ErrorCode::EmailTooLong,
+            "El correo electrónico no puede superar los 64 caracteres.",
+            "email",
+        );
+        assert!(validar_inicio(&inicio(&de_64, CLAVE)).is_empty());
+    }
+
+    #[test]
+    fn ca_he_01_hu04_ca08() {
+        // HE-01-HU04-CA08 · Correo no registrado o contraseña incorrecta: el mismo resultado (ET06). También la
+        // cuenta que nunca verificó su correo (email_not_confirmed).
+        const TEXTO: &str = "Correo electrónico o contraseña incorrectos.";
+        no_inicia(
+            inicio("nadie@example.com", CLAVE),
+            None,
+            ErrorCode::AuthInvalidCredentials,
+            TEXTO,
+        );
+        no_inicia(
+            inicio(REGISTRADO, "Clave999"),
+            None,
+            ErrorCode::AuthInvalidCredentials,
+            TEXTO,
+        );
+        let sin_verificar = FallaDeAuth::Rechazo {
+            estado: 400,
+            codigo: "email_not_confirmed".into(),
+        };
+        no_inicia(
+            inicio("ana@example.com", CLAVE),
+            Some(sin_verificar),
+            ErrorCode::AuthInvalidCredentials,
+            TEXTO,
+        );
+    }
+
+    #[test]
+    fn ca_he_01_hu04_ca09() {
+        // HE-01-HU04-CA09 · Límite de intentos de Supabase Auth (429, ET07).
+        no_inicia(
+            inicio(REGISTRADO, CLAVE),
+            Some(FallaDeAuth::Rechazo {
+                estado: 429,
+                codigo: "over_request_rate_limit".into(),
+            }),
+            ErrorCode::AuthRateLimited,
+            "Demasiados intentos. Espera unos minutos e intenta de nuevo.",
+        );
+    }
+
+    #[test]
+    fn ca_he_01_hu04_ca10() {
+        // HE-01-HU04-CA10 · Sin conexión: `net.offline` con el texto de Inicio de sesión.
+        no_inicia(
+            inicio(REGISTRADO, CLAVE),
+            Some(FallaDeAuth::SinConexion),
+            ErrorCode::NetOffline,
+            "No hay conexión a internet. Conéctate para iniciar sesión.",
+        );
+    }
+
+    #[test]
+    fn inicio_con_servicio_sin_respuesta_o_rechazo_imprevisto() {
+        // RT-04-CA13: sin respuesta, `service.unavailable`; un rechazo que ningún CA prevé, el genérico sin texto.
+        no_inicia(
+            inicio(REGISTRADO, CLAVE),
+            Some(FallaDeAuth::SinRespuesta),
+            ErrorCode::ServiceUnavailable,
+            "No pudimos completar la operación. Intenta de nuevo más tarde.",
+        );
+        no_inicia(
+            inicio(REGISTRADO, CLAVE),
+            Some(FallaDeAuth::Rechazo {
+                estado: 422,
+                codigo: "user_banned".into(),
+            }),
+            ErrorCode::InternalUnexpected,
+            "",
         );
     }
 }

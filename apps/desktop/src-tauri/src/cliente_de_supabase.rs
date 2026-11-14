@@ -91,6 +91,13 @@ pub trait AuthDeSupabase: Send + Sync {
         correo: &str,
         codigo: &str,
     ) -> impl Future<Output = Result<SesionDeAuth, FallaDeAuth>> + Send;
+    /// `POST /token?grant_type=password` `{ email, password }`: abre la sesión de una cuenta verificada. Un
+    /// correo no registrado y una contraseña incorrecta responden igual: 400 `invalid_credentials`.
+    fn iniciar_con_contrasena(
+        &self,
+        correo: &str,
+        contrasena: &str,
+    ) -> impl Future<Output = Result<SesionDeAuth, FallaDeAuth>> + Send;
 }
 
 /// Sesión que entrega Supabase Auth (`access_token`, `refresh_token`, `expires_in`, `user`).
@@ -253,6 +260,22 @@ impl AuthDeSupabase for ClienteDeSupabase {
         let cuerpo = serde_json::json!({ "type": "signup", "email": correo, "token": codigo });
         let texto = self
             .enviar(reqwest::Method::POST, "/auth/v1/verify", Some(cuerpo))
+            .await?;
+        leer_sesion(&texto)
+    }
+
+    async fn iniciar_con_contrasena(
+        &self,
+        correo: &str,
+        contrasena: &str,
+    ) -> Result<SesionDeAuth, FallaDeAuth> {
+        let cuerpo = serde_json::json!({ "email": correo, "password": contrasena });
+        let texto = self
+            .enviar(
+                reqwest::Method::POST,
+                "/auth/v1/token?grant_type=password",
+                Some(cuerpo),
+            )
             .await?;
         leer_sesion(&texto)
     }

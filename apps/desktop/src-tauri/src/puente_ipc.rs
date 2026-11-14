@@ -14,9 +14,9 @@ use crate::repositorios_y_archivos_locales::almacen_de_la_aplicacion;
 use crate::servicio_de_sesion::{ConMensaje, RelojDelSistema, ServicioDeSesion};
 use crate::tipos::{
     AppError, AuthRegisterStartParams, AuthRegisterStartResult, AuthRegisterVerifyParams,
-    AuthRegisterVerifyResult, CodeSent, Connectivity, EventMapConnectivityChanged,
-    EventMapSessionChanged, EventMapSessionChangedReason, EventMapSessionChangedState, IpcErr,
-    IpcOk, IpcResult, NoParams,
+    AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, CodeSent, Connectivity,
+    EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
+    EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, NoParams, SessionInfo,
 };
 
 /// El Núcleo que ven los comandos.
@@ -165,4 +165,37 @@ pub fn auth_register_cancel(nucleo: State<'_, Nucleo>, params: NoParams) -> IpcR
     let _ = params;
     nucleo.sesion.registrar_cancelar();
     correcto(())
+}
+
+/// IPC-AUTH-05 `auth_sign_in` (HE-01-HU04). Al abrir la sesión emite `session_changed` con `reason: 'sign_in'`;
+/// la ventana principal abre la pantalla principal (RT-01-CA01).
+#[tauri::command]
+pub async fn auth_sign_in(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: AuthSignInParams,
+) -> Result<IpcResult<SessionInfo>, ()> {
+    let antes = nucleo.sesion.auth().en_linea();
+    let r = nucleo.sesion.iniciar_sesion(params).await;
+    avisar_conectividad(&app, antes);
+    if let Ok(sesion) = &r {
+        avisar_sesion_iniciada(&app, &sesion.alias, EventMapSessionChangedReason::SignIn);
+    }
+    Ok(match r {
+        Ok(sesion) => correcto(sesion),
+        Err(error) => IpcResult::Err(IpcErr {
+            ok: false.into(),
+            error,
+        }),
+    })
+}
+
+/// IPC-AUTH-12 `auth_get_session` (HE-01-HU04-CA02): lee `session.bin`, sin llamar a la nube.
+#[tauri::command]
+pub fn auth_get_session(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> IpcResult<AuthSessionState> {
+    let _ = params;
+    correcto(nucleo.sesion.estado_de_sesion())
 }
