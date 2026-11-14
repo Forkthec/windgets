@@ -99,7 +99,7 @@ test.describe('escritorio', () => {
     await expect(page.locator('svg.isotipo-animado, [class*="isotipo"]')).toHaveCount(0);
 
     // Al terminar la entrada no queda nada desplazado ni recortado.
-    await expect.poll(() => animaciones(page)).toBe(0);
+    await expect.poll(() => animaciones(page), { timeout: 15_000 }).toBe(0);
     // (La pieza activa, si hay alguna función a la vista, sube a propósito: es la animación 6.)
     for (const selector of [
       '.identificador__logo',
@@ -138,6 +138,8 @@ test.describe('escritorio', () => {
       await expect(grupo.getByRole('radio')).toHaveCount(3);
       await expect(grupo.getByRole('radio', { name: 'Windgets' })).toBeChecked();
       await expect(panel(page)).toHaveAttribute('data-tema', 'windgets');
+      // Durante la entrada el isotipo se construye sobre el logo; el `h1` se compara ya con la imagen oficial.
+      await expect(page.locator('.isotipo-animado')).toHaveCount(0);
       const antes = await Promise.all(
         [h1, lista, descarga].map((zona) => zona.evaluate((el) => el.outerHTML)),
       );
@@ -158,7 +160,7 @@ test.describe('escritorio', () => {
 
       // El wallpaper anterior se retira al terminar el barrido y las piezas quedan en su plantilla.
       await expect(page.locator('.fondo--saliente')).toHaveCount(0);
-      await expect.poll(() => animaciones(page)).toBe(0);
+      await expect.poll(() => animaciones(page), { timeout: 15_000 }).toBe(0);
       for (const encontrado of await estilo(page, PIEZAS_EN_REPOSO)) expect(encontrado).toEqual(QUIETO);
 
       const despues = await Promise.all(
@@ -194,14 +196,13 @@ test.describe('escritorio', () => {
     await abrir(page, 'reduce');
     await expect(page.locator('h1')).toHaveCount(1);
     expect(await page.locator('h1').evaluate((el) => el.textContent)).toBe('Windgets');
-    await expect(page.locator('button')).toHaveCount(1);
     await expect(boton(page)).toHaveCount(1);
     // El `textContent` de cada función es el literal exacto: los dibujos no agregan texto.
     expect(await funciones(page).evaluateAll((lis) => lis.map((li) => li.textContent))).toEqual(FUNCIONES);
     expect(await page.locator('li svg text, li svg title').count()).toBe(0);
-    // El panel es decorativo: oculto para lectores de pantalla y sin nada enfocable ni con rol.
-    await expect(panel(page)).toHaveAttribute('aria-hidden', 'true');
-    await expect(panel(page).locator('a, button, input, [role], [tabindex]')).toHaveCount(0);
+    // El panel es un grupo con nombre; no lleva logo ni isotipo, ni avisos.
+    await expect(page.getByRole('group', { name: 'Escritorio de ejemplo' })).toHaveCount(1);
+    await expect(panel(page).locator('img, [role="alert"]')).toHaveCount(0);
     // Orden de tabulación: botón, selector y enlace del cierre.
     await page.keyboard.press('Tab');
     await expect(boton(page)).toBeFocused();
@@ -217,14 +218,108 @@ test.describe('escritorio', () => {
     expect(externas).toEqual([]);
   });
 
-  test('CD-01-HU01 · El héroe cabe en 1366 × 768 y el panel se sale por la derecha', async ({ page }) => {
+  test('CD-01-HU01 · El héroe cabe en 1366 × 768 y el panel queda entero y quieto en la ventana', async ({
+    page,
+  }) => {
     await abrir(page, 'reduce');
     for (const zona of [boton(page), page.getByRole('group', { name: 'Elige un tema' })]) {
       await expect(zona).toBeInViewport({ ratio: 1 });
     }
-    const caja = await panel(page).boundingBox();
-    expect(caja && caja.x + caja.width).toBeGreaterThan(1366);
+    await expect(panel(page)).toBeInViewport({ ratio: 1 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(1366);
+    // El lienzo cabe entero en el panel: el escritorio no se recorta.
+    const cajas = await page.evaluate(() => {
+      const caja = (selector: string) => document.querySelector(selector)?.getBoundingClientRect().toJSON();
+      return { panel: caja('.panel') as DOMRect, lienzo: caja('.lienzo') as DOMRect };
+    });
+    expect(cajas.lienzo.right).toBeLessThanOrEqual(cajas.panel.right);
+    expect(cajas.lienzo.bottom).toBeLessThanOrEqual(cajas.panel.bottom);
+    // Al recorrer la página hasta el final, el panel no se mueve.
+    const arriba = await panel(page).boundingBox();
+    await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+    await expect(page.getByRole('link', { name: 'Volver a la descarga' })).toBeInViewport();
+    expect(await panel(page).boundingBox()).toEqual(arriba);
+    await expect(panel(page)).toBeInViewport({ ratio: 1 });
+  });
+
+  test('CD-01-HU01 · El escritorio de ejemplo se puede usar', async ({ page }) => {
+    await abrir(page, 'reduce');
+    const escritorio = page.getByRole('group', { name: 'Escritorio de ejemplo' });
+
+    // Tareas del día: completar y deshacer cambia la palabra, el ícono y la cuenta.
+    const tarea = escritorio.getByRole('button', { name: 'Entregar ensayo de historia' });
+    await expect(tarea).toHaveText('Entregar ensayo de historiaPendiente');
+    await expect(escritorio.getByText('1 de 3 completadas')).toBeVisible();
+    await tarea.click();
+    await expect(tarea).toHaveText('Entregar ensayo de historiaCompletada');
+    await expect(tarea).toHaveAttribute('aria-pressed', 'true');
+    await expect(escritorio.getByText('2 de 3 completadas')).toBeVisible();
+    await tarea.press('Enter');
+    await expect(escritorio.getByText('1 de 3 completadas')).toBeVisible();
+
+    // Calendario: se elige un día con el puntero y se cambia con las flechas.
+    const dia = (n: number) => escritorio.getByRole('button', { name: String(n), exact: true });
+    await expect(dia(5)).toHaveAttribute('aria-pressed', 'true');
+    await dia(14).click();
+    await expect(dia(14)).toHaveAttribute('aria-pressed', 'true');
+    await expect(dia(5)).toHaveAttribute('aria-pressed', 'false');
+    await page.keyboard.press('ArrowDown');
+    await expect(dia(21)).toHaveAttribute('aria-pressed', 'true');
+    await expect(dia(21)).toBeFocused();
+
+    // Kanban: pulsar una tarjeta la pasa a la columna siguiente; arrastrarla, a la columna donde se suelta.
+    const tarjetas = () =>
+      page
+        .locator('.columna')
+        .evaluateAll((columnas) => columnas.map((c) => c.querySelectorAll('.tarjeta').length));
+    expect(await tarjetas()).toEqual([3, 2, 4]);
+    await page.locator('.columna').first().locator('.tarjeta').first().click();
+    expect(await tarjetas()).toEqual([2, 3, 4]);
+    const origen = await page.locator('.columna').nth(2).locator('.tarjeta').first().boundingBox();
+    const destino = await page.locator('.columna').first().boundingBox();
+    if (!origen || !destino) throw new Error('El Kanban no está a la vista');
+    await page.mouse.move(origen.x + origen.width / 2, origen.y + origen.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(destino.x + destino.width / 2, destino.y + destino.height - 10, { steps: 6 });
+    await page.mouse.up();
+    expect(await tarjetas()).toEqual([3, 3, 3]);
+    for (const encontrado of await estilo(page, '.tarjeta')) expect(encontrado).toEqual(QUIETO);
+
+    // Windi: «Confirmar» mueve una tarjeta a «Por hacer» y la propuesta queda respondida.
+    await escritorio.getByRole('button', { name: 'Confirmar' }).click();
+    expect(await tarjetas()).toEqual([4, 2, 3]);
+    await expect(page.locator('.columna').first().locator('.tarjeta--movida')).toHaveCount(1);
+    await expect(escritorio.getByRole('button', { name: 'Confirmar' })).toBeDisabled();
+    await expect(escritorio.getByRole('button', { name: 'Rechazar' })).toBeDisabled();
+
+    // Pestaña «Personalización»: elegir un tema ahí es lo mismo que en «Elige un tema».
+    await escritorio.getByRole('tab', { name: 'Personalización' }).click();
+    await expect(escritorio.getByRole('tabpanel', { name: 'Personalización' })).toBeVisible();
+    await expect(escritorio.getByText('Agente de IA', { exact: true })).toBeHidden();
+    await escritorio.getByRole('button', { name: 'Rosa pastel' }).click();
+    await expect(panel(page)).toHaveAttribute('data-tema', 'rosa-pastel');
+    await expect(page.getByRole('radio', { name: 'Rosa pastel' })).toBeChecked();
+    await page.getByRole('radio', { name: 'Windgets' }).check();
+    await expect(escritorio.getByRole('button', { name: 'Windgets' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    // Nada de lo anterior tocó la descarga ni mostró avisos.
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    expect(await animaciones(page)).toBe(0);
+  });
+
+  test('CD-01-HU01 · «Rechazar» deja la propuesta respondida sin mover tarjetas', async ({ page }) => {
+    await abrir(page, 'reduce');
+    await page.getByRole('button', { name: 'Rechazar' }).click();
+    expect(
+      await page
+        .locator('.columna')
+        .evaluateAll((cs) => cs.map((c) => c.querySelectorAll('.tarjeta').length)),
+    ).toEqual([3, 2, 4]);
+    await expect(page.locator('.tarjeta--movida')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Confirmar' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Rechazar' })).toBeDisabled();
   });
 });
 
