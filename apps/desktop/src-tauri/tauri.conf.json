@@ -34,6 +34,7 @@
       "webviewInstallMode": { "type": "offlineInstaller" },
       "nsis": {
         "installMode": "currentUser",
+        "languages": ["Spanish"],
         "template": "../../../installer/installer.nsi"
       }
     }

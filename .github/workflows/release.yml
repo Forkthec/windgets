@@ -27,9 +27,11 @@ jobs:
           WINDGETS_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           WINDGETS_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: pnpm --filter desktop tauri build --bundles nsis
-      - name: Renombrar a Windgets-Setup.exe
+      - name: Renombrar a Windgets-Setup.exe y sellarlo (CD-02-HU01-CA12)
         shell: bash
-        run: cp apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe Windgets-Setup.exe
+        run: |
+          cp apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe Windgets-Setup.exe
+          node installer/sellar.mjs Windgets-Setup.exe
       - name: Publicar la release
         shell: bash
         env:
