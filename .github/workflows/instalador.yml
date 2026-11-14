@@ -63,3 +63,58 @@ jobs:
           path: Windgets-Setup.exe
           if-no-files-found: warn
           retention-days: 14
+
+  # Pruebas de la interfaz (installer/pruebas/interfaz.py): abren el instalador, pulsan sus opciones, leen sus
+  # textos y toman capturas. windows-2025 (compilación 26100) cumple los requisitos; windows-2022 (compilación
+  # 20348) no los cumple y prueba CD-02-HU01-CA03. Windows 10 22H2 no está en GitHub: se prueba a mano.
+  interfaz:
+    needs: instalador
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - sistema: windows-2025
+            grupo: compatible
+          - sistema: windows-2022
+            grupo: no-compatible
+    runs-on: ${{ matrix.sistema }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v5
+        with:
+          name: windgets-instalador
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Herramientas de la prueba de interfaz
+        run: pip install pywinauto==0.6.9 pillow==11.3.0 psutil==7.0.0
+      - name: Disco pequeño para el espacio insuficiente (CD-02-HU01-CA04)
+        if: matrix.grupo == 'compatible'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $vhd = Join-Path $env:RUNNER_TEMP 'pequeno.vhdx'
+          $guion = Join-Path $env:RUNNER_TEMP 'disco.txt'
+          @(
+            "create vdisk file=`"$vhd`" maximum=300 type=expandable",
+            "select vdisk file=`"$vhd`"",
+            'attach vdisk',
+            'create partition primary',
+            'format fs=ntfs quick label=Pequeno',
+            'assign letter=W'
+          ) | Set-Content $guion -Encoding ascii
+          diskpart /s $guion
+          if (Test-Path 'W:\') { 'DISCO_PEQUENO=W:' >> $env:GITHUB_ENV }
+      - name: Pruebas de la interfaz del instalador
+        shell: pwsh
+        run: |
+          $extra = @()
+          if ($env:DISCO_PEQUENO) { $extra = @('--disco-pequeno', $env:DISCO_PEQUENO) }
+          python installer/pruebas/interfaz.py --instalador Windgets-Setup.exe --salida resultados --grupo ${{ matrix.grupo }} @extra
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: windgets-interfaz-${{ matrix.grupo }}
+          path: resultados/
+          if-no-files-found: warn
+          retention-days: 14
