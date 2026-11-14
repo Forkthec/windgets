@@ -68,6 +68,10 @@ class Falla(Exception):
     pass
 
 
+class Carrera(Falla):
+    """La instalación terminó antes de que la prueba pudiera cancelarla (condición de carrera de la prueba)."""
+
+
 # ---------------------------------------------------------------------------------------------------------
 # Registro y archivos
 # ---------------------------------------------------------------------------------------------------------
@@ -308,9 +312,9 @@ def habilitado(h, id_boton):
     return bool(win32gui.IsWindowEnabled(win32gui.GetDlgItem(h, id_boton)))
 
 
-def mensaje_con_opciones(texto, opcion1, opcion2):
+def mensaje_con_opciones(texto, opcion1, opcion2, segundos=30):
     """Espera el mensaje y comprueba que es el cuadro con las dos opciones propias (no el «Sí/No» de reserva)."""
-    h = esperar(con_texto(texto), f"el mensaje «{texto}»")
+    h = esperar(con_texto(texto), f"el mensaje «{texto}»", segundos)
     if not es_mensaje_con_opciones(h):
         raise Falla(f"El mensaje «{texto}» salió con «Sí» y «No» en vez de «{opcion1}» y «{opcion2}».")
     vistos = textos(h)
@@ -526,7 +530,8 @@ def pruebas_compatible(inf: Informe, instalador: Path, temporal: Path, disco_peq
         volver_a_opciones,
     )
 
-    def cancelar_en_curso(inf, confirmar):
+    def cancelar_en_curso_una_vez():
+        """Un intento. Lanza Carrera si la instalación termina antes de que «Cancelar» alcance a atenderse."""
         proceso = abrir(instalador)
         h = esperar(en_opciones, "el paso Opciones")
         pulsar(h, ID_SIGUIENTE)
@@ -537,12 +542,33 @@ def pruebas_compatible(inf: Informe, instalador: Path, temporal: Path, disco_peq
             ):
                 break
             if en_completada(h):
-                raise Falla("La instalación terminó antes de poder pulsar «Cancelar».")
+                raise Carrera("La instalación terminó antes de poder pulsar «Cancelar».")
             time.sleep(0.02)
         else:
             raise Falla("«Cancelar» no se habilitó en el paso Instalación en curso.")
         pulsar(h, ID_CANCELAR)
-        m = mensaje_con_opciones(CONFIRMAR_CANCELAR, "Cancelar instalación", "Seguir instalando")
+        try:
+            m = mensaje_con_opciones(CONFIRMAR_CANCELAR, "Cancelar instalación", "Seguir instalando", 15)
+        except Falla:
+            # Si la instalación ya terminó, «Cancelar» llegó tarde: es la carrera de la prueba, no una falla del instalador.
+            if any(en_completada(x) for x in dialogos()):
+                raise Carrera("La instalación terminó antes de que se atendiera «Cancelar».")
+            raise
+        return proceso, h, m
+
+    def cancelar_en_curso(inf, confirmar):
+        # La instalación dura unos segundos y en un equipo rápido puede terminar antes de que «Cancelar» se atienda:
+        # se repite el intento (hasta 3 veces, con el equipo limpio) solo en ese caso.
+        for intento in range(1, 4):
+            try:
+                proceso, h, m = cancelar_en_curso_una_vez()
+                break
+            except Carrera as e:
+                inf.nota(f"Intento {intento} de 3: {e}")
+                if intento == 3:
+                    raise Falla(f"{e} Pasó en los 3 intentos.") from e
+                cerrar_procesos()
+                limpiar()
         inf.captura("cancelar-en-curso")
         return proceso, h, m
 
