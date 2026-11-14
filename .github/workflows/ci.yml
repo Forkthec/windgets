@@ -19,12 +19,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: docs/ sin cambios en archivos existentes (D-200)
+      - name: docs/ sin borrar ni renombrar archivos (D-200)
         if: github.event_name == 'pull_request'
         run: |
           git fetch --depth=1 origin "${{ github.base_ref }}"
-          if git diff --name-status FETCH_HEAD HEAD -- docs/ | grep -v '^A' | grep -v 'docs/DUDAS.md$'; then
-            echo "::error::Solo se pueden agregar archivos a docs/ o editar docs/DUDAS.md."; exit 1
+          if git diff --name-status FETCH_HEAD HEAD -- docs/ | grep -v '^[AM]'; then
+            echo "::error::En docs/ se pueden agregar y modificar archivos, pero no borrarlos ni renombrarlos."; exit 1
           fi
 
       - uses: pnpm/action-setup@v6

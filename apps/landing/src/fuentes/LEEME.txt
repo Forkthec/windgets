@@ -1,0 +1,10 @@
+Fuentes de la landing page, servidas desde el propio sitio (sin peticiones a terceros).
+
+Cada archivo es la variante variable (eje de peso), subconjunto latino, del paquete de Fontsource indicado,
+versión 5.2.5. Las cuatro se distribuyen con la licencia SIL Open Font License 1.1
+(https://openfontlicense.org), que permite usarlas e incluirlas en el sitio.
+
+rubik.woff2          @fontsource-variable/rubik          Página (la letra de la que nace la palabra del logo)
+nunito.woff2         @fontsource-variable/nunito         Panel, tema «Windgets»
+space-grotesk.woff2  @fontsource-variable/space-grotesk  Panel, tema «Enfoque rojo y negro»
+quicksand.woff2      @fontsource-variable/quicksand      Panel, tema «Rosa pastel»

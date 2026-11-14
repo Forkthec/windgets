@@ -1,8 +1,12 @@
 // Tokens de la interfaz (interfaz.md, «Tema a tokens»). El Núcleo los calcula a partir del tema aplicado;
 // la vista solo los escribe como variables CSS. Ningún color de interfaz se fija en el código.
 export const NOMBRES_TOKEN = [
+  'marco',
+  'sobre_marco',
   'superficie',
   'superficie_alta',
+  'superficie_baja',
+  'linea',
   'tinta',
   'texto',
   'accion',

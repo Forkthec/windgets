@@ -8,12 +8,13 @@
 -- una propuesta mínima y usable. Los archivos a que apuntan las rutas se cargan al bucket `catalog`.
 -- ============================================================================
 
--- Tipografías (HE-02-HU06-ET03). La primera es la de la plantilla por defecto; licencias abiertas.
+-- Tipografías (HE-02-HU06-ET03). Nunito es la de la plantilla por defecto (WG-MK-01); licencias abiertas.
 INSERT INTO public.catalog_font (id, family_name, display_name, file_path, license, sort_order) VALUES
   ('inter',          'Inter',          'Inter',          'fonts/inter.woff2',          'OFL-1.1', 1),
   ('merriweather',   'Merriweather',   'Merriweather',   'fonts/merriweather.woff2',   'OFL-1.1', 2),
   ('poppins',        'Poppins',        'Poppins',        'fonts/poppins.woff2',        'OFL-1.1', 3),
-  ('jetbrains-mono', 'JetBrains Mono', 'JetBrains Mono', 'fonts/jetbrains-mono.woff2', 'OFL-1.1', 4)
+  ('jetbrains-mono', 'JetBrains Mono', 'JetBrains Mono', 'fonts/jetbrains-mono.woff2', 'OFL-1.1', 4),
+  ('nunito',         'Nunito',         'Nunito',         'fonts/nunito.woff2',         'OFL-1.1', 5)
 ON CONFLICT (id) DO NOTHING;
 
 -- Plantilla por defecto (glosario: Plantilla por defecto; HE-02-HU01-ET02, CA01). Viaja además dentro del
@@ -23,7 +24,7 @@ INSERT INTO public.catalog_template
    default_color_primary, default_color_secondary, default_color_text, default_font_id, is_default, sort_order)
 VALUES
   ('default', 'Windgets', 'templates/default/thumbnail.png', 'templates/default/', 'templates/default/background.jpg',
-   '#00D9E2', '#DC026C', '#FFFFFF', 'inter', true, 1)
+   '#96B2B2', '#829890', '#14201C', 'nunito', true, 1)
 ON CONFLICT (id) DO NOTHING;
 
 -- Paletas (HE-02-HU07-ET02): tres colores cada una
