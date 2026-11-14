@@ -52,6 +52,7 @@ for (const [id, paquete] of [
   ['merriweather', 'merriweather'],
   ['poppins', 'poppins'],
   ['jetbrains-mono', 'jetbrains-mono'],
+  ['nunito', 'nunito'],
 ]) {
   const origen = requerir.resolve(`@fontsource/${paquete}/files/${paquete}-latin-400-normal.woff2`);
   const destino = join(salida, `fonts/${id}.woff2`);

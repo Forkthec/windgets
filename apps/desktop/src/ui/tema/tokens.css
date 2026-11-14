@@ -15,7 +15,7 @@
 
 body {
   margin: 0;
-  background: var(--wg-superficie);
+  background: var(--wg-marco);
   color: var(--wg-tinta);
   font-family: var(--wg-fuente);
   font-size: var(--wg-tamano-fuente);
@@ -198,11 +198,11 @@ body {
   flex-direction: column;
   gap: calc(var(--wg-unidad) * 4);
   padding: calc(var(--wg-unidad) * 4);
-  background: var(--wg-superficie-alta);
+  background: var(--wg-marco);
 }
 .wg-menu__seccion {
   margin: 0 0 var(--wg-unidad);
-  color: var(--wg-texto);
+  color: var(--wg-sobre-marco);
   font-size: inherit;
 }
 .wg-menu__opcion {
@@ -220,9 +220,18 @@ body {
 .wg-ventana-principal {
   display: grid;
   grid-template-columns: auto 1fr;
+  gap: calc(var(--wg-unidad) * 4);
   min-height: 100vh;
+  box-sizing: border-box;
+  padding: calc(var(--wg-unidad) * 4);
+  background: var(--wg-marco); /* WG-MK-01: el principal es el marco exterior */
+  color: var(--wg-sobre-marco);
 }
 .wg-ventana-principal__pantalla {
   overflow: auto;
   padding: calc(var(--wg-unidad) * 6);
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-radius: var(--wg-radio);
+  background: var(--wg-superficie); /* WG-MK-01: panel de contenido */
+  color: var(--wg-tinta);
 }
