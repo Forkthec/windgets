@@ -5,8 +5,8 @@
 // La página cuenta una sola secuencia, lenta y encadenada, con dos gestos que se repiten en todo:
 //   · destapar: una capa se descubre con un barrido a 18°, el ángulo de la marca;
 //   · acomodar: una capa se desliza hasta su sitio y se apoya, como al cambiar de tema.
-// El logo se construye trazo a trazo en su sitio, como quien escribe la W; mientras tanto se destapa el
-// texto, y el escritorio se arma en el orden de la marca: wallpaper, widgets, información.
+// El isotipo se construye trazo a trazo en el centro, como quien escribe la W, y se desliza a su lugar en el
+// logo; entonces se destapa el texto, y el escritorio se arma en el orden de la marca: wallpaper, widgets, información.
 import { aplicarTema, type Panel, type Tema } from './panel';
 
 const CLASE = 'con-movimiento';
@@ -19,15 +19,17 @@ const TAN_18 = Math.tan((18 * Math.PI) / 180);
 // Tiempos de la entrada, en milisegundos desde que empieza. Cada tramo arranca antes de que termine el
 // anterior, para que se lea como un solo movimiento.
 const T = {
+  // Momento de marca: el isotipo se construye en el centro de la página en blanco y viaja a su sitio.
   trazo: { inicio: 0, paso: 300, dura: 720 },
-  palabra: { inicio: 1000, dura: 1100 },
-  // La zona de descarga es el tercer bloque: termina a los 1750 ms, antes de 1,8 s.
-  texto: { inicio: 350, paso: 150, dura: 1100 },
-  marco: { inicio: 700, dura: 1200 },
-  fondo: { inicio: 1300, dura: 1100 },
-  capas: { inicio: 1500, paso: 170, dura: 1400 },
-  piezas: { inicio: 2300, paso: 130, dura: 2000 },
-  chat: { inicio: 4700, paso: 520, dura: 800 },
+  viaje: { inicio: 1500, dura: 1100 },
+  palabra: { inicio: 1800, dura: 900 },
+  // El texto espera al momento de marca: la zona de descarga, tercer bloque, termina a los 2900 ms.
+  texto: { inicio: 1500, paso: 150, dura: 1100 },
+  marco: { inicio: 1900, dura: 1200 },
+  fondo: { inicio: 2500, dura: 1100 },
+  capas: { inicio: 2700, paso: 170, dura: 1400 },
+  piezas: { inicio: 3500, paso: 130, dura: 2000 },
+  chat: { inicio: 5900, paso: 520, dura: 800 },
 } as const;
 
 // Isotipo con las medidas de la guía de identidad, con w = 24: trazos de ancho w y radio w/3; exteriores de
@@ -43,7 +45,6 @@ const TRAZOS = [
 const CRUCES = ['#D6258C', '#F7B212', '#7A14E3'] as const;
 
 export interface Escena {
-  identificador: HTMLElement;
   logo: HTMLImageElement;
   /** Bloques de texto en orden de lectura. */
   texto: HTMLElement[];
@@ -96,14 +97,14 @@ function crearIsotipo() {
  * animación (`fill: backwards`); al terminar, cada elemento vuelve a su estilo propio, sin `transform` ni
  * `clip-path`.
  */
-function entrada({ identificador, logo, texto, panel }: Escena) {
+function entrada({ logo, texto, panel }: Escena) {
   const antes = { fill: 'backwards' } as const;
 
-  // El logo se construye en su sitio. Los trazos se escriben como una W, en un solo gesto: el cian baja, el
+  // El isotipo se construye grande, en el centro de la página en blanco. Los trazos se escriben como una W, en un solo gesto: el cian baja, el
   // magenta sube, el amarillo baja y el púrpura sube. El cruce de cada trazo crece con él, así que aparece
   // justo cuando se apoya en el anterior. Después la palabra se destapa a 18°.
   const svg = crearIsotipo();
-  identificador.append(svg);
+  document.body.append(svg);
   svg.querySelectorAll<SVGElement>('[data-trazo]').forEach((trazo) => {
     const i = Number(trazo.dataset.trazo);
     trazo.style.transformOrigin = i % 2 === 0 ? '50% 0' : '50% 100%';
@@ -123,8 +124,19 @@ function entrada({ identificador, logo, texto, panel }: Escena) {
     ...antes,
   });
   // Al terminar se retira el SVG y queda solo la imagen oficial, que es idéntica.
+  // Escrito el isotipo, se desliza y se reduce hasta su lugar en el logo (el 28,96 % izquierdo de la imagen).
+  const origen = svg.getBoundingClientRect();
+  const dx = caja.left + (caja.width * 0.2896) / 2 - (origen.left + origen.width / 2);
+  const dy = caja.top + caja.height / 2 - (origen.top + origen.height / 2);
+  const viaje = svg.animate(
+    [
+      { transform: 'none' },
+      { transform: `translate(${dx}px, ${dy}px) scale(${caja.height / origen.height})` },
+    ],
+    { duration: T.viaje.dura, delay: T.viaje.inicio, easing: DESLIZ, fill: 'forwards' },
+  );
   const retirar = () => svg.remove();
-  palabra.finished.then(retirar, retirar);
+  Promise.allSettled([viaje.finished, palabra.finished]).then(retirar);
 
   // El texto se destapa con el mismo barrido mientras el logo se escribe, y se apoya subiendo 12 px.
   texto.forEach((bloque, i) => {

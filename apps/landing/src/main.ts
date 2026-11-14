@@ -130,7 +130,6 @@ function dibujar(raiz: HTMLElement) {
   // El orden del DOM es el orden de lectura; el panel va al final y se coloca con CSS.
   raiz.append(h1, titular, descripcion, descarga, selector, lista, pie, panel.raiz);
   const cambiarTema = iniciarMovimiento({
-    identificador: h1,
     logo: imagen,
     texto: [titular, descripcion, descarga, selector, lista, pie],
     funciones: elementos,

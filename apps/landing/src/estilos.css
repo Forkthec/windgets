@@ -898,15 +898,16 @@ html:not(.con-movimiento) .panel.activa {
   right: 16px;
 }
 
-/* Entrada: el isotipo se construye trazo a trazo sobre su lugar en el logo (movimiento.ts) y se retira al
-   terminar, cuando queda la imagen oficial. Ocupa el 28,96 % del ancho del logo (695 de 2400 px). Cada trazo
+/* Entrada: el isotipo se construye trazo a trazo en el centro de la página, viaja a su lugar en el logo
+   (movimiento.ts) y se retira al llegar, cuando queda la imagen oficial. Cada trazo
    crece a lo largo de su eje desde el extremo por el que se escribe y está oculto hasta que le toca. */
 .isotipo-animado {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 28.96%;
-  height: 100%;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 10;
+  width: clamp(144px, 40vw, 260px);
+  translate: -50% -50%;
   pointer-events: none;
 }
 .isotipo-animado__trazo {
