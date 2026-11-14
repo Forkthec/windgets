@@ -226,3 +226,65 @@ body {
   overflow: auto;
   padding: calc(var(--wg-unidad) * 6);
 }
+
+/* Pantallas de cuenta (P-CTA-01 Inicio de sesión, P-CTA-02 Registro; mockups del equipo, figuras 1 a 3): el
+ * isotipo centrado arriba y una tarjeta centrada con borde y sombra sólida; un campo debajo de otro. */
+.wg-cuenta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--wg-unidad) * 6);
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: calc(var(--wg-unidad) * 12) calc(var(--wg-unidad) * 4);
+}
+.wg-cuenta__isotipo {
+  width: calc(var(--wg-unidad) * 14);
+  height: calc(var(--wg-unidad) * 14);
+}
+.wg-cuenta__tarjeta {
+  width: 100%;
+  max-width: calc(var(--wg-unidad) * 135);
+  box-sizing: border-box;
+  padding: calc(var(--wg-unidad) * 7);
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-radius: var(--wg-radio);
+  box-shadow: var(--wg-sombra);
+}
+.wg-formulario {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: calc(var(--wg-unidad) * 4);
+}
+/* Una acción a lo ancho de la tarjeta (figura 1: «Iniciar sesión» y «Continuar con Google»). */
+.wg-formulario > .wg-boton,
+.wg-formulario > .wg-fila > .wg-boton:only-child {
+  width: 100%;
+}
+/* Pie con el texto de ayuda a la izquierda y la acción principal a la derecha (figura 2). */
+.wg-cuenta__pie {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.wg-cuenta__derecha {
+  align-self: flex-end;
+}
+.wg-cuenta__centro {
+  text-align: center;
+}
+
+/* Hipervínculo dentro de la aplicación (HE-01-HU01, HE-01-HU04). Subrayado: no depende solo del color. */
+.wg-enlace {
+  color: var(--wg-tinta);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.wg-enlace[aria-disabled='true'] {
+  color: var(--wg-borde);
+  cursor: default;
+}
+.wg-enlace:focus-visible {
+  outline: var(--wg-borde-ancho) solid var(--wg-accion);
+  outline-offset: calc(var(--wg-unidad) / 2);
+}

@@ -43,12 +43,34 @@ export type GuardiaDeSalida = () => Promise<boolean>;
 interface Navegacion {
   /** Abre una pantalla con sesión iniciada, después de consultar la guardia de la pantalla actual. */
   abrir: (pantalla: ScreenId) => Promise<void>;
-  /** Abre Inicio de sesión, Registro o Recuperar contraseña; solo sin sesión iniciada. */
-  abrirCuenta: (pantalla: PantallaDeCuenta) => void;
+  /**
+   * Abre Inicio de sesión, Registro o Recuperar contraseña; solo sin sesión iniciada. `correo` llega ya
+   * diligenciado en la pantalla de destino (HE-01-HU01-CA09, CA10).
+   */
+  abrirCuenta: (pantalla: PantallaDeCuenta, correo?: string) => void;
+  /** Correo con el que se abrió la pantalla de cuenta actual (vacío si no se pasó ninguno). */
+  correoDeCuenta: string;
+  /**
+   * La pantalla de cuenta inició la sesión o creó la cuenta: abre la pantalla principal (RT-01-ET04). Dentro de
+   * Tauri llega también `session_changed` (EV-01); fuera de Tauri (Núcleo simulado) no llega ningún evento.
+   */
+  sesionIniciada: () => void;
   registrarGuardia: (guardia: GuardiaDeSalida | null) => void;
 }
 
 const ContextoDeNavegacion = createContext<Navegacion | null>(null);
+
+interface Nucleo {
+  invocar: Invoke;
+  escuchar: Escuchar;
+}
+
+const ContextoDelNucleo = createContext<Nucleo>({ invocar: invocarNucleo, escuchar: escucharNucleo });
+
+/** El cliente IPC y los eventos del Núcleo de la ventana principal (las pruebas pasan uno simulado). */
+export function useNucleo(): Nucleo {
+  return useContext(ContextoDelNucleo);
+}
 
 export function useNavegacion(): Navegacion {
   const navegacion = useContext(ContextoDeNavegacion);
@@ -87,6 +109,7 @@ export function VentanaPrincipal({
   const [sesion, setSesion] = useState<Sesion>('consultando');
   const [pantalla, setPantalla] = useState<ScreenId>(PANTALLA_PRINCIPAL);
   const [cuenta, setCuenta] = useState<PantallaDeCuenta>('sign_in');
+  const [correoDeCuenta, setCorreoDeCuenta] = useState('');
   const [emergentes, setEmergentes] = useState(0);
   const guardia = useRef<GuardiaDeSalida | null>(null);
   const fondo = useRef<HTMLDivElement>(null);
@@ -100,6 +123,7 @@ export function VentanaPrincipal({
     guardia.current = null;
     setSesion('sin_sesion');
     setCuenta('sign_in');
+    setCorreoDeCuenta('');
   }, []);
 
   // Al abrir la aplicación: con la sesión recordada, con o sin conexión, abre la pantalla principal
@@ -140,15 +164,20 @@ export function VentanaPrincipal({
         guardia.current = null;
         setPantalla(destino);
       },
-      abrirCuenta: (destino) => {
-        if (sesion === 'sin_sesion') setCuenta(destino);
+      abrirCuenta: (destino, correo = '') => {
+        if (sesion !== 'sin_sesion') return;
+        setCuenta(destino);
+        setCorreoDeCuenta(correo);
       },
+      correoDeCuenta,
+      sesionIniciada: iniciada,
       registrarGuardia: (nueva) => {
         guardia.current = nueva;
       },
     }),
-    [pantalla, sesion],
+    [correoDeCuenta, iniciada, pantalla, sesion],
   );
+  const nucleo = useMemo(() => ({ invocar, escuchar }), [escuchar, invocar]);
 
   let contenido = null;
   if (sesion === 'con_sesion') {
@@ -166,16 +195,22 @@ export function VentanaPrincipal({
     const Cuenta = pantallasDeCuenta[cuenta];
     contenido = (
       <div ref={fondo}>
-        {Cuenta ? <Cuenta /> : <PantallaSinConstruir nombre={NOMBRE_DE_CUENTA[cuenta]} />}
+        {Cuenta ? (
+          <Cuenta key={`${cuenta}-${correoDeCuenta}`} />
+        ) : (
+          <PantallaSinConstruir nombre={NOMBRE_DE_CUENTA[cuenta]} />
+        )}
       </div>
     );
   }
 
   return (
-    <ContextoDeNavegacion.Provider value={navegacion}>
-      <ContextoDeBloqueo.Provider value={bloquear}>
-        <ProveedorDeResultado>{contenido}</ProveedorDeResultado>
-      </ContextoDeBloqueo.Provider>
-    </ContextoDeNavegacion.Provider>
+    <ContextoDelNucleo.Provider value={nucleo}>
+      <ContextoDeNavegacion.Provider value={navegacion}>
+        <ContextoDeBloqueo.Provider value={bloquear}>
+          <ProveedorDeResultado>{contenido}</ProveedorDeResultado>
+        </ContextoDeBloqueo.Provider>
+      </ContextoDeNavegacion.Provider>
+    </ContextoDelNucleo.Provider>
   );
 }

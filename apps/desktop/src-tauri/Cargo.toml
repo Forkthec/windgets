@@ -19,6 +19,9 @@ tauri = { version = "=2.12.5", features = [] }
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = "=1.0.154"
 ts-rs = { version = "=12.0.1", features = ["no-serde-warnings"] }
+# Cliente HTTPS del Núcleo hacia Supabase (INT-01, arquitectura.md: «Rust, reqwest»). La misma versión que
+# ya trae Tauri; TLS del sistema (Schannel en Windows) con mínimo TLS 1.2 (RNF-18).
+reqwest = { version = "=0.13.5", default-features = false, features = ["json", "native-tls"] }
 
 # API de Windows para el Host del wallpaper (INT-07, contratos.md): la misma versión que ya trae Tauri.
 [target.'cfg(windows)'.dependencies]
