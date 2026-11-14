@@ -63,6 +63,11 @@ jobs:
       - name: Vitest
         run: pnpm --filter desktop test
 
+      - name: Playwright de la aplicación (pantallas con el IPC simulado)
+        run: |
+          pnpm --filter desktop exec playwright install --with-deps chromium
+          pnpm --filter desktop test:e2e
+
       - name: Playwright de la landing
         run: |
           pnpm --filter landing exec playwright install --with-deps chromium

@@ -116,10 +116,11 @@ body {
   background: var(--wg-sobre-accion);
 }
 
+/* RT-02: la pantalla de fondo sigue visible (sin color ni transparencia en la capa) y no responde. */
 .wg-fondo-emergente {
   position: fixed;
   inset: 0;
-  background: var(--wg-superficie);
+  background: none;
   display: grid;
   place-items: center;
 }
@@ -172,6 +173,26 @@ body {
   color: var(--wg-texto);
 }
 
+.wg-miga__nivel {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--wg-tinta);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.wg-miga__nivel:focus-visible {
+  outline: var(--wg-borde-ancho) solid var(--wg-accion);
+  outline-offset: calc(var(--wg-unidad) / 2);
+}
+
+/* RT-03: miga de pan y «Regresar» en la parte superior de la pantalla, subpantalla o paso. */
+.wg-encabezado-ruta {
+  justify-content: space-between;
+  margin-bottom: calc(var(--wg-unidad) * 4);
+}
+
 .wg-menu {
   display: flex;
   flex-direction: column;
@@ -193,4 +214,15 @@ body {
 .wg-menu__opcion[aria-current='page'] {
   border-color: var(--wg-accion);
   border-left-width: var(--wg-unidad);
+}
+
+/* RT-01: ventana principal con el menú principal a la izquierda de la pantalla actual. */
+.wg-ventana-principal {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  min-height: 100vh;
+}
+.wg-ventana-principal__pantalla {
+  overflow: auto;
+  padding: calc(var(--wg-unidad) * 6);
 }
