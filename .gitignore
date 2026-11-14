@@ -36,3 +36,10 @@ desktop.ini
 .idea/
 .vscode/
 *.swp
+
+# Claude Code (las skills de .claude/skills sí se versionan)
+.claude/worktrees/
+.claude/settings.local.json
+
+# Estado local de cada persona (ESTADO.md, bitácora, borradores de PR)
+.trabajo/
