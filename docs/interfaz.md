@@ -21,10 +21,12 @@ Los elementos de una misma línea (íconos, textos, casillas, botones, campos, i
 
 ## Colores y tipografía de la interfaz
 
+**Prototipos visuales (WG-MK-01, `docs/prototipos/`).** Los mockups mandan en la distribución y el aspecto: dónde va cada elemento, sus proporciones, la jerarquía visual y la paleta del tema por defecto. Las historias de usuario mandan en los textos, los campos, los mensajes y el comportamiento. Si un mockup muestra un texto, un botón o una pantalla que ningún CA define, no se construye. Si contradice una regla R-nn o un RNF, gana la regla.
+
 De la guía de identidad solo aplica lo siguiente a la aplicación:
 
 - **Los colores y la tipografía de la aplicación los define el tema** (tres colores: principal, secundario y del texto; tipografía y tamaño pequeño, mediano o grande). No hay modo claro ni oscuro. La interfaz lee el tema aplicado; no fijes colores de interfaz en el código.
-- **Tema por defecto** (semilla): plantilla «Windgets», colores principal `#00D9E2`, secundario `#DC026C` y del texto `#FFFFFF`; tipografía Inter. La plantilla y la tipografía por defecto viajan en el instalador (D-198).
+- **Tema por defecto** (semilla): plantilla «Windgets», colores principal `#96B2B2`, secundario `#829890` y del texto `#14201C`; tipografía Nunito, tamaño mediano (los de «Mi tema» en WG-MK-01). La plantilla y la tipografía por defecto viajan en el instalador (D-198).
 - **Colores de marca fijos** (el isotipo y el logo no cambian con el tema): cian `#00D9E2`, magenta `#DC026C`, amarillo `#DCBA04`, púrpura `#6604E6`; cruces `#D6258C`, `#F7B212`, `#7A14E3`; neutros `#121216` y `#FFFFFF`. La palabra «Windgets» del logo es solo `#121216` o `#FFFFFF` y nunca usa la tipografía ni los colores del tema.
 - **Los colores de marca no tienen función en la aplicación** (acción, foco, selección, estado, prioridad, aviso, fondos); la función la dan los colores del tema (R-04). Los estados con color son mezclas sólidas calculadas, nunca opacidad (R-05).
 - **Forma**: un solo ángulo diagonal de 18° (R-06); esquina de un tercio: radio = grosor / 3 con un tope absoluto fijado por la implementación (R-07); profundidad con capas sólidas y sombra desplazada a 18°, sin transparencias apiladas, desenfoque ni vidrio (R-08). Los widgets no se superponen (R-09). Toda medida nueva es fracción o múltiplo de una unidad base (R-14).
@@ -38,13 +40,17 @@ Cómo se derivan los colores de la interfaz de los tres colores del tema (princi
 
 | Token | Fórmula | Uso |
 |---|---|---|
-| `superficie` | `P` mezclado con el extremo al 90 % | Fondo de la ventana principal y de los widgets |
-| `superficie_alta` | `P` mezclado con el extremo al 80 % | Tarjetas, ventanas emergentes, celdas |
+| `marco` | `P` | Fondo exterior de la ventana principal, detrás de los paneles |
+| `sobre_marco` | `#121216` o `#FFFFFF`, el que dé más contraste con `P` | Texto e íconos que van directo sobre `marco` (siempre 4,5:1 o más) |
+| `superficie` | `S` mezclado con el extremo al 60 % | Panel de contenido de la pantalla actual y fondo de los widgets |
+| `superficie_alta` | `S` mezclado con el extremo al 65 % | Tarjetas, listas, pestaña elegida, ventanas emergentes, celdas |
+| `superficie_baja` | `S` mezclado con el extremo al 45 % | Pestañas no elegidas y zonas hundidas; sin controles ni gráficos con significado encima |
+| `linea` | `P` mezclado con el extremo al 10 % | Divisores y fondo de las barras de progreso |
 | `tinta` | `X` | Títulos, cifras y contenido principal (la tinta principal) |
-| `texto` | `X` mezclado con `superficie` al 25 % | Descripciones, etiquetas de campo, texto secundario |
-| `accion` | `S` | Botones principales, foco, selección, controles y líneas de gráficas |
-| `sobre_accion` | `#121216` o `#FFFFFF`, el que dé más contraste con `S` | Texto de un botón de `accion` (siempre 4,5:1 o más) |
-| `borde` | `X` mezclado con `superficie` al 65 % | Bordes de campos y tarjetas |
+| `texto` | `X` mezclado con `superficie` al 15 % | Descripciones, etiquetas de campo, texto secundario |
+| `accion` | `S` mezclado con `X` al 30 % | Botones principales, foco, selección, controles, relleno de progreso y líneas de gráficas |
+| `sobre_accion` | `#121216` o `#FFFFFF`, el que dé más contraste con `accion` | Texto de un botón de `accion` (siempre 4,5:1 o más) |
+| `borde` | `X` mezclado con `P` al 40 % | Bordes de campos, tarjetas y paneles |
 | `estado_vencida`, `estado_pendiente`, `estado_completada` | Tono fijo (rojo 4°, amarillo 45°, verde 140°), saturación 70 %; luminosidad inicial 50 %, que se mueve de a 1 % alejándose de `superficie` hasta alcanzar 3:1 con ella | Color de estado de vencidas, pendientes y completadas; no son colores de marca (R-04) |
 | `relleno_estado` | Color de estado mezclado con `superficie` al 30 % (nunca opacidad, R-05) | Relleno de un día resaltado o de un indicador de estado; el borde usa el color de estado completo |
 
@@ -58,7 +64,7 @@ El significado no depende solo del color (R-12): vencida lleva el ícono de aler
 | `text_surface` (texto) | `texto` | 4,5:1 |
 | `control_surface` (controles y gráficos con significado) | `accion` | 3:1 |
 
-`P` no entra en un par: solo da la base de `superficie`. El tema por defecto (`#00D9E2`, `#DC026C`, `#FFFFFF`) da `superficie = #10262A` y cumple los tres pares (15,8:1; 9,4:1; 3,2:1).
+`P` no entra en un par: da `marco`, `linea` y `borde`. El texto sobre `marco` usa `sobre_marco`, que por construcción llega a 4,5:1 o más. El tema por defecto (`#96B2B2`, `#829890`, `#14201C`) da `superficie = #CDD6D3`, `accion = #61746D` y cumple los tres pares (11,3:1; 7,8:1; 3,4:1).
 
 **Color sugerido.** Para el par que no cumple (si fallan varios, el de menor razón), se conservan el tono y la saturación (HSL) del color del primer plano y se busca la luminosidad más cercana a la elegida, en pasos de 1 %, con la que el par cumple su mínimo y los demás siguen cumpliéndose; si empata, la más lejana de `superficie`. Si ninguna cumple, se sugiere `#FFFFFF` o `#121216`, el que dé más contraste con `superficie`. El contraste del aviso es el menor de los pares que fallan, truncado (no redondeado) a un decimal y escrito con coma. El aviso se muestra debajo de la muestra de la vista previa y desaparece cuando todos los pares cumplen.
 
