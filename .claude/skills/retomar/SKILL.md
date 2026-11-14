@@ -5,7 +5,8 @@ description: Úsala al abrir una sesión nueva de windgets (otra cuenta de Claud
 
 # Retomar
 
-0. `.trabajo/` es local y no está en git. Si `.trabajo/ESTADO.md` no existe, créalo con las secciones «Próxima
+0. `.trabajo/` es local y no está en git: ESTADO.md es un apunte de quien lo escribe, **no** la fuente de verdad (la
+   fuente es `estado.sh`, git y los PR). Si `.trabajo/ESTADO.md` no existe, créalo con las secciones «Próxima
    acción», «Paso en curso», «Última verificación», «Plan» (copiada de `docs/plan_construccion.md`),
    «Bloqueos» y «Decisiones», y llénalo desde git y los PR (paso 2). Crea también `.trabajo/bitacora.md`.
 1. Lee `.trabajo/ESTADO.md` completo y las últimas 20 líneas de `.trabajo/bitacora.md`.
@@ -13,7 +14,8 @@ description: Úsala al abrir una sesión nueva de windgets (otra cuenta de Claud
      en Windows (da UTC). Las horas de `gh` terminan en `Z` (UTC): réstales 5 horas.
    - Mira «Última actualización» (hora de Colombia, UTC-5). Si tiene más de 2 días, o dice «hoy» de una fecha
      pasada, avisa en una línea a quien te dirige antes de darlo por cierto.
-2. Mira el repositorio:
+2. Mira el repositorio. Lo primero, `bash herramientas/estado.sh`: es el estado oficial de los pasos y no depende
+   de ningún archivo local. Después:
    - `git fetch -q origin`
    - `git status --short --branch` y `git stash list`
    - `git log --oneline --decorate origin/main..HEAD`
