@@ -30,6 +30,13 @@ pub const SIN_CONEXION_REGISTRO: &str =
 pub const DEMASIADOS_INTENTOS: &str =
     "Demasiados intentos. Espera unos minutos e intenta de nuevo.";
 
+// HE-01-HU02 · Crear la contraseña de la cuenta durante el registro (IPC-AUTH-01).
+
+/// `password.invalid` (HE-01-HU02-CA04 a CA06).
+pub const CONTRASENA_INVALIDA: &str = "La contraseña debe tener entre 8 y 64 caracteres e incluir una mayúscula, una minúscula y un número.";
+/// `password_confirmation.mismatch` (HE-01-HU02-CA08).
+pub const CONTRASENAS_NO_COINCIDEN: &str = "Las contraseñas no coinciden.";
+
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
     ("SERVICIO_NO_DISPONIBLE", SERVICIO_NO_DISPONIBLE),
@@ -41,6 +48,8 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("CODIGO_ENVIADO", CODIGO_ENVIADO),
     ("SIN_CONEXION_REGISTRO", SIN_CONEXION_REGISTRO),
     ("DEMASIADOS_INTENTOS", DEMASIADOS_INTENTOS),
+    ("CONTRASENA_INVALIDA", CONTRASENA_INVALIDA),
+    ("CONTRASENAS_NO_COINCIDEN", CONTRASENAS_NO_COINCIDEN),
 ];
 
 #[cfg(test)]

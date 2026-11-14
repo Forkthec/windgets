@@ -139,12 +139,64 @@ pub fn validar_correo(correo: &str) -> Option<AppError> {
     })
 }
 
+/// Largo de la contraseña: de 8 a 64 caracteres (HE-01-HU02-ET02).
+pub const CONTRASENA_MIN: usize = 8;
+pub const CONTRASENA_MAX: usize = 64;
+
+/// Contraseña (HE-01-HU02-ET01 a ET03): obligatoria, de 8 a 64 caracteres y con al menos una mayúscula, una
+/// minúscula y un número. Las clases son las de Supabase Auth (letras A-Z y a-z, dígitos 0-9), para que el
+/// Núcleo y el servidor acepten lo mismo. No se recorta: los espacios forman parte de la contraseña.
+pub fn validar_contrasena(contrasena: &str) -> Option<AppError> {
+    if vacio(contrasena) {
+        return Some(error(
+            ErrorCode::PasswordRequired,
+            messages::CAMPO_OBLIGATORIO,
+            Some("password"),
+        ));
+    }
+    let largo = contrasena.chars().count();
+    let valida = (CONTRASENA_MIN..=CONTRASENA_MAX).contains(&largo)
+        && contrasena.chars().any(|c| c.is_ascii_uppercase())
+        && contrasena.chars().any(|c| c.is_ascii_lowercase())
+        && contrasena.chars().any(|c| c.is_ascii_digit());
+    (!valida).then(|| {
+        error(
+            ErrorCode::PasswordInvalid,
+            messages::CONTRASENA_INVALIDA,
+            Some("password"),
+        )
+    })
+}
+
+/// Confirmar contraseña (HE-01-HU02-ET04, ET05): obligatoria e idéntica a la contraseña.
+pub fn validar_confirmacion(contrasena: &str, confirmacion: &str) -> Option<AppError> {
+    if vacio(confirmacion) {
+        return Some(error(
+            ErrorCode::PasswordConfirmationRequired,
+            messages::CAMPO_OBLIGATORIO,
+            Some("password_confirmation"),
+        ));
+    }
+    (confirmacion != contrasena).then(|| {
+        error(
+            ErrorCode::PasswordConfirmationMismatch,
+            messages::CONTRASENAS_NO_COINCIDEN,
+            Some("password_confirmation"),
+        )
+    })
+}
+
 /// Errores de forma del formulario de Registro, todos a la vez y en el orden de la pantalla.
 pub fn validar_registro(params: &AuthRegisterStartParams) -> Vec<AppError> {
-    [validar_alias(&params.alias), validar_correo(&params.email)]
-        .into_iter()
-        .flatten()
-        .collect()
+    [
+        validar_alias(&params.alias),
+        validar_correo(&params.email),
+        validar_contrasena(&params.password),
+        validar_confirmacion(&params.password, &params.password_confirmation),
+    ]
+    .into_iter()
+    .flatten()
+    .collect()
 }
 
 /// Registro que espera el código de verificación (IPC-AUTH-04: vive solo en la memoria del Núcleo).
@@ -583,6 +635,129 @@ pub(crate) mod pruebas {
         assert_eq!(
             campos,
             [Some("alias".to_string()), Some("email".to_string())]
+        );
+    }
+
+    fn con_contrasena(password: &str, confirmacion: &str) -> AuthRegisterStartParams {
+        AuthRegisterStartParams {
+            password: password.to_string(),
+            password_confirmation: confirmacion.to_string(),
+            ..formulario("Ana", "ana@example.com")
+        }
+    }
+
+    const INVALIDA: &str = "La contraseña debe tener entre 8 y 64 caracteres e incluir una mayúscula, una minúscula y un número.";
+
+    #[test]
+    fn ca_he_01_hu02_ca01() {
+        // HE-01-HU02-CA01 · Contraseña válida de 8 y de 64 caracteres con la confirmación idéntica (ET02, ET03,
+        // ET05): sin mensaje de campo y con el código pedido.
+        for clave in ["Clave123".to_string(), format!("Aa1{}", "x".repeat(61))] {
+            let (servicio, _) = servicio();
+            assert!(esperar(servicio.registrar_inicio(con_contrasena(&clave, &clave))).is_ok());
+            assert!(
+                servicio
+                    .auth()
+                    .llamadas()
+                    .iter()
+                    .any(|l| l.starts_with("signup"))
+            );
+        }
+    }
+
+    #[test]
+    fn ca_he_01_hu02_ca02() {
+        // HE-01-HU02-CA02 · Formulario vacío: «Este campo es obligatorio.» en los cuatro campos (ET01, ET04).
+        let vacio = AuthRegisterStartParams {
+            password: String::new(),
+            password_confirmation: String::new(),
+            ..formulario("", "")
+        };
+        let errores = validar_registro(&vacio);
+        let campos: Vec<_> = errores
+            .iter()
+            .map(|e| e.field.clone().unwrap_or_default())
+            .collect();
+        assert_eq!(
+            campos,
+            ["alias", "email", "password", "password_confirmation"]
+        );
+        assert!(
+            errores
+                .iter()
+                .all(|e| e.message == "Este campo es obligatorio.")
+        );
+        let (servicio, _) = servicio();
+        assert!(esperar(servicio.registrar_inicio(vacio)).is_err());
+        assert!(servicio.auth().llamadas().is_empty());
+    }
+
+    #[test]
+    fn ca_he_01_hu02_ca03() {
+        // HE-01-HU02-CA03 · Contraseña vacía.
+        rechaza_sin_enviar(
+            con_contrasena("", "Clave123"),
+            ErrorCode::PasswordRequired,
+            "Este campo es obligatorio.",
+            Some("password"),
+        );
+    }
+
+    #[test]
+    fn ca_he_01_hu02_ca04() {
+        // HE-01-HU02-CA04 · Contraseña de menos de 8 caracteres.
+        rechaza_sin_enviar(
+            con_contrasena("Clave12", "Clave12"),
+            ErrorCode::PasswordInvalid,
+            INVALIDA,
+            Some("password"),
+        );
+    }
+
+    #[test]
+    fn ca_he_01_hu02_ca05() {
+        // HE-01-HU02-CA05 · Contraseña de más de 64 caracteres (65).
+        let clave = format!("Aa1{}", "x".repeat(62));
+        rechaza_sin_enviar(
+            con_contrasena(&clave, &clave),
+            ErrorCode::PasswordInvalid,
+            INVALIDA,
+            Some("password"),
+        );
+    }
+
+    #[test]
+    fn ca_he_01_hu02_ca06() {
+        // HE-01-HU02-CA06 · Sin mayúscula, sin minúscula o sin número.
+        for clave in ["clave123", "CLAVE123", "ClaveClave"] {
+            rechaza_sin_enviar(
+                con_contrasena(clave, clave),
+                ErrorCode::PasswordInvalid,
+                INVALIDA,
+                Some("password"),
+            );
+        }
+    }
+
+    #[test]
+    fn ca_he_01_hu02_ca07() {
+        // HE-01-HU02-CA07 · Confirmar contraseña vacía.
+        rechaza_sin_enviar(
+            con_contrasena("Clave123", ""),
+            ErrorCode::PasswordConfirmationRequired,
+            "Este campo es obligatorio.",
+            Some("password_confirmation"),
+        );
+    }
+
+    #[test]
+    fn ca_he_01_hu02_ca08() {
+        // HE-01-HU02-CA08 · Contraseñas distintas.
+        rechaza_sin_enviar(
+            con_contrasena("Clave123", "Clave124"),
+            ErrorCode::PasswordConfirmationMismatch,
+            "Las contraseñas no coinciden.",
+            Some("password_confirmation"),
         );
     }
 }

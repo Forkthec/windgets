@@ -1,6 +1,6 @@
 // HE-01-HU01 · Registrar una cuenta con alias y correo electrónico. Una prueba por CA (criterio de aceptación)
 // en la vista; las reglas del Núcleo tienen su prueba ca_he_01_hu01_* en servicio_de_sesion.rs.
-import { act, fireEvent, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { abrirCuenta, Destino, llamadasA } from '../cuenta/pruebas';
 import { Register } from './Register';
@@ -214,5 +214,72 @@ describe('HE-01-HU01 · Registro', () => {
       'No pudimos completar la operación. Intenta de nuevo más tarde.',
     );
     expect(screen.getByRole('form', { name: 'Formulario' })).toBeTruthy();
+  });
+});
+
+const INVALIDA =
+  'La contraseña debe tener entre 8 y 64 caracteres e incluir una mayúscula, una minúscula y un número.';
+
+describe('HE-01-HU02 · Contraseña del registro', () => {
+  it('HE-01-HU02-CA01 · Crear la contraseña con valores válidos', async () => {
+    for (const clave of ['Clave123', `Aa1${'x'.repeat(61)}`]) {
+      const nucleo = await registro();
+      diligenciar({ Contraseña: clave, 'Confirmar contraseña': clave });
+      await crearCuenta();
+      expect(llamadasA(nucleo, 'auth_register_start')).toHaveLength(1);
+      expect(screen.queryByRole('form', { name: 'Formulario' })).toBeNull();
+      cleanup();
+    }
+  });
+
+  it('HE-01-HU02-CA02 · Formulario sin ningún campo diligenciado', async () => {
+    const nucleo = await registro();
+    await crearCuenta();
+    for (const etiqueta of ['Alias', 'Correo electrónico', 'Contraseña', 'Confirmar contraseña']) {
+      expect(textoDebajoDe(etiqueta)).toBe('Este campo es obligatorio.');
+    }
+    // RT-04: el cursor va al primer campo con error.
+    expect(document.activeElement).toBe(screen.getByLabelText('Alias'));
+    expect(llamadasA(nucleo, 'auth_register_start')).toHaveLength(0);
+  });
+
+  it('HE-01-HU02-CA03 · Contraseña vacía', async () => {
+    await rechazaEnLaVista({ Contraseña: '' }, 'Contraseña', 'Este campo es obligatorio.');
+  });
+
+  it('HE-01-HU02-CA04 · Contraseña de menos de 8 caracteres', async () => {
+    await rechazaEnLaVista(
+      { Contraseña: 'Clave12', 'Confirmar contraseña': 'Clave12' },
+      'Contraseña',
+      INVALIDA,
+    );
+  });
+
+  it('HE-01-HU02-CA05 · Contraseña de más de 64 caracteres', async () => {
+    const clave = `Aa1${'x'.repeat(62)}`;
+    await rechazaEnLaVista({ Contraseña: clave, 'Confirmar contraseña': clave }, 'Contraseña', INVALIDA);
+  });
+
+  it('HE-01-HU02-CA06 · Contraseña sin mayúscula, minúscula o número', async () => {
+    for (const clave of ['clave123', 'CLAVE123', 'ClaveClave']) {
+      await rechazaEnLaVista({ Contraseña: clave, 'Confirmar contraseña': clave }, 'Contraseña', INVALIDA);
+      cleanup();
+    }
+  });
+
+  it('HE-01-HU02-CA07 · Confirmación de contraseña vacía', async () => {
+    await rechazaEnLaVista(
+      { 'Confirmar contraseña': '' },
+      'Confirmar contraseña',
+      'Este campo es obligatorio.',
+    );
+  });
+
+  it('HE-01-HU02-CA08 · Contraseñas distintas', async () => {
+    await rechazaEnLaVista(
+      { 'Confirmar contraseña': 'Clave124' },
+      'Confirmar contraseña',
+      'Las contraseñas no coinciden.',
+    );
   });
 });

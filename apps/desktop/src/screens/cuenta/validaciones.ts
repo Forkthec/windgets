@@ -31,3 +31,20 @@ export const validarCorreo: Validador = (valor) => {
   if (!formatoDeCorreo(correo)) return TEXTOS.CORREO_INVALIDO;
   return undefined;
 };
+
+/**
+ * Contraseña (HE-01-HU02-ET01 a ET03): obligatoria, de 8 a 64 caracteres, con una mayúscula, una minúscula y
+ * un número (A-Z, a-z, 0-9, como `validar_contrasena` del Núcleo). No se recorta.
+ */
+export const validarContrasena: Validador = (valor) => {
+  if (estaVacio(valor)) return TEXTOS.CAMPO_OBLIGATORIO;
+  const n = largo(valor);
+  const valida = n >= 8 && n <= 64 && /[A-Z]/.test(valor) && /[a-z]/.test(valor) && /[0-9]/.test(valor);
+  return valida ? undefined : TEXTOS.CONTRASENA_INVALIDA;
+};
+
+/** Confirmar contraseña (HE-01-HU02-ET04, ET05): obligatoria e idéntica a la contraseña. */
+export function validarConfirmacion(contrasena: string, confirmacion: string): string | undefined {
+  if (estaVacio(confirmacion)) return TEXTOS.CAMPO_OBLIGATORIO;
+  return confirmacion === contrasena ? undefined : TEXTOS.CONTRASENAS_NO_COINCIDEN;
+}

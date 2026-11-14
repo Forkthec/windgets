@@ -1,4 +1,4 @@
-import { useCallback, useState, type FormEvent } from 'react';
+import { useCallback, useMemo, useState, type FormEvent } from 'react';
 import { useEnvioUnico } from '@/reglas/envio';
 import { useMensajesDeCampo } from '@/reglas/formulario';
 import type { AppError, AuthRegisterStartResult } from '@/types';
@@ -11,15 +11,13 @@ import { useConexion } from '../cuenta/conexion';
 import { Hipervinculo } from '../cuenta/Hipervinculo';
 import { MarcoDeCuenta } from '../cuenta/MarcoDeCuenta';
 import { TEXTOS } from '../cuenta/textos';
-import { validarAlias, validarCorreo } from '../cuenta/validaciones';
+import { validarAlias, validarConfirmacion, validarContrasena, validarCorreo } from '../cuenta/validaciones';
 
 // P-CTA-02 Registro (HE-01-HU01 a HU03): paso Formulario y paso Verificar correo. Sin miga de pan (RT-03-ET08).
 
 const CAMPOS = ['alias', 'email', 'password', 'password_confirmation'] as const;
 type Campo = (typeof CAMPOS)[number];
 type Valores = Record<Campo, string>;
-
-const VALIDADORES = { alias: validarAlias, email: validarCorreo };
 
 export function Register() {
   const { invocar } = useNucleo();
@@ -37,7 +35,17 @@ export function Register() {
   const [, setEnvio] = useState<AuthRegisterStartResult | null>(null);
   const [registrado, setRegistrado] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
-  const campos = useMensajesDeCampo(CAMPOS, VALIDADORES);
+  // Confirmar contraseña se compara con la contraseña diligenciada (HE-01-HU02-ET05).
+  const validadores = useMemo(
+    () => ({
+      alias: validarAlias,
+      email: validarCorreo,
+      password: validarContrasena,
+      password_confirmation: (valor: string) => validarConfirmacion(valores.password, valor),
+    }),
+    [valores.password],
+  );
+  const campos = useMensajesDeCampo(CAMPOS, validadores);
 
   const cambiar = (campo: Campo) => (valor: string) => {
     setValores((v) => ({ ...v, [campo]: valor }));

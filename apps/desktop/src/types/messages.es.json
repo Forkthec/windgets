@@ -2,6 +2,8 @@
   "ALIAS_MUY_LARGO": "El alias no puede superar los 30 caracteres.",
   "CAMPO_OBLIGATORIO": "Este campo es obligatorio.",
   "CODIGO_ENVIADO": "Te enviamos un código de verificación a tu correo. Diligéncialo para crear tu cuenta.",
+  "CONTRASENAS_NO_COINCIDEN": "Las contraseñas no coinciden.",
+  "CONTRASENA_INVALIDA": "La contraseña debe tener entre 8 y 64 caracteres e incluir una mayúscula, una minúscula y un número.",
   "CORREO_INVALIDO": "Diligencia un correo electrónico válido.",
   "CORREO_MUY_LARGO": "El correo electrónico no puede superar los 64 caracteres.",
   "CORREO_YA_REGISTRADO": "Este correo electrónico ya está registrado.",
