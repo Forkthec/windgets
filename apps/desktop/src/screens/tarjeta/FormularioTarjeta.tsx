@@ -16,9 +16,11 @@ import textos from '@/types/messages.es.json';
 import { Boton } from '@/ui/Boton/Boton';
 import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
 import { Casilla } from '@/ui/Casilla/Casilla';
+import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { Selector } from '@/ui/Selector/Selector';
 import { SelectorFecha } from '@/ui/SelectorFecha/SelectorFecha';
 import { VentanaEmergente } from '@/ui/VentanaEmergente/VentanaEmergente';
+import { FormularioEtiqueta } from '../labels/FormularioEtiqueta';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { escribirFecha, fechaIso, fechaVisible, hoy, leerFecha } from './fechas';
 
@@ -27,6 +29,8 @@ import { escribirFecha, fechaIso, fechaVisible, hoy, leerFecha } from './fechas'
 // de campo para mostrar el mensaje al instante; el Núcleo vuelve a validar (D-188).
 
 const TITULO_MAX = 100;
+/** Etiquetas por tarjeta (HE-07-HU02-ET04). */
+const ETIQUETAS_MAX = 5;
 const DESCRIPCION_MAX = 1000;
 
 const CAMPOS = ['title', 'due_date', 'description'] as const;
@@ -116,10 +120,17 @@ export function FormularioTarjeta({ tarjeta, alGuardar, alCancelar, alNoExistir 
   const idFormulario = useId();
   const [valores, setValores] = useState<Valores>(() => (tarjeta ? valoresDe(tarjeta) : VACIO));
   const [etiquetas, setEtiquetas] = useState<Label[]>([]);
+  const [listaAbierta, setListaAbierta] = useState(false);
+  const [creandoEtiqueta, setCreandoEtiqueta] = useState(false);
+  const mostrarResultado = useMensajeDeResultado();
   const reglas = useMemo(() => validadores(tarjeta?.due_date), [tarjeta?.due_date]);
   const campos = useMensajesDeCampo(CAMPOS, reglas);
 
-  // HE-07-HU01-ET12: el campo Etiquetas ofrece solo las etiquetas creadas (sus reglas están en HE-07-HU02).
+  // HE-07-HU01-ET12; HE-07-HU02-ET03, ET10: solo las etiquetas creadas, en el orden del Núcleo (A a la Z).
+  const leerEtiquetas = useCallback(async () => {
+    const r = await invocar('label_list', {});
+    if (r.ok) setEtiquetas(r.value);
+  }, [invocar]);
   useEffect(() => {
     let vigente = true;
     void invocar('label_list', {}).then((r) => {
@@ -248,18 +259,63 @@ export function FormularioTarjeta({ tarjeta, alGuardar, alCancelar, alNoExistir 
           valor={valores.priority}
           alCambiar={(p) => setValores((v) => ({ ...v, priority: p as Priority | '' }))}
         />
+        {/* HE-07-HU02-ET01: lista desplegable con las etiquetas creadas; las asignadas se ven en el campo. */}
         <div className="wg-campo" role="group" aria-label="Etiquetas">
           <span className="wg-campo__etiqueta">Etiquetas</span>
-          {etiquetas.map((e) => (
-            <Casilla
-              key={e.id}
-              etiqueta={e.name}
-              marcada={valores.label_ids.includes(e.id)}
-              alCambiar={(marcada) => marcarEtiqueta(e.id, marcada)}
-            />
-          ))}
+          <button
+            type="button"
+            className="wg-campo__entrada"
+            aria-expanded={listaAbierta}
+            aria-label="Etiquetas asignadas"
+            onClick={() => setListaAbierta((a) => !a)}
+          >
+            {etiquetas
+              .filter((e) => valores.label_ids.includes(e.id))
+              .map((e) => e.name)
+              .join(', ')}
+          </button>
+          {listaAbierta &&
+            (etiquetas.length === 0 ? (
+              // ET07: estado vacío con «Nueva etiqueta».
+              <span className="wg-fila">
+                <span>Aún no tienes etiquetas.</span>
+                <Boton onClick={() => setCreandoEtiqueta(true)}>Nueva etiqueta</Boton>
+              </span>
+            ) : (
+              <div className="wg-lista" role="list" aria-label="Lista de etiquetas">
+                {etiquetas.map((e) => {
+                  const marcada = valores.label_ids.includes(e.id);
+                  return (
+                    <span key={e.id} role="listitem">
+                      <Casilla
+                        etiqueta={e.name}
+                        marcada={marcada}
+                        // ET04, ET06: con 5 asignadas, las demás quedan deshabilitadas.
+                        deshabilitada={!marcada && valores.label_ids.length >= ETIQUETAS_MAX}
+                        alCambiar={(m) => marcarEtiqueta(e.id, m)}
+                      />
+                    </span>
+                  );
+                })}
+                {valores.label_ids.length >= ETIQUETAS_MAX && (
+                  <span className="wg-motivo">{textos.MAXIMO_ETIQUETAS}</span>
+                )}
+              </div>
+            ))}
         </div>
       </form>
+      {/* ET08, ET09: el Formulario de etiqueta se abre encima; al guardar o cancelar, este formulario sigue
+          abierto con sus datos. */}
+      {creandoEtiqueta && (
+        <FormularioEtiqueta
+          alCancelar={() => setCreandoEtiqueta(false)}
+          alGuardar={(_, mensaje) => {
+            setCreandoEtiqueta(false);
+            mostrarResultado(mensaje);
+            void leerEtiquetas();
+          }}
+        />
+      )}
     </VentanaEmergente>
   );
 }

@@ -12,6 +12,9 @@ export interface VentanaEmergenteProps {
 /** Avisa a la ventana principal que hay una ventana emergente abierta, para bloquear el fondo (RT-02-ET08). */
 export const ContextoDeBloqueo = createContext<((abierta: boolean) => void) | null>(null);
 
+/** Ventanas emergentes abiertas, de la de abajo a la de arriba: Esc cierra solo la de arriba (RT-02-ET05). */
+const abiertas: symbol[] = [];
+
 // Se abre sobre la pantalla actual, que sigue visible de fondo (RT-02-ET02): la capa de fondo no tiene color
 // (sin transparencias apiladas, interfaz.md) pero recibe la selección, así que la pantalla de fondo y el menú
 // principal no responden (ET08). Se dibuja fuera de la pantalla para que el bloqueo no la alcance.
@@ -28,11 +31,16 @@ export function VentanaEmergente({ titulo, children, alSalir, acciones }: Ventan
   }, [bloquear]);
   useEffect(() => {
     ventana.current?.focus();
+    const propia = Symbol('ventana');
+    abiertas.push(propia);
     const alTeclear = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') salir.current();
+      if (e.key === 'Escape' && abiertas[abiertas.length - 1] === propia) salir.current();
     };
     document.addEventListener('keydown', alTeclear);
-    return () => document.removeEventListener('keydown', alTeclear);
+    return () => {
+      document.removeEventListener('keydown', alTeclear);
+      abiertas.splice(abiertas.indexOf(propia), 1);
+    };
   }, []);
   return createPortal(
     <div className="wg-fondo-emergente">
