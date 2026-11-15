@@ -1,0 +1,189 @@
+// Ayudas de las pruebas de las pantallas del planificador: la ventana principal con sesión iniciada y un Núcleo
+// de prueba con la semilla de la cuenta (las 3 columnas por defecto) y las tarjetas en memoria.
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import type { ComponentType } from 'react';
+import { vi } from 'vitest';
+import type { Escuchar } from '@/ipc/eventos';
+import type {
+  BoardColumn,
+  Card,
+  CardCreateParams,
+  Column,
+  CommandMap,
+  CommandName,
+  EventMap,
+  Invoke,
+  Label,
+  Result,
+  ScreenId,
+} from '@/types';
+import { VentanaPrincipal } from '@/ventana_principal/VentanaPrincipal';
+
+export const POR_HACER: Column = {
+  id: 'col-todo',
+  name: 'Por hacer',
+  color_id: 'gray',
+  color_hex: '#9E9E9E',
+  role: 'todo',
+  position: 1024,
+  card_count: 0,
+  is_default: true,
+};
+export const EN_PROGRESO: Column = {
+  ...POR_HACER,
+  id: 'col-progreso',
+  name: 'En progreso',
+  color_id: 'blue',
+  color_hex: '#2196F3',
+  role: 'in_progress',
+  position: 2048,
+};
+export const HECHO: Column = {
+  ...POR_HACER,
+  id: 'col-hecho',
+  name: 'Hecho',
+  color_id: 'green',
+  color_hex: '#4CAF50',
+  role: 'done',
+  position: 3072,
+};
+
+export const ETIQUETAS: Label[] = [
+  { id: 'e1', name: 'Estudio', color_id: 'blue', color_hex: '#2196F3', card_count: 0 },
+  { id: 'e2', name: 'Casa', color_id: 'green', color_hex: '#4CAF50', card_count: 0 },
+];
+
+let siguiente = 0;
+
+/** Una tarjeta de prueba en Por hacer, con lo indicado. */
+export function tarjeta(datos: Partial<Card> & Pick<Card, 'title'>): Card {
+  siguiente += 1;
+  return {
+    id: `t${siguiente}`,
+    type: 'task',
+    description: null,
+    priority: null,
+    due_date: '2026-11-20',
+    column_id: POR_HACER.id,
+    position: 1024 * siguiente,
+    previous_column_id: null,
+    completed_on: null,
+    scheduled_date: null,
+    scheduled_hour: null,
+    label_ids: [],
+    is_completed: false,
+    is_overdue: false,
+    created_at: '2026-11-14T12:00:00.000Z',
+    ...datos,
+  };
+}
+
+type Respuesta = (params: unknown) => Result<unknown>;
+
+export interface NucleoDelPlanificador {
+  tarjetas: Card[];
+  columnas: Column[];
+  llamadas: Array<{ comando: string; params: unknown }>;
+  responder: <K extends CommandName>(
+    comando: K,
+    respuesta: (params: CommandMap[K]['params']) => Result<CommandMap[K]['result']>,
+  ) => void;
+  emitir: <E extends keyof EventMap>(evento: E, carga: EventMap[E]) => void;
+}
+
+export function llamadasA(nucleo: NucleoDelPlanificador, comando: CommandName) {
+  return nucleo.llamadas.filter((l) => l.comando === comando).map((l) => l.params);
+}
+
+/** Núcleo de prueba con las columnas por defecto y las tarjetas indicadas. */
+export function crearNucleo(tarjetas: Card[] = []): {
+  nucleo: NucleoDelPlanificador;
+  invocar: Invoke;
+  escuchar: Escuchar;
+} {
+  const nucleo: NucleoDelPlanificador = {
+    tarjetas: [...tarjetas],
+    columnas: [POR_HACER, EN_PROGRESO, HECHO],
+    llamadas: [],
+    responder: (comando, respuesta) => respuestas.set(comando, respuesta as Respuesta),
+    emitir: (evento, carga) => act(() => (oyentes.get(evento) ?? []).forEach((o) => o(carga))),
+  };
+  const tablero = (): BoardColumn[] =>
+    nucleo.columnas.map((column) => {
+      const cards = nucleo.tarjetas
+        .filter((t) => t.column_id === column.id)
+        .sort((a, b) => a.position - b.position);
+      return { column: { ...column, card_count: cards.length }, cards };
+    });
+  const respuestas = new Map<string, Respuesta>([
+    [
+      'auth_get_session',
+      () => ({ ok: true, value: { state: 'signed_in', alias: 'Prueba', token: 'valid' } }),
+    ],
+    ['label_list', () => ({ ok: true, value: ETIQUETAS })],
+    ['card_list_board', () => ({ ok: true, value: { columns: tablero() } })],
+    ['column_list', () => ({ ok: true, value: tablero().map((c) => c.column) })],
+    [
+      'card_create',
+      (params) => {
+        const p = params as CardCreateParams;
+        const nueva = tarjeta({
+          type: p.type ?? 'task',
+          title: p.title,
+          due_date: p.due_date,
+          description: p.description ?? null,
+          priority: p.priority ?? null,
+          label_ids: p.label_ids ?? [],
+        });
+        nucleo.tarjetas.push(nueva);
+        return {
+          ok: true,
+          value: nueva,
+          result_message: { code: 'card_create', message: 'Tarjeta creada.' },
+        };
+      },
+    ],
+  ]);
+  const oyentes = new Map<string, Array<(c: unknown) => void>>();
+  const invocar = ((comando: string, params: unknown) => {
+    nucleo.llamadas.push({ comando, params });
+    const r = respuestas.get(comando);
+    return Promise.resolve(
+      r ? r(params) : { ok: false, error: { code: 'internal.unexpected', message: '' } },
+    );
+  }) as unknown as Invoke;
+  const escuchar = ((evento: string, alRecibir: (c: unknown) => void) => {
+    const lista = oyentes.get(evento) ?? [];
+    lista.push(alRecibir);
+    oyentes.set(evento, lista);
+    return () => lista.splice(lista.indexOf(alRecibir), 1);
+  }) as unknown as Escuchar;
+  return { nucleo, invocar, escuchar };
+}
+
+/** Hoy es el sábado 14/11/2026 en el computador (solo se simula `Date`). */
+export function fijarHoy() {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(2026, 10, 14, 12, 0, 0));
+}
+
+/**
+ * Abre la ventana principal con sesión iniciada en Menú principal > Planificador > <pantalla> y espera a que
+ * la pantalla lea sus datos.
+ */
+export async function abrirPantalla(
+  pantalla: ScreenId,
+  nombre: string,
+  componente: ComponentType,
+  tarjetas: Card[] = [],
+): Promise<NucleoDelPlanificador> {
+  const { nucleo, invocar, escuchar } = crearNucleo(tarjetas);
+  render(<VentanaPrincipal invocar={invocar} escuchar={escuchar} pantallas={{ [pantalla]: componente }} />);
+  const menu = await screen.findByRole('navigation', { name: 'Menú principal' });
+  fireEvent.click(within(menu).getByRole('button', { name: nombre }));
+  await screen.findByRole('main', { name: nombre });
+  await act(async () => {});
+  return nucleo;
+}
+
+export { screen };

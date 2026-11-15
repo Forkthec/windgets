@@ -4,16 +4,19 @@
 //! Local primero (D-164, D-189): cada escritura se guarda en SQLite y encola su cambio pendiente en la misma
 //! transacción; el envío a la nube llega con la sincronización (P10).
 
+use std::collections::HashMap;
+
 use chrono::NaiveDate;
 use serde_json::{Map, Value, json};
 use sqlx::Row;
+use sqlx::sqlite::SqliteRow;
 
 use crate::messages;
 use crate::repositorios_y_archivos_locales::{BaseLocal, encolar_cambio};
 use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, instante};
 use crate::tipos::{
-    AppError, Card, CardCreateParams, CardType, DateIso, ErrorCode, Hex, Hour, Instant, Label,
-    Priority, ResultMessage, Uuid,
+    AppError, BoardColumn, Card, CardCreateParams, CardListBoardResult, CardType, Column,
+    ColumnRole, DateIso, ErrorCode, Hex, Hour, Instant, Label, Priority, ResultMessage, Uuid,
 };
 
 /// Clave para ordenar nombres de la A a la Z sin distinguir mayúsculas ni tildes (D-165): «Árbol» va con la A.
@@ -425,11 +428,9 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
     /// Una tarjeta del usuario con sus etiquetas, o `None` si no existe.
     pub async fn tarjeta(&self, user_id: &str, id: &str) -> Result<Option<Card>, AppError> {
         let pool = self.base.pool().await.map_err(de_sqlx)?;
-        let Some(fila) = sqlx::query(
-            "SELECT id, type, title, description, priority, due_date, column_id, position, \
-             previous_column_id, completed_on, scheduled_date, scheduled_hour, created_at \
-             FROM card WHERE id = ? AND user_id = ?",
-        )
+        let Some(fila) = sqlx::query(&format!(
+            "{SELECT_TARJETA} WHERE c.id = ? AND c.user_id = ?"
+        ))
         .bind(id)
         .bind(user_id)
         .fetch_optional(pool)
@@ -445,34 +446,141 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         .fetch_all(pool)
         .await
         .map_err(de_sqlx)?;
-        let texto = |c: &str| fila.try_get::<Option<String>, _>(c).map_err(de_sqlx);
-        let completada = texto("completed_on")?;
-        let fecha_limite: String = fila.try_get("due_date").map_err(de_sqlx)?;
-        let vencida =
-            completada.is_none() && fecha(&fecha_limite).is_some_and(|d| d < self.calendario.hoy());
-        let posicion: f64 = fila.try_get("position").map_err(de_sqlx)?;
-        let hora: Option<i64> = fila.try_get("scheduled_hour").map_err(de_sqlx)?;
-        Ok(Some(Card {
-            id: Uuid(fila.try_get("id").map_err(de_sqlx)?),
-            r#type: tipo_de_texto(&fila.try_get::<String, _>("type").map_err(de_sqlx)?),
-            title: fila.try_get("title").map_err(de_sqlx)?,
-            description: texto("description")?,
-            priority: texto("priority")?.as_deref().and_then(prioridad_de_texto),
-            due_date: DateIso(fecha_limite),
-            column_id: Uuid(fila.try_get("column_id").map_err(de_sqlx)?),
-            // `position` es REAL en la base; Card.position de tipos.ts es entero.
-            #[allow(clippy::cast_possible_truncation)]
-            position: posicion as i64,
-            previous_column_id: texto("previous_column_id")?.map(Uuid),
-            is_completed: completada.is_some(),
-            completed_on: completada.map(DateIso),
-            scheduled_date: texto("scheduled_date")?.map(DateIso),
-            scheduled_hour: hora.and_then(|h| u8::try_from(h).ok()).map(Hour),
-            label_ids: etiquetas.into_iter().map(Uuid).collect(),
-            is_overdue: vencida,
-            created_at: Instant(fila.try_get("created_at").map_err(de_sqlx)?),
-        }))
+        tarjeta_de_fila(&fila, etiquetas, self.calendario.hoy())
+            .map(Some)
+            .map_err(de_sqlx)
     }
+
+    /// IPC-COL-01 `column_list`: las columnas del usuario por `position`, con su cantidad de tarjetas
+    /// (HE-09-HU01-ET01). Las tres por defecto son las de función `todo`, `in_progress` y `done` (ET02).
+    pub async fn columnas(&self, user_id: &str) -> Result<Vec<Column>, AppError> {
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let filas = sqlx::query(
+            "SELECT k.id, k.name, k.color_id, c.hex, k.role, k.position, \
+             (SELECT count(*) FROM card t WHERE t.column_id = k.id) AS card_count \
+             FROM kanban_column k JOIN catalog_color c ON c.id = k.color_id \
+             WHERE k.user_id = ? ORDER BY k.position, k.created_at",
+        )
+        .bind(user_id)
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        filas
+            .iter()
+            .map(|f| {
+                let rol = rol_de_texto(&f.try_get::<String, _>("role")?);
+                let posicion: f64 = f.try_get("position")?;
+                Ok(Column {
+                    id: Uuid(f.try_get("id")?),
+                    name: f.try_get("name")?,
+                    color_id: f.try_get("color_id")?,
+                    color_hex: Hex(f.try_get("hex")?),
+                    is_default: rol != ColumnRole::Custom,
+                    role: rol,
+                    #[allow(clippy::cast_possible_truncation)]
+                    position: posicion as i64,
+                    card_count: f.try_get("card_count")?,
+                })
+            })
+            .collect::<Result<Vec<_>, sqlx::Error>>()
+            .map_err(de_sqlx)
+    }
+
+    /// IPC-CARD-05 `card_list_board`: columnas por `position` y, en cada una, sus tarjetas por `position`
+    /// (HE-09-HU01). Los textos de columna vacía los pone la vista (CA01, CA03).
+    pub async fn tablero(&self, user_id: &str) -> Result<CardListBoardResult, AppError> {
+        let columnas = self.columnas(user_id).await?;
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let filas = sqlx::query(&format!(
+            "{SELECT_TARJETA} WHERE c.user_id = ? ORDER BY c.position, c.created_at"
+        ))
+        .bind(user_id)
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        let uniones: Vec<(String, String)> = sqlx::query_as(
+            "SELECT card_id, label_id FROM card_label WHERE user_id = ? ORDER BY created_at, label_id",
+        )
+        .bind(user_id)
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        let mut etiquetas: HashMap<String, Vec<String>> = HashMap::new();
+        for (tarjeta, etiqueta) in uniones {
+            etiquetas.entry(tarjeta).or_default().push(etiqueta);
+        }
+        let hoy = self.calendario.hoy();
+        let mut por_columna: HashMap<String, Vec<Card>> = HashMap::new();
+        for fila in &filas {
+            let id: String = fila.try_get("id").map_err(de_sqlx)?;
+            let tarjeta = tarjeta_de_fila(fila, etiquetas.remove(&id).unwrap_or_default(), hoy)
+                .map_err(de_sqlx)?;
+            por_columna
+                .entry(tarjeta.column_id.0.clone())
+                .or_default()
+                .push(tarjeta);
+        }
+        Ok(CardListBoardResult {
+            columns: columnas
+                .into_iter()
+                .map(|column| BoardColumn {
+                    cards: por_columna.remove(&column.id.0).unwrap_or_default(),
+                    column,
+                })
+                .collect(),
+        })
+    }
+}
+
+/// Las columnas de una tarjeta con la función de su columna (para «Vencida» y «completada»).
+const SELECT_TARJETA: &str = "SELECT c.id, c.type, c.title, c.description, c.priority, c.due_date, \
+     c.column_id, c.position, c.previous_column_id, c.completed_on, c.scheduled_date, \
+     c.scheduled_hour, c.created_at, k.role AS column_role \
+     FROM card c JOIN kanban_column k ON k.id = c.column_id";
+
+fn rol_de_texto(texto: &str) -> ColumnRole {
+    match texto {
+        "todo" => ColumnRole::Todo,
+        "in_progress" => ColumnRole::InProgress,
+        "done" => ColumnRole::Done,
+        _ => ColumnRole::Custom,
+    }
+}
+
+/// Una fila de `SELECT_TARJETA` como `Card`. Una tarjeta en la columna Hecho es una tarjeta completada
+/// (HE-09-HU01-ET07); está vencida si su fecha límite es anterior a hoy y no está en Hecho (ET06;
+/// HE-07-HU03-ET06).
+fn tarjeta_de_fila(
+    fila: &SqliteRow,
+    etiquetas: Vec<String>,
+    hoy: NaiveDate,
+) -> Result<Card, sqlx::Error> {
+    let texto = |c: &str| fila.try_get::<Option<String>, _>(c);
+    let completada = fila.try_get::<String, _>("column_role")? == "done";
+    let fecha_limite: String = fila.try_get("due_date")?;
+    let vencida = !completada && fecha(&fecha_limite).is_some_and(|d| d < hoy);
+    let posicion: f64 = fila.try_get("position")?;
+    let hora: Option<i64> = fila.try_get("scheduled_hour")?;
+    Ok(Card {
+        id: Uuid(fila.try_get("id")?),
+        r#type: tipo_de_texto(&fila.try_get::<String, _>("type")?),
+        title: fila.try_get("title")?,
+        description: texto("description")?,
+        priority: texto("priority")?.as_deref().and_then(prioridad_de_texto),
+        due_date: DateIso(fecha_limite),
+        column_id: Uuid(fila.try_get("column_id")?),
+        // `position` es REAL en la base; Card.position de tipos.ts es entero.
+        #[allow(clippy::cast_possible_truncation)]
+        position: posicion as i64,
+        previous_column_id: texto("previous_column_id")?.map(Uuid),
+        is_completed: completada,
+        completed_on: texto("completed_on")?.map(DateIso),
+        scheduled_date: texto("scheduled_date")?.map(DateIso),
+        scheduled_hour: hora.and_then(|h| u8::try_from(h).ok()).map(Hour),
+        label_ids: etiquetas.into_iter().map(Uuid).collect(),
+        is_overdue: vencida,
+        created_at: Instant(fila.try_get("created_at")?),
+    })
 }
 
 #[cfg(test)]
@@ -938,5 +1046,127 @@ pub(crate) mod pruebas {
             bloquear(servicio.tarjeta(OTRO_USUARIO, &t.id.0)).unwrap(),
             None
         );
+    }
+
+    /// Inserta una tarjeta directamente en una columna (para fechas pasadas, que `card_create` no acepta).
+    pub(crate) fn tarjeta_en(
+        servicio: &ServicioDelPlanificador<CalendarioDePrueba>,
+        columna: &str,
+        titulo: &str,
+        fecha_limite: &str,
+        posicion: f64,
+    ) -> String {
+        let id = uuid::Uuid::new_v4().to_string();
+        bloquear(async {
+            sqlx::query(
+                "INSERT INTO card (id, user_id, created_at, title, due_date, column_id, position) \
+                 VALUES (?, ?, '2026-11-01T00:00:00.000Z', ?, ?, ?, ?)",
+            )
+            .bind(&id)
+            .bind(USUARIO)
+            .bind(titulo)
+            .bind(fecha_limite)
+            .bind(columna)
+            .bind(posicion)
+            .execute(servicio.base().pool().await.unwrap())
+            .await
+            .unwrap();
+        });
+        id
+    }
+
+    fn tablero(servicio: &ServicioDelPlanificador<CalendarioDePrueba>) -> Vec<BoardColumn> {
+        bloquear(servicio.tablero(USUARIO)).unwrap().columns
+    }
+
+    #[test]
+    fn ca_he_09_hu01_ca01() {
+        // HE-09-HU01-CA01 · Sin tarjetas: Por hacer, En progreso y Hecho en ese orden (ET02), cada una con su
+        // nombre, su color y 0 tarjetas (ET01).
+        let columnas = tablero(&con_semilla());
+        let vistas: Vec<_> = columnas
+            .iter()
+            .map(|c| {
+                (
+                    c.column.name.as_str(),
+                    c.column.color_hex.0.as_str(),
+                    c.column.card_count,
+                    c.column.is_default,
+                    c.cards.len(),
+                )
+            })
+            .collect();
+        assert_eq!(
+            vistas,
+            [
+                ("Por hacer", "#9E9E9E", 0, true, 0),
+                ("En progreso", "#2196F3", 0, true, 0),
+                ("Hecho", "#4CAF50", 0, true, 0),
+            ]
+        );
+        let roles: Vec<_> = columnas.iter().map(|c| c.column.role.clone()).collect();
+        assert_eq!(
+            roles,
+            [ColumnRole::Todo, ColumnRole::InProgress, ColumnRole::Done]
+        );
+    }
+
+    #[test]
+    fn ca_he_09_hu01_ca02() {
+        // HE-09-HU01-CA02 · 2 tarjetas en Por hacer y 1 en En progreso: cada una en su columna, por posición,
+        // con título, fecha límite y prioridad (ET05), y las cantidades 2, 1 y 0.
+        let servicio = con_semilla();
+        tarjeta_en(&servicio, POR_HACER, "Segunda", "2026-11-20", 2048.0);
+        tarjeta_en(&servicio, POR_HACER, "Primera", "2026-11-18", 1024.0);
+        tarjeta_en(&servicio, EN_PROGRESO, "Tercera", "2026-11-19", 1024.0);
+        let columnas = tablero(&servicio);
+        let cantidades: Vec<i64> = columnas.iter().map(|c| c.column.card_count).collect();
+        assert_eq!(cantidades, [2, 1, 0]);
+        let titulos: Vec<Vec<&str>> = columnas
+            .iter()
+            .map(|c| c.cards.iter().map(|t| t.title.as_str()).collect())
+            .collect();
+        assert_eq!(
+            titulos,
+            [vec!["Primera", "Segunda"], vec!["Tercera"], vec![]]
+        );
+        assert_eq!(columnas[0].cards[0].due_date, DateIso("2026-11-18".into()));
+    }
+
+    #[test]
+    fn ca_he_09_hu01_ca03() {
+        // HE-09-HU01-CA03 · Tarjetas solo en Por hacer: las demás columnas llegan vacías (la vista pone el
+        // texto «No hay tarjetas en esta columna.»).
+        let servicio = con_semilla();
+        tarjeta_en(&servicio, POR_HACER, "Sola", "2026-11-20", 1024.0);
+        let vacias: Vec<bool> = tablero(&servicio)
+            .iter()
+            .map(|c| c.cards.is_empty())
+            .collect();
+        assert_eq!(vacias, [false, true, true]);
+    }
+
+    #[test]
+    fn ca_he_09_hu01_ca04() {
+        // HE-09-HU01-CA04 · Fecha límite anterior a hoy fuera de Hecho: vencida (ET06).
+        let servicio = con_semilla();
+        tarjeta_en(&servicio, EN_PROGRESO, "Atrasada", "2026-11-13", 1024.0);
+        tarjeta_en(&servicio, POR_HACER, "A tiempo", "2026-11-14", 1024.0);
+        let columnas = tablero(&servicio);
+        assert!(columnas[1].cards[0].is_overdue);
+        assert!(
+            !columnas[0].cards[0].is_overdue,
+            "la de hoy no está vencida"
+        );
+    }
+
+    #[test]
+    fn ca_he_09_hu01_ca05() {
+        // HE-09-HU01-CA05 · Fecha límite anterior a hoy en Hecho: completada y sin «Vencida» (ET07).
+        let servicio = con_semilla();
+        tarjeta_en(&servicio, HECHO, "Hecha", "2026-11-01", 1024.0);
+        let tarjeta = &tablero(&servicio)[2].cards[0];
+        assert!(tarjeta.is_completed);
+        assert!(!tarjeta.is_overdue);
     }
 }

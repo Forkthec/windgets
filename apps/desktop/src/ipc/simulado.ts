@@ -1,4 +1,4 @@
-import type { AppError, CommandMap, CommandName, Result } from '@/types';
+import type { AppError, BoardColumn, Card, Column, CommandMap, CommandName, Result } from '@/types';
 import textos from '@/types/messages.es.json';
 
 // Núcleo simulado para `pnpm --filter desktop dev`: «solo las vistas en el navegador, con IPC simulado»
@@ -16,6 +16,31 @@ const ESPERA_DE_REENVIO_MS = 60_000;
 const VIGENCIA_DEL_CODIGO_MS = 600_000;
 
 const error = (e: AppError): Result<never> => ({ ok: false, error: e });
+
+// Planificador del simulado: la semilla de la cuenta (las 3 columnas por defecto, datos.md, Modelo · 9) y las
+// tarjetas que se crean mientras la página está abierta.
+const COLUMNAS_SIMULADAS: Column[] = [
+  ['por-hacer', 'Por hacer', 'gray', '#9E9E9E', 'todo'],
+  ['en-progreso', 'En progreso', 'blue', '#2196F3', 'in_progress'],
+  ['hecho', 'Hecho', 'green', '#4CAF50', 'done'],
+].map(([id, name, color_id, color_hex, role], i) => ({
+  id: id as string,
+  name: name as string,
+  color_id: color_id as string,
+  color_hex: color_hex as string,
+  role: role as Column['role'],
+  position: 1024 * (i + 1),
+  card_count: 0,
+  is_default: true,
+}));
+const tarjetasSimuladas: Card[] = [];
+
+function tableroSimulado(): BoardColumn[] {
+  return COLUMNAS_SIMULADAS.map((column) => {
+    const cards = tarjetasSimuladas.filter((t) => t.column_id === column.id);
+    return { column: { ...column, card_count: cards.length }, cards };
+  });
+}
 
 type Respuestas = {
   [K in CommandName]?: (params: CommandMap[K]['params']) => Result<CommandMap[K]['result']>;
@@ -61,9 +86,8 @@ const respuestas: Respuestas = {
       : error({ code: 'auth.invalid_credentials', message: textos.CREDENCIALES_INCORRECTAS }),
   // HE-07-HU01: el simulado no tiene etiquetas y crea la tarjeta tal cual llega, al final de Por hacer.
   label_list: () => ({ ok: true, value: [] }),
-  card_create: (p) => ({
-    ok: true,
-    value: {
+  card_create: (p) => {
+    const tarjeta: Card = {
       id: crypto.randomUUID(),
       type: p.type ?? 'task',
       title: p.title.trim(),
@@ -71,7 +95,7 @@ const respuestas: Respuestas = {
       priority: p.priority ?? null,
       due_date: p.due_date,
       column_id: 'por-hacer',
-      position: 1024,
+      position: 1024 * (tarjetasSimuladas.length + 1),
       previous_column_id: null,
       completed_on: null,
       scheduled_date: null,
@@ -80,9 +104,17 @@ const respuestas: Respuestas = {
       is_completed: false,
       is_overdue: false,
       created_at: new Date().toISOString(),
-    },
-    result_message: { code: 'card_create', message: textos.TARJETA_CREADA },
-  }),
+    };
+    tarjetasSimuladas.push(tarjeta);
+    return {
+      ok: true,
+      value: tarjeta,
+      result_message: { code: 'card_create', message: textos.TARJETA_CREADA },
+    };
+  },
+  // HE-09-HU01: el tablero con las columnas por defecto y las tarjetas creadas.
+  card_list_board: () => ({ ok: true, value: { columns: tableroSimulado() } }),
+  column_list: () => ({ ok: true, value: tableroSimulado().map((c) => c.column) }),
 };
 
 export async function invocarSimulado<K extends CommandName>(

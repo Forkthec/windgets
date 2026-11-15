@@ -15,10 +15,11 @@ use crate::servicio_de_sesion::{ConMensaje, RelojDelSistema, ServicioDeSesion};
 use crate::servicio_del_planificador::{CalendarioDelSistema, ServicioDelPlanificador};
 use crate::tipos::{
     AppError, AuthRegisterStartParams, AuthRegisterStartResult, AuthRegisterVerifyParams,
-    AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, Card, CardCreateParams, ChangeOp,
-    CodeSent, Connectivity, EntityChange, ErrorCode, EventMapConnectivityChanged,
-    EventMapSessionChanged, EventMapSessionChangedReason, EventMapSessionChangedState, IpcErr,
-    IpcOk, IpcResult, Label, NoParams, OriginKind, SessionInfo,
+    AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, Card, CardCreateParams,
+    CardListBoardResult, ChangeOp, CodeSent, Column, Connectivity, EntityChange, ErrorCode,
+    EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
+    EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, Label, NoParams, OriginKind,
+    SessionInfo,
 };
 
 /// El Núcleo que ven los comandos.
@@ -271,4 +272,41 @@ pub async fn label_list(
             error,
         }),
     })
+}
+
+/// Respuesta de un comando de lectura sin mensaje de resultado.
+fn leido<T>(r: Result<T, AppError>) -> IpcResult<T> {
+    match r {
+        Ok(valor) => correcto(valor),
+        Err(error) => IpcResult::Err(IpcErr {
+            ok: false.into(),
+            error,
+        }),
+    }
+}
+
+/// IPC-CARD-05 `card_list_board` (HE-09-HU01): columnas y tarjetas del tablero Kanban.
+#[tauri::command]
+pub async fn card_list_board(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<CardListBoardResult>, ()> {
+    let _ = params;
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.tablero(&user_id).await,
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-COL-01 `column_list` (HE-09-HU01): columnas por `position`.
+#[tauri::command]
+pub async fn column_list(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<Vec<Column>>, ()> {
+    let _ = params;
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.columnas(&user_id).await,
+        Err(e) => Err(e),
+    }))
 }

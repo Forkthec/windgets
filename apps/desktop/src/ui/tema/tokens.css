@@ -297,3 +297,62 @@ body {
   outline: var(--wg-borde-ancho) solid var(--wg-accion);
   outline-offset: calc(var(--wg-unidad) / 2);
 }
+
+/* Tablero Kanban (P-KAN-01, HE-09-HU01): columnas una al lado de otra, con desplazamiento horizontal. */
+.wg-tablero {
+  display: flex;
+  align-items: flex-start;
+  gap: calc(var(--wg-unidad) * 4);
+  overflow-x: auto;
+  padding-block: calc(var(--wg-unidad) * 4);
+}
+.wg-columna {
+  flex: 0 0 calc(var(--wg-unidad) * 70);
+  box-sizing: border-box;
+  padding: calc(var(--wg-unidad) * 3);
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-radius: var(--wg-radio);
+}
+.wg-columna__encabezado {
+  margin: 0 0 calc(var(--wg-unidad) * 3);
+  font-size: inherit;
+}
+.wg-columna__cantidad {
+  margin-left: auto;
+}
+.wg-columna__tarjetas {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--wg-unidad) * 2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wg-muestra-color {
+  width: calc(var(--wg-unidad) * 3);
+  height: calc(var(--wg-unidad) * 3);
+  border-radius: 50%;
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+}
+.wg-tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wg-unidad);
+  padding: calc(var(--wg-unidad) * 3);
+  background: var(--wg-superficie);
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-radius: var(--wg-radio);
+}
+.wg-tarjeta__tipo {
+  font-size: 0.85em;
+}
+.wg-tarjeta__titulo {
+  font-weight: 700;
+}
+/* «Vencida» con texto y borde: no depende solo del color (interfaz.md). */
+.wg-indicador {
+  padding: 0 var(--wg-unidad);
+  border: var(--wg-borde-ancho) solid var(--wg-tinta);
+  border-radius: var(--wg-radio);
+  font-size: 0.85em;
+}
