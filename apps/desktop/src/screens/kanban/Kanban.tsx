@@ -5,27 +5,25 @@ import { Boton } from '@/ui/Boton/Boton';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
-import { escribirFecha } from '../tarjeta/fechas';
+import { DetalleTarjeta } from '../tarjeta/DetalleTarjeta';
+import { fechaVisible } from '../tarjeta/fechas';
 import { FormularioTarjeta } from '../tarjeta/FormularioTarjeta';
 import { NOMBRE_DE_PRIORIDAD, NOMBRE_DE_TIPO } from '../tarjeta/nombres';
 
 // P-KAN-01 Tablero Kanban (Menú principal > Planificador > Tablero Kanban; HE-09-HU01). Las columnas y las
 // tarjetas vienen del Núcleo (IPC-CARD-05); la pantalla se vuelve a leer con cards_changed y columns_changed.
 
-type Ventana = 'formulario';
-
-/** «AAAA-MM-DD» como DD/MM/AAAA. */
-function fechaVisible(iso: string): string {
-  const [anio, mes, dia] = iso.split('-').map(Number);
-  return anio && mes && dia ? escribirFecha(new Date(anio, mes - 1, dia)) : iso;
-}
+type Ventana = { tipo: 'formulario' } | { tipo: 'detalle'; id: string };
 
 /** Una tarjeta en la vista compacta (ET05): tipo (HE-07-HU01-ET15), título, fecha límite y prioridad. */
-function Tarjeta({ tarjeta }: { tarjeta: Card }) {
+function Tarjeta({ tarjeta, alAbrir }: { tarjeta: Card; alAbrir: (id: string) => void }) {
   return (
     <li className="wg-tarjeta">
       <span className="wg-tarjeta__tipo">{NOMBRE_DE_TIPO[tarjeta.type]}</span>
-      <span className="wg-tarjeta__titulo">{tarjeta.title}</span>
+      {/* HE-07-HU03-ET02: el título abre el Detalle de tarjeta. */}
+      <button type="button" className="wg-tarjeta__titulo" onClick={() => alAbrir(tarjeta.id)}>
+        {tarjeta.title}
+      </button>
       <span className="wg-fila">
         <span>{fechaVisible(tarjeta.due_date)}</span>
         {/* ET06, ET07: «Vencida» solo fuera de la columna Hecho. */}
@@ -37,7 +35,7 @@ function Tarjeta({ tarjeta }: { tarjeta: Card }) {
 }
 
 /** Una columna con su nombre, su color y su cantidad de tarjetas (ET01). */
-function Columna({ columna }: { columna: BoardColumn }) {
+function Columna({ columna, alAbrir }: { columna: BoardColumn; alAbrir: (id: string) => void }) {
   const { column, cards } = columna;
   return (
     <section className="wg-columna" aria-label={column.name}>
@@ -53,7 +51,7 @@ function Columna({ columna }: { columna: BoardColumn }) {
       ) : (
         <ul className="wg-columna__tarjetas">
           {cards.map((t) => (
-            <Tarjeta key={t.id} tarjeta={t} />
+            <Tarjeta key={t.id} tarjeta={t} alAbrir={alAbrir} />
           ))}
         </ul>
       )}
@@ -93,11 +91,24 @@ export function Kanban() {
     [emergentes, leer, mostrarResultado],
   );
 
+  // DP-04: la tarjeta ya no existe (por ejemplo, la eliminó otro computador).
+  const noExiste = useCallback(
+    (mensaje: string) => {
+      emergentes.volver();
+      mostrarResultado(mensaje);
+      void leer();
+    },
+    [emergentes, leer, mostrarResultado],
+  );
+
+  const abrirDetalle = useCallback((id: string) => emergentes.abrir({ tipo: 'detalle', id }), [emergentes]);
+  const ventana = emergentes.actual;
+
   return (
     <main aria-label="Tablero Kanban" aria-busy={columnas === null}>
       {/* ET03. «Nueva columna» es de HE-09-HU03 y el cambio de vista, de HE-09-HU07. */}
       <div className="wg-fila">
-        <Boton principal onClick={() => emergentes.abrir('formulario')}>
+        <Boton principal onClick={() => emergentes.abrir({ tipo: 'formulario' })}>
           Nueva tarjeta
         </Boton>
         <Boton>Nueva columna</Boton>
@@ -106,12 +117,15 @@ export function Kanban() {
       {columnas && (
         <div className="wg-tablero">
           {columnas.map((c) => (
-            <Columna key={c.column.id} columna={c} />
+            <Columna key={c.column.id} columna={c} alAbrir={abrirDetalle} />
           ))}
         </div>
       )}
-      {emergentes.actual === 'formulario' && (
+      {ventana?.tipo === 'formulario' && (
         <FormularioTarjeta alCrear={creada} alCancelar={emergentes.volver} />
+      )}
+      {ventana?.tipo === 'detalle' && (
+        <DetalleTarjeta id={ventana.id} alCerrar={emergentes.volver} alNoExistir={noExiste} />
       )}
     </main>
   );

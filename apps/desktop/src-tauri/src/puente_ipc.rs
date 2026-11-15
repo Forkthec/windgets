@@ -16,10 +16,10 @@ use crate::servicio_del_planificador::{CalendarioDelSistema, ServicioDelPlanific
 use crate::tipos::{
     AppError, AuthRegisterStartParams, AuthRegisterStartResult, AuthRegisterVerifyParams,
     AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, Card, CardCreateParams,
-    CardListBoardResult, ChangeOp, CodeSent, Column, Connectivity, EntityChange, ErrorCode,
-    EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
-    EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, Label, NoParams, OriginKind,
-    SessionInfo,
+    CardDetail, CardIdParams, CardListBoardResult, ChangeOp, CodeSent, Column, Connectivity,
+    EntityChange, ErrorCode, EventMapConnectivityChanged, EventMapSessionChanged,
+    EventMapSessionChangedReason, EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, Label,
+    NoParams, OriginKind, SessionInfo,
 };
 
 /// El Núcleo que ven los comandos.
@@ -307,6 +307,18 @@ pub async fn column_list(
     let _ = params;
     Ok(leido(match usuario(&nucleo) {
         Ok(user_id) => nucleo.planificador.columnas(&user_id).await,
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-CARD-04 `card_get` (HE-07-HU03): el Detalle de tarjeta.
+#[tauri::command]
+pub async fn card_get(
+    nucleo: State<'_, Nucleo>,
+    params: CardIdParams,
+) -> Result<IpcResult<CardDetail>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.detalle(&user_id, &params.id.0).await,
         Err(e) => Err(e),
     }))
 }

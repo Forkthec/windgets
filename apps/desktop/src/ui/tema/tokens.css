@@ -356,3 +356,36 @@ body {
   border-radius: var(--wg-radio);
   font-size: 0.85em;
 }
+
+/* Título de una tarjeta: abre el Detalle de tarjeta (HE-07-HU03-ET02). */
+button.wg-tarjeta__titulo {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+button.wg-tarjeta__titulo:focus-visible {
+  outline: var(--wg-borde-ancho) solid var(--wg-accion);
+  outline-offset: calc(var(--wg-unidad) / 2);
+}
+
+/* Detalle de tarjeta (P-TAR-01): el nombre de cada dato sobre su valor. */
+.wg-detalle {
+  display: grid;
+  gap: var(--wg-unidad);
+  margin: 0;
+}
+.wg-detalle dd {
+  margin: 0 0 calc(var(--wg-unidad) * 2);
+}
+.wg-lista-en-linea {
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

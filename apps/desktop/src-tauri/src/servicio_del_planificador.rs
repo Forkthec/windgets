@@ -15,8 +15,9 @@ use crate::messages;
 use crate::repositorios_y_archivos_locales::{BaseLocal, encolar_cambio};
 use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, instante};
 use crate::tipos::{
-    AppError, BoardColumn, Card, CardCreateParams, CardListBoardResult, CardType, Column,
-    ColumnRole, DateIso, ErrorCode, Hex, Hour, Instant, Label, Priority, ResultMessage, Uuid,
+    AppError, BoardColumn, Card, CardCreateParams, CardDetail, CardDetailColumn,
+    CardDetailLabelsItem, CardDetailTimeBlock, CardListBoardResult, CardType, Column, ColumnRole,
+    DateIso, ErrorCode, Hex, Hour, Instant, Label, Priority, ResultMessage, Uuid,
 };
 
 /// Clave para ordenar nombres de la A a la Z sin distinguir mayúsculas ni tildes (D-165): «Árbol» va con la A.
@@ -451,6 +452,59 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
             .map_err(de_sqlx)
     }
 
+    /// IPC-CARD-04 `card_get` (HE-07-HU03): la tarjeta con sus etiquetas y su color, su columna y su bloque
+    /// horario, si lo tiene (ET03). Si ya no existe: `card.not_found` (DP-04).
+    pub async fn detalle(&self, user_id: &str, id: &str) -> Result<CardDetail, AppError> {
+        let tarjeta = self
+            .tarjeta(user_id, id)
+            .await?
+            .ok_or_else(tarjeta_no_existe)?;
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let mut etiquetas: Vec<CardDetailLabelsItem> =
+            sqlx::query_as::<_, (String, String, String)>(
+                "SELECT l.id, l.name, c.hex FROM card_label cl JOIN label l ON l.id = cl.label_id \
+             JOIN catalog_color c ON c.id = l.color_id WHERE cl.card_id = ?",
+            )
+            .bind(id)
+            .fetch_all(pool)
+            .await
+            .map_err(de_sqlx)?
+            .into_iter()
+            .map(|(id, name, hex)| CardDetailLabelsItem {
+                id: Uuid(id),
+                name,
+                color_hex: Hex(hex),
+            })
+            .collect();
+        etiquetas.sort_by_cached_key(|e| clave_alfabetica(&e.name));
+        let (columna_id, nombre, hex): (String, String, String) = sqlx::query_as(
+            "SELECT k.id, k.name, c.hex FROM kanban_column k \
+             JOIN catalog_color c ON c.id = k.color_id WHERE k.id = ?",
+        )
+        .bind(&tarjeta.column_id.0)
+        .fetch_one(pool)
+        .await
+        .map_err(de_sqlx)?;
+        let bloque = match (&tarjeta.scheduled_date, &tarjeta.scheduled_hour) {
+            (Some(fecha), Some(hora)) => Some(CardDetailTimeBlock {
+                date: fecha.clone(),
+                hour: hora.clone(),
+                label: texto_del_bloque(hora.0),
+            }),
+            _ => None,
+        };
+        Ok(CardDetail {
+            base_card: tarjeta,
+            labels: etiquetas,
+            column: CardDetailColumn {
+                id: Uuid(columna_id),
+                name: nombre,
+                color_hex: Hex(hex),
+            },
+            time_block: bloque,
+        })
+    }
+
     /// IPC-COL-01 `column_list`: las columnas del usuario por `position`, con su cantidad de tarjetas
     /// (HE-09-HU01-ET01). Las tres por defecto son las de función `todo`, `in_progress` y `done` (ET02).
     pub async fn columnas(&self, user_id: &str) -> Result<Vec<Column>, AppError> {
@@ -537,6 +591,16 @@ const SELECT_TARJETA: &str = "SELECT c.id, c.type, c.title, c.description, c.pri
      c.column_id, c.position, c.previous_column_id, c.completed_on, c.scheduled_date, \
      c.scheduled_hour, c.created_at, k.role AS column_role \
      FROM card c JOIN kanban_column k ON k.id = c.column_id";
+
+/// «10:00 – 11:00» (contratos.md, `CardDetail.time_block.label`). El bloque de las 23 termina a las 00:00.
+pub fn texto_del_bloque(hora: u8) -> String {
+    format!("{:02}:00 – {:02}:00", hora, (hora + 1) % 24)
+}
+
+/// `card.not_found` (DP-04: fuera de editar usa el mismo texto que HE-07-HU04-CA11).
+fn tarjeta_no_existe() -> AppError {
+    error(ErrorCode::CardNotFound, messages::TARJETA_NO_EXISTE, None)
+}
 
 fn rol_de_texto(texto: &str) -> ColumnRole {
     match texto {
@@ -1168,5 +1232,122 @@ pub(crate) mod pruebas {
         let tarjeta = &tablero(&servicio)[2].cards[0];
         assert!(tarjeta.is_completed);
         assert!(!tarjeta.is_overdue);
+    }
+
+    /// Asigna un bloque horario directamente en la base (los bloques son de HE-11-HU02).
+    pub(crate) fn con_bloque(
+        servicio: &ServicioDelPlanificador<CalendarioDePrueba>,
+        id: &str,
+        fecha: &str,
+        hora: i64,
+    ) {
+        bloquear(async {
+            sqlx::query("UPDATE card SET scheduled_date = ?, scheduled_hour = ? WHERE id = ?")
+                .bind(fecha)
+                .bind(hora)
+                .bind(id)
+                .execute(servicio.base().pool().await.unwrap())
+                .await
+                .unwrap();
+        });
+    }
+
+    #[test]
+    fn ca_he_07_hu03_ca01() {
+        // HE-07-HU03-CA01 · El detalle trae tipo, título, fecha límite, descripción, prioridad, etiquetas con su
+        // color, la columna y el bloque horario (ET03).
+        let servicio = con_semilla();
+        let (casa, estudio) = (etiqueta(&servicio, "Casa"), etiqueta(&servicio, "Estudio"));
+        let t = crear(
+            &servicio,
+            CardCreateParams {
+                r#type: Some(CardType::Event),
+                description: Some("Stand 4".into()),
+                priority: Some(Priority::Medium),
+                label_ids: Some(vec![Uuid(estudio.clone()), Uuid(casa.clone())]),
+                ..params("Feria", "2026-11-20")
+            },
+        )
+        .unwrap()
+        .valor;
+        con_bloque(&servicio, &t.id.0, "2026-11-16", 10);
+        let d = bloquear(servicio.detalle(USUARIO, &t.id.0)).unwrap();
+        assert_eq!(
+            (
+                d.base_card.r#type,
+                d.base_card.title.as_str(),
+                d.base_card.due_date.0.as_str()
+            ),
+            (CardType::Event, "Feria", "2026-11-20")
+        );
+        assert_eq!(d.base_card.description.as_deref(), Some("Stand 4"));
+        assert_eq!(d.base_card.priority, Some(Priority::Medium));
+        let etiquetas: Vec<_> = d
+            .labels
+            .iter()
+            .map(|e| (e.name.as_str(), e.color_hex.0.as_str()))
+            .collect();
+        assert_eq!(etiquetas, [("Casa", "#2196F3"), ("Estudio", "#2196F3")]);
+        assert_eq!(
+            (d.column.name.as_str(), d.column.color_hex.0.as_str()),
+            ("Por hacer", "#9E9E9E")
+        );
+        let bloque = d.time_block.unwrap();
+        assert_eq!(
+            (bloque.date.0.as_str(), bloque.hour.0, bloque.label.as_str()),
+            ("2026-11-16", 10, "10:00 – 11:00")
+        );
+    }
+
+    #[test]
+    fn ca_he_07_hu03_ca02() {
+        // HE-07-HU03-CA02 · Sin descripción, prioridad ni etiquetas (ni bloque): llegan vacíos y la vista
+        // muestra «Sin descripción», «Sin prioridad» y «Sin etiquetas» (ET05).
+        let servicio = con_semilla();
+        let t = crear(&servicio, params("Simple", "2026-11-20"))
+            .unwrap()
+            .valor;
+        let d = bloquear(servicio.detalle(USUARIO, &t.id.0)).unwrap();
+        assert_eq!(
+            (d.base_card.description, d.base_card.priority),
+            (None, None)
+        );
+        assert!(d.labels.is_empty());
+        assert_eq!(d.time_block, None);
+    }
+
+    #[test]
+    fn ca_he_07_hu03_ca03() {
+        // HE-07-HU03-CA03 · Fecha límite anterior a hoy y fuera de Hecho: vencida (ET06).
+        let servicio = con_semilla();
+        let id = tarjeta_en(&servicio, POR_HACER, "Atrasada", "2026-11-10", 1024.0);
+        assert!(
+            bloquear(servicio.detalle(USUARIO, &id))
+                .unwrap()
+                .base_card
+                .is_overdue
+        );
+        let hecha = tarjeta_en(&servicio, HECHO, "Hecha", "2026-11-10", 1024.0);
+        assert!(
+            !bloquear(servicio.detalle(USUARIO, &hecha))
+                .unwrap()
+                .base_card
+                .is_overdue
+        );
+    }
+
+    #[test]
+    fn el_detalle_de_una_tarjeta_que_ya_no_existe_es_card_not_found() {
+        // DP-04: «Esta tarjeta ya no existe.»; tampoco se lee la tarjeta de otro usuario (RNF-21).
+        let servicio = con_semilla();
+        let e = bloquear(servicio.detalle(USUARIO, "00000000-0000-4000-8000-00000000ffff"))
+            .unwrap_err();
+        assert_eq!(
+            (e.code, e.message.as_str()),
+            (ErrorCode::CardNotFound, "Esta tarjeta ya no existe.")
+        );
+        let mia = crear(&servicio, params("Mía", "2026-11-20")).unwrap().valor;
+        assert!(bloquear(servicio.detalle(OTRO_USUARIO, &mia.id.0)).is_err());
+        assert_eq!(texto_del_bloque(23), "23:00 – 00:00");
     }
 }

@@ -8,6 +8,7 @@ import type {
   BoardColumn,
   Card,
   CardCreateParams,
+  CardDetail,
   Column,
   CommandMap,
   CommandName,
@@ -123,6 +124,34 @@ export function crearNucleo(tarjetas: Card[] = []): {
     ['label_list', () => ({ ok: true, value: ETIQUETAS })],
     ['card_list_board', () => ({ ok: true, value: { columns: tablero() } })],
     ['column_list', () => ({ ok: true, value: tablero().map((c) => c.column) })],
+    [
+      'card_get',
+      (params) => {
+        const t = nucleo.tarjetas.find((c) => c.id === (params as { id: string }).id);
+        if (!t) {
+          return { ok: false, error: { code: 'card.not_found', message: 'Esta tarjeta ya no existe.' } };
+        }
+        const columna = nucleo.columnas.find((c) => c.id === t.column_id) ?? POR_HACER;
+        const hora = t.scheduled_hour ?? 0;
+        const detalle: CardDetail = {
+          ...t,
+          labels: ETIQUETAS.filter((e) => t.label_ids.includes(e.id)).map(({ id, name, color_hex }) => ({
+            id,
+            name,
+            color_hex,
+          })),
+          column: { id: columna.id, name: columna.name, color_hex: columna.color_hex },
+          time_block: t.scheduled_date
+            ? {
+                date: t.scheduled_date,
+                hour: hora,
+                label: `${String(hora).padStart(2, '0')}:00 – ${String((hora + 1) % 24).padStart(2, '0')}:00`,
+              }
+            : null,
+        };
+        return { ok: true, value: detalle };
+      },
+    ],
     [
       'card_create',
       (params) => {

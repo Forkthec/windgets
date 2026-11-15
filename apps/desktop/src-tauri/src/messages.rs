@@ -73,6 +73,11 @@ pub const DESCRIPCION_MUY_LARGA: &str = "La descripción no puede superar los 10
 /// `labels.too_many` (HE-07-HU02-CA02, ET06; IPC-CARD-01).
 pub const MAXIMO_ETIQUETAS: &str = "Puedes asignar máximo 5 etiquetas por tarjeta.";
 
+// HE-07-HU03 · Consultar el detalle de una tarjeta (IPC-CARD-04 card_get).
+
+/// `card.not_found` (HE-07-HU04-CA11; DP-04: el mismo texto al consultar, eliminar o mover).
+pub const TARJETA_NO_EXISTE: &str = "Esta tarjeta ya no existe.";
+
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
     ("SERVICIO_NO_DISPONIBLE", SERVICIO_NO_DISPONIBLE),
@@ -99,6 +104,7 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("FECHA_LIMITE_ANTERIOR_A_HOY", FECHA_LIMITE_ANTERIOR_A_HOY),
     ("DESCRIPCION_MUY_LARGA", DESCRIPCION_MUY_LARGA),
     ("MAXIMO_ETIQUETAS", MAXIMO_ETIQUETAS),
+    ("TARJETA_NO_EXISTE", TARJETA_NO_EXISTE),
 ];
 
 #[cfg(test)]

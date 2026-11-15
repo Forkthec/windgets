@@ -28,3 +28,9 @@ export function hoy(): Date {
   const ahora = new Date();
   return new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
 }
+
+/** «AAAA-MM-DD» (DateIso) como DD/MM/AAAA. */
+export function fechaVisible(iso: string): string {
+  const [anio, mes, dia] = iso.split('-').map(Number);
+  return anio && mes && dia ? escribirFecha(new Date(anio, mes - 1, dia)) : iso;
+}

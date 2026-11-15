@@ -115,6 +115,21 @@ const respuestas: Respuestas = {
   // HE-09-HU01: el tablero con las columnas por defecto y las tarjetas creadas.
   card_list_board: () => ({ ok: true, value: { columns: tableroSimulado() } }),
   column_list: () => ({ ok: true, value: tableroSimulado().map((c) => c.column) }),
+  // HE-07-HU03: el detalle de una tarjeta creada (el simulado no tiene etiquetas ni bloques horarios).
+  card_get: ({ id }) => {
+    const t = tarjetasSimuladas.find((c) => c.id === id);
+    const columna = COLUMNAS_SIMULADAS.find((c) => c.id === t?.column_id);
+    if (!t || !columna) return error({ code: 'card.not_found', message: textos.TARJETA_NO_EXISTE });
+    return {
+      ok: true,
+      value: {
+        ...t,
+        labels: [],
+        column: { id: columna.id, name: columna.name, color_hex: columna.color_hex },
+        time_block: null,
+      },
+    };
+  },
 };
 
 export async function invocarSimulado<K extends CommandName>(
