@@ -149,6 +149,22 @@ export function crearNucleo(tarjetas: Card[] = []): {
       () => ({ ok: true, value: { has_cards: true, first_card_date: '2026-01-01', has_labels: true } }),
     ],
     [
+      'report_get_status_breakdown',
+      () => ({
+        ok: true,
+        value: {
+          overdue: 2,
+          pending: 3,
+          completed: 5,
+          total: 10,
+          percent_overdue: 20,
+          percent_pending: 30,
+          percent_completed: 50,
+          is_empty: false,
+        },
+      }),
+    ],
+    [
       'report_get_compliance',
       () => ({ ok: true, value: { percent: 200 / 3, on_time: 2, total: 3, is_empty: false } }),
     ],

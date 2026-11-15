@@ -7,7 +7,7 @@ use super::*;
 use crate::tipos::{
     CompletedPoint, CompletedReport, ComplianceReport, RangeInput, RangeInputVariant1Kind,
     ReportFilter, ReportFilterParams, ReportGrouping, ReportMeta, ReportResolveRangeParams,
-    ResolvedRange,
+    ResolvedRange, StatusBreakdown,
 };
 
 /// Máximo del rango personalizado: 366 días contados ambos extremos (HE-13-HU01-ET08, D-170).
@@ -300,6 +300,49 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
             percent: (total > 0).then(|| on_time as f64 * 100.0 / total as f64),
             on_time,
             total,
+            is_empty: total == 0,
+        })
+    }
+
+    /// IPC-REP-05 `report_get_status_breakdown` (HE-13-HU04): las tarjetas con fecha límite en el rango, por su
+    /// estado actual (ET04, ET05): vencida (no completada, fecha límite ya pasada), pendiente (no completada,
+    /// fecha límite hoy o futura) y completada (en Hecho). Porcentajes con un decimal (ET03).
+    pub async fn estados_del_reporte(
+        &self,
+        user_id: &str,
+        params: &ReportFilterParams,
+    ) -> Result<StatusBreakdown, AppError> {
+        let hoy = self.calendario.hoy();
+        let rango = resolver_rango(&params.filter.range, hoy)?;
+        let (inicio, fin) = (dia_de(&rango.start), dia_de(&rango.end));
+        let tarjetas = self.tarjetas_del_filtro(user_id, &params.filter).await?;
+        let (mut overdue, mut pending, mut completed) = (0i64, 0i64, 0i64);
+        for t in tarjetas
+            .iter()
+            .filter(|t| t.limite >= inicio && t.limite <= fin)
+        {
+            match (t.completada, t.limite < hoy) {
+                (Some(_), _) => completed += 1,
+                (None, true) => overdue += 1,
+                (None, false) => pending += 1,
+            }
+        }
+        let total = overdue + pending + completed;
+        let por_ciento = |n: i64| {
+            if total == 0 {
+                0.0
+            } else {
+                (n as f64 * 1000.0 / total as f64).round() / 10.0
+            }
+        };
+        Ok(StatusBreakdown {
+            overdue,
+            pending,
+            completed,
+            total,
+            percent_overdue: por_ciento(overdue),
+            percent_pending: por_ciento(pending),
+            percent_completed: por_ciento(completed),
             is_empty: total == 0,
         })
     }

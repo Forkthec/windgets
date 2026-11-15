@@ -454,6 +454,23 @@ pub async fn report_get_meta(
     }))
 }
 
+/// IPC-REP-05 `report_get_status_breakdown` (HE-13-HU04): vencidas, pendientes y completadas.
+#[tauri::command]
+pub async fn report_get_status_breakdown(
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::ReportFilterParams,
+) -> Result<IpcResult<crate::tipos::StatusBreakdown>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .estados_del_reporte(&user_id, &params)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
 /// IPC-REP-04 `report_get_compliance` (HE-13-HU03): la tasa de cumplimiento.
 #[tauri::command]
 pub async fn report_get_compliance(

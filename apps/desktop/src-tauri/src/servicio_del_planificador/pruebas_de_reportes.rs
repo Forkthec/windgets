@@ -439,3 +439,77 @@ fn ca_he_13_hu03_ca08() {
     );
     assert_eq!(tasa(&r), ("100.0".into(), 1, 1));
 }
+
+fn estados(
+    servicio: &ServicioDelPlanificador<CalendarioDePrueba>,
+) -> crate::tipos::StatusBreakdown {
+    bloquear(servicio.estados_del_reporte(
+        USUARIO,
+        &filtro(predefinido(RangeInputVariant1Kind::Last30)),
+    ))
+    .unwrap()
+}
+
+#[test]
+fn ca_he_13_hu04_ca01() {
+    // HE-13-HU04-CA01 · 2 vencidas, 3 pendientes (una vence hoy) y 5 completadas: 20,0 %, 30,0 % y 50,0 %
+    // (ET03 a ET05). Una fuera del rango no cuenta.
+    let servicio = con_semilla();
+    for limite in ["2026-11-01", "2026-11-13"] {
+        tarjeta_del_reporte(&servicio, "task", "2026-10-01", limite, None);
+    }
+    for _ in 0..3 {
+        tarjeta_del_reporte(&servicio, "task", "2026-10-01", "2026-11-14", None);
+    }
+    for _ in 0..5 {
+        tarjeta_del_reporte(
+            &servicio,
+            "task",
+            "2026-10-01",
+            "2026-11-05",
+            Some("2026-11-07"),
+        );
+    }
+    tarjeta_del_reporte(&servicio, "task", "2026-10-01", "2026-10-01", None);
+    let r = estados(&servicio);
+    assert_eq!((r.overdue, r.pending, r.completed, r.total), (2, 3, 5, 10));
+    assert_eq!(
+        (r.percent_overdue, r.percent_pending, r.percent_completed),
+        (20.0, 30.0, 50.0)
+    );
+    assert!(!r.is_empty);
+}
+
+#[test]
+fn ca_he_13_hu04_ca04() {
+    // HE-13-HU04-CA04 · Sin tarjetas con fecha límite en el rango: vacío.
+    let servicio = con_semilla();
+    tarjeta_del_reporte(&servicio, "task", "2026-10-01", "2026-12-20", None);
+    let r = estados(&servicio);
+    assert!(r.is_empty);
+    assert_eq!(r.total, 0);
+}
+
+#[test]
+fn ca_he_13_hu04_ca05() {
+    // HE-13-HU04-CA05 · 0 vencidas, 2 pendientes y 3 completadas: 0,0 %, 40,0 % y 60,0 % (ET10).
+    let servicio = con_semilla();
+    for _ in 0..2 {
+        tarjeta_del_reporte(&servicio, "task", "2026-10-01", "2026-11-14", None);
+    }
+    for _ in 0..3 {
+        tarjeta_del_reporte(
+            &servicio,
+            "task",
+            "2026-10-01",
+            "2026-11-01",
+            Some("2026-11-02"),
+        );
+    }
+    let r = estados(&servicio);
+    assert_eq!((r.overdue, r.pending, r.completed), (0, 2, 3));
+    assert_eq!(
+        (r.percent_overdue, r.percent_pending, r.percent_completed),
+        (0.0, 40.0, 60.0)
+    );
+}

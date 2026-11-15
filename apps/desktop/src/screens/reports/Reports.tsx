@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { CompletedReport, ComplianceReport, ReportMeta, ResolvedRange } from '@/types';
+import type { CompletedReport, ComplianceReport, ReportMeta, ResolvedRange, StatusBreakdown } from '@/types';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { fechaVisible } from '../tarjeta/fechas';
+import { useVentanasDeTarjeta } from '../tarjeta/useVentanasDeTarjeta';
+import { EstadosTarjetas } from './EstadosTarjetas';
 import { GraficaCompletadas } from './GraficaCompletadas';
 import { SelectorRango } from './SelectorRango';
 import { TasaCumplimiento } from './TasaCumplimiento';
@@ -19,6 +21,7 @@ export function Reports() {
   const [rango, setRango] = useState<ResolvedRange | null>(null);
   const [completadas, setCompletadas] = useState<CompletedReport | null>(null);
   const [cumplimiento, setCumplimiento] = useState<ComplianceReport | null>(null);
+  const [estados, setEstados] = useState<StatusBreakdown | null>(null);
 
   useEffect(() => {
     let vigente = true;
@@ -36,6 +39,7 @@ export function Reports() {
       setRango(nuevo);
       setCompletadas(null);
       setCumplimiento(null);
+      setEstados(null);
       // DUDA: HE-13-HU02 el filtro Etiquetas es de HE-13-HU05; hasta entonces, «Todas las etiquetas» (ET02).
       const filter = {
         range: { kind: 'custom' as const, start: nuevo.start, end: nuevo.end },
@@ -47,6 +51,10 @@ export function Reports() {
       // HE-13-HU03-ET05: la tasa de cumplimiento con los mismos filtros.
       void invocar('report_get_compliance', { filter }).then((r) => {
         if (r.ok) setCumplimiento(r.value);
+      });
+      // HE-13-HU04-ET06: vencidas, pendientes y completadas con los mismos filtros.
+      void invocar('report_get_status_breakdown', { filter }).then((r) => {
+        if (r.ok) setEstados(r.value);
       });
     },
     [invocar],
@@ -63,6 +71,13 @@ export function Reports() {
       vigente = false;
     };
   }, [aplicar, invocar, meta?.has_cards]);
+
+  // HE-13-HU04-ET09: el Detalle de tarjeta sobre Reportes (RT-02); al cambiar una tarjeta, se recalcula.
+  const tarjetas = useVentanasDeTarjeta(
+    useCallback(() => {
+      if (rango) aplicar(rango);
+    }, [aplicar, rango]),
+  );
 
   const sinTarjetas = meta !== null && !meta.has_cards;
   return (
@@ -82,9 +97,11 @@ export function Reports() {
           <>
             <GraficaCompletadas reporte={completadas} />
             <TasaCumplimiento reporte={cumplimiento} />
+            <EstadosTarjetas reporte={estados} rango={rango} alAbrir={tarjetas.abrirDetalle} />
           </>
         )
       )}
+      {tarjetas.ventanas}
     </main>
   );
 }
