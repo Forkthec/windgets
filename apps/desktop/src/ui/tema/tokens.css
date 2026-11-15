@@ -526,3 +526,27 @@ button.wg-tarjeta__titulo:focus-visible {
 .wg-lista__nombre {
   flex: 1;
 }
+/* Reportes (HE-13-HU02-ET15): indicador de carga de cada sección, sin transparencias ni desenfoque. */
+.wg-seccion {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--wg-unidad) * 2);
+}
+.wg-cargando {
+  width: calc(var(--wg-unidad) * 4);
+  height: calc(var(--wg-unidad) * 4);
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-top-color: var(--wg-accion);
+  border-radius: 50%;
+  animation: wg-girar 1s linear infinite;
+}
+@keyframes wg-girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wg-cargando {
+    animation: none;
+  }
+}

@@ -430,7 +430,45 @@ pub async fn report_resolve_range(
     nucleo: State<'_, Nucleo>,
     params: crate::tipos::ReportResolveRangeParams,
 ) -> Result<IpcResult<crate::tipos::ResolvedRange>, ()> {
-    Ok(leido(nucleo.planificador.rango_del_reporte(&params)))
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .rango_del_reporte(&user_id, &params)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-REP-02 `report_get_meta` (HE-13-HU02): si hay tarjetas, desde cuándo y si hay etiquetas.
+#[tauri::command]
+pub async fn report_get_meta(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<crate::tipos::ReportMeta>, ()> {
+    let _ = params;
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.meta_del_reporte(&user_id).await,
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-REP-03 `report_get_completed` (HE-13-HU02): la gráfica de tarjetas completadas.
+#[tauri::command]
+pub async fn report_get_completed(
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::ReportFilterParams,
+) -> Result<IpcResult<crate::tipos::CompletedReport>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .completadas_del_reporte(&user_id, &params)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
 }
 
 /// IPC-COL-01 `column_list` (HE-09-HU01): columnas por `position`.

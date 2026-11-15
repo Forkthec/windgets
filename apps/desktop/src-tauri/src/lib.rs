@@ -37,6 +37,8 @@ pub fn run() {
             puente_ipc::column_update,
             puente_ipc::column_reorder,
             puente_ipc::report_resolve_range,
+            puente_ipc::report_get_meta,
+            puente_ipc::report_get_completed,
             puente_ipc::card_list_board,
             puente_ipc::column_list,
             puente_ipc::card_get,

@@ -1651,6 +1651,8 @@ mod pruebas_de_etiquetas;
 #[cfg(test)]
 mod pruebas_de_la_agenda;
 #[cfg(test)]
+mod pruebas_de_reportes;
+#[cfg(test)]
 mod pruebas_del_planificador_diario;
 #[cfg(test)]
 mod pruebas_del_tablero;

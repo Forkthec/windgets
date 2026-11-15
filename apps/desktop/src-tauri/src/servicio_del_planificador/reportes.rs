@@ -1,11 +1,12 @@
 //! Reportes del Servicio del planificador (HE-13, P18): rango de fechas, gráfica de completadas, tasa de
 //! cumplimiento y conteos, calculados en el Núcleo.
 
-use chrono::{Duration, Months, NaiveDate};
+use chrono::{Datelike, Duration, Months, NaiveDate};
 
 use super::*;
 use crate::tipos::{
-    RangeInput, RangeInputVariant1Kind, ReportGrouping, ReportResolveRangeParams, ResolvedRange,
+    CompletedPoint, CompletedReport, RangeInput, RangeInputVariant1Kind, ReportFilter,
+    ReportFilterParams, ReportGrouping, ReportMeta, ReportResolveRangeParams, ResolvedRange,
 };
 
 /// Máximo del rango personalizado: 366 días contados ambos extremos (HE-13-HU01-ET08, D-170).
@@ -83,20 +84,198 @@ pub fn resolver_rango(rango: &RangeInput, hoy: NaiveDate) -> Result<ResolvedRang
         end: DateIso(fin.format("%Y-%m-%d").to_string()),
         days: dias,
         grouping: agrupacion(dias),
-        // DUDA: HE-13-HU01 `clipped_start` (la fecha de la primera tarjeta cuando el rango empieza antes) es
-        // de HE-13-HU02-ET13; se calcula con esa HU.
+        // `clipped_start` necesita la primera tarjeta: lo pone `rango_del_reporte` (HE-13-HU02-ET13).
         clipped_start: None,
     })
 }
 
+/// La fecha de un `DateIso` ya validado.
+fn dia_de(valor: &DateIso) -> NaiveDate {
+    fecha(&valor.0).unwrap_or_default()
+}
+
+fn iso(dia: NaiveDate) -> DateIso {
+    DateIso(dia.format("%Y-%m-%d").to_string())
+}
+
+/// Los períodos de la gráfica entre `inicio` y `fin` (HE-13-HU02-ET06 a ET08): cada día; cada semana de lunes a
+/// domingo; o cada mes. El primero y el último se recortan al rango.
+pub fn periodos(
+    inicio: NaiveDate,
+    fin: NaiveDate,
+    agrupacion: &ReportGrouping,
+) -> Vec<(NaiveDate, NaiveDate)> {
+    let mut lista = Vec::new();
+    let mut desde = inicio;
+    while desde <= fin {
+        let hasta = match agrupacion {
+            ReportGrouping::Day => desde,
+            ReportGrouping::Week => {
+                desde + Duration::days(6 - i64::from(desde.weekday().num_days_from_monday()))
+            }
+            ReportGrouping::Month => {
+                let primero = desde.with_day(1).unwrap_or(desde);
+                primero
+                    .checked_add_months(Months::new(1))
+                    .map(|siguiente| siguiente - Duration::days(1))
+                    .unwrap_or(desde)
+            }
+        }
+        .min(fin);
+        lista.push((desde, hasta));
+        desde = hasta + Duration::days(1);
+    }
+    lista
+}
+
 impl<C: Calendario> ServicioDelPlanificador<C> {
-    /// IPC-REP-01 `report_resolve_range` (HE-13-HU01): el rango con la fecha de hoy del computador.
-    pub fn rango_del_reporte(
+    /// Fecha de creación de la primera tarjeta del usuario (HE-13-HU02-ET13). DUDA: HE-13-HU02 `created_at` es
+    /// un instante UTC; se toma su fecha (AAAA-MM-DD) sin pasarla a la hora local.
+    async fn primera_tarjeta(&self, user_id: &str) -> Result<Option<NaiveDate>, AppError> {
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let primera: Option<String> =
+            sqlx::query_scalar("SELECT min(substr(created_at, 1, 10)) FROM card WHERE user_id = ?")
+                .bind(user_id)
+                .fetch_one(pool)
+                .await
+                .map_err(de_sqlx)?;
+        Ok(primera.as_deref().and_then(fecha))
+    }
+
+    /// IPC-REP-01 `report_resolve_range` (HE-13-HU01): el rango con la fecha de hoy del computador y, si empieza
+    /// antes de la primera tarjeta, la fecha desde la que se cuenta (`clipped_start`, HE-13-HU02-ET13).
+    pub async fn rango_del_reporte(
         &self,
+        user_id: &str,
         params: &ReportResolveRangeParams,
     ) -> Result<ResolvedRange, AppError> {
-        resolver_rango(&params.range, self.calendario.hoy())
+        let mut rango = resolver_rango(&params.range, self.calendario.hoy())?;
+        if let Some(primera) = self.primera_tarjeta(user_id).await?
+            && primera > dia_de(&rango.start)
+            && primera <= dia_de(&rango.end)
+        {
+            rango.clipped_start = Some(iso(primera));
+        }
+        Ok(rango)
     }
+
+    /// IPC-REP-02 `report_get_meta`: si hay tarjetas y etiquetas, y la fecha de la primera tarjeta.
+    pub async fn meta_del_reporte(&self, user_id: &str) -> Result<ReportMeta, AppError> {
+        let primera = self.primera_tarjeta(user_id).await?;
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let etiquetas: i64 = sqlx::query_scalar("SELECT count(*) FROM label WHERE user_id = ?")
+            .bind(user_id)
+            .fetch_one(pool)
+            .await
+            .map_err(de_sqlx)?;
+        Ok(ReportMeta {
+            has_cards: primera.is_some(),
+            first_card_date: primera.map(iso),
+            has_labels: etiquetas > 0,
+        })
+    }
+
+    /// Las tarjetas del usuario que pasan el filtro de etiquetas: su fecha de creación y de completado.
+    /// Sin etiquetas elegidas, todas («Todas las etiquetas», HE-13-HU02-ET02). DUDA: HE-13-HU02 con varias
+    /// etiquetas elegidas (HE-13-HU05) se toma la tarjeta que tenga cualquiera de ellas.
+    pub(super) async fn tarjetas_del_filtro(
+        &self,
+        user_id: &str,
+        filtro: &ReportFilter,
+    ) -> Result<Vec<TarjetaDelReporte>, AppError> {
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let filas: Vec<(String, String, Option<String>)> = sqlx::query_as(
+            "SELECT id, substr(created_at, 1, 10), completed_on FROM card WHERE user_id = ?",
+        )
+        .bind(user_id)
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        let elegidas: Vec<String> = filtro
+            .label_ids
+            .iter()
+            .map(|u| u.0.to_lowercase())
+            .collect();
+        let uniones: Vec<(String, String)> = if elegidas.is_empty() {
+            Vec::new()
+        } else {
+            sqlx::query_as("SELECT card_id, label_id FROM card_label WHERE user_id = ?")
+                .bind(user_id)
+                .fetch_all(pool)
+                .await
+                .map_err(de_sqlx)?
+        };
+        Ok(filas
+            .into_iter()
+            .filter(|(id, _, _)| {
+                elegidas.is_empty()
+                    || uniones
+                        .iter()
+                        .any(|(tarjeta, etiqueta)| tarjeta == id && elegidas.contains(etiqueta))
+            })
+            .filter_map(|(_, creada, completada)| {
+                Some(TarjetaDelReporte {
+                    creada: fecha(&creada)?,
+                    completada: completada.as_deref().and_then(fecha),
+                })
+            })
+            .collect())
+    }
+
+    /// IPC-REP-03 `report_get_completed` (HE-13-HU02): tarjetas completadas por período, contadas por su fecha de
+    /// completado (ET04), de los tres tipos (ET05), desde la primera tarjeta (ET13). Regla de 0 (ET09): con
+    /// tarjetas creadas hasta el fin del rango, cada período tiene su cantidad, aunque sea 0. Regla de vacío
+    /// (ET10): sin tarjetas que evaluar, `is_empty` y ningún punto.
+    pub async fn completadas_del_reporte(
+        &self,
+        user_id: &str,
+        params: &ReportFilterParams,
+    ) -> Result<CompletedReport, AppError> {
+        let rango = self
+            .rango_del_reporte(
+                user_id,
+                &ReportResolveRangeParams {
+                    range: params.filter.range.clone(),
+                },
+            )
+            .await?;
+        let inicio = rango
+            .clipped_start
+            .as_ref()
+            .map(dia_de)
+            .unwrap_or_else(|| dia_de(&rango.start));
+        let fin = dia_de(&rango.end);
+        let tarjetas = self.tarjetas_del_filtro(user_id, &params.filter).await?;
+        if !tarjetas.iter().any(|t| t.creada <= fin) {
+            return Ok(CompletedReport {
+                grouping: rango.grouping,
+                points: Vec::new(),
+                is_empty: true,
+            });
+        }
+        let points = periodos(inicio, fin, &rango.grouping)
+            .into_iter()
+            .map(|(desde, hasta)| CompletedPoint {
+                period_start: iso(desde),
+                period_end: iso(hasta),
+                count: tarjetas
+                    .iter()
+                    .filter(|t| t.completada.is_some_and(|d| d >= desde && d <= hasta))
+                    .count() as i64,
+            })
+            .collect();
+        Ok(CompletedReport {
+            grouping: rango.grouping,
+            points,
+            is_empty: false,
+        })
+    }
+}
+
+/// Lo que los reportes necesitan de cada tarjeta.
+pub(super) struct TarjetaDelReporte {
+    pub creada: NaiveDate,
+    pub completada: Option<NaiveDate>,
 }
 
 #[cfg(test)]

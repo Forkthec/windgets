@@ -34,9 +34,11 @@ const REGLAS: Record<Campo, Validador> = { start: fechaDelRango, end: fechaDelRa
 export interface SelectorRangoProps {
   /** El rango resuelto que aplica a todas las secciones del reporte (ET09). */
   alAplicar: (rango: ResolvedRange) => void;
+  /** Sin tarjetas, la barra de filtros se muestra deshabilitada (HE-13-HU02-ET12). */
+  deshabilitado?: boolean;
 }
 
-export function SelectorRango({ alAplicar }: SelectorRangoProps) {
+export function SelectorRango({ alAplicar, deshabilitado = false }: SelectorRangoProps) {
   const { invocar } = useNucleo();
   // ET16: al abrir la pantalla, «Últimos 30 días».
   const [opcion, setOpcion] = useState<Opcion>('last_30');
@@ -79,7 +81,13 @@ export function SelectorRango({ alAplicar }: SelectorRangoProps) {
 
   return (
     <div className="wg-fila" role="group" aria-label="Rango de fechas">
-      <Selector etiqueta="Rango de fechas" opciones={OPCIONES} valor={opcion} alCambiar={elegir} />
+      <Selector
+        etiqueta="Rango de fechas"
+        opciones={OPCIONES}
+        valor={opcion}
+        alCambiar={elegir}
+        deshabilitado={deshabilitado}
+      />
       {opcion === 'custom' && (
         <>
           <CampoTexto
