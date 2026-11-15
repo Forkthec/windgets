@@ -14,12 +14,13 @@ use crate::repositorios_y_archivos_locales::{BaseLocal, almacen_de_la_aplicacion
 use crate::servicio_de_sesion::{ConMensaje, RelojDelSistema, ServicioDeSesion};
 use crate::servicio_del_planificador::{CalendarioDelSistema, ServicioDelPlanificador};
 use crate::tipos::{
-    AppError, AuthRegisterStartParams, AuthRegisterStartResult, AuthRegisterVerifyParams,
-    AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, Card, CardCreateParams,
-    CardDetail, CardIdParams, CardListBoardResult, CardMoveParams, CardUpdateParams, ChangeOp,
-    CodeSent, Column, Connectivity, EntityChange, ErrorCode, EventMapConnectivityChanged,
-    EventMapSessionChanged, EventMapSessionChangedReason, EventMapSessionChangedState, IpcErr,
-    IpcOk, IpcResult, Label, NoParams, OriginKind, SessionInfo,
+    AgendaDay, AgendaDayParams, AppError, AuthRegisterStartParams, AuthRegisterStartResult,
+    AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, Card,
+    CardCreateParams, CardDetail, CardIdParams, CardListBoardResult, CardMoveParams,
+    CardUpdateParams, ChangeOp, CodeSent, Column, Connectivity, EntityChange, ErrorCode,
+    EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
+    EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, Label, NoParams, OriginKind,
+    SessionInfo,
 };
 
 /// El Núcleo que ven los comandos.
@@ -384,4 +385,16 @@ pub async fn card_move(
         avisar_tarjetas(&app, vec![movida.id.clone()], ChangeOp::Upsert);
     }
     Ok(leido(r))
+}
+
+/// IPC-CARD-09 `agenda_get_day` (HE-11-HU01): la agenda diaria de un día.
+#[tauri::command]
+pub async fn agenda_get_day(
+    nucleo: State<'_, Nucleo>,
+    params: AgendaDayParams,
+) -> Result<IpcResult<AgendaDay>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.agenda(&user_id, &params.date.0).await,
+        Err(e) => Err(e),
+    }))
 }

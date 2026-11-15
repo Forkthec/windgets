@@ -445,3 +445,44 @@ button.wg-tarjeta__titulo:focus-visible {
   color: var(--wg-borde);
   cursor: default;
 }
+
+/* Agenda diaria (P-AGE-01, HE-11-HU01): los 24 bloques a la izquierda y Tarjetas sin horario a la derecha. */
+.wg-agenda {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  align-items: start;
+  gap: calc(var(--wg-unidad) * 4);
+  padding-block: calc(var(--wg-unidad) * 4);
+}
+.wg-agenda__fecha {
+  margin: 0 0 0 auto;
+  font-size: inherit;
+}
+.wg-agenda__bloques {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wg-agenda__bloque {
+  padding: calc(var(--wg-unidad) * 2) 0;
+  border-top: var(--wg-borde-ancho) solid var(--wg-borde);
+  scroll-margin-top: calc(var(--wg-unidad) * 2);
+}
+/* El bloque de la hora actual se marca con un borde más grueso, no solo con color (interfaz.md). */
+.wg-agenda__bloque--actual {
+  border-top-width: calc(var(--wg-borde-ancho) * 4);
+}
+.wg-agenda__hora {
+  margin: 0 0 var(--wg-unidad);
+  font-size: inherit;
+  font-weight: 400;
+}
+.wg-agenda__sin-horario {
+  padding: calc(var(--wg-unidad) * 3);
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-radius: var(--wg-radio);
+}
+.wg-agenda__sin-horario h3 {
+  margin: 0 0 calc(var(--wg-unidad) * 2);
+  font-size: inherit;
+}

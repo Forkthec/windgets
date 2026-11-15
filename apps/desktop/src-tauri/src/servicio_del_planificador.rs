@@ -15,10 +15,10 @@ use crate::messages;
 use crate::repositorios_y_archivos_locales::{BaseLocal, encolar_cambio};
 use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, instante};
 use crate::tipos::{
-    AppError, BoardColumn, Card, CardCreateParams, CardDetail, CardDetailColumn,
-    CardDetailLabelsItem, CardDetailTimeBlock, CardListBoardResult, CardMoveParams, CardType,
-    CardUpdateParams, Column, ColumnRole, DateIso, ErrorCode, Hex, Hour, Instant, Label, Placement,
-    Priority, ResultMessage, Uuid,
+    AgendaBlock, AgendaDay, AppError, BoardColumn, Card, CardCreateParams, CardDetail,
+    CardDetailColumn, CardDetailLabelsItem, CardDetailTimeBlock, CardListBoardResult,
+    CardMoveParams, CardType, CardUpdateParams, Column, ColumnRole, DateIso, ErrorCode, Hex, Hour,
+    Instant, Label, Placement, Priority, ResultMessage, Uuid,
 };
 
 /// Clave para ordenar nombres de la A a la Z sin distinguir mayúsculas ni tildes (D-165): «Árbol» va con la A.
@@ -52,6 +52,8 @@ pub const PASO_DE_POSICION: f64 = 1024.0;
 pub trait Calendario: Send + Sync {
     fn hoy(&self) -> NaiveDate;
     fn ahora_ms(&self) -> i64;
+    /// Hora local del computador, de 0 a 23 (agenda diaria, HE-11-HU01-ET01).
+    fn hora(&self) -> u8;
 }
 
 /// El calendario del sistema.
@@ -64,6 +66,10 @@ impl Calendario for CalendarioDelSistema {
 
     fn ahora_ms(&self) -> i64 {
         RelojDelSistema.ahora_ms()
+    }
+
+    fn hora(&self) -> u8 {
+        u8::try_from(chrono::Timelike::hour(&chrono::Local::now())).unwrap_or(0)
     }
 }
 
@@ -853,6 +859,80 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         })
     }
 
+    /// IPC-CARD-09 `agenda_get_day` (HE-11-HU01): los 24 bloques horarios del día con sus tarjetas (ET01, ET03)
+    /// y las tarjetas sin horario: las que no están en Hecho ni tienen bloque (ET04). Lee solo la base local,
+    /// así que funciona igual sin conexión (ET08).
+    pub async fn agenda(&self, user_id: &str, dia: &str) -> Result<AgendaDay, AppError> {
+        let fecha_del_dia = fecha(dia).ok_or_else(inesperado)?;
+        let hoy = self.calendario.hoy();
+        let es_hoy = fecha_del_dia == hoy;
+        let hora_actual = self.calendario.hora();
+        let dia = fecha_del_dia.format("%Y-%m-%d").to_string();
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let filas = sqlx::query(&format!(
+            "{SELECT_TARJETA} WHERE c.user_id = ? AND \
+             (c.scheduled_date = ? OR (c.scheduled_date IS NULL AND k.role <> 'done')) \
+             ORDER BY c.due_date, c.position, c.created_at"
+        ))
+        .bind(user_id)
+        .bind(&dia)
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        let etiquetas = self.etiquetas_por_tarjeta(user_id).await?;
+        let mut bloques: Vec<AgendaBlock> = (0..24u8)
+            .map(|h| AgendaBlock {
+                hour: Hour(h),
+                cards: Vec::new(),
+                // Un bloque que ya pasó (HE-11-HU02-CA04): los de un día anterior y, hoy, los anteriores a la
+                // hora actual.
+                is_past: fecha_del_dia < hoy || (es_hoy && h < hora_actual),
+            })
+            .collect();
+        let mut sin_horario = Vec::new();
+        for fila in &filas {
+            let id: String = fila.try_get("id").map_err(de_sqlx)?;
+            let tarjeta =
+                tarjeta_de_fila(fila, etiquetas.get(&id).cloned().unwrap_or_default(), hoy)
+                    .map_err(de_sqlx)?;
+            match &tarjeta.scheduled_hour {
+                Some(hora) => {
+                    if let Some(bloque) = bloques.get_mut(usize::from(hora.0)) {
+                        bloque.cards.push(tarjeta);
+                    }
+                }
+                None => sin_horario.push(tarjeta),
+            }
+        }
+        Ok(AgendaDay {
+            date: DateIso(dia),
+            is_today: es_hoy,
+            current_hour: es_hoy.then_some(Hour(hora_actual)),
+            blocks: bloques,
+            unscheduled: sin_horario,
+        })
+    }
+
+    /// Las etiquetas de cada tarjeta del usuario, en el orden en que se asignaron.
+    async fn etiquetas_por_tarjeta(
+        &self,
+        user_id: &str,
+    ) -> Result<HashMap<String, Vec<String>>, AppError> {
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let uniones: Vec<(String, String)> = sqlx::query_as(
+            "SELECT card_id, label_id FROM card_label WHERE user_id = ? ORDER BY created_at, label_id",
+        )
+        .bind(user_id)
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        let mut etiquetas: HashMap<String, Vec<String>> = HashMap::new();
+        for (tarjeta, etiqueta) in uniones {
+            etiquetas.entry(tarjeta).or_default().push(etiqueta);
+        }
+        Ok(etiquetas)
+    }
+
     /// IPC-COL-01 `column_list`: las columnas del usuario por `position`, con su cantidad de tarjetas
     /// (HE-09-HU01-ET01). Las tres por defecto son las de función `todo`, `in_progress` y `done` (ET02).
     pub async fn columnas(&self, user_id: &str) -> Result<Vec<Column>, AppError> {
@@ -998,6 +1078,8 @@ fn tarjeta_de_fila(
 #[cfg(test)]
 mod pruebas_de_edicion;
 #[cfg(test)]
+mod pruebas_de_la_agenda;
+#[cfg(test)]
 mod pruebas_del_tablero;
 
 #[cfg(test)]
@@ -1030,6 +1112,10 @@ pub(crate) mod pruebas {
         }
         fn ahora_ms(&self) -> i64 {
             self.0.load(Ordering::SeqCst)
+        }
+        /// Son las 14:25 (HE-11-HU01-CA01).
+        fn hora(&self) -> u8 {
+            14
         }
     }
 

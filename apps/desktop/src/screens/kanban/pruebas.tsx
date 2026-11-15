@@ -5,6 +5,7 @@ import type { ComponentType } from 'react';
 import { vi } from 'vitest';
 import type { Escuchar } from '@/ipc/eventos';
 import type {
+  AgendaDay,
   BoardColumn,
   Card,
   CardCreateParams,
@@ -55,6 +56,10 @@ export const ETIQUETAS: Label[] = [
   { id: 'e1', name: 'Estudio', color_id: 'blue', color_hex: '#2196F3', card_count: 0 },
   { id: 'e2', name: 'Casa', color_id: 'green', color_hex: '#4CAF50', card_count: 0 },
 ];
+
+/** Hoy en las pruebas del planificador: sábado 14/11/2026, a las 14:25 (fijarHoy). */
+export const HOY = '2026-11-14';
+export const HORA = 14;
 
 let siguiente = 0;
 
@@ -156,6 +161,26 @@ export function crearNucleo(tarjetas: Card[] = []): {
           value: t,
           result_message: { code: 'card_update', message: 'Tarjeta actualizada.' },
         };
+      },
+    ],
+    [
+      'agenda_get_day',
+      (params) => {
+        const { date } = params as { date: string };
+        const esHoy = date === HOY;
+        const hecho = (t: Card) => nucleo.columnas.find((c) => c.id === t.column_id)?.role === 'done';
+        const agenda: AgendaDay = {
+          date,
+          is_today: esHoy,
+          current_hour: esHoy ? HORA : null,
+          blocks: Array.from({ length: 24 }, (_, hour) => ({
+            hour,
+            cards: nucleo.tarjetas.filter((t) => t.scheduled_date === date && t.scheduled_hour === hour),
+            is_past: date < HOY || (esHoy && hour < HORA),
+          })),
+          unscheduled: nucleo.tarjetas.filter((t) => t.scheduled_date === null && !hecho(t)),
+        };
+        return { ok: true, value: agenda };
       },
     ],
     [
@@ -270,7 +295,7 @@ export function crearNucleo(tarjetas: Card[] = []): {
 /** Hoy es el sábado 14/11/2026 en el computador (solo se simula `Date`). */
 export function fijarHoy() {
   vi.useFakeTimers({ toFake: ['Date'] });
-  vi.setSystemTime(new Date(2026, 10, 14, 12, 0, 0));
+  vi.setSystemTime(new Date(2026, 10, 14, 14, 25, 0));
 }
 
 /**

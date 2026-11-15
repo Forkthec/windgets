@@ -133,6 +133,28 @@ const respuestas: Respuestas = {
       result_message: { code: 'card_update', message: textos.TARJETA_ACTUALIZADA },
     };
   },
+  // HE-11-HU01: la agenda de un día con la fecha y la hora del navegador.
+  agenda_get_day: ({ date }) => {
+    const ahora = new Date();
+    const dos = (n: number) => String(n).padStart(2, '0');
+    const hoy = `${ahora.getFullYear()}-${dos(ahora.getMonth() + 1)}-${dos(ahora.getDate())}`;
+    const esHoy = date === hoy;
+    const hora = ahora.getHours();
+    return {
+      ok: true,
+      value: {
+        date,
+        is_today: esHoy,
+        current_hour: esHoy ? hora : null,
+        blocks: Array.from({ length: 24 }, (_, hour) => ({
+          hour,
+          cards: tarjetasSimuladas.filter((t) => t.scheduled_date === date && t.scheduled_hour === hour),
+          is_past: date < hoy || (esHoy && hour < hora),
+        })),
+        unscheduled: tarjetasSimuladas.filter((t) => t.scheduled_date === null && t.column_id !== 'hecho'),
+      },
+    };
+  },
   // HE-09-HU02: mueve la tarjeta, con las reglas de la columna Hecho.
   card_move: ({ card_id, column_id, placement }) => {
     const t = tarjetasSimuladas.find((c) => c.id === card_id);
