@@ -13,6 +13,7 @@ import { escuchar as escucharNucleo, type Escuchar } from '@/ipc/eventos';
 import type { Invoke, ScreenId } from '@/types';
 import { ProveedorDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { MenuPrincipal, SECCIONES_MENU } from '@/ui/MenuPrincipal/MenuPrincipal';
+import { IndicadorSincronizacion } from './IndicadorSincronizacion';
 import { ContextoDeBloqueo } from '@/ui/VentanaEmergente/VentanaEmergente';
 
 // Ventana principal (C-01, interfaz.md): RT-01 (menú principal y pantalla principal) y el bloqueo del fondo de
@@ -184,7 +185,10 @@ export function VentanaPrincipal({
     const Pantalla = pantallas[pantalla];
     contenido = (
       <div ref={fondo} className="wg-ventana-principal">
-        <MenuPrincipal actual={pantalla} alElegir={(p) => void navegacion.abrir(p)} />
+        <div className="wg-ventana-principal__menu">
+          <MenuPrincipal actual={pantalla} alElegir={(p) => void navegacion.abrir(p)} />
+          <IndicadorSincronizacion />
+        </div>
         <div className="wg-ventana-principal__pantalla">
           {Pantalla ? <Pantalla /> : <PantallaSinConstruir nombre={NOMBRE_DE_PANTALLA[pantalla]} />}
         </div>
