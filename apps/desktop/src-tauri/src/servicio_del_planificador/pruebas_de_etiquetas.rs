@@ -51,7 +51,11 @@ fn nueva(nombre: &str, color: &str) -> LabelCreateParams {
     }
 }
 
-fn codigo_al_crear(servicio: &ServicioDelPlanificador<CalendarioDePrueba>, nombre: &str, color: &str) -> AppError {
+fn codigo_al_crear(
+    servicio: &ServicioDelPlanificador<CalendarioDePrueba>,
+    nombre: &str,
+    color: &str,
+) -> AppError {
     bloquear(servicio.crear_etiqueta(USUARIO, nueva(nombre, color))).unwrap_err()
 }
 
@@ -62,7 +66,13 @@ fn ca_he_08_hu02_ca01() {
     let servicio = con_semilla();
     let creada = bloquear(servicio.crear_etiqueta(USUARIO, nueva("Estudio", "green"))).unwrap();
     assert_eq!(creada.mensaje.message, "Etiqueta creada.");
-    assert_eq!((creada.valor.name.as_str(), creada.valor.color_hex.0.as_str()), ("Estudio", "#4CAF50"));
+    assert_eq!(
+        (
+            creada.valor.name.as_str(),
+            creada.valor.color_hex.0.as_str()
+        ),
+        ("Estudio", "#4CAF50")
+    );
     bloquear(servicio.crear_etiqueta(USUARIO, nueva("A", "blue"))).unwrap();
     bloquear(servicio.crear_etiqueta(USUARIO, nueva(&"b".repeat(30), "blue"))).unwrap();
     assert_eq!(nombres(&servicio).len(), 3);
@@ -74,7 +84,14 @@ fn ca_he_08_hu02_ca02() {
     let servicio = con_semilla();
     for nombre in ["", "   "] {
         let e = codigo_al_crear(&servicio, nombre, "blue");
-        assert_eq!((e.code, e.message.as_str(), e.field.as_deref()), (ErrorCode::NameRequired, "Este campo es obligatorio.", Some("name")));
+        assert_eq!(
+            (e.code, e.message.as_str(), e.field.as_deref()),
+            (
+                ErrorCode::NameRequired,
+                "Este campo es obligatorio.",
+                Some("name")
+            )
+        );
     }
     assert!(nombres(&servicio).is_empty());
 }
@@ -86,7 +103,11 @@ fn ca_he_08_hu02_ca03() {
     let e = codigo_al_crear(&servicio, &"á".repeat(31), "blue");
     assert_eq!(
         (e.code, e.message.as_str(), e.field.as_deref()),
-        (ErrorCode::NameTooLong, "El nombre de la etiqueta no puede superar los 30 caracteres.", Some("name"))
+        (
+            ErrorCode::NameTooLong,
+            "El nombre de la etiqueta no puede superar los 30 caracteres.",
+            Some("name")
+        )
     );
     assert!(nombres(&servicio).is_empty());
 }
@@ -101,7 +122,11 @@ fn ca_he_08_hu02_ca04() {
         let e = codigo_al_crear(&servicio, nombre, "blue");
         assert_eq!(
             (e.code, e.message.as_str(), e.field.as_deref()),
-            (ErrorCode::NameDuplicate, "Ya existe una etiqueta con ese nombre.", Some("name"))
+            (
+                ErrorCode::NameDuplicate,
+                "Ya existe una etiqueta con ese nombre.",
+                Some("name")
+            )
         );
     }
     assert_eq!(nombres(&servicio).len(), 2);
@@ -113,7 +138,14 @@ fn ca_he_08_hu02_ca05() {
     let servicio = con_semilla();
     for color in ["", "no-existe"] {
         let e = codigo_al_crear(&servicio, "Estudio", color);
-        assert_eq!((e.code, e.message.as_str(), e.field.as_deref()), (ErrorCode::ColorRequired, "Este campo es obligatorio.", Some("color_id")));
+        assert_eq!(
+            (e.code, e.message.as_str(), e.field.as_deref()),
+            (
+                ErrorCode::ColorRequired,
+                "Este campo es obligatorio.",
+                Some("color_id")
+            )
+        );
     }
     assert!(nombres(&servicio).is_empty());
 }
@@ -128,7 +160,10 @@ fn ca_he_08_hu02_ca06() {
     let e = codigo_al_crear(&servicio, "Otra", "blue");
     assert_eq!(
         (e.code, e.message.as_str()),
-        (ErrorCode::LabelLimitReached, "Alcanzaste el máximo de 20 etiquetas. Elimina una para crear otra.")
+        (
+            ErrorCode::LabelLimitReached,
+            "Alcanzaste el máximo de 20 etiquetas. Elimina una para crear otra."
+        )
     );
     assert_eq!(nombres(&servicio).len(), 20);
 }
@@ -140,10 +175,13 @@ fn ca_he_08_hu02_ca08() {
     let creada = bloquear(servicio.crear_etiqueta(USUARIO, nueva("Casa", "gray"))).unwrap();
     assert_eq!(creada.mensaje.message, "Etiqueta creada.");
     assert_eq!(
-        contar(&servicio, &format!(
-            "SELECT count(*) FROM pending_change WHERE entity_kind = 'label' AND entity_id = '{}'",
-            creada.valor.id.0
-        )),
+        contar(
+            &servicio,
+            &format!(
+                "SELECT count(*) FROM pending_change WHERE entity_kind = 'label' AND entity_id = '{}'",
+                creada.valor.id.0
+            )
+        ),
         1
     );
 }

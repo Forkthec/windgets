@@ -17,10 +17,10 @@ use crate::tipos::{
     AgendaDay, AgendaDayParams, AppError, AuthRegisterStartParams, AuthRegisterStartResult,
     AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, Card,
     CardAssignTimeBlockParams, CardCreateParams, CardDetail, CardIdParams, CardListBoardResult,
-    CardMoveParams, CardUpdateParams, CatalogItem, CatalogKind, CatalogListParams, LabelCreateParams, ChangeOp, CodeSent, Column, Connectivity, EntityChange,
-    ErrorCode, EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
-    EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, Label, NoParams, OriginKind,
-    PlannerToday, SessionInfo,
+    CardMoveParams, CardUpdateParams, CatalogItem, CatalogKind, CatalogListParams, ChangeOp,
+    CodeSent, Column, Connectivity, EntityChange, ErrorCode, EventMapConnectivityChanged,
+    EventMapSessionChanged, EventMapSessionChangedReason, EventMapSessionChangedState, IpcErr,
+    IpcOk, IpcResult, Label, LabelCreateParams, NoParams, OriginKind, PlannerToday, SessionInfo,
 };
 
 /// El Núcleo que ven los comandos.

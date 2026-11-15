@@ -15,11 +15,11 @@ use crate::messages;
 use crate::repositorios_y_archivos_locales::{BaseLocal, encolar_cambio};
 use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, instante};
 use crate::tipos::{
-    AgendaBlock, AgendaDay, AppError, BoardColumn, CatalogItem, LabelCreateParams, Card, CardAssignTimeBlockParams,
+    AgendaBlock, AgendaDay, AppError, BoardColumn, Card, CardAssignTimeBlockParams,
     CardCreateParams, CardDetail, CardDetailColumn, CardDetailLabelsItem, CardDetailTimeBlock,
-    CardListBoardResult, CardMoveParams, CardType, CardUpdateParams, Column, ColumnRole, DateIso,
-    ErrorCode, Hex, Hour, Instant, Label, Placement, PlannerItem, PlannerSummary, PlannerToday,
-    Priority, ResultMessage, Uuid,
+    CardListBoardResult, CardMoveParams, CardType, CardUpdateParams, CatalogItem, Column,
+    ColumnRole, DateIso, ErrorCode, Hex, Hour, Instant, Label, LabelCreateParams, Placement,
+    PlannerItem, PlannerSummary, PlannerToday, Priority, ResultMessage, Uuid,
 };
 
 /// Clave para ordenar nombres de la A a la Z sin distinguir mayúsculas ni tildes (D-165): «Árbol» va con la A.
@@ -796,7 +796,11 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         let nombre = params.name.trim().to_string();
         let color = params.color_id.trim().to_string();
         if nombre.is_empty() {
-            return Err(error(ErrorCode::NameRequired, messages::CAMPO_OBLIGATORIO, Some("name")));
+            return Err(error(
+                ErrorCode::NameRequired,
+                messages::CAMPO_OBLIGATORIO,
+                Some("name"),
+            ));
         }
         if nombre.chars().count() > NOMBRE_DE_ETIQUETA_MAX {
             return Err(error(
@@ -806,16 +810,21 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
             ));
         }
         if color.is_empty() {
-            return Err(error(ErrorCode::ColorRequired, messages::CAMPO_OBLIGATORIO, Some("color_id")));
+            return Err(error(
+                ErrorCode::ColorRequired,
+                messages::CAMPO_OBLIGATORIO,
+                Some("color_id"),
+            ));
         }
         let pool = self.base.pool().await.map_err(de_sqlx)?;
         let mut tx = pool.begin().await.map_err(de_sqlx)?;
 
-        let existentes: Vec<String> = sqlx::query_scalar("SELECT name FROM label WHERE user_id = ?")
-            .bind(user_id)
-            .fetch_all(&mut *tx)
-            .await
-            .map_err(de_sqlx)?;
+        let existentes: Vec<String> =
+            sqlx::query_scalar("SELECT name FROM label WHERE user_id = ?")
+                .bind(user_id)
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(de_sqlx)?;
         if existentes.len() as i64 >= ETIQUETAS_POR_USUARIO_MAX {
             return Err(error(
                 ErrorCode::LabelLimitReached,
@@ -827,7 +836,11 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         // convierte ASCII).
         let clave = nombre.to_lowercase();
         if existentes.iter().any(|e| e.trim().to_lowercase() == clave) {
-            return Err(error(ErrorCode::NameDuplicate, messages::ETIQUETA_DUPLICADA, Some("name")));
+            return Err(error(
+                ErrorCode::NameDuplicate,
+                messages::ETIQUETA_DUPLICADA,
+                Some("name"),
+            ));
         }
         let existe_el_color: i64 =
             sqlx::query_scalar("SELECT count(*) FROM catalog_color WHERE id = ? AND is_active = 1")
@@ -837,7 +850,11 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 .map_err(de_sqlx)?;
         if existe_el_color == 0 {
             // La vista solo ofrece colores del catálogo (ET05): uno que no está cuenta como sin color.
-            return Err(error(ErrorCode::ColorRequired, messages::CAMPO_OBLIGATORIO, Some("color_id")));
+            return Err(error(
+                ErrorCode::ColorRequired,
+                messages::CAMPO_OBLIGATORIO,
+                Some("color_id"),
+            ));
         }
 
         let id = uuid::Uuid::new_v4().to_string();
