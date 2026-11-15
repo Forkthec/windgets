@@ -18,9 +18,10 @@ use crate::tipos::{
     AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, Card,
     CardAssignTimeBlockParams, CardCreateParams, CardDetail, CardIdParams, CardListBoardResult,
     CardMoveParams, CardUpdateParams, CatalogItem, CatalogKind, CatalogListParams, ChangeOp,
-    CodeSent, Column, Connectivity, EntityChange, ErrorCode, EventMapConnectivityChanged,
-    EventMapSessionChanged, EventMapSessionChangedReason, EventMapSessionChangedState, IpcErr,
-    IpcOk, IpcResult, Label, LabelCreateParams, NoParams, OriginKind, PlannerToday, SessionInfo,
+    CodeSent, Column, ColumnCreateParams, Connectivity, EntityChange, ErrorCode,
+    EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
+    EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, Label, LabelCreateParams, NoParams,
+    OriginKind, PlannerToday, SessionInfo,
 };
 
 /// El Núcleo que ven los comandos.
@@ -340,6 +341,36 @@ pub async fn card_list_board(
         Ok(user_id) => nucleo.planificador.tablero(&user_id).await,
         Err(e) => Err(e),
     }))
+}
+
+/// EV-09 `columns_changed` tras crear, editar, reordenar o eliminar columnas en este computador.
+fn avisar_columnas(app: &AppHandle, ids: Vec<crate::tipos::Uuid>, op: ChangeOp) {
+    let _ = app.emit(
+        "columns_changed",
+        EntityChange {
+            ids,
+            op,
+            origin: OriginKind::Local,
+        },
+    );
+}
+
+/// IPC-COL-02 `column_create` (HE-09-HU03). Emite `columns_changed` para que el tablero y el widget Kanban
+/// agreguen la columna al final (ET09).
+#[tauri::command]
+pub async fn column_create(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: ColumnCreateParams,
+) -> Result<IpcResult<Column>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.crear_columna(&user_id, params).await,
+        Err(e) => Err(e),
+    };
+    if let Ok(creada) = &r {
+        avisar_columnas(&app, vec![creada.valor.id.clone()], ChangeOp::Upsert);
+    }
+    Ok(con_mensaje(r))
 }
 
 /// IPC-COL-01 `column_list` (HE-09-HU01): columnas por `position`.

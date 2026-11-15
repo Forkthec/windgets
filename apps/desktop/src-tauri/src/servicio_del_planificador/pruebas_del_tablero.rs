@@ -243,3 +243,117 @@ fn mover_a_una_columna_o_tarjeta_que_no_existe() {
     );
     assert_eq!(cantidades(&servicio), [1, 0, 0]);
 }
+
+fn nueva_columna(nombre: &str, color: Option<&str>) -> ColumnCreateParams {
+    ColumnCreateParams {
+        name: nombre.into(),
+        color_id: color.map(str::to_string),
+    }
+}
+
+fn nombres_de_columnas(servicio: &ServicioDelPlanificador<CalendarioDePrueba>) -> Vec<String> {
+    bloquear(servicio.columnas(USUARIO))
+        .unwrap()
+        .into_iter()
+        .map(|c| c.name)
+        .collect()
+}
+
+#[test]
+fn ca_he_09_hu03_ca01() {
+    // HE-09-HU03-CA01 · Con el color elegido, al final del tablero (ET05, ET09), y encola el cambio.
+    let servicio = con_semilla();
+    let creada =
+        bloquear(servicio.crear_columna(USUARIO, nueva_columna("Revisión", Some("blue")))).unwrap();
+    assert_eq!(creada.mensaje.message, "Columna creada.");
+    assert_eq!(
+        (creada.valor.name.as_str(), creada.valor.color_id.as_str()),
+        ("Revisión", "blue")
+    );
+    assert_eq!(nombres_de_columnas(&servicio).last().unwrap(), "Revisión");
+    assert_eq!(
+        contar(
+            &servicio,
+            "SELECT count(*) FROM pending_change WHERE entity_kind = 'kanban_column'"
+        ),
+        1
+    );
+}
+
+#[test]
+fn ca_he_09_hu03_ca02() {
+    // HE-09-HU03-CA02 · Sin color, gris por defecto (ET06; IPC-COL-02 `color_id` def. 'gray').
+    let servicio = con_semilla();
+    let creada =
+        bloquear(servicio.crear_columna(USUARIO, nueva_columna("Revisión", None))).unwrap();
+    assert_eq!(creada.valor.color_id, "gray");
+    assert_eq!(creada.mensaje.message, "Columna creada.");
+}
+
+#[test]
+fn ca_he_09_hu03_ca03() {
+    // HE-09-HU03-CA03 · Nombre vacío o solo espacios.
+    let servicio = con_semilla();
+    for nombre in ["", "  "] {
+        let e = bloquear(servicio.crear_columna(USUARIO, nueva_columna(nombre, None))).unwrap_err();
+        assert_eq!(
+            (e.code, e.message.as_str(), e.field.as_deref()),
+            (
+                ErrorCode::NameRequired,
+                "Este campo es obligatorio.",
+                Some("name")
+            )
+        );
+    }
+    assert_eq!(nombres_de_columnas(&servicio).len(), 3);
+}
+
+#[test]
+fn ca_he_09_hu03_ca04() {
+    // HE-09-HU03-CA04 · 31 caracteres se rechaza; 30 se acepta (ET03).
+    let servicio = con_semilla();
+    let e = bloquear(servicio.crear_columna(USUARIO, nueva_columna(&"a".repeat(31), None)))
+        .unwrap_err();
+    assert_eq!(
+        (e.code, e.message.as_str()),
+        (
+            ErrorCode::NameTooLong,
+            "El nombre de la columna no puede superar los 30 caracteres."
+        )
+    );
+    bloquear(servicio.crear_columna(USUARIO, nueva_columna(&"a".repeat(30), None))).unwrap();
+}
+
+#[test]
+fn ca_he_09_hu03_ca05() {
+    // HE-09-HU03-CA05 · «revisión» con «Revisión» ya creada (ET04).
+    let servicio = con_semilla();
+    bloquear(servicio.crear_columna(USUARIO, nueva_columna("Revisión", None))).unwrap();
+    let e = bloquear(servicio.crear_columna(USUARIO, nueva_columna("revisión", None))).unwrap_err();
+    assert_eq!(
+        (e.code, e.message.as_str(), e.field.as_deref()),
+        (
+            ErrorCode::NameDuplicate,
+            "Ya existe una columna con ese nombre.",
+            Some("name")
+        )
+    );
+}
+
+#[test]
+fn ca_he_09_hu03_ca06() {
+    // HE-09-HU03-CA06 · 10 columnas, contadas las tres por defecto (ET07, D-167).
+    let servicio = con_semilla();
+    for i in 0..7 {
+        bloquear(servicio.crear_columna(USUARIO, nueva_columna(&format!("C{i}"), None))).unwrap();
+    }
+    let e = bloquear(servicio.crear_columna(USUARIO, nueva_columna("Otra", None))).unwrap_err();
+    assert_eq!(
+        (e.code, e.message.as_str()),
+        (
+            ErrorCode::ColumnLimitReached,
+            "Alcanzaste el máximo de 10 columnas. Elimina una para crear otra."
+        )
+    );
+    assert_eq!(nombres_de_columnas(&servicio).len(), 10);
+}

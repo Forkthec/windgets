@@ -177,6 +177,29 @@ export function crearNucleo(tarjetas: Card[] = []): {
     ['card_list_board', () => ({ ok: true, value: { columns: tablero() } })],
     ['column_list', () => ({ ok: true, value: tablero().map((c) => c.column) })],
     [
+      'column_create',
+      (params) => {
+        const { name, color_id } = params as { name: string; color_id?: string };
+        const ultima = Math.max(0, ...nucleo.columnas.map((c) => c.position));
+        const creada: Column = {
+          id: `col-${nucleo.columnas.length + 1}`,
+          name,
+          color_id: color_id ?? 'gray',
+          color_hex: '#2196F3',
+          role: 'custom',
+          position: ultima + 1024,
+          card_count: 0,
+          is_default: false,
+        };
+        nucleo.columnas.push(creada);
+        return {
+          ok: true,
+          value: creada,
+          result_message: { code: 'column_create', message: 'Columna creada.' },
+        };
+      },
+    ],
+    [
       'card_update',
       (params) => {
         const { id, patch } = params as CardUpdateParams;

@@ -13,6 +13,8 @@ import type { BoardColumn, Card, CardMoveParams, Column } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
+import textos from '@/types/messages.es.json';
+import { FormularioColumna } from './FormularioColumna';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { fechaVisible } from '../tarjeta/fechas';
 import { MoverA } from '../tarjeta/MoverA';
@@ -117,6 +119,7 @@ export function Kanban() {
   const { invocar, escuchar } = useNucleo();
   const mostrarResultado = useMensajeDeResultado();
   const [columnas, setColumnas] = useState<BoardColumn[] | null>(null);
+  const [creandoColumna, setCreandoColumna] = useState(false);
 
   const leer = useCallback(async () => {
     const r = await invocar('card_list_board', {});
@@ -168,14 +171,24 @@ export function Kanban() {
     [abrirDetalle, columnas, mover],
   );
 
+  /** Columnas del tablero, contadas las tres por defecto (HE-09-HU03-ET07, D-167). */
+  const enElMaximo = (columnas?.length ?? 0) >= 10;
+
   return (
     <main aria-label="Tablero Kanban" aria-busy={columnas === null}>
-      {/* ET03. «Nueva columna» es de HE-09-HU03 y el cambio de vista, de HE-09-HU07. */}
+      {/* ET03. El cambio de vista es de HE-09-HU07. */}
       <div className="wg-fila">
         <Boton principal onClick={tarjetas.abrirNueva}>
           Nueva tarjeta
         </Boton>
-        <Boton>Nueva columna</Boton>
+        {/* HE-09-HU03-ET01, ET08: con 10 columnas, deshabilitada con su texto (RT-04). */}
+        <Boton
+          disabled={enElMaximo}
+          motivo={enElMaximo ? textos.MAXIMO_DE_COLUMNAS : undefined}
+          onClick={() => setCreandoColumna(true)}
+        >
+          Nueva columna
+        </Boton>
         <Boton>Vista expandida</Boton>
       </div>
       {columnas && (
@@ -191,6 +204,17 @@ export function Kanban() {
         </ContextoDelTablero.Provider>
       )}
       {tarjetas.ventanas}
+      {creandoColumna && (
+        <FormularioColumna
+          alCancelar={() => setCreandoColumna(false)}
+          alGuardar={(_, mensaje) => {
+            // HE-09-HU03-CA01: la columna aparece al final del tablero y se ve el mensaje (RT-04).
+            setCreandoColumna(false);
+            mostrarResultado(mensaje);
+            void leer();
+          }}
+        />
+      )}
     </main>
   );
 }
