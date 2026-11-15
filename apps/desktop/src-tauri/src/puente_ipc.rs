@@ -16,10 +16,10 @@ use crate::servicio_del_planificador::{CalendarioDelSistema, ServicioDelPlanific
 use crate::tipos::{
     AppError, AuthRegisterStartParams, AuthRegisterStartResult, AuthRegisterVerifyParams,
     AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, Card, CardCreateParams,
-    CardDetail, CardIdParams, CardListBoardResult, CardUpdateParams, ChangeOp, CodeSent, Column,
-    Connectivity, EntityChange, ErrorCode, EventMapConnectivityChanged, EventMapSessionChanged,
-    EventMapSessionChangedReason, EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, Label,
-    NoParams, OriginKind, SessionInfo,
+    CardDetail, CardIdParams, CardListBoardResult, CardMoveParams, CardUpdateParams, ChangeOp,
+    CodeSent, Column, Connectivity, EntityChange, ErrorCode, EventMapConnectivityChanged,
+    EventMapSessionChanged, EventMapSessionChangedReason, EventMapSessionChangedState, IpcErr,
+    IpcOk, IpcResult, Label, NoParams, OriginKind, SessionInfo,
 };
 
 /// El Núcleo que ven los comandos.
@@ -367,4 +367,21 @@ pub async fn card_delete(
         avisar_tarjetas(&app, vec![params.id], ChangeOp::Delete);
     }
     Ok(con_mensaje(r))
+}
+
+/// IPC-CARD-06 `card_move` (HE-09-HU02): drag-and-drop y «Mover a». Emite `cards_changed` (EV-07).
+#[tauri::command]
+pub async fn card_move(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: CardMoveParams,
+) -> Result<IpcResult<Card>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.mover_tarjeta(&user_id, params).await,
+        Err(e) => Err(e),
+    };
+    if let Ok(movida) = &r {
+        avisar_tarjetas(&app, vec![movida.id.clone()], ChangeOp::Upsert);
+    }
+    Ok(leido(r))
 }

@@ -394,3 +394,54 @@ button.wg-tarjeta__titulo:focus-visible {
   padding: 0;
   list-style: none;
 }
+
+/* Drag-and-drop del tablero (HE-09-HU02-ET01): la tarjeta que se arrastra queda encima y el destino se marca con
+   un borde más grueso, sin transparencias (interfaz.md). */
+.wg-tarjeta {
+  position: relative;
+  touch-action: none;
+}
+.wg-tarjeta--arrastrada {
+  z-index: 1;
+  box-shadow: var(--wg-sombra);
+  cursor: grabbing;
+}
+.wg-tarjeta--destino,
+.wg-columna--destino {
+  outline: calc(var(--wg-borde-ancho) * 2) solid var(--wg-accion);
+}
+
+/* «Mover a» (HE-09-HU02-ET10, ET11): la columna actual va marcada y deshabilitada (RT-04). */
+.wg-mover-a {
+  position: relative;
+}
+.wg-mover-a__menu {
+  position: absolute;
+  z-index: 2;
+  margin: var(--wg-unidad) 0 0;
+  padding: var(--wg-unidad);
+  list-style: none;
+  background: var(--wg-superficie);
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-radius: var(--wg-radio);
+  box-shadow: var(--wg-sombra);
+}
+.wg-mover-a__opcion {
+  display: block;
+  width: 100%;
+  padding: var(--wg-unidad) calc(var(--wg-unidad) * 2);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.wg-mover-a__opcion[aria-checked='true'] {
+  font-weight: 700;
+  text-decoration: underline;
+}
+.wg-mover-a__opcion:disabled {
+  color: var(--wg-borde);
+  cursor: default;
+}

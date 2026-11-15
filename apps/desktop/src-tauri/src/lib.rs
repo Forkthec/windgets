@@ -36,6 +36,7 @@ pub fn run() {
             puente_ipc::card_get,
             puente_ipc::card_update,
             puente_ipc::card_delete,
+            puente_ipc::card_move,
         ])
         .setup(|app| {
             puente_ipc::vigilar_conexion(app.handle().clone());

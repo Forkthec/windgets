@@ -37,7 +37,9 @@ const tarjetasSimuladas: Card[] = [];
 
 function tableroSimulado(): BoardColumn[] {
   return COLUMNAS_SIMULADAS.map((column) => {
-    const cards = tarjetasSimuladas.filter((t) => t.column_id === column.id);
+    const cards = tarjetasSimuladas
+      .filter((t) => t.column_id === column.id)
+      .sort((a, b) => a.position - b.position);
     return { column: { ...column, card_count: cards.length }, cards };
   });
 }
@@ -130,6 +132,32 @@ const respuestas: Respuestas = {
       value: t,
       result_message: { code: 'card_update', message: textos.TARJETA_ACTUALIZADA },
     };
+  },
+  // HE-09-HU02: mueve la tarjeta, con las reglas de la columna Hecho.
+  card_move: ({ card_id, column_id, placement }) => {
+    const t = tarjetasSimuladas.find((c) => c.id === card_id);
+    const destino = COLUMNAS_SIMULADAS.find((c) => c.id === column_id);
+    if (!t) return error({ code: 'card.not_found', message: textos.TARJETA_NO_EXISTE });
+    if (!destino) return error({ code: 'column.not_found', message: '' });
+    const otras = tarjetasSimuladas
+      .filter((c) => c.column_id === column_id && c.id !== card_id)
+      .sort((a, b) => a.position - b.position);
+    const i = placement.kind === 'before' ? otras.findIndex((c) => c.id === placement.card_id) : -1;
+    const siguiente = otras[i];
+    t.position = siguiente
+      ? ((otras[i - 1]?.position ?? siguiente.position - 1024) + siguiente.position) / 2
+      : (otras.at(-1)?.position ?? 0) + 1024;
+    const hoy = new Date().toISOString().slice(0, 10);
+    const eraHecho = t.column_id === 'hecho';
+    if (destino.role === 'done' && !eraHecho) {
+      t.completed_on = hoy;
+      t.previous_column_id = t.column_id;
+    }
+    if (eraHecho && destino.role !== 'done') t.completed_on = null;
+    t.column_id = column_id;
+    t.is_completed = destino.role === 'done';
+    t.is_overdue = !t.is_completed && t.due_date < hoy;
+    return { ok: true, value: t };
   },
   // HE-07-HU05: elimina la tarjeta creada.
   card_delete: ({ id }) => {

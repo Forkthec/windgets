@@ -9,6 +9,7 @@ import type {
   Card,
   CardCreateParams,
   CardDetail,
+  CardMoveParams,
   CardUpdateParams,
   Column,
   CommandMap,
@@ -91,6 +92,11 @@ export interface NucleoDelPlanificador {
     respuesta: (params: CommandMap[K]['params']) => Result<CommandMap[K]['result']>,
   ) => void;
   emitir: <E extends keyof EventMap>(evento: E, carga: EventMap[E]) => void;
+  /**
+   * Suelta una tarjeta como lo haría el drag-and-drop (jsdom no calcula posiciones): el Núcleo aplica
+   * `card_move` y emite `cards_changed`, y la pantalla vuelve a leer el tablero.
+   */
+  responderYMover: (movimiento: CardMoveParams) => Promise<void>;
 }
 
 export function llamadasA(nucleo: NucleoDelPlanificador, comando: CommandName) {
@@ -109,6 +115,12 @@ export function crearNucleo(tarjetas: Card[] = []): {
     llamadas: [],
     responder: (comando, respuesta) => respuestas.set(comando, respuesta as Respuesta),
     emitir: (evento, carga) => act(() => (oyentes.get(evento) ?? []).forEach((o) => o(carga))),
+    responderYMover: async (movimiento) => {
+      await invocar('card_move', movimiento);
+      (oyentes.get('cards_changed') ?? []).forEach((o) =>
+        o({ ids: [movimiento.card_id], op: 'upsert', origin: 'local' }),
+      );
+    },
   };
   const tablero = (): BoardColumn[] =>
     nucleo.columnas.map((column) => {
@@ -144,6 +156,34 @@ export function crearNucleo(tarjetas: Card[] = []): {
           value: t,
           result_message: { code: 'card_update', message: 'Tarjeta actualizada.' },
         };
+      },
+    ],
+    [
+      'card_move',
+      (params) => {
+        const { card_id, column_id, placement } = params as CardMoveParams;
+        const t = nucleo.tarjetas.find((c) => c.id === card_id);
+        const destino = nucleo.columnas.find((c) => c.id === column_id);
+        if (!t)
+          return { ok: false, error: { code: 'card.not_found', message: 'Esta tarjeta ya no existe.' } };
+        if (!destino) return { ok: false, error: { code: 'column.not_found', message: '' } };
+        const otras = nucleo.tarjetas
+          .filter((c) => c.column_id === column_id && c.id !== card_id)
+          .sort((a, b) => a.position - b.position);
+        const i = placement.kind === 'before' ? otras.findIndex((c) => c.id === placement.card_id) : -1;
+        const siguiente = otras[i];
+        t.position = siguiente
+          ? (otras[i - 1]?.position ?? siguiente.position - 1024) / 2 + siguiente.position / 2
+          : (otras.at(-1)?.position ?? 0) + 1024;
+        const eraHecho = nucleo.columnas.find((c) => c.id === t.column_id)?.role === 'done';
+        if (destino.role === 'done' && !eraHecho) {
+          Object.assign(t, { completed_on: '2026-11-14', previous_column_id: t.column_id });
+        }
+        if (eraHecho && destino.role !== 'done') t.completed_on = null;
+        t.column_id = column_id;
+        t.is_completed = destino.role === 'done';
+        t.is_overdue = !t.is_completed && t.due_date < '2026-11-14';
+        return { ok: true, value: t };
       },
     ],
     [

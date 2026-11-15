@@ -16,9 +16,9 @@ use crate::repositorios_y_archivos_locales::{BaseLocal, encolar_cambio};
 use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, instante};
 use crate::tipos::{
     AppError, BoardColumn, Card, CardCreateParams, CardDetail, CardDetailColumn,
-    CardDetailLabelsItem, CardDetailTimeBlock, CardListBoardResult, CardType, CardUpdateParams,
-    Column, ColumnRole, DateIso, ErrorCode, Hex, Hour, Instant, Label, Priority, ResultMessage,
-    Uuid,
+    CardDetailLabelsItem, CardDetailTimeBlock, CardListBoardResult, CardMoveParams, CardType,
+    CardUpdateParams, Column, ColumnRole, DateIso, ErrorCode, Hex, Hour, Instant, Label, Placement,
+    Priority, ResultMessage, Uuid,
 };
 
 /// Clave para ordenar nombres de la A a la Z sin distinguir mayúsculas ni tildes (D-165): «Árbol» va con la A.
@@ -636,6 +636,114 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         })
     }
 
+    /// IPC-CARD-06 `card_move` (HE-09-HU02): cambia la tarjeta de columna o de posición. `end` la pone al final
+    /// de la columna («Mover a», ET12); `before` la pone antes de otra tarjeta (drag-and-drop, ET01, ET08).
+    /// Al llegar a Hecho queda completada con la fecha de hoy y recuerda su columna anterior (ET04 a ET06); al
+    /// salir de Hecho se borra la fecha de completado (ET07).
+    pub async fn mover_tarjeta(
+        &self,
+        user_id: &str,
+        params: CardMoveParams,
+    ) -> Result<Card, AppError> {
+        let id = params.card_id.0.to_lowercase();
+        let destino = params.column_id.0.to_lowercase();
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let mut tx = pool.begin().await.map_err(de_sqlx)?;
+        let origen: Option<(String, String)> = sqlx::query_as(
+            "SELECT c.column_id, k.role FROM card c JOIN kanban_column k ON k.id = c.column_id \
+             WHERE c.id = ? AND c.user_id = ?",
+        )
+        .bind(&id)
+        .bind(user_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(de_sqlx)?;
+        let (columna_origen, rol_origen) = origen.ok_or_else(tarjeta_no_existe)?;
+        let rol_destino: String =
+            sqlx::query_scalar("SELECT role FROM kanban_column WHERE id = ? AND user_id = ?")
+                .bind(&destino)
+                .bind(user_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(de_sqlx)?
+                // Sin texto: la vista solo ofrece columnas que existen.
+                .ok_or_else(|| error(ErrorCode::ColumnNotFound, "", None))?;
+
+        // Posiciones de las demás tarjetas de la columna de destino.
+        let otras: Vec<(String, f64)> = sqlx::query_as(
+            "SELECT id, position FROM card WHERE user_id = ? AND column_id = ? AND id <> ? \
+             ORDER BY position, created_at",
+        )
+        .bind(user_id)
+        .bind(&destino)
+        .bind(&id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(de_sqlx)?;
+        let al_final = || otras.last().map_or(0.0, |(_, p)| *p) + PASO_DE_POSICION;
+        let posicion = match &params.placement {
+            Placement::Variant2(antes) => {
+                let objetivo = antes.card_id.0.to_lowercase();
+                match otras.iter().position(|(o, _)| *o == objetivo) {
+                    Some(i) => {
+                        let siguiente = otras[i].1;
+                        let anterior = i
+                            .checked_sub(1)
+                            .map_or(siguiente - PASO_DE_POSICION, |j| otras[j].1);
+                        (anterior + siguiente) / 2.0
+                    }
+                    // La tarjeta de referencia ya no está en esa columna: al final.
+                    None => al_final(),
+                }
+            }
+            Placement::Variant1(_) => al_final(),
+        };
+
+        let ahora = instante(self.calendario.ahora_ms()).0;
+        let mut valores: Vec<(&str, Value)> = vec![("position", json!(posicion))];
+        if destino != columna_origen {
+            valores.push(("column_id", Value::from(destino.as_str())));
+        }
+        let llega_a_hecho = rol_destino == "done" && rol_origen != "done";
+        let sale_de_hecho = rol_origen == "done" && rol_destino != "done";
+        if llega_a_hecho {
+            let hoy = self.calendario.hoy().format("%Y-%m-%d").to_string();
+            valores.push(("completed_on", Value::from(hoy)));
+            valores.push(("previous_column_id", Value::from(columna_origen.as_str())));
+        }
+        if sale_de_hecho {
+            valores.push(("completed_on", Value::Null));
+        }
+        let (fields, mods) = campos(&valores, &ahora);
+        let asignaciones: Vec<String> = valores.iter().map(|(c, _)| format!("{c} = ?")).collect();
+        let sql = format!(
+            "UPDATE card SET {}, field_mods = json_patch(field_mods, ?) WHERE id = ? AND user_id = ?",
+            asignaciones.join(", ")
+        );
+        let mut consulta = sqlx::query(&sql);
+        for (_, valor) in &valores {
+            consulta = match valor {
+                Value::Null => consulta.bind(None::<String>),
+                Value::String(s) => consulta.bind(s.clone()),
+                otro => consulta.bind(otro.as_f64()),
+            };
+        }
+        consulta
+            .bind(mods.to_string())
+            .bind(&id)
+            .bind(user_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(de_sqlx)?;
+        encolar_cambio(&mut tx, "card", &id, "upsert", &fields, &ahora)
+            .await
+            .map_err(de_sqlx)?;
+        tx.commit().await.map_err(de_sqlx)?;
+        self.tarjeta(user_id, &id)
+            .await?
+            .ok_or_else(tarjeta_no_existe)
+    }
+
     /// IPC-LABEL-01 `label_list`: las etiquetas del usuario en orden alfabético por nombre, de la A a la Z
     /// (D-165). El Formulario de tarjeta solo ofrece estas (HE-07-HU02-ET03).
     pub async fn etiquetas(&self, user_id: &str) -> Result<Vec<Label>, AppError> {
@@ -889,6 +997,8 @@ fn tarjeta_de_fila(
 
 #[cfg(test)]
 mod pruebas_de_edicion;
+#[cfg(test)]
+mod pruebas_del_tablero;
 
 #[cfg(test)]
 pub(crate) mod pruebas {
