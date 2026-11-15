@@ -12,6 +12,10 @@ async function arrastrar(page: Page, desde: Locator, x: number, y: number) {
   await page.mouse.down();
   await page.mouse.move(caja.x + caja.width / 2 + 10, caja.y + 16, { steps: 4 });
   await page.mouse.move(x, y, { steps: 12 });
+  // dnd-kit decide sobre qué está el puntero en el siguiente cuadro: un último movimiento y una espera corta
+  // antes de soltar, como hace una persona (en la CI, más lenta, soltar al instante no lo alcanzaba).
+  await page.mouse.move(x + 1, y + 1);
+  await page.waitForTimeout(150);
   await page.mouse.up();
 }
 

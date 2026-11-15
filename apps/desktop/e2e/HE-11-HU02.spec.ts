@@ -23,6 +23,10 @@ async function arrastrar(page: Page, desde: Locator, hasta: Locator) {
   const destino = await hasta.boundingBox();
   if (!destino) throw new Error('El bloque no tiene caja');
   await page.mouse.move(destino.x + destino.width / 2, destino.y + destino.height / 2, { steps: 12 });
+  // dnd-kit decide sobre qué está el puntero en el siguiente cuadro: un último movimiento y una espera corta
+  // antes de soltar, como hace una persona (en la CI, más lenta, soltar al instante no lo alcanzaba).
+  await page.mouse.move(destino.x + destino.width / 2 + 1, destino.y + destino.height / 2 + 1);
+  await page.waitForTimeout(150);
   await page.mouse.up();
 }
 
