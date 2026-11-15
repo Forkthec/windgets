@@ -50,9 +50,11 @@ pub fn run() {
             puente_ipc::agenda_get_day,
             puente_ipc::card_assign_time_block,
             puente_ipc::planner_get_today,
+            puente_ipc::sync_get_status,
         ])
         .setup(|app| {
             puente_ipc::vigilar_conexion(app.handle().clone());
+            puente_ipc::sincronizar(app.handle().clone());
             #[cfg(all(windows, feature = "spike"))]
             host_del_wallpaper::spike::iniciar(app.handle())?;
             Ok(())

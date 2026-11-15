@@ -96,7 +96,7 @@ fn inesperado() -> AppError {
     error(ErrorCode::InternalUnexpected, "", None)
 }
 
-fn de_sqlx(_: sqlx::Error) -> AppError {
+pub(crate) fn de_sqlx(_: sqlx::Error) -> AppError {
     inesperado()
 }
 

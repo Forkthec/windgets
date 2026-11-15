@@ -10,6 +10,7 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::cliente_de_supabase::ClienteDeSupabase;
+use crate::motor_de_sincronizacion;
 use crate::repositorios_y_archivos_locales::{BaseLocal, almacen_de_la_aplicacion};
 use crate::servicio_de_sesion::{ConMensaje, RelojDelSistema, ServicioDeSesion};
 use crate::servicio_del_planificador::{CalendarioDelSistema, ServicioDelPlanificador};
@@ -110,6 +111,58 @@ pub fn vigilar_conexion(app: AppHandle) {
             }
         }
     });
+}
+
+/// Cada cuánto el motor revisa la cola de cambios pendientes. Con la espera de 2 s tras guardar, un cambio llega
+/// a la nube en unos 3 s, dentro de los 10 s de HE-15-HU01-ET02.
+const REVISION_DE_LA_COLA: Duration = Duration::from_secs(1);
+
+/// HE-15-HU01: el motor de sincronización envía la cola en segundo plano, sin que el usuario elija una opción
+/// (ET01), y emite EV-04 `sync_status_changed` en cada cambio del indicador o de los pendientes.
+pub fn sincronizar(app: AppHandle) {
+    std::thread::spawn(move || {
+        let mut anterior = None;
+        loop {
+            std::thread::sleep(REVISION_DE_LA_COLA);
+            let nucleo = app.state::<Nucleo>();
+            let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+                continue;
+            };
+            let base = nucleo.planificador.base();
+            let ahora = chrono::Utc::now().timestamp_millis();
+            let estado = tauri::async_runtime::block_on(async {
+                motor_de_sincronizacion::enviar(
+                    base,
+                    nucleo.sesion.auth(),
+                    &sesion.user_id.to_lowercase(),
+                    &sesion.access_token,
+                    ahora,
+                )
+                .await?;
+                motor_de_sincronizacion::estado(base).await
+            });
+            if let Ok(estado) = estado
+                && anterior.as_ref() != Some(&estado)
+            {
+                let _ = app.emit("sync_status_changed", estado.clone());
+                anterior = Some(estado);
+            }
+        }
+    });
+}
+
+/// IPC-SYNC-01 `sync_get_status` (HE-15-HU01-ET03): el estado del indicador y los cambios pendientes.
+#[tauri::command]
+pub async fn sync_get_status(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<crate::tipos::SyncStatus>, ()> {
+    let _ = params;
+    Ok(leido(
+        motor_de_sincronizacion::estado(nucleo.planificador.base())
+            .await
+            .map_err(crate::servicio_del_planificador::de_sqlx),
+    ))
 }
 
 /// IPC-DESK-14 `connectivity_get`: estado de la red según la última llamada a la nube.

@@ -187,6 +187,17 @@ impl ClienteDeSupabase {
         ruta: &str,
         cuerpo: Option<serde_json::Value>,
     ) -> Result<String, FallaDeAuth> {
+        self.enviar_como(metodo, ruta, cuerpo, None).await
+    }
+
+    /// Como [`Self::enviar`], con el JWT de la sesión (`Authorization: Bearer`) si se indica.
+    async fn enviar_como(
+        &self,
+        metodo: reqwest::Method,
+        ruta: &str,
+        cuerpo: Option<serde_json::Value>,
+        token: Option<&str>,
+    ) -> Result<String, FallaDeAuth> {
         // Sin proyecto configurado no hay a quién llamar: el servicio de cuentas no está disponible.
         let Some(http) = self.http.as_ref().filter(|_| !self.url.is_empty()) else {
             return Err(FallaDeAuth::SinRespuesta);
@@ -194,6 +205,9 @@ impl ClienteDeSupabase {
         let mut peticion = http
             .request(metodo, format!("{}{ruta}", self.url))
             .header("apikey", &self.anon);
+        if let Some(token) = token {
+            peticion = peticion.bearer_auth(token);
+        }
         if let Some(cuerpo) = cuerpo {
             peticion = peticion.json(&cuerpo);
         }
@@ -278,6 +292,25 @@ impl AuthDeSupabase for ClienteDeSupabase {
             )
             .await?;
         leer_sesion(&texto)
+    }
+}
+
+impl crate::motor_de_sincronizacion::NubeDeSincronizacion for ClienteDeSupabase {
+    async fn sync_push(
+        &self,
+        token: &str,
+        params: &crate::tipos::SyncPushParams,
+    ) -> Result<crate::tipos::SyncPushResult, FallaDeAuth> {
+        let cuerpo = serde_json::to_value(params).map_err(|_| FallaDeAuth::SinRespuesta)?;
+        let texto = self
+            .enviar_como(
+                reqwest::Method::POST,
+                "/rest/v1/rpc/sync_push",
+                Some(cuerpo),
+                Some(token),
+            )
+            .await?;
+        serde_json::from_str(&texto).map_err(|_| FallaDeAuth::SinRespuesta)
     }
 }
 
