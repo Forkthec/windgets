@@ -122,6 +122,11 @@ pub const COLUMNA_DUPLICADA: &str = "Ya existe una columna con ese nombre.";
 pub const MAXIMO_DE_COLUMNAS: &str =
     "Alcanzaste el máximo de 10 columnas. Elimina una para crear otra.";
 
+// HE-09-HU04 · Editar una columna (IPC-COL-03 column_update).
+
+/// Resultado de `column_update` (HE-09-HU04-CA01, CA02).
+pub const COLUMNA_ACTUALIZADA: &str = "Columna actualizada.";
+
 // HE-07-HU03 · Consultar el detalle de una tarjeta (IPC-CARD-04 card_get).
 
 /// `card.not_found` (HE-07-HU04-CA11; DP-04: el mismo texto al consultar, eliminar o mover).
@@ -158,6 +163,7 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("NOMBRE_DE_COLUMNA_MUY_LARGO", NOMBRE_DE_COLUMNA_MUY_LARGO),
     ("COLUMNA_DUPLICADA", COLUMNA_DUPLICADA),
     ("MAXIMO_DE_COLUMNAS", MAXIMO_DE_COLUMNAS),
+    ("COLUMNA_ACTUALIZADA", COLUMNA_ACTUALIZADA),
     ("ETIQUETA_CREADA", ETIQUETA_CREADA),
     ("NOMBRE_DE_ETIQUETA_MUY_LARGO", NOMBRE_DE_ETIQUETA_MUY_LARGO),
     ("ETIQUETA_DUPLICADA", ETIQUETA_DUPLICADA),

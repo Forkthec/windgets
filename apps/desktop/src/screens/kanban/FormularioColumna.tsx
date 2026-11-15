@@ -9,7 +9,8 @@ import { CatalogoColores, type ColorDelCatalogo } from '@/ui/CatalogoColores/Cat
 import { VentanaEmergente } from '@/ui/VentanaEmergente/VentanaEmergente';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 
-// P-KAN-02 Formulario de columna, título «Nueva columna» (HE-09-HU03-ET02). Ventana emergente sobre el Tablero
+// P-KAN-02 Formulario de columna. Modo creación, título «Nueva columna» (HE-09-HU03-ET02), y modo edición, título
+// «Editar columna» (HE-09-HU04-ET02), con las mismas reglas de nombre (ET09). Ventana emergente sobre el Tablero
 // Kanban (RT-02). La vista repite las validaciones de campo; el Núcleo vuelve a validar (D-188).
 
 const NOMBRE_MAX = 30;
@@ -28,18 +29,21 @@ const REGLAS: Record<Campo, Validador> = {
 };
 
 export interface FormularioColumnaProps {
-  /** «Guardar» creó la columna: el tablero cierra el formulario y muestra el mensaje (CA01). */
+  /** La columna que se edita (modo edición); sin ella, el formulario crea una columna. */
+  columna?: Column;
+  /** «Guardar» creó o editó la columna: el tablero cierra el formulario y muestra el mensaje (CA01). */
   alGuardar: (columna: Column, mensaje: string) => void;
-  /** «Cancelar» (o Esc): cierra sin crear (CA07, RT-02). */
+  /** «Cancelar» (o Esc): cierra sin guardar (HE-09-HU03-CA07, HE-09-HU04-CA07; RT-02). */
   alCancelar: () => void;
 }
 
-export function FormularioColumna({ alGuardar, alCancelar }: FormularioColumnaProps) {
+export function FormularioColumna({ columna, alGuardar, alCancelar }: FormularioColumnaProps) {
   const { invocar } = useNucleo();
   const idFormulario = useId();
-  // CA08: Nombre vacío; ET06: gris marcado.
-  const [nombre, setNombre] = useState('');
-  const [color, setColor] = useState(COLOR_POR_DEFECTO);
+  // Creación: Nombre vacío y gris marcado (HE-09-HU03-CA08, ET06). Edición: el nombre y el color actuales
+  // (HE-09-HU04-CA08).
+  const [nombre, setNombre] = useState(columna?.name ?? '');
+  const [color, setColor] = useState(columna?.color_id ?? COLOR_POR_DEFECTO);
   const [colores, setColores] = useState<ColorDelCatalogo[]>([]);
   const campos = useMensajesDeCampo(CAMPOS, REGLAS);
 
@@ -56,18 +60,22 @@ export function FormularioColumna({ alGuardar, alCancelar }: FormularioColumnaPr
 
   const guardar = useCallback(async () => {
     if (!campos.validarTodo({ name: nombre })) return;
-    const r = await invocar('column_create', { name: nombre.trim(), color_id: color });
+    const datos = { name: nombre.trim(), color_id: color };
+    const r = columna
+      ? await invocar('column_update', { id: columna.id, ...datos })
+      : await invocar('column_create', datos);
     if (!r.ok) {
       if (r.error.field) campos.mostrarDelNucleo([r.error]);
       return;
     }
-    alGuardar(r.value, r.result_message?.message ?? textos.COLUMNA_CREADA);
-  }, [alGuardar, campos, color, invocar, nombre]);
+    const porDefecto = columna ? textos.COLUMNA_ACTUALIZADA : textos.COLUMNA_CREADA;
+    alGuardar(r.value, r.result_message?.message ?? porDefecto);
+  }, [alGuardar, campos, color, columna, invocar, nombre]);
   const { ejecutar, enCurso } = useEnvioUnico(guardar);
 
   return (
     <VentanaEmergente
-      titulo="Nueva columna"
+      titulo={columna ? 'Editar columna' : 'Nueva columna'}
       alSalir={alCancelar}
       acciones={
         <>

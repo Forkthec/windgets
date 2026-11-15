@@ -18,8 +18,8 @@ use crate::tipos::{
     AgendaBlock, AgendaDay, AppError, BoardColumn, Card, CardAssignTimeBlockParams,
     CardCreateParams, CardDetail, CardDetailColumn, CardDetailLabelsItem, CardDetailTimeBlock,
     CardListBoardResult, CardMoveParams, CardType, CardUpdateParams, CatalogItem, Column,
-    ColumnCreateParams, ColumnRole, DateIso, ErrorCode, Hex, Hour, Instant, Label,
-    LabelCreateParams, Placement, PlannerItem, PlannerSummary, PlannerToday, Priority,
+    ColumnCreateParams, ColumnRole, ColumnUpdateParams, DateIso, ErrorCode, Hex, Hour, Instant,
+    Label, LabelCreateParams, Placement, PlannerItem, PlannerSummary, PlannerToday, Priority,
     ResultMessage, Uuid,
 };
 
@@ -111,6 +111,25 @@ fn resultado(code: &str, message: &str) -> ResultMessage {
 /// Un campo vacío o formado solo por espacios (HE-07-HU01-ET07; RT-04-ET21).
 fn vacio(valor: &str) -> bool {
     valor.trim().is_empty()
+}
+
+/// Nombre de columna (HE-09-HU03-ET03; HE-09-HU04-ET03, ET09): obligatorio, de 1 a 30 caracteres.
+pub fn validar_nombre_de_columna(nombre: &str) -> Option<AppError> {
+    if vacio(nombre) {
+        return Some(error(
+            ErrorCode::NameRequired,
+            messages::CAMPO_OBLIGATORIO,
+            Some("name"),
+        ));
+    }
+    if nombre.trim().chars().count() > NOMBRE_DE_COLUMNA_MAX {
+        return Some(error(
+            ErrorCode::NameTooLong,
+            messages::NOMBRE_DE_COLUMNA_MUY_LARGO,
+            Some("name"),
+        ));
+    }
+    None
 }
 
 /// Título (HE-07-HU01-ET06, ET07): obligatorio, de 1 a 100 caracteres; solo espacios cuenta como vacío.
@@ -1235,19 +1254,8 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
             .map(|c| c.trim().to_string())
             .filter(|c| !c.is_empty())
             .unwrap_or_else(|| "gray".to_string());
-        if nombre.is_empty() {
-            return Err(error(
-                ErrorCode::NameRequired,
-                messages::CAMPO_OBLIGATORIO,
-                Some("name"),
-            ));
-        }
-        if nombre.chars().count() > NOMBRE_DE_COLUMNA_MAX {
-            return Err(error(
-                ErrorCode::NameTooLong,
-                messages::NOMBRE_DE_COLUMNA_MUY_LARGO,
-                Some("name"),
-            ));
+        if let Some(e) = validar_nombre_de_columna(&nombre) {
+            return Err(e);
         }
         let pool = self.base.pool().await.map_err(de_sqlx)?;
         let mut tx = pool.begin().await.map_err(de_sqlx)?;
@@ -1329,6 +1337,107 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         Ok(ConMensaje {
             valor: columna,
             mensaje: resultado("column_create", messages::COLUMNA_CREADA),
+        })
+    }
+
+    /// IPC-COL-03 `column_update` (HE-09-HU04). Mismas reglas de nombre que al crear (ET03, ET04, ET09) y color
+    /// del catálogo (ET05). No cambia la función de la columna (`role`): renombrar Hecho conserva sus tarjetas
+    /// completadas (ET06). Si la columna ya no existe, `column.not_found`.
+    pub async fn actualizar_columna(
+        &self,
+        user_id: &str,
+        params: ColumnUpdateParams,
+    ) -> Result<ConMensaje<Column>, AppError> {
+        let id = params.id.0.to_lowercase();
+        let nombre = params.name.map(|n| n.trim().to_string());
+        let color = params
+            .color_id
+            .map(|c| c.trim().to_string())
+            .filter(|c| !c.is_empty());
+        if let Some(e) = nombre.as_deref().and_then(validar_nombre_de_columna) {
+            return Err(e);
+        }
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let mut tx = pool.begin().await.map_err(de_sqlx)?;
+
+        let existe: i64 =
+            sqlx::query_scalar("SELECT count(*) FROM kanban_column WHERE id = ? AND user_id = ?")
+                .bind(&id)
+                .bind(user_id)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(de_sqlx)?;
+        if existe == 0 {
+            return Err(error(ErrorCode::ColumnNotFound, "", None));
+        }
+        if let Some(nombre) = &nombre {
+            let otras: Vec<String> =
+                sqlx::query_scalar("SELECT name FROM kanban_column WHERE user_id = ? AND id <> ?")
+                    .bind(user_id)
+                    .bind(&id)
+                    .fetch_all(&mut *tx)
+                    .await
+                    .map_err(de_sqlx)?;
+            let clave = nombre.to_lowercase();
+            if otras.iter().any(|n| n.trim().to_lowercase() == clave) {
+                return Err(error(
+                    ErrorCode::NameDuplicate,
+                    messages::COLUMNA_DUPLICADA,
+                    Some("name"),
+                ));
+            }
+        }
+        if let Some(color) = &color {
+            let existe_el_color: i64 = sqlx::query_scalar(
+                "SELECT count(*) FROM catalog_color WHERE id = ? AND is_active = 1",
+            )
+            .bind(color)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(de_sqlx)?;
+            if existe_el_color == 0 {
+                // Igual que al crear (DUDA: HE-09-HU03): el contrato no tiene un error para este caso.
+                return Err(inesperado());
+            }
+        }
+
+        let ahora = instante(self.calendario.ahora_ms()).0;
+        let mut valores: Vec<(&str, Value)> = Vec::new();
+        if let Some(nombre) = &nombre {
+            valores.push(("name", Value::from(nombre.as_str())));
+        }
+        if let Some(color) = &color {
+            valores.push(("color_id", Value::from(color.as_str())));
+        }
+        if !valores.is_empty() {
+            let (fields, mods) = campos(&valores, &ahora);
+            sqlx::query(
+                "UPDATE kanban_column SET name = coalesce(?, name), color_id = coalesce(?, color_id), \
+                 field_mods = json_patch(field_mods, ?) WHERE id = ? AND user_id = ?",
+            )
+            .bind(&nombre)
+            .bind(&color)
+            .bind(mods.to_string())
+            .bind(&id)
+            .bind(user_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(de_sqlx)?;
+            encolar_cambio(&mut tx, "kanban_column", &id, "upsert", &fields, &ahora)
+                .await
+                .map_err(de_sqlx)?;
+        }
+        tx.commit().await.map_err(de_sqlx)?;
+
+        let columna = self
+            .columnas(user_id)
+            .await?
+            .into_iter()
+            .find(|c| c.id.0 == id)
+            .ok_or_else(inesperado)?;
+        Ok(ConMensaje {
+            valor: columna,
+            mensaje: resultado("column_update", messages::COLUMNA_ACTUALIZADA),
         })
     }
 

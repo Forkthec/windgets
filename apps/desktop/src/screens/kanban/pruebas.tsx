@@ -177,6 +177,23 @@ export function crearNucleo(tarjetas: Card[] = []): {
     ['card_list_board', () => ({ ok: true, value: { columns: tablero() } })],
     ['column_list', () => ({ ok: true, value: tablero().map((c) => c.column) })],
     [
+      'column_update',
+      (params) => {
+        const { id, name, color_id } = params as { id: string; name?: string; color_id?: string };
+        const i = nucleo.columnas.findIndex((x) => x.id === id);
+        const actual = nucleo.columnas[i];
+        if (!actual) return { ok: false, error: { code: 'column.not_found', message: '' } };
+        // Sin tocar las columnas compartidas entre pruebas (POR_HACER, EN_PROGRESO, HECHO).
+        const c: Column = { ...actual, name: name ?? actual.name, color_id: color_id ?? actual.color_id };
+        nucleo.columnas[i] = c;
+        return {
+          ok: true,
+          value: c,
+          result_message: { code: 'column_update', message: 'Columna actualizada.' },
+        };
+      },
+    ],
+    [
       'column_create',
       (params) => {
         const { name, color_id } = params as { name: string; color_id?: string };

@@ -85,7 +85,7 @@ function Tarjeta({ tarjeta }: { tarjeta: Card }) {
 }
 
 /** Una columna con su nombre, su color y su cantidad de tarjetas (HE-09-HU01-ET01); se suelta al final. */
-function Columna({ columna }: { columna: BoardColumn }) {
+function Columna({ columna, alEditar }: { columna: BoardColumn; alEditar: (columna: Column) => void }) {
   const { column, cards } = columna;
   const lugar: LugarDeSoltar = { columna: column.id };
   const soltar = useDroppable({ id: `columna:${column.id}`, data: lugar });
@@ -100,6 +100,8 @@ function Columna({ columna }: { columna: BoardColumn }) {
         <span className="wg-muestra-color" style={{ background: column.color_hex }} aria-hidden="true" />
         <span>{column.name}</span>
         <span className="wg-columna__cantidad">{column.card_count}</span>
+        {/* HE-09-HU04-ET01: cada columna tiene «Editar». */}
+        <Boton onClick={() => alEditar(column)}>Editar</Boton>
       </h2>
       {cards.length === 0 ? (
         // HE-09-HU01-ET04: estado vacío de la columna (RT-04).
@@ -119,7 +121,8 @@ export function Kanban() {
   const { invocar, escuchar } = useNucleo();
   const mostrarResultado = useMensajeDeResultado();
   const [columnas, setColumnas] = useState<BoardColumn[] | null>(null);
-  const [creandoColumna, setCreandoColumna] = useState(false);
+  // Formulario de columna abierto: `null` para crear (HE-09-HU03) o la columna que se edita (HE-09-HU04).
+  const [formularioColumna, setFormularioColumna] = useState<{ columna: Column | null } | null>(null);
 
   const leer = useCallback(async () => {
     const r = await invocar('card_list_board', {});
@@ -185,7 +188,7 @@ export function Kanban() {
         <Boton
           disabled={enElMaximo}
           motivo={enElMaximo ? textos.MAXIMO_DE_COLUMNAS : undefined}
-          onClick={() => setCreandoColumna(true)}
+          onClick={() => setFormularioColumna({ columna: null })}
         >
           Nueva columna
         </Boton>
@@ -197,19 +200,24 @@ export function Kanban() {
           <DndContext sensors={sensores} collisionDetection={pointerWithin} onDragEnd={soltada}>
             <div className="wg-tablero">
               {columnas.map((c) => (
-                <Columna key={c.column.id} columna={c} />
+                <Columna
+                  key={c.column.id}
+                  columna={c}
+                  alEditar={(columna) => setFormularioColumna({ columna })}
+                />
               ))}
             </div>
           </DndContext>
         </ContextoDelTablero.Provider>
       )}
       {tarjetas.ventanas}
-      {creandoColumna && (
+      {formularioColumna && (
         <FormularioColumna
-          alCancelar={() => setCreandoColumna(false)}
+          columna={formularioColumna.columna ?? undefined}
+          alCancelar={() => setFormularioColumna(null)}
           alGuardar={(_, mensaje) => {
-            // HE-09-HU03-CA01: la columna aparece al final del tablero y se ve el mensaje (RT-04).
-            setCreandoColumna(false);
+            // HE-09-HU03-CA01, HE-09-HU04-CA01: el tablero muestra la columna nueva o editada y el mensaje.
+            setFormularioColumna(null);
             mostrarResultado(mensaje);
             void leer();
           }}

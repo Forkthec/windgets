@@ -34,6 +34,7 @@ pub fn run() {
             puente_ipc::label_create,
             puente_ipc::catalog_list,
             puente_ipc::column_create,
+            puente_ipc::column_update,
             puente_ipc::card_list_board,
             puente_ipc::column_list,
             puente_ipc::card_get,

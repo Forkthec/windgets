@@ -18,8 +18,8 @@ use crate::tipos::{
     AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, Card,
     CardAssignTimeBlockParams, CardCreateParams, CardDetail, CardIdParams, CardListBoardResult,
     CardMoveParams, CardUpdateParams, CatalogItem, CatalogKind, CatalogListParams, ChangeOp,
-    CodeSent, Column, ColumnCreateParams, Connectivity, EntityChange, ErrorCode,
-    EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
+    CodeSent, Column, ColumnCreateParams, ColumnUpdateParams, Connectivity, EntityChange,
+    ErrorCode, EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
     EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, Label, LabelCreateParams, NoParams,
     OriginKind, PlannerToday, SessionInfo,
 };
@@ -369,6 +369,29 @@ pub async fn column_create(
     };
     if let Ok(creada) = &r {
         avisar_columnas(&app, vec![creada.valor.id.clone()], ChangeOp::Upsert);
+    }
+    Ok(con_mensaje(r))
+}
+
+/// IPC-COL-03 `column_update` (HE-09-HU04). Emite `columns_changed` para que el tablero y el widget Kanban
+/// muestren el nombre y el color nuevos (ET07).
+#[tauri::command]
+pub async fn column_update(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: ColumnUpdateParams,
+) -> Result<IpcResult<Column>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .actualizar_columna(&user_id, params)
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if let Ok(editada) = &r {
+        avisar_columnas(&app, vec![editada.valor.id.clone()], ChangeOp::Upsert);
     }
     Ok(con_mensaje(r))
 }
