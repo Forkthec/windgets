@@ -85,7 +85,9 @@ Requisitos: Windows 10 22H2 o Windows 11 de 64 bits, Node.js LTS, pnpm, Rust est
 ```
 pnpm install
 supabase start && supabase db reset          # Supabase local: migraciones y semilla
-cp apps/desktop/.env.example apps/desktop/.env   # completa con la URL y la clave pública
+# La URL y la clave pública se fijan al compilar (option_env!, D-192): defínelas en la terminal antes de ejecutar.
+# PowerShell: $env:WINDGETS_SUPABASE_URL="..."; $env:WINDGETS_SUPABASE_ANON_KEY="..."
+# Si cambian, recompila. apps/desktop/.env.example solo lista los nombres; ningún archivo .env se carga solo.
 pnpm --filter desktop tauri dev              # aplicación completa
 pnpm --filter desktop dev                    # solo las vistas en el navegador, con IPC simulado
 pnpm --filter landing dev                    # landing page
