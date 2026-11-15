@@ -5,6 +5,14 @@
  * Forma (R-06 a R-08): ángulo de 18°, esquina de un tercio con tope, capas sólidas sin transparencias.
  * Toda medida es múltiplo o fracción de --wg-unidad (R-14).
  */
+/* Nunito, la tipografía del tema por defecto (D-198): el mismo archivo que viaja en el instalador. */
+@font-face {
+  font-family: 'Nunito';
+  src: url('../../../assets/fonts/nunito.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
 :root {
   --wg-unidad: 4px; /* DUDA: P00 unidad base no definida (docs/DUDAS.md) */
   --wg-grosor-control: calc(var(--wg-unidad) * 10);
