@@ -127,6 +127,11 @@ body {
 .wg-emergente {
   min-width: calc(var(--wg-unidad) * 90);
   max-width: calc(100vw - var(--wg-unidad) * 16);
+  /* Un contenido más alto que la ventana se desplaza dentro de la ventana emergente: sus opciones siguen al
+     alcance (RT-02-ET05, «Guardar» y «Cancelar»). */
+  max-height: calc(100vh - var(--wg-unidad) * 16);
+  overflow-y: auto;
+  box-sizing: border-box;
   padding: calc(var(--wg-unidad) * 6);
   border: var(--wg-borde-ancho) solid var(--wg-borde);
   border-radius: var(--wg-radio);
