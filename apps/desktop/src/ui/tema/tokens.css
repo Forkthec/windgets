@@ -245,6 +245,18 @@ body {
   background: var(--wg-marco); /* WG-MK-01: el principal es el marco exterior */
   color: var(--wg-sobre-marco);
 }
+.wg-ventana-principal__menu {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--wg-unidad) * 4);
+}
+.wg-indicador-sincronizacion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wg-unidad);
+  max-width: calc(var(--wg-unidad) * 56);
+  color: var(--wg-texto);
+}
 .wg-ventana-principal__pantalla {
   overflow: auto;
   padding: calc(var(--wg-unidad) * 6);

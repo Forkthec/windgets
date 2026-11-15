@@ -50,6 +50,7 @@ type Respuestas = {
 
 const respuestas: Respuestas = {
   connectivity_get: () => ({ ok: true, value: { online: true } }),
+  sync_get_status: () => ({ ok: true, value: { status: 'synced', pending_count: 0, last_sync_at: null } }),
   auth_get_session: () => ({ ok: true, value: { state: 'signed_out', token: 'valid' } }),
   auth_register_start: ({ email }) => {
     if (email.trim().toLowerCase() === CUENTA_SIMULADA.email) {

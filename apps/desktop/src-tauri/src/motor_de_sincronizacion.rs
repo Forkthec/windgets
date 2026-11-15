@@ -24,6 +24,12 @@ pub const REINTENTO_MS: i64 = 60_000;
 /// `sync_push` acepta hasta 200 cambios por llamada (RPC-02, `too_many_changes`).
 pub const CAMBIOS_POR_ENVIO: i64 = 200;
 
+/// La cuenta y el JWT de la sesión iniciada.
+pub struct Credenciales<'a> {
+    pub user_id: &'a str,
+    pub token: &'a str,
+}
+
 /// RPC-02 `sync_push` de Supabase con el JWT de la sesión.
 pub trait NubeDeSincronizacion: Send + Sync {
     fn sync_push(
@@ -91,16 +97,25 @@ async fn poner_estado(base: &BaseLocal, estado: &str) -> Result<(), sqlx::Error>
 }
 
 /// Un ciclo de envío (HE-15-HU01). Envía la cola si hay cambios guardados hace al menos 2 s y ningún intento
-/// fallido en el último minuto (ET04). Devuelve `true` si llamó a la nube.
+/// fallido en el último minuto (ET04). Sin conexión no llama a la nube: el indicador queda «Sin conexión» y los
+/// cambios se acumulan como pendientes (HE-15-HU02-ET03, ET04). Devuelve `true` si llamó a la nube.
 pub async fn enviar<N: NubeDeSincronizacion>(
     base: &BaseLocal,
     nube: &N,
-    user_id: &str,
-    token: &str,
+    sesion: &Credenciales<'_>,
+    en_linea: bool,
     ahora_ms: i64,
 ) -> Result<bool, sqlx::Error> {
-    preparar(base, user_id).await?;
+    preparar(base, sesion.user_id).await?;
     let pool = base.pool().await?;
+    if !en_linea {
+        poner_estado(base, "offline").await?;
+        return Ok(false);
+    }
+    // Volvió la conexión: deja de mostrar «Sin conexión» aunque no haya nada que enviar.
+    sqlx::query("UPDATE sync_state SET status = 'synced' WHERE id = 1 AND status = 'offline'")
+        .execute(pool)
+        .await?;
     let reintento = instante(ahora_ms - REINTENTO_MS);
     let en_espera: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM pending_change WHERE last_attempt_at IS NOT NULL AND last_attempt_at > ?",
@@ -148,7 +163,7 @@ pub async fn enviar<N: NubeDeSincronizacion>(
     };
 
     poner_estado(base, "syncing").await?;
-    match nube.sync_push(token, &params).await {
+    match nube.sync_push(sesion.token, &params).await {
         Ok(respuesta) => {
             let mut tx = pool.begin().await?;
             // Se quita de la cola lo enviado, salvo que se haya vuelto a modificar mientras tanto.
@@ -278,8 +293,33 @@ mod pruebas {
         base
     }
 
+    const SESION: Credenciales<'static> = Credenciales {
+        user_id: USUARIO,
+        token: "jwt",
+    };
+
     fn ciclo(base: &BaseLocal, nube: &NubeDePrueba, ahora: i64) -> bool {
-        bloquear(enviar(base, nube, USUARIO, "jwt", ahora)).unwrap()
+        bloquear(enviar(base, nube, &SESION, true, ahora)).unwrap()
+    }
+
+    fn sin_conexion(base: &BaseLocal, nube: &NubeDePrueba, ahora: i64) -> bool {
+        bloquear(enviar(base, nube, &SESION, false, ahora)).unwrap()
+    }
+
+    fn encolar(base: &BaseLocal, tipo: &str, id: &str, ahora: i64) {
+        bloquear(async {
+            let mut c = base.pool().await.unwrap().acquire().await.unwrap();
+            encolar_cambio(
+                &mut c,
+                tipo,
+                id,
+                "upsert",
+                &serde_json::json!({ "title": { "value": "T", "modified_at": instante(ahora) } }),
+                &instante(ahora),
+            )
+            .await
+            .unwrap();
+        });
     }
 
     #[test]
@@ -347,5 +387,53 @@ mod pruebas {
         assert!(ciclo(&base, &sana, AHORA + 120_000));
         assert_eq!(bloquear(estado(&base)).unwrap().status, SyncState::Synced);
         assert_eq!(bloquear(estado(&base)).unwrap().pending_count, 0);
+    }
+
+    #[test]
+    fn ca_he_15_hu02_ca01() {
+        // HE-15-HU02-CA01 · Al perder la conexión, el indicador muestra «Sin conexión» (ET04) sin llamar a la nube.
+        let base = base_con_cambio(AHORA - 5_000);
+        let nube = NubeDePrueba::default();
+        assert!(!sin_conexion(&base, &nube, AHORA));
+        assert!(nube.recibidos.lock().unwrap().is_empty());
+        assert_eq!(bloquear(estado(&base)).unwrap().status, SyncState::Offline);
+    }
+
+    #[test]
+    fn ca_he_15_hu02_ca02() {
+        // HE-15-HU02-CA02 · Offline, los cambios se aplican en el computador y quedan pendientes (ET03, ET06):
+        // tres tarjetas y una preferencia son 4 cambios pendientes.
+        let base = BaseLocal::en_memoria();
+        let nube = NubeDePrueba::default();
+        sin_conexion(&base, &nube, AHORA);
+        for (i, id) in [
+            "00000000-0000-4000-8000-0000000000a1",
+            "00000000-0000-4000-8000-0000000000a2",
+            "00000000-0000-4000-8000-0000000000a3",
+        ]
+        .iter()
+        .enumerate()
+        {
+            encolar(&base, "card", id, AHORA + i as i64);
+        }
+        encolar(&base, "user_preference", USUARIO, AHORA + 5);
+        sin_conexion(&base, &nube, AHORA + 10_000);
+        let e = bloquear(estado(&base)).unwrap();
+        assert_eq!((e.status, e.pending_count), (SyncState::Offline, 4));
+        // Al volver la conexión, deja de estar «Sin conexión» y se envían.
+        assert!(ciclo(&base, &nube, AHORA + 20_000));
+        let e = bloquear(estado(&base)).unwrap();
+        assert_eq!((e.status, e.pending_count), (SyncState::Synced, 0));
+    }
+
+    #[test]
+    fn ca_he_15_hu02_ca03() {
+        // HE-15-HU02-CA03 · Offline, crear una tarjeta deja 1 cambio pendiente.
+        let base = BaseLocal::en_memoria();
+        let nube = NubeDePrueba::default();
+        encolar(&base, "card", TARJETA, AHORA);
+        sin_conexion(&base, &nube, AHORA + 5_000);
+        let e = bloquear(estado(&base)).unwrap();
+        assert_eq!((e.status, e.pending_count), (SyncState::Offline, 1));
     }
 }

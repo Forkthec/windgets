@@ -129,18 +129,20 @@ pub fn sincronizar(app: AppHandle) {
                 continue;
             };
             let base = nucleo.planificador.base();
+            let cliente = nucleo.sesion.auth();
             let ahora = chrono::Utc::now().timestamp_millis();
+            let user_id = sesion.user_id.to_lowercase();
+            let credenciales = motor_de_sincronizacion::Credenciales {
+                user_id: &user_id,
+                token: &sesion.access_token,
+            };
+            let antes = cliente.en_linea();
             let estado = tauri::async_runtime::block_on(async {
-                motor_de_sincronizacion::enviar(
-                    base,
-                    nucleo.sesion.auth(),
-                    &sesion.user_id.to_lowercase(),
-                    &sesion.access_token,
-                    ahora,
-                )
-                .await?;
+                motor_de_sincronizacion::enviar(base, cliente, &credenciales, antes, ahora).await?;
                 motor_de_sincronizacion::estado(base).await
             });
+            // HE-15-HU02-ET05: un envío que no encuentra la red avisa que se perdió la conexión (EV-03).
+            avisar_conectividad(&app, antes);
             if let Ok(estado) = estado
                 && anterior.as_ref() != Some(&estado)
             {
