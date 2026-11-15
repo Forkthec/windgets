@@ -27,9 +27,10 @@ Para el agente o la persona que sigue en otra computadora. Lee primero `docs/AGE
 - `infra: abrir la base local SQLite con sqlx`: no existía la base local. sqlx 0.8.6, `%APPDATA%\Windgets\windgets.db`
   en WAL, con `sqlite_esquema.sql` en el primer uso (`repositorios_y_archivos_locales.rs`).
 - HE-07-HU01, HU03, HU04, HU05; HE-09-HU01, HU02; HE-11-HU01, HU02; HE-12-HU01.
-- `RT-02: desplazar el contenido de una ventana emergente más alta que la ventana`: corrección encontrada
+- `RT-02: desplazar el contenido de una ventana emergente más alta que la ventana` y `RT-01: el menú principal
+  ocupa solo el ancho de sus opciones` (el menú medía unos 800 px desde P02): correcciones encontradas
   por la e2e.
-- Verificación sobre 01d10cc: todos los PASOS de `/verificar` en 0 (559 pruebas de Rust, 170 de Vitest,
+- Verificación sobre 01d10cc (y e2e repetidas sobre 7d56403): todos los PASOS de `/verificar` en 0 (559 pruebas de Rust, 170 de Vitest,
   14 e2e de escritorio con drag-and-drop real, 26 de la landing). La CI de GitHub, en verde.
 
 ## 3. Cómo seguir
@@ -55,12 +56,12 @@ Pasos que **no** necesitan el spike, en este orden:
 
 ## 4. Rebase de las ramas apiladas cuando se fusione P08
 
-P16 trae P08 con un merge (cf21136). Al fusionar #14 con squash, sigue la skill `/cerrar-paso`, sección
+P16 trae P08 con merges (el último, 5a44ec7; punta de P08: 7d56403). Al fusionar #14 con squash, sigue la skill `/cerrar-paso`, sección
 «Rebase de un apilado»:
 
 ```
 git fetch origin
-git rebase --onto origin/main 01d10cc paso-16-etiquetas-y-columnas
+git rebase --onto origin/main 7d56403 paso-16-etiquetas-y-columnas
 gh pr edit 15 --base main
 git push --force-with-lease=paso-16-etiquetas-y-columnas:<sha remoto> origin paso-16-etiquetas-y-columnas
 ```
