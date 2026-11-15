@@ -96,3 +96,46 @@ describe('HE-15-HU02 · Trabajar offline', () => {
   // ET09, ET10: los widgets externos dependen del spike P01.
   it.todo('HE-15-HU02-CA06 · Widgets externos offline (se prueba con HE-04-HU05 y HE-04-HU06)');
 });
+
+describe('HE-15-HU03 · Sincronizar al volver la conexión', () => {
+  it('HE-15-HU03-CA01 · Sincronización al reconectarse', async () => {
+    const { indicador, emitir } = await abrir(CON_SESION, estado('offline', 2));
+    // ET08: «Sincronizando…» y luego «Sincronizado».
+    emitir('sync_status_changed', estado('syncing', 2));
+    expect(within(indicador).getByText('Sincronizando…')).toBeTruthy();
+    emitir('sync_status_changed', estado('synced'));
+    expect(within(indicador).getByText('Sincronizado')).toBeTruthy();
+    // ET09
+    emitir('sync_completed', { pushed: 2, pulled: 0, after_reconnect: true });
+    expect(screen.getByText('Tus cambios se sincronizaron.')).toBeTruthy();
+  });
+
+  it('sin cambios hechos offline no muestra el mensaje de sincronización', async () => {
+    const { emitir } = await abrir(CON_SESION, estado('synced'));
+    emitir('sync_completed', { pushed: 0, pulled: 3, after_reconnect: false });
+    expect(screen.queryByText('Tus cambios se sincronizaron.')).toBeNull();
+  });
+
+  // CA02, CA05 y CA06: la nube decidió con la hora más reciente (pruebas ca_he_15_hu03_ca02, ca05 y ca06 del
+  // motor) y avisa con EV-06.
+  for (const ca of [
+    'HE-15-HU03-CA02 · Conflicto en el mismo campo entre computadores',
+    'HE-15-HU03-CA05 · Tarjeta eliminada en un computador y modificada en otro, con eliminación más reciente',
+    'HE-15-HU03-CA06 · Tarjeta eliminada en un computador y modificada en otro, con modificación más reciente',
+  ]) {
+    it(ca, async () => {
+      const { emitir } = await abrir(CON_SESION, estado('synced'));
+      emitir('sync_conflicts_resolved', { count: 1 });
+      expect(
+        screen.getByText('Algunas tarjetas se actualizaron con cambios más recientes de otro computador.'),
+      ).toBeTruthy();
+    });
+  }
+
+  it('HE-15-HU03-CA04 · Cambios en campos distintos de la misma tarjeta', async () => {
+    // ET02: se combinan sin conflicto (ca_he_15_hu03_ca04): no llega EV-06 y no hay mensaje.
+    const { emitir } = await abrir(CON_SESION, estado('synced'));
+    emitir('sync_completed', { pushed: 1, pulled: 0, after_reconnect: false });
+    expect(screen.queryByText(/cambios más recientes de otro computador/)).toBeNull();
+  });
+});

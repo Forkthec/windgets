@@ -18,6 +18,11 @@ const TEXTO: Record<SyncState, string> = {
 export const AVISO_SIN_CONEXION =
   'Estás sin conexión. Tus cambios se guardarán y se sincronizarán al reconectarte.';
 
+// HE-15-HU03-ET09.
+export const SINCRONIZADOS = 'Tus cambios se sincronizaron.';
+// HE-15-HU03-CA02, CA05, CA06 (EV-06).
+export const CONFLICTOS = 'Algunas tarjetas se actualizaron con cambios más recientes de otro computador.';
+
 /** HE-15-HU02-ET11 (D-160): «<cantidad> cambios pendientes de sincronizar»; con 1, en singular; con 0, nada. */
 export function textoDePendientes(cantidad: number): string | null {
   if (cantidad <= 0) return null;
@@ -54,6 +59,21 @@ export function IndicadorSincronizacion() {
       }),
     [escuchar, mostrarResultado],
   );
+
+  // HE-15-HU03: al terminar de sincronizar los cambios hechos offline (EV-05) y cuando la nube conservó una
+  // versión más reciente de una tarjeta (EV-06).
+  useEffect(() => {
+    const dejarCompletado = escuchar('sync_completed', (carga) => {
+      if (carga.after_reconnect) mostrarResultado(SINCRONIZADOS);
+    });
+    const dejarConflictos = escuchar('sync_conflicts_resolved', (carga) => {
+      if (carga.count > 0) mostrarResultado(CONFLICTOS);
+    });
+    return () => {
+      dejarCompletado();
+      dejarConflictos();
+    };
+  }, [escuchar, mostrarResultado]);
 
   if (!estado) return null;
   // HE-15-HU02-ET06: offline, la cantidad de cambios pendientes.

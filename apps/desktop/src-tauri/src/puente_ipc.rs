@@ -122,6 +122,9 @@ const REVISION_DE_LA_COLA: Duration = Duration::from_secs(1);
 pub fn sincronizar(app: AppHandle) {
     std::thread::spawn(move || {
         let mut anterior = None;
+        // `None` al abrir la aplicación: cuenta como reconexión para la primera consulta (datos.md, Modelo · 6).
+        let mut en_linea_antes: Option<bool> = None;
+        let mut ultima_consulta = 0_i64;
         loop {
             std::thread::sleep(REVISION_DE_LA_COLA);
             let nucleo = app.state::<Nucleo>();
@@ -137,13 +140,48 @@ pub fn sincronizar(app: AppHandle) {
                 token: &sesion.access_token,
             };
             let antes = cliente.en_linea();
-            let estado = tauri::async_runtime::block_on(async {
-                motor_de_sincronizacion::enviar(base, cliente, &credenciales, antes, ahora).await?;
-                motor_de_sincronizacion::estado(base).await
+            // HE-15-HU03-ET06: al recuperar la conexión (o al abrir), se mide el reloj, se envía de inmediato y se
+            // descarga el resultado final.
+            let reconectado = antes && en_linea_antes != Some(true);
+            let hubo_pendientes = matches!(
+                tauri::async_runtime::block_on(motor_de_sincronizacion::estado(base)),
+                Ok(e) if e.pending_count > 0
+            );
+            let resultado = tauri::async_runtime::block_on(async {
+                if reconectado {
+                    motor_de_sincronizacion::calibrar(base, cliente, &credenciales, ahora).await?;
+                }
+                let envio = motor_de_sincronizacion::enviar(
+                    base,
+                    cliente,
+                    &credenciales,
+                    antes,
+                    reconectado,
+                    ahora,
+                )
+                .await?;
+                let consultar = cliente.en_linea()
+                    && (reconectado
+                        || envio.llamo
+                        || ahora - ultima_consulta >= CONSULTA_PERIODICA_MS);
+                let descarga = if consultar {
+                    motor_de_sincronizacion::descargar(base, cliente, &credenciales).await?
+                } else {
+                    motor_de_sincronizacion::Ciclo::default()
+                };
+                Ok::<_, sqlx::Error>((envio, descarga))
             });
+            en_linea_antes = Some(cliente.en_linea());
             // HE-15-HU02-ET05: un envío que no encuentra la red avisa que se perdió la conexión (EV-03).
             avisar_conectividad(&app, antes);
-            if let Ok(estado) = estado
+            if let Ok((envio, descarga)) = resultado {
+                if descarga.llamo {
+                    ultima_consulta = ahora;
+                }
+                avisar_ciclo(&app, &envio, &descarga, reconectado && hubo_pendientes);
+            }
+            if let Ok(estado) =
+                tauri::async_runtime::block_on(motor_de_sincronizacion::estado(base))
                 && anterior.as_ref() != Some(&estado)
             {
                 let _ = app.emit("sync_status_changed", estado.clone());
@@ -151,6 +189,71 @@ pub fn sincronizar(app: AppHandle) {
             }
         }
     });
+}
+
+/// Consulta los cambios de otros computadores cada 60 s (datos.md, Modelo · 6).
+const CONSULTA_PERIODICA_MS: i64 = 60_000;
+
+/// EV-05 `sync_completed`, EV-06 `sync_conflicts_resolved` y los cambios de entidades que recibió el computador
+/// (EV-07 a EV-09, `origin: 'remote'`), para que las pantallas vuelvan a leer.
+fn avisar_ciclo(
+    app: &AppHandle,
+    envio: &motor_de_sincronizacion::Ciclo,
+    descarga: &motor_de_sincronizacion::Ciclo,
+    tras_reconectar: bool,
+) {
+    use crate::tipos::{
+        ChangeOp, EntityChange, EventMapSyncCompleted, EventMapSyncConflictsResolved, OriginKind,
+        Uuid,
+    };
+    if envio.cantidad > 0 || descarga.cantidad > 0 {
+        let _ = app.emit(
+            "sync_completed",
+            EventMapSyncCompleted {
+                pushed: envio.cantidad,
+                pulled: descarga.cantidad,
+                // HE-15-HU03-ET09: el mensaje solo tras sincronizar los cambios hechos offline.
+                after_reconnect: tras_reconectar && envio.cantidad > 0,
+            },
+        );
+    }
+    if envio.conflictos_de_tarjetas > 0 {
+        let _ = app.emit(
+            "sync_conflicts_resolved",
+            EventMapSyncConflictsResolved {
+                count: envio.conflictos_de_tarjetas,
+            },
+        );
+    }
+    for (tipo, evento) in [
+        ("card", "cards_changed"),
+        ("label", "labels_changed"),
+        ("kanban_column", "columns_changed"),
+    ] {
+        for eliminadas in [false, true] {
+            let ids: Vec<Uuid> = envio
+                .cambiadas
+                .iter()
+                .chain(&descarga.cambiadas)
+                .filter(|(t, _, e)| t == tipo && *e == eliminadas)
+                .map(|(_, id, _)| Uuid(id.clone()))
+                .collect();
+            if !ids.is_empty() {
+                let _ = app.emit(
+                    evento,
+                    EntityChange {
+                        ids,
+                        op: if eliminadas {
+                            ChangeOp::Delete
+                        } else {
+                            ChangeOp::Upsert
+                        },
+                        origin: OriginKind::Remote,
+                    },
+                );
+            }
+        }
+    }
 }
 
 /// IPC-SYNC-01 `sync_get_status` (HE-15-HU01-ET03): el estado del indicador y los cambios pendientes.

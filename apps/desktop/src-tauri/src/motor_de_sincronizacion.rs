@@ -14,7 +14,8 @@ use chrono::DateTime;
 use crate::cliente_de_supabase::FallaDeAuth;
 use crate::repositorios_y_archivos_locales::BaseLocal;
 use crate::tipos::{
-    Instant, SyncChange, SyncPushParams, SyncPushResult, SyncState, SyncStatus, Uuid,
+    Instant, SyncChange, SyncChangeStatus, SyncPullParams, SyncPullResult, SyncPushParams,
+    SyncPushResult, SyncRow, SyncState, SyncStatus, Uuid,
 };
 
 /// Los cambios se envían 2 s después de guardar (datos.md, Modelo · 6; D-030).
@@ -37,6 +38,28 @@ pub trait NubeDeSincronizacion: Send + Sync {
         token: &str,
         params: &SyncPushParams,
     ) -> impl Future<Output = Result<SyncPushResult, FallaDeAuth>> + Send;
+    /// RPC-03 `sync_pull`: las filas del usuario con `updated_seq` mayor que el cursor.
+    fn sync_pull(
+        &self,
+        token: &str,
+        params: &SyncPullParams,
+    ) -> impl Future<Output = Result<SyncPullResult, FallaDeAuth>> + Send;
+    /// RPC-01 `server_time`: la hora del servidor, para medir el desfase del reloj (HE-15-HU03-ET05).
+    fn server_time(&self, token: &str)
+    -> impl Future<Output = Result<Instant, FallaDeAuth>> + Send;
+}
+
+/// Lo que dejó un ciclo de envío o de descarga.
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct Ciclo {
+    /// Si llamó a la nube.
+    pub llamo: bool,
+    /// Cambios enviados o filas descargadas.
+    pub cantidad: i64,
+    /// Respuestas con `conflict` sobre una tarjeta (EV-06, HE-15-HU03).
+    pub conflictos_de_tarjetas: i64,
+    /// Filas locales que cambió lo recibido: `(entity_kind, entity_id, eliminada)`.
+    pub cambiadas: Vec<(String, String, bool)>,
 }
 
 /// Un instante en el formato del contrato (`AAAA-MM-DDTHH:MM:SS.mmmZ`, UTC).
@@ -98,19 +121,21 @@ async fn poner_estado(base: &BaseLocal, estado: &str) -> Result<(), sqlx::Error>
 
 /// Un ciclo de envío (HE-15-HU01). Envía la cola si hay cambios guardados hace al menos 2 s y ningún intento
 /// fallido en el último minuto (ET04). Sin conexión no llama a la nube: el indicador queda «Sin conexión» y los
-/// cambios se acumulan como pendientes (HE-15-HU02-ET03, ET04). Devuelve `true` si llamó a la nube.
+/// cambios se acumulan como pendientes (HE-15-HU02-ET03, ET04). Con `forzar` (al recuperar la conexión,
+/// HE-15-HU03-ET06) envía de inmediato. Lo que la nube decide en un conflicto se adopta en el computador.
 pub async fn enviar<N: NubeDeSincronizacion>(
     base: &BaseLocal,
     nube: &N,
     sesion: &Credenciales<'_>,
     en_linea: bool,
+    forzar: bool,
     ahora_ms: i64,
-) -> Result<bool, sqlx::Error> {
+) -> Result<Ciclo, sqlx::Error> {
     preparar(base, sesion.user_id).await?;
     let pool = base.pool().await?;
     if !en_linea {
         poner_estado(base, "offline").await?;
-        return Ok(false);
+        return Ok(Ciclo::default());
     }
     // Volvió la conexión: deja de mostrar «Sin conexión» aunque no haya nada que enviar.
     sqlx::query("UPDATE sync_state SET status = 'synced' WHERE id = 1 AND status = 'offline'")
@@ -128,10 +153,14 @@ pub async fn enviar<N: NubeDeSincronizacion>(
             .bind(instante(ahora_ms - ESPERA_TRAS_GUARDAR_MS))
             .fetch_one(pool)
             .await?;
-    if en_espera > 0 || listos == 0 {
-        return Ok(false);
+    let hay: i64 = sqlx::query_scalar("SELECT count(*) FROM pending_change")
+        .fetch_one(pool)
+        .await?;
+    if hay == 0 || (!forzar && (en_espera > 0 || listos == 0)) {
+        return Ok(Ciclo::default());
     }
 
+    // HE-15-HU03-ET06 (CA07): en el orden en que se hicieron (el `id` de la cola).
     let filas: Vec<(i64, String, String, String, String, String)> = sqlx::query_as(
         "SELECT id, entity_kind, entity_id, op, fields, modified_at FROM pending_change ORDER BY id LIMIT ?",
     )
@@ -163,8 +192,13 @@ pub async fn enviar<N: NubeDeSincronizacion>(
     };
 
     poner_estado(base, "syncing").await?;
+    let mut ciclo = Ciclo {
+        llamo: true,
+        ..Ciclo::default()
+    };
     match nube.sync_push(sesion.token, &params).await {
         Ok(respuesta) => {
+            ciclo.cantidad = respuesta.results.len() as i64;
             let mut tx = pool.begin().await?;
             // Se quita de la cola lo enviado, salvo que se haya vuelto a modificar mientras tanto.
             // DUDA: HE-15-HU01 un cambio `rejected` no se acepta nunca; se quita de la cola para no bloquearla.
@@ -179,15 +213,25 @@ pub async fn enviar<N: NubeDeSincronizacion>(
                         .await?;
                 }
             }
-            let desfase = milisegundos(&respuesta.server_now.0)
-                .map(|servidor| servidor - ahora_ms)
-                .unwrap_or(desfase);
+            // HE-15-HU03: la combinación la decide el servidor (D-189). Con un conflicto, o si el cambio no se
+            // aplicó tal cual, se adopta la fila ganadora que trae la respuesta.
+            let ganadoras: Vec<SyncRow> = respuesta
+                .results
+                .iter()
+                .filter(|r| r.conflict || !matches!(r.status, SyncChangeStatus::Applied))
+                .filter_map(|r| r.row.clone())
+                .collect();
+            ciclo.conflictos_de_tarjetas = respuesta
+                .results
+                .iter()
+                .filter(|r| r.conflict)
+                .filter(|r| filas.iter().any(|f| f.0 == r.change_id && f.1 == "card"))
+                .count() as i64;
+            ciclo.cambiadas = aplicar_filas(&mut tx, &ganadoras, sesion.user_id).await?;
             sqlx::query(
-                "UPDATE sync_state SET status = 'synced', last_sync_at = ?, last_error_code = NULL, \
-                 clock_offset_ms = ?, clock_calibrated_at = ? WHERE id = 1",
+                "UPDATE sync_state SET status = 'synced', last_sync_at = ?, last_error_code = NULL \
+                 WHERE id = 1",
             )
-            .bind(&respuesta.server_now.0)
-            .bind(desfase)
             .bind(&respuesta.server_now.0)
             .execute(&mut *tx)
             .await?;
@@ -221,7 +265,245 @@ pub async fn enviar<N: NubeDeSincronizacion>(
             tx.commit().await?;
         }
     }
-    Ok(true)
+    Ok(ciclo)
+}
+
+/// HE-15-HU03-ET05 (CA08): al recuperar la conexión se mide la diferencia entre el reloj del servidor y el del
+/// computador; `sync_push` la aplica a las horas de modificación antes de comparar.
+pub async fn calibrar<N: NubeDeSincronizacion>(
+    base: &BaseLocal,
+    nube: &N,
+    sesion: &Credenciales<'_>,
+    ahora_ms: i64,
+) -> Result<(), sqlx::Error> {
+    preparar(base, sesion.user_id).await?;
+    if let Ok(hora) = nube.server_time(sesion.token).await
+        && let Some(servidor) = milisegundos(&hora.0)
+    {
+        sqlx::query(
+            "UPDATE sync_state SET clock_offset_ms = ?, clock_calibrated_at = ? WHERE id = 1",
+        )
+        .bind(servidor - ahora_ms)
+        .bind(&hora.0)
+        .execute(base.pool().await?)
+        .await?;
+    }
+    Ok(())
+}
+
+/// Descarga con RPC-03 `sync_pull` lo que cambió desde el cursor (HE-15-HU03-ET06: «el computador descarga el
+/// resultado final»), una transacción por página, y avanza el cursor.
+pub async fn descargar<N: NubeDeSincronizacion>(
+    base: &BaseLocal,
+    nube: &N,
+    sesion: &Credenciales<'_>,
+) -> Result<Ciclo, sqlx::Error> {
+    preparar(base, sesion.user_id).await?;
+    let pool = base.pool().await?;
+    let mut ciclo = Ciclo {
+        llamo: true,
+        ..Ciclo::default()
+    };
+    loop {
+        let cursor: i64 = sqlx::query_scalar("SELECT last_pulled_seq FROM sync_state WHERE id = 1")
+            .fetch_one(pool)
+            .await?;
+        let pagina = match nube
+            .sync_pull(
+                sesion.token,
+                &SyncPullParams {
+                    p_since_seq: cursor,
+                    p_limit: None,
+                },
+            )
+            .await
+        {
+            Ok(pagina) => pagina,
+            Err(falla) => {
+                // ET07: lo descargado hasta aquí queda; el resto llega en la siguiente consulta.
+                let estado = if falla == FallaDeAuth::SinConexion {
+                    "offline"
+                } else {
+                    "error"
+                };
+                poner_estado(base, estado).await?;
+                return Ok(ciclo);
+            }
+        };
+        let mut tx = pool.begin().await?;
+        let cambiadas = aplicar_filas(&mut tx, &pagina.rows, sesion.user_id).await?;
+        sqlx::query("UPDATE sync_state SET last_pulled_seq = ?, last_sync_at = ? WHERE id = 1")
+            .bind(pagina.next_seq.max(cursor))
+            .bind(&pagina.server_now.0)
+            .execute(&mut *tx)
+            .await?;
+        tx.commit().await?;
+        ciclo.cantidad += pagina.rows.len() as i64;
+        ciclo.cambiadas.extend(cambiadas);
+        if !pagina.has_more || pagina.next_seq <= cursor {
+            break;
+        }
+    }
+    Ok(ciclo)
+}
+
+/// Orden padre → hijo de las entidades (datos.md, Modelo · 6, «Aplicación local»).
+const ORDEN: [&str; 12] = [
+    "profile",
+    "user_preference",
+    "kanban_column",
+    "label",
+    "uploaded_image",
+    "theme",
+    "applied_theme",
+    "card",
+    "card_label",
+    "widget",
+    "theme_widget",
+    "widget_carousel_item",
+];
+
+fn valor_sql(valor: &serde_json::Value) -> Option<String> {
+    match valor {
+        serde_json::Value::Null => None,
+        serde_json::Value::String(texto) => Some(texto.clone()),
+        otro => Some(otro.to_string()),
+    }
+}
+
+/// Aplica filas recibidas de la nube sin encolarlas (el reajuste por resolución no se encola). Las eliminaciones
+/// van primero, de hijo a padre, y las altas de padre a hijo. Un campo con un cambio pendiente más reciente que el
+/// recibido no se sobrescribe. Devuelve las filas tocadas.
+async fn aplicar_filas(
+    tx: &mut sqlx::SqliteConnection,
+    filas: &[SyncRow],
+    user_id: &str,
+) -> Result<Vec<(String, String, bool)>, sqlx::Error> {
+    let tipo_de = |fila: &SyncRow| {
+        serde_json::to_value(&fila.entity_kind)
+            .ok()
+            .and_then(|v| v.as_str().map(str::to_string))
+            .unwrap_or_default()
+    };
+    let posicion = |tipo: &str| ORDEN.iter().position(|t| *t == tipo);
+    let mut ordenadas: Vec<(&SyncRow, String, usize)> = filas
+        .iter()
+        .filter_map(|f| {
+            let tipo = tipo_de(f);
+            posicion(&tipo).map(|i| (f, tipo, i))
+        })
+        .collect();
+    // Eliminaciones primero (hijo → padre); después altas y cambios (padre → hijo).
+    ordenadas.sort_by_key(|(f, _, i)| {
+        if f.deleted_at.is_some() {
+            (0, ORDEN.len() - i)
+        } else {
+            (1, *i)
+        }
+    });
+    let mut tocadas = Vec::new();
+    for (fila, tipo, _) in ordenadas {
+        // El nombre de la tabla sale de la lista fija ORDEN, nunca del texto recibido.
+        let Some(tabla) = ORDEN.iter().find(|t| **t == tipo) else {
+            continue;
+        };
+        let clave = if *tabla == "profile" { "user_id" } else { "id" };
+        let id = fila.entity_id.0.to_lowercase();
+        if fila.deleted_at.is_some() {
+            sqlx::query(&format!("DELETE FROM {tabla} WHERE {clave} = ?"))
+                .bind(&id)
+                .execute(&mut *tx)
+                .await?;
+            tocadas.push((tipo.clone(), id, true));
+            continue;
+        }
+        let columnas: Vec<String> =
+            sqlx::query_scalar(&format!("SELECT name FROM pragma_table_info('{tabla}')"))
+                .fetch_all(&mut *tx)
+                .await?;
+        let pendiente: Option<(String, String)> = sqlx::query_as(
+            "SELECT op, fields FROM pending_change WHERE entity_kind = ? AND entity_id = ?",
+        )
+        .bind(&tipo)
+        .bind(&id)
+        .fetch_optional(&mut *tx)
+        .await?;
+        // Una eliminación local pendiente la decide el servidor al enviarla.
+        if pendiente.as_ref().is_some_and(|(op, _)| op == "delete") {
+            continue;
+        }
+        let campos_pendientes: serde_json::Value = pendiente
+            .and_then(|(_, f)| serde_json::from_str(&f).ok())
+            .unwrap_or_default();
+        let mas_reciente_local = |campo: &str| {
+            let local = campos_pendientes
+                .get(campo)
+                .and_then(|c| c.get("modified_at"))
+                .and_then(|m| m.as_str());
+            match (local, fila.field_mods.get(campo)) {
+                (Some(local), Some(remoto)) => local > remoto.0.as_str(),
+                (Some(_), None) => true,
+                _ => false,
+            }
+        };
+        let mut nombres: Vec<String> = vec![clave.to_string()];
+        let mut valores: Vec<Option<String>> = vec![Some(id.clone())];
+        if let Some(objeto) = fila.fields.as_object() {
+            for (campo, valor) in objeto {
+                if campo == clave
+                    || campo == "user_id"
+                    || !columnas.contains(campo)
+                    || mas_reciente_local(campo)
+                {
+                    continue;
+                }
+                nombres.push(campo.clone());
+                valores.push(valor_sql(valor));
+            }
+        }
+        if clave != "user_id" && columnas.iter().any(|c| c == "user_id") {
+            nombres.push("user_id".into());
+            valores.push(Some(user_id.to_string()));
+        }
+        if columnas.iter().any(|c| c == "field_mods") {
+            nombres.push("field_mods".into());
+            valores.push(serde_json::to_string(&fila.field_mods).ok());
+        }
+        if columnas.iter().any(|c| c == "updated_seq") {
+            nombres.push("updated_seq".into());
+            valores.push(Some(fila.updated_seq.to_string()));
+        }
+        let existe: Option<i64> =
+            sqlx::query_scalar(&format!("SELECT 1 FROM {tabla} WHERE {clave} = ?"))
+                .bind(&id)
+                .fetch_optional(&mut *tx)
+                .await?;
+        // SQLite revisa los NOT NULL antes del conflicto: una fila existente se actualiza con UPDATE.
+        let sql = if existe.is_some() {
+            let cambios = nombres
+                .iter()
+                .skip(1)
+                .map(|n| format!("{n} = ?"))
+                .collect::<Vec<_>>()
+                .join(", ");
+            valores.rotate_left(1);
+            format!("UPDATE {tabla} SET {cambios} WHERE {clave} = ?")
+        } else {
+            let lista = nombres.join(", ");
+            let marcas = vec!["?"; nombres.len()].join(", ");
+            format!("INSERT INTO {tabla} ({lista}) VALUES ({marcas})")
+        };
+        let mut consulta = sqlx::query(&sql);
+        for valor in &valores {
+            consulta = consulta.bind(valor.clone());
+        }
+        // DUDA: HE-15-HU03 una fila que no cumple el esquema local (por ejemplo, sin un campo obligatorio) no se
+        // aplica; las demás de la página sí.
+        if consulta.execute(&mut *tx).await.is_ok() {
+            tocadas.push((tipo.clone(), id, false));
+        }
+    }
+    Ok(tocadas)
 }
 
 #[cfg(test)]
@@ -240,11 +522,15 @@ mod pruebas {
         tauri::async_runtime::block_on(f)
     }
 
-    /// Doble de la nube: responde `applied` a todo o falla como se le indique, y guarda lo recibido.
+    /// Doble de la nube: responde `applied` a todo (o lo indicado en `respuestas`), falla como se le indique y
+    /// guarda lo recibido.
     #[derive(Default)]
     struct NubeDePrueba {
         falla: Option<FallaDeAuth>,
         recibidos: Mutex<Vec<SyncPushParams>>,
+        respuestas: Mutex<Vec<SyncChangeResult>>,
+        paginas: Mutex<Vec<SyncPullResult>>,
+        hora: Option<i64>,
     }
 
     impl NubeDeSincronizacion for NubeDePrueba {
@@ -257,21 +543,55 @@ mod pruebas {
             if let Some(falla) = &self.falla {
                 return Err(falla.clone());
             }
+            let propias = std::mem::take(&mut *self.respuestas.lock().unwrap());
             Ok(SyncPushResult {
                 server_now: Instant(instante(AHORA + 500)),
                 results: params
                     .p_changes
                     .iter()
-                    .map(|c| SyncChangeResult {
-                        change_id: c.change_id,
-                        status: SyncChangeStatus::Applied,
-                        conflict: false,
-                        reason: None,
-                        row: None,
+                    .map(|c| {
+                        propias
+                            .iter()
+                            .find(|r| r.change_id == c.change_id)
+                            .cloned()
+                            .unwrap_or(SyncChangeResult {
+                                change_id: c.change_id,
+                                status: SyncChangeStatus::Applied,
+                                conflict: false,
+                                reason: None,
+                                row: None,
+                            })
                     })
                     .collect(),
                 max_seq: 1,
             })
+        }
+
+        async fn sync_pull(
+            &self,
+            _token: &str,
+            params: &SyncPullParams,
+        ) -> Result<SyncPullResult, FallaDeAuth> {
+            if let Some(falla) = &self.falla {
+                return Err(falla.clone());
+            }
+            let mut paginas = self.paginas.lock().unwrap();
+            Ok(if paginas.is_empty() {
+                SyncPullResult {
+                    server_now: Instant(instante(AHORA)),
+                    rows: Vec::new(),
+                    next_seq: params.p_since_seq,
+                    has_more: false,
+                }
+            } else {
+                paginas.remove(0)
+            })
+        }
+
+        async fn server_time(&self, _token: &str) -> Result<Instant, FallaDeAuth> {
+            self.hora
+                .map(|h| Instant(instante(h)))
+                .ok_or(FallaDeAuth::SinRespuesta)
         }
     }
 
@@ -299,11 +619,20 @@ mod pruebas {
     };
 
     fn ciclo(base: &BaseLocal, nube: &NubeDePrueba, ahora: i64) -> bool {
-        bloquear(enviar(base, nube, &SESION, true, ahora)).unwrap()
+        bloquear(enviar(base, nube, &SESION, true, false, ahora))
+            .unwrap()
+            .llamo
     }
 
     fn sin_conexion(base: &BaseLocal, nube: &NubeDePrueba, ahora: i64) -> bool {
-        bloquear(enviar(base, nube, &SESION, false, ahora)).unwrap()
+        bloquear(enviar(base, nube, &SESION, false, false, ahora))
+            .unwrap()
+            .llamo
+    }
+
+    /// Al recuperar la conexión: envía de inmediato (forzado).
+    fn al_reconectar(base: &BaseLocal, nube: &NubeDePrueba, ahora: i64) -> Ciclo {
+        bloquear(enviar(base, nube, &SESION, true, true, ahora)).unwrap()
     }
 
     fn encolar(base: &BaseLocal, tipo: &str, id: &str, ahora: i64) {
@@ -435,5 +764,318 @@ mod pruebas {
         sin_conexion(&base, &nube, AHORA + 5_000);
         let e = bloquear(estado(&base)).unwrap();
         assert_eq!((e.status, e.pending_count), (SyncState::Offline, 1));
+    }
+
+    // HE-15-HU03: una cuenta con la semilla (perfil y columnas) para aplicar tarjetas.
+    use crate::servicio_del_planificador::pruebas::{POR_HACER, con_semilla};
+
+    const MARCA: &str = "2026-11-14T10:00:00.000Z";
+
+    fn con_tarjeta() -> crate::servicio_del_planificador::ServicioDelPlanificador<
+        crate::servicio_del_planificador::pruebas::CalendarioDePrueba,
+    > {
+        let servicio = con_semilla();
+        bloquear(async {
+            sqlx::query(
+                "INSERT INTO card (id, user_id, created_at, type, title, due_date, column_id, position)                  VALUES (?, ?, ?, 'task', 'Informe', '2026-11-20', ?, 1024)",
+            )
+            .bind(TARJETA)
+            .bind(USUARIO)
+            .bind(MARCA)
+            .bind(POR_HACER)
+            .execute(servicio.base().pool().await.unwrap())
+            .await
+            .unwrap();
+        });
+        servicio
+    }
+
+    fn fila_de_tarjeta(campos: serde_json::Value, borrada: bool) -> SyncRow {
+        serde_json::from_value(serde_json::json!({
+            "entity_kind": "card",
+            "entity_id": TARJETA,
+            "fields": campos,
+            "field_mods": { "title": "2026-11-14T12:00:00.000Z" },
+            "deleted_at": if borrada { serde_json::json!("2026-11-14T12:00:00.000Z") } else { serde_json::Value::Null },
+            "updated_seq": 9,
+        }))
+        .unwrap()
+    }
+
+    fn resultado(
+        estado: SyncChangeStatus,
+        conflicto: bool,
+        fila: Option<SyncRow>,
+    ) -> SyncChangeResult {
+        SyncChangeResult {
+            change_id: 1,
+            status: estado,
+            conflict: conflicto,
+            reason: None,
+            row: fila,
+        }
+    }
+
+    fn titulo(base: &BaseLocal) -> Option<String> {
+        bloquear(async {
+            sqlx::query_scalar("SELECT title FROM card WHERE id = ?")
+                .bind(TARJETA)
+                .fetch_optional(base.pool().await.unwrap())
+                .await
+                .unwrap()
+        })
+    }
+
+    #[test]
+    fn ca_he_15_hu03_ca01() {
+        // HE-15-HU03-CA01 · Al reconectarse se envía de inmediato (ET06), sin esperar el minuto del reintento, se
+        // descarga el resultado final y el indicador termina «Sincronizado» (ET08).
+        let base = BaseLocal::en_memoria();
+        let nube = NubeDePrueba::default();
+        encolar(&base, "card", TARJETA, AHORA);
+        encolar(&base, "card", "00000000-0000-4000-8000-0000000000ab", AHORA);
+        sin_conexion(&base, &nube, AHORA + 1_000);
+        let envio = al_reconectar(&base, &nube, AHORA + 1_500);
+        assert!(envio.llamo);
+        assert_eq!(envio.cantidad, 2);
+        let descarga = bloquear(descargar(&base, &nube, &SESION)).unwrap();
+        assert!(descarga.llamo);
+        let e = bloquear(estado(&base)).unwrap();
+        assert_eq!((e.status, e.pending_count), (SyncState::Synced, 0));
+    }
+
+    #[test]
+    fn ca_he_15_hu03_ca02() {
+        // HE-15-HU03-CA02 · Mismo campo en dos computadores: la nube conserva la versión más reciente
+        // (`superseded`, `conflict`) y este computador la adopta (ET01, ET04); cuenta como conflicto de tarjeta.
+        let servicio = con_tarjeta();
+        let base = servicio.base();
+        encolar(base, "card", TARJETA, AHORA - 5_000);
+        let nube = NubeDePrueba::default();
+        nube.respuestas.lock().unwrap().push(resultado(
+            SyncChangeStatus::Superseded,
+            true,
+            Some(fila_de_tarjeta(
+                serde_json::json!({ "title": "Informe final" }),
+                false,
+            )),
+        ));
+        let envio = al_reconectar(base, &nube, AHORA);
+        assert_eq!(envio.conflictos_de_tarjetas, 1);
+        assert_eq!(titulo(base).as_deref(), Some("Informe final"));
+        assert_eq!(bloquear(estado(base)).unwrap().pending_count, 0);
+    }
+
+    #[test]
+    fn ca_he_15_hu03_ca03() {
+        // HE-15-HU03-CA03 · Se pierde la conexión durante el envío: los cambios siguen pendientes (ET07) y se
+        // envían en la siguiente reconexión, sin perder información.
+        let base = base_con_cambio(AHORA - 5_000);
+        let caida = NubeDePrueba {
+            falla: Some(FallaDeAuth::SinConexion),
+            ..Default::default()
+        };
+        assert!(al_reconectar(&base, &caida, AHORA).llamo);
+        let e = bloquear(estado(&base)).unwrap();
+        assert_eq!((e.status, e.pending_count), (SyncState::Offline, 1));
+        let sana = NubeDePrueba::default();
+        assert_eq!(al_reconectar(&base, &sana, AHORA + 1_000).cantidad, 1);
+        assert_eq!(
+            sana.recibidos.lock().unwrap()[0].p_changes[0].fields["title"].value,
+            "Informe"
+        );
+        assert_eq!(bloquear(estado(&base)).unwrap().pending_count, 0);
+    }
+
+    #[test]
+    fn ca_he_15_hu03_ca04() {
+        // HE-15-HU03-CA04 · Campos distintos: la nube combina (`merged` sin `conflict`, ET02) y este computador
+        // adopta la fila con ambos cambios, sin contarlo como conflicto.
+        let servicio = con_tarjeta();
+        let base = servicio.base();
+        encolar(base, "card", TARJETA, AHORA - 5_000);
+        let nube = NubeDePrueba::default();
+        nube.respuestas.lock().unwrap().push(resultado(
+            SyncChangeStatus::Merged,
+            false,
+            Some(fila_de_tarjeta(
+                serde_json::json!({ "title": "T", "description": "Con anexos" }),
+                false,
+            )),
+        ));
+        let envio = al_reconectar(base, &nube, AHORA);
+        assert_eq!(envio.conflictos_de_tarjetas, 0);
+        let descripcion: Option<String> = bloquear(async {
+            sqlx::query_scalar("SELECT description FROM card WHERE id = ?")
+                .bind(TARJETA)
+                .fetch_one(base.pool().await.unwrap())
+                .await
+                .unwrap()
+        });
+        assert_eq!(descripcion.as_deref(), Some("Con anexos"));
+        assert_eq!(titulo(base).as_deref(), Some("T"));
+    }
+
+    #[test]
+    fn ca_he_15_hu03_ca05() {
+        // HE-15-HU03-CA05 · La eliminación es más reciente: la nube responde `deleted` con `conflict` y la tarjeta
+        // se elimina en este computador (ET03).
+        let servicio = con_tarjeta();
+        let base = servicio.base();
+        encolar(base, "card", TARJETA, AHORA - 5_000);
+        let nube = NubeDePrueba::default();
+        nube.respuestas.lock().unwrap().push(resultado(
+            SyncChangeStatus::Deleted,
+            true,
+            Some(fila_de_tarjeta(serde_json::json!({}), true)),
+        ));
+        let envio = al_reconectar(base, &nube, AHORA);
+        assert_eq!(envio.conflictos_de_tarjetas, 1);
+        assert_eq!(titulo(base), None);
+        assert_eq!(
+            envio.cambiadas,
+            vec![("card".to_string(), TARJETA.to_string(), true)]
+        );
+    }
+
+    #[test]
+    fn ca_he_15_hu03_ca06() {
+        // HE-15-HU03-CA06 · La modificación es más reciente que la eliminación hecha aquí: la nube conserva la
+        // tarjeta (`superseded`, `conflict`) y este computador la vuelve a tener con esa modificación.
+        let servicio = con_tarjeta();
+        let base = servicio.base();
+        bloquear(async {
+            let pool = base.pool().await.unwrap();
+            sqlx::query("DELETE FROM card WHERE id = ?")
+                .bind(TARJETA)
+                .execute(pool)
+                .await
+                .unwrap();
+            let mut c = pool.acquire().await.unwrap();
+            encolar_cambio(
+                &mut c,
+                "card",
+                TARJETA,
+                "delete",
+                &serde_json::json!({}),
+                &instante(AHORA - 5_000),
+            )
+            .await
+            .unwrap();
+        });
+        let nube = NubeDePrueba::default();
+        nube.respuestas.lock().unwrap().push(resultado(
+            SyncChangeStatus::Superseded,
+            true,
+            Some(fila_de_tarjeta(
+                serde_json::json!({
+                    "title": "Informe revisado", "type": "task", "due_date": "2026-11-20",
+                    "column_id": POR_HACER, "position": 1024, "created_at": MARCA
+                }),
+                false,
+            )),
+        ));
+        let envio = al_reconectar(base, &nube, AHORA);
+        assert_eq!(envio.conflictos_de_tarjetas, 1);
+        assert_eq!(titulo(base).as_deref(), Some("Informe revisado"));
+    }
+
+    #[test]
+    fn ca_he_15_hu03_ca07() {
+        // HE-15-HU03-CA07 · Se envían en el orden en que se hicieron; la misma tarjeta editada dos veces viaja con
+        // su último valor, de modo que la nube queda con el resultado del último.
+        let base = BaseLocal::en_memoria();
+        let otra = "00000000-0000-4000-8000-0000000000ab";
+        encolar(&base, "card", TARJETA, AHORA);
+        encolar(&base, "card", otra, AHORA + 1);
+        bloquear(async {
+            let mut c = base.pool().await.unwrap().acquire().await.unwrap();
+            encolar_cambio(
+                &mut c,
+                "card",
+                TARJETA,
+                "upsert",
+                &serde_json::json!({ "title": { "value": "Último", "modified_at": instante(AHORA + 2) } }),
+                &instante(AHORA + 2),
+            )
+            .await
+            .unwrap();
+        });
+        let nube = NubeDePrueba::default();
+        al_reconectar(&base, &nube, AHORA + 3);
+        let enviados = nube.recibidos.lock().unwrap();
+        let cambios = &enviados[0].p_changes;
+        let ids: Vec<i64> = cambios.iter().map(|c| c.change_id).collect();
+        assert!(ids.windows(2).all(|par| par[0] < par[1]));
+        assert_eq!(cambios[0].entity_id.0, TARJETA);
+        assert_eq!(cambios[0].fields["title"].value, "Último");
+        assert_eq!(cambios[1].entity_id.0, otra);
+    }
+
+    #[test]
+    fn ca_he_15_hu03_ca08() {
+        // HE-15-HU03-CA08 · Reloj del computador 3 h atrasado: al reconectarse se mide la diferencia con el
+        // servidor (ET05) y `sync_push` la recibe para corregir las horas antes de comparar.
+        let base = base_con_cambio(AHORA - 5_000);
+        let tres_horas = 3 * 3_600_000;
+        let nube = NubeDePrueba {
+            hora: Some(AHORA + tres_horas),
+            ..Default::default()
+        };
+        bloquear(calibrar(&base, &nube, &SESION, AHORA)).unwrap();
+        al_reconectar(&base, &nube, AHORA);
+        assert_eq!(
+            nube.recibidos.lock().unwrap()[0].p_clock_offset_ms,
+            tres_horas
+        );
+    }
+
+    #[test]
+    fn descargar_aplica_sin_pisar_un_cambio_pendiente_mas_reciente() {
+        // datos.md, Modelo · 6: un campo con cambio pendiente más reciente que el descargado no se sobrescribe;
+        // los demás campos sí se aplican, y el cursor avanza.
+        let servicio = con_tarjeta();
+        let base = servicio.base();
+        bloquear(async {
+            let mut c = base.pool().await.unwrap().acquire().await.unwrap();
+            encolar_cambio(
+                &mut c,
+                "card",
+                TARJETA,
+                "upsert",
+                &serde_json::json!({ "title": { "value": "Mío", "modified_at": "2026-11-14T13:00:00.000Z" } }),
+                "2026-11-14T13:00:00.000Z",
+            )
+            .await
+            .unwrap();
+        });
+        let nube = NubeDePrueba::default();
+        nube.paginas.lock().unwrap().push(SyncPullResult {
+            server_now: Instant(instante(AHORA)),
+            rows: vec![fila_de_tarjeta(
+                serde_json::json!({ "title": "De otro", "description": "Nueva" }),
+                false,
+            )],
+            next_seq: 9,
+            has_more: false,
+        });
+        let r = bloquear(descargar(base, &nube, &SESION)).unwrap();
+        assert_eq!(r.cantidad, 1);
+        assert_eq!(titulo(base).as_deref(), Some("Informe"));
+        let (descripcion, cursor): (Option<String>, i64) = bloquear(async {
+            let pool = base.pool().await.unwrap();
+            (
+                sqlx::query_scalar("SELECT description FROM card WHERE id = ?")
+                    .bind(TARJETA)
+                    .fetch_one(pool)
+                    .await
+                    .unwrap(),
+                sqlx::query_scalar("SELECT last_pulled_seq FROM sync_state WHERE id = 1")
+                    .fetch_one(pool)
+                    .await
+                    .unwrap(),
+            )
+        });
+        assert_eq!((descripcion.as_deref(), cursor), (Some("Nueva"), 9));
     }
 }

@@ -312,6 +312,35 @@ impl crate::motor_de_sincronizacion::NubeDeSincronizacion for ClienteDeSupabase 
             .await?;
         serde_json::from_str(&texto).map_err(|_| FallaDeAuth::SinRespuesta)
     }
+
+    async fn sync_pull(
+        &self,
+        token: &str,
+        params: &crate::tipos::SyncPullParams,
+    ) -> Result<crate::tipos::SyncPullResult, FallaDeAuth> {
+        let cuerpo = serde_json::to_value(params).map_err(|_| FallaDeAuth::SinRespuesta)?;
+        let texto = self
+            .enviar_como(
+                reqwest::Method::POST,
+                "/rest/v1/rpc/sync_pull",
+                Some(cuerpo),
+                Some(token),
+            )
+            .await?;
+        serde_json::from_str(&texto).map_err(|_| FallaDeAuth::SinRespuesta)
+    }
+
+    async fn server_time(&self, token: &str) -> Result<crate::tipos::Instant, FallaDeAuth> {
+        let texto = self
+            .enviar_como(
+                reqwest::Method::POST,
+                "/rest/v1/rpc/server_time",
+                Some(serde_json::json!({})),
+                Some(token),
+            )
+            .await?;
+        serde_json::from_str(&texto).map_err(|_| FallaDeAuth::SinRespuesta)
+    }
 }
 
 #[cfg(test)]
