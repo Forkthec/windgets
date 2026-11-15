@@ -10,18 +10,21 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::cliente_de_supabase::ClienteDeSupabase;
-use crate::repositorios_y_archivos_locales::almacen_de_la_aplicacion;
+use crate::repositorios_y_archivos_locales::{BaseLocal, almacen_de_la_aplicacion};
 use crate::servicio_de_sesion::{ConMensaje, RelojDelSistema, ServicioDeSesion};
+use crate::servicio_del_planificador::{CalendarioDelSistema, ServicioDelPlanificador};
 use crate::tipos::{
     AppError, AuthRegisterStartParams, AuthRegisterStartResult, AuthRegisterVerifyParams,
-    AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, CodeSent, Connectivity,
-    EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
-    EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, NoParams, SessionInfo,
+    AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, Card, CardCreateParams, ChangeOp,
+    CodeSent, Connectivity, EntityChange, ErrorCode, EventMapConnectivityChanged,
+    EventMapSessionChanged, EventMapSessionChangedReason, EventMapSessionChangedState, IpcErr,
+    IpcOk, IpcResult, Label, NoParams, OriginKind, SessionInfo,
 };
 
 /// El Núcleo que ven los comandos.
 pub struct Nucleo {
     pub sesion: ServicioDeSesion<ClienteDeSupabase, RelojDelSistema>,
+    pub planificador: ServicioDelPlanificador<CalendarioDelSistema>,
 }
 
 impl Nucleo {
@@ -31,6 +34,10 @@ impl Nucleo {
                 ClienteDeSupabase::desde_compilacion(),
                 RelojDelSistema,
                 almacen_de_la_aplicacion(),
+            ),
+            planificador: ServicioDelPlanificador::nuevo(
+                BaseLocal::de_la_aplicacion(),
+                CalendarioDelSistema,
             ),
         }
     }
@@ -198,4 +205,70 @@ pub fn auth_get_session(
 ) -> IpcResult<AuthSessionState> {
     let _ = params;
     correcto(nucleo.sesion.estado_de_sesion())
+}
+
+/// El `user_id` de la sesión guardada: los comandos del planificador solo se usan con la sesión iniciada
+/// (RT-01). Sin sesión no hay pantalla que los llame; si pasara, la respuesta es `internal.unexpected`.
+fn usuario(nucleo: &Nucleo) -> Result<String, AppError> {
+    nucleo
+        .sesion
+        .sesion_guardada()
+        .map(|s| s.user_id.to_lowercase())
+        .ok_or(AppError {
+            code: ErrorCode::InternalUnexpected,
+            message: String::new(),
+            field: None,
+            params: None,
+        })
+}
+
+/// EV-07 `cards_changed` tras crear, editar, mover, completar o eliminar tarjetas en este computador.
+fn avisar_tarjetas(app: &AppHandle, ids: Vec<crate::tipos::Uuid>, op: ChangeOp) {
+    let _ = app.emit(
+        "cards_changed",
+        EntityChange {
+            ids,
+            op,
+            origin: OriginKind::Local,
+        },
+    );
+}
+
+/// IPC-CARD-01 `card_create` (HE-07-HU01). Guarda en la base local, con o sin conexión (CA12), y emite
+/// `cards_changed` para que el tablero y las demás vistas muestren la tarjeta (ET14).
+#[tauri::command]
+pub async fn card_create(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: CardCreateParams,
+) -> Result<IpcResult<Card>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.crear_tarjeta(&user_id, params).await,
+        Err(e) => Err(e),
+    };
+    if let Ok(creada) = &r {
+        avisar_tarjetas(&app, vec![creada.valor.id.clone()], ChangeOp::Upsert);
+    }
+    Ok(con_mensaje(r))
+}
+
+/// IPC-LABEL-01 `label_list`: etiquetas en orden alfabético (D-165), para el campo Etiquetas del Formulario de
+/// tarjeta (HE-07-HU01-ET12). Los textos de estado vacío los pone la vista (HE-08-HU01, HE-07-HU02).
+#[tauri::command]
+pub async fn label_list(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<Vec<Label>>, ()> {
+    let _ = params;
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.etiquetas(&user_id).await,
+        Err(e) => Err(e),
+    };
+    Ok(match r {
+        Ok(etiquetas) => correcto(etiquetas),
+        Err(error) => IpcResult::Err(IpcErr {
+            ok: false.into(),
+            error,
+        }),
+    })
 }

@@ -29,6 +29,8 @@ pub fn run() {
             puente_ipc::auth_register_cancel,
             puente_ipc::auth_sign_in,
             puente_ipc::auth_get_session,
+            puente_ipc::card_create,
+            puente_ipc::label_list,
         ])
         .setup(|app| {
             puente_ipc::vigilar_conexion(app.handle().clone());

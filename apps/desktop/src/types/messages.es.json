@@ -13,8 +13,14 @@
   "CORREO_YA_REGISTRADO": "Este correo electrónico ya está registrado.",
   "CREDENCIALES_INCORRECTAS": "Correo electrónico o contraseña incorrectos.",
   "DEMASIADOS_INTENTOS": "Demasiados intentos. Espera unos minutos e intenta de nuevo.",
+  "DESCRIPCION_MUY_LARGA": "La descripción no puede superar los 1000 caracteres.",
+  "FECHA_INVALIDA": "Diligencia una fecha válida.",
+  "FECHA_LIMITE_ANTERIOR_A_HOY": "La fecha límite no puede ser anterior a hoy.",
+  "MAXIMO_ETIQUETAS": "Puedes asignar máximo 5 etiquetas por tarjeta.",
   "REENVIO_EN_SEGUNDOS": "Puedes pedir un nuevo código en <segundos restantes> s.",
   "SERVICIO_NO_DISPONIBLE": "No pudimos completar la operación. Intenta de nuevo más tarde.",
   "SIN_CONEXION_INICIO": "No hay conexión a internet. Conéctate para iniciar sesión.",
-  "SIN_CONEXION_REGISTRO": "No hay conexión a internet. Conéctate para crear tu cuenta."
+  "SIN_CONEXION_REGISTRO": "No hay conexión a internet. Conéctate para crear tu cuenta.",
+  "TARJETA_CREADA": "Tarjeta creada.",
+  "TITULO_MUY_LARGO": "El título no puede superar los 100 caracteres."
 }

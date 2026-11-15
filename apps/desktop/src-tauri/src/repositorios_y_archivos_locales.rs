@@ -92,6 +92,42 @@ impl BaseLocal {
     }
 }
 
+/// Encola un cambio en `pending_change` dentro de la transacción de la escritura (arquitectura.md,
+/// OutboxRepository: «misma transacción»). Un cambio pendiente por entidad: uno nuevo se funde con el que ya
+/// esperaba (H-D-11); un `delete` deja los campos en `{}` (HE-15-HU03-ET04).
+pub async fn encolar_cambio(
+    tx: &mut sqlx::SqliteConnection,
+    entity_kind: &str,
+    entity_id: &str,
+    op: &str,
+    fields: &serde_json::Value,
+    ahora: &str,
+) -> Result<(), sqlx::Error> {
+    let fields = if op == "delete" {
+        "{}".to_string()
+    } else {
+        fields.to_string()
+    };
+    sqlx::query(
+        "INSERT INTO pending_change (entity_kind, entity_id, op, fields, modified_at, created_at) \
+         VALUES (?, ?, ?, ?, ?, ?) \
+         ON CONFLICT (entity_kind, entity_id) DO UPDATE SET \
+           op = excluded.op, \
+           fields = CASE WHEN excluded.op = 'delete' THEN '{}' \
+                         ELSE json_patch(pending_change.fields, excluded.fields) END, \
+           modified_at = excluded.modified_at",
+    )
+    .bind(entity_kind)
+    .bind(entity_id)
+    .bind(op)
+    .bind(fields)
+    .bind(ahora)
+    .bind(ahora)
+    .execute(tx)
+    .await?;
+    Ok(())
+}
+
 #[cfg(windows)]
 mod dpapi;
 
@@ -235,7 +271,7 @@ mod pruebas {
             assert_eq!(modo, "wal");
             base.pool().await.unwrap().close().await;
             let otra = BaseLocal::en_archivo(&ruta);
-            assert!(otra.pool().await.is_ok());
+            otra.pool().await.unwrap();
             otra.pool().await.unwrap().close().await;
         });
         let _ = std::fs::remove_dir_all(&carpeta);

@@ -59,6 +59,30 @@ const respuestas: Respuestas = {
     email.trim().toLowerCase() === CUENTA_SIMULADA.email && password === CONTRASENA_SIMULADA
       ? { ok: true, value: { user_id: 'simulado', alias: CUENTA_SIMULADA.alias } }
       : error({ code: 'auth.invalid_credentials', message: textos.CREDENCIALES_INCORRECTAS }),
+  // HE-07-HU01: el simulado no tiene etiquetas y crea la tarjeta tal cual llega, al final de Por hacer.
+  label_list: () => ({ ok: true, value: [] }),
+  card_create: (p) => ({
+    ok: true,
+    value: {
+      id: crypto.randomUUID(),
+      type: p.type ?? 'task',
+      title: p.title.trim(),
+      description: p.description ?? null,
+      priority: p.priority ?? null,
+      due_date: p.due_date,
+      column_id: 'por-hacer',
+      position: 1024,
+      previous_column_id: null,
+      completed_on: null,
+      scheduled_date: null,
+      scheduled_hour: null,
+      label_ids: p.label_ids ?? [],
+      is_completed: false,
+      is_overdue: false,
+      created_at: new Date().toISOString(),
+    },
+    result_message: { code: 'card_create', message: textos.TARJETA_CREADA },
+  }),
 };
 
 export async function invocarSimulado<K extends CommandName>(

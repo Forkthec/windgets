@@ -58,6 +58,21 @@ pub const CREDENCIALES_INCORRECTAS: &str = "Correo electrónico o contraseña in
 /// `net.offline` en Inicio de sesión (HE-01-HU04-CA10).
 pub const SIN_CONEXION_INICIO: &str = "No hay conexión a internet. Conéctate para iniciar sesión.";
 
+// HE-07-HU01 · Crear una tarjeta de tipo Tarea, Recordatorio o Evento (IPC-CARD-01 card_create).
+
+/// Resultado de `card_create` (HE-07-HU01-CA01, CA02, CA12; ET16).
+pub const TARJETA_CREADA: &str = "Tarjeta creada.";
+/// `title.too_long` (HE-07-HU01-CA06, ET18).
+pub const TITULO_MUY_LARGO: &str = "El título no puede superar los 100 caracteres.";
+/// `due_date.invalid` (HE-07-HU01-CA08, ET19).
+pub const FECHA_INVALIDA: &str = "Diligencia una fecha válida.";
+/// `due_date.in_past` (HE-07-HU01-CA09, ET20).
+pub const FECHA_LIMITE_ANTERIOR_A_HOY: &str = "La fecha límite no puede ser anterior a hoy.";
+/// `description.too_long` (HE-07-HU01-CA10, ET21).
+pub const DESCRIPCION_MUY_LARGA: &str = "La descripción no puede superar los 1000 caracteres.";
+/// `labels.too_many` (HE-07-HU02-CA02, ET06; IPC-CARD-01).
+pub const MAXIMO_ETIQUETAS: &str = "Puedes asignar máximo 5 etiquetas por tarjeta.";
+
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
     ("SERVICIO_NO_DISPONIBLE", SERVICIO_NO_DISPONIBLE),
@@ -78,6 +93,12 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("REENVIO_EN_SEGUNDOS", REENVIO_EN_SEGUNDOS),
     ("CREDENCIALES_INCORRECTAS", CREDENCIALES_INCORRECTAS),
     ("SIN_CONEXION_INICIO", SIN_CONEXION_INICIO),
+    ("TARJETA_CREADA", TARJETA_CREADA),
+    ("TITULO_MUY_LARGO", TITULO_MUY_LARGO),
+    ("FECHA_INVALIDA", FECHA_INVALIDA),
+    ("FECHA_LIMITE_ANTERIOR_A_HOY", FECHA_LIMITE_ANTERIOR_A_HOY),
+    ("DESCRIPCION_MUY_LARGA", DESCRIPCION_MUY_LARGA),
+    ("MAXIMO_ETIQUETAS", MAXIMO_ETIQUETAS),
 ];
 
 #[cfg(test)]
