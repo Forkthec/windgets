@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useVentanasEmergentes } from '@/reglas/emergentes';
-import type { BoardColumn, Card } from '@/types';
+import type { BoardColumn, Card, CardDetail } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
@@ -13,7 +13,8 @@ import { NOMBRE_DE_PRIORIDAD, NOMBRE_DE_TIPO } from '../tarjeta/nombres';
 // P-KAN-01 Tablero Kanban (Menú principal > Planificador > Tablero Kanban; HE-09-HU01). Las columnas y las
 // tarjetas vienen del Núcleo (IPC-CARD-05); la pantalla se vuelve a leer con cards_changed y columns_changed.
 
-type Ventana = { tipo: 'formulario' } | { tipo: 'detalle'; id: string };
+type Ventana =
+  { tipo: 'formulario' } | { tipo: 'detalle'; id: string } | { tipo: 'edicion'; tarjeta: CardDetail };
 
 /** Una tarjeta en la vista compacta (ET05): tipo (HE-07-HU01-ET15), título, fecha límite y prioridad. */
 function Tarjeta({ tarjeta, alAbrir }: { tarjeta: Card; alAbrir: (id: string) => void }) {
@@ -91,9 +92,20 @@ export function Kanban() {
     [emergentes, leer, mostrarResultado],
   );
 
-  // DP-04: la tarjeta ya no existe (por ejemplo, la eliminó otro computador).
+  // DP-04, HE-07-HU04-CA11: la tarjeta ya no existe (por ejemplo, la eliminó otro computador): se cierran las
+  // ventanas, la tarjeta sale del tablero y se muestra «Esta tarjeta ya no existe.».
   const noExiste = useCallback(
     (mensaje: string) => {
+      emergentes.cerrarTodas();
+      mostrarResultado(mensaje);
+      void leer();
+    },
+    [emergentes, leer, mostrarResultado],
+  );
+
+  // HE-07-HU04-CA01: al guardar la edición, regresa al Detalle de tarjeta actualizado (ET03) con el mensaje.
+  const editada = useCallback(
+    (_: Card, mensaje: string) => {
       emergentes.volver();
       mostrarResultado(mensaje);
       void leer();
@@ -122,10 +134,25 @@ export function Kanban() {
         </div>
       )}
       {ventana?.tipo === 'formulario' && (
-        <FormularioTarjeta alCrear={creada} alCancelar={emergentes.volver} />
+        <FormularioTarjeta alGuardar={creada} alCancelar={emergentes.volver} />
       )}
       {ventana?.tipo === 'detalle' && (
-        <DetalleTarjeta id={ventana.id} alCerrar={emergentes.volver} alNoExistir={noExiste} />
+        <DetalleTarjeta
+          id={ventana.id}
+          alCerrar={emergentes.volver}
+          alNoExistir={noExiste}
+          // HE-07-HU04-ET01: «Editar» reemplaza el detalle por el formulario en modo edición (RT-02).
+          alEditar={(tarjeta) => emergentes.pasarA({ tipo: 'edicion', tarjeta })}
+        />
+      )}
+      {ventana?.tipo === 'edicion' && (
+        <FormularioTarjeta
+          tarjeta={ventana.tarjeta}
+          alGuardar={editada}
+          // CA09: «Cancelar» vuelve al detalle con la información anterior.
+          alCancelar={emergentes.volver}
+          alNoExistir={noExiste}
+        />
       )}
     </main>
   );

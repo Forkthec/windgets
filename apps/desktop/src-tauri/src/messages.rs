@@ -73,6 +73,13 @@ pub const DESCRIPCION_MUY_LARGA: &str = "La descripción no puede superar los 10
 /// `labels.too_many` (HE-07-HU02-CA02, ET06; IPC-CARD-01).
 pub const MAXIMO_ETIQUETAS: &str = "Puedes asignar máximo 5 etiquetas por tarjeta.";
 
+// HE-07-HU04 · Editar una tarjeta (IPC-CARD-02 card_update).
+
+/// Resultado de `card_update` (HE-07-HU04-CA01, CA03; ET14).
+pub const TARJETA_ACTUALIZADA: &str = "Tarjeta actualizada.";
+/// Resultado de `card_update` cuando la tarjeta sale de su bloque horario (HE-07-HU04-CA10; ET15).
+pub const TARJETA_ACTUALIZADA_SIN_BLOQUE: &str = "Tarjeta actualizada. Se quitó de su bloque horario porque quedó después de la nueva fecha límite.";
+
 // HE-07-HU03 · Consultar el detalle de una tarjeta (IPC-CARD-04 card_get).
 
 /// `card.not_found` (HE-07-HU04-CA11; DP-04: el mismo texto al consultar, eliminar o mover).
@@ -105,6 +112,11 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("DESCRIPCION_MUY_LARGA", DESCRIPCION_MUY_LARGA),
     ("MAXIMO_ETIQUETAS", MAXIMO_ETIQUETAS),
     ("TARJETA_NO_EXISTE", TARJETA_NO_EXISTE),
+    ("TARJETA_ACTUALIZADA", TARJETA_ACTUALIZADA),
+    (
+        "TARJETA_ACTUALIZADA_SIN_BLOQUE",
+        TARJETA_ACTUALIZADA_SIN_BLOQUE,
+    ),
 ];
 
 #[cfg(test)]

@@ -16,8 +16,9 @@ use crate::repositorios_y_archivos_locales::{BaseLocal, encolar_cambio};
 use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, instante};
 use crate::tipos::{
     AppError, BoardColumn, Card, CardCreateParams, CardDetail, CardDetailColumn,
-    CardDetailLabelsItem, CardDetailTimeBlock, CardListBoardResult, CardType, Column, ColumnRole,
-    DateIso, ErrorCode, Hex, Hour, Instant, Label, Priority, ResultMessage, Uuid,
+    CardDetailLabelsItem, CardDetailTimeBlock, CardListBoardResult, CardType, CardUpdateParams,
+    Column, ColumnRole, DateIso, ErrorCode, Hex, Hour, Instant, Label, Priority, ResultMessage,
+    Uuid,
 };
 
 /// Clave para ordenar nombres de la A a la Z sin distinguir mayúsculas ni tildes (D-165): «Árbol» va con la A.
@@ -396,6 +397,197 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         })
     }
 
+    /// IPC-CARD-02 `card_update` (HE-07-HU04). Mismas reglas de campos que al crear (ET04); la fecha límite
+    /// solo se compara con hoy si cambió (ET08). Si la nueva fecha límite queda antes del día del bloque
+    /// horario, lo quita (ET12, ET13) y el mensaje lo dice (ET15). Si la tarjeta ya no existe, no guarda
+    /// (ET20): `card.not_found`.
+    pub async fn actualizar_tarjeta(
+        &self,
+        user_id: &str,
+        params: CardUpdateParams,
+    ) -> Result<ConMensaje<Card>, AppError> {
+        let id = params.id.0.to_lowercase();
+        let actual = self
+            .tarjeta(user_id, &id)
+            .await?
+            .ok_or_else(tarjeta_no_existe)?;
+        let patch = params.patch;
+        let hoy = self.calendario.hoy();
+
+        let fecha_cambia = patch
+            .due_date
+            .as_ref()
+            .is_some_and(|f| f.0.trim() != actual.due_date.0);
+        let errores = [
+            patch.title.as_deref().and_then(validar_titulo),
+            patch
+                .due_date
+                .as_ref()
+                .filter(|_| fecha_cambia)
+                .and_then(|f| validar_fecha_limite(&f.0, hoy)),
+            patch
+                .description
+                .as_ref()
+                .and_then(|d| validar_descripcion(d.as_deref())),
+            patch
+                .label_ids
+                .as_deref()
+                .and_then(validar_cantidad_de_etiquetas),
+        ];
+        if let Some(primero) = errores.into_iter().flatten().next() {
+            return Err(primero);
+        }
+
+        let ahora = instante(self.calendario.ahora_ms()).0;
+        let mut valores: Vec<(&str, Value)> = Vec::new();
+        if let Some(tipo) = &patch.r#type {
+            valores.push(("type", Value::from(tipo_en_texto(tipo))));
+        }
+        if let Some(titulo) = &patch.title {
+            valores.push(("title", Value::from(titulo.trim())));
+        }
+        let fecha_limite = patch
+            .due_date
+            .as_ref()
+            .filter(|_| fecha_cambia)
+            .map(|f| f.0.trim().to_string());
+        if let Some(f) = &fecha_limite {
+            valores.push(("due_date", Value::from(f.as_str())));
+        }
+        if let Some(descripcion) = &patch.description {
+            let d = descripcion.as_ref().filter(|d| !vacio(d));
+            valores.push(("description", json!(d)));
+        }
+        if let Some(prioridad) = &patch.priority {
+            valores.push((
+                "priority",
+                json!(prioridad.as_ref().map(prioridad_en_texto)),
+            ));
+        }
+        // ET12, ET13: el bloque horario no puede quedar después de la nueva fecha límite.
+        let sale_del_bloque = match (&fecha_limite, &actual.scheduled_date) {
+            (Some(nueva), Some(bloque)) => bloque.0.as_str() > nueva.as_str(),
+            _ => false,
+        };
+        if sale_del_bloque {
+            valores.push(("scheduled_date", Value::Null));
+            valores.push(("scheduled_hour", Value::Null));
+        }
+
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let mut tx = pool.begin().await.map_err(de_sqlx)?;
+        if !valores.is_empty() {
+            let (fields, mods) = campos(&valores, &ahora);
+            let asignaciones: Vec<String> =
+                valores.iter().map(|(c, _)| format!("{c} = ?")).collect();
+            let sql = format!(
+                "UPDATE card SET {}, field_mods = json_patch(field_mods, ?) WHERE id = ? AND user_id = ?",
+                asignaciones.join(", ")
+            );
+            let mut consulta = sqlx::query(&sql);
+            for (_, valor) in &valores {
+                consulta = match valor {
+                    Value::Null => consulta.bind(None::<String>),
+                    Value::String(s) => consulta.bind(s.clone()),
+                    otro => consulta.bind(otro.to_string()),
+                };
+            }
+            consulta
+                .bind(mods.to_string())
+                .bind(&id)
+                .bind(user_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(de_sqlx)?;
+            encolar_cambio(&mut tx, "card", &id, "upsert", &fields, &ahora)
+                .await
+                .map_err(de_sqlx)?;
+        }
+
+        if let Some(nuevas) = patch.label_ids {
+            let nuevas: Vec<String> = nuevas.into_iter().fold(Vec::new(), |mut v, u| {
+                let e = u.0.to_lowercase();
+                if !v.contains(&e) {
+                    v.push(e);
+                }
+                v
+            });
+            for etiqueta in &nuevas {
+                let existe: i64 =
+                    sqlx::query_scalar("SELECT count(*) FROM label WHERE id = ? AND user_id = ?")
+                        .bind(etiqueta)
+                        .bind(user_id)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .map_err(de_sqlx)?;
+                if existe == 0 {
+                    return Err(error(ErrorCode::LabelsNotFound, "", Some("label_ids")));
+                }
+            }
+            let actuales: Vec<String> = actual.label_ids.iter().map(|u| u.0.clone()).collect();
+            for quitada in actuales.iter().filter(|e| !nuevas.contains(e)) {
+                let union = id_de_card_label(&id, quitada);
+                sqlx::query("DELETE FROM card_label WHERE card_id = ? AND label_id = ?")
+                    .bind(&id)
+                    .bind(quitada)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(de_sqlx)?;
+                encolar_cambio(
+                    &mut tx,
+                    "card_label",
+                    &union,
+                    "delete",
+                    &Value::Null,
+                    &ahora,
+                )
+                .await
+                .map_err(de_sqlx)?;
+            }
+            for agregada in nuevas.iter().filter(|e| !actuales.contains(e)) {
+                let union = id_de_card_label(&id, agregada);
+                let (fields, mods) = campos(
+                    &[
+                        ("card_id", Value::from(id.as_str())),
+                        ("label_id", Value::from(agregada.as_str())),
+                    ],
+                    &ahora,
+                );
+                sqlx::query(
+                    "INSERT INTO card_label (id, user_id, created_at, field_mods, card_id, label_id) \
+                     VALUES (?, ?, ?, ?, ?, ?)",
+                )
+                .bind(&union)
+                .bind(user_id)
+                .bind(&ahora)
+                .bind(mods.to_string())
+                .bind(&id)
+                .bind(agregada)
+                .execute(&mut *tx)
+                .await
+                .map_err(de_sqlx)?;
+                encolar_cambio(&mut tx, "card_label", &union, "upsert", &fields, &ahora)
+                    .await
+                    .map_err(de_sqlx)?;
+            }
+        }
+        tx.commit().await.map_err(de_sqlx)?;
+
+        let tarjeta = self
+            .tarjeta(user_id, &id)
+            .await?
+            .ok_or_else(tarjeta_no_existe)?;
+        let mensaje = if sale_del_bloque {
+            messages::TARJETA_ACTUALIZADA_SIN_BLOQUE
+        } else {
+            messages::TARJETA_ACTUALIZADA
+        };
+        Ok(ConMensaje {
+            valor: tarjeta,
+            mensaje: resultado("card_update", mensaje),
+        })
+    }
+
     /// IPC-LABEL-01 `label_list`: las etiquetas del usuario en orden alfabético por nombre, de la A a la Z
     /// (D-165). El Formulario de tarjeta solo ofrece estas (HE-07-HU02-ET03).
     pub async fn etiquetas(&self, user_id: &str) -> Result<Vec<Label>, AppError> {
@@ -648,6 +840,9 @@ fn tarjeta_de_fila(
 }
 
 #[cfg(test)]
+mod pruebas_de_edicion;
+
+#[cfg(test)]
 pub(crate) mod pruebas {
     use super::*;
     use std::sync::Arc;
@@ -773,7 +968,7 @@ pub(crate) mod pruebas {
         })
     }
 
-    fn params(titulo: &str, fecha_limite: &str) -> CardCreateParams {
+    pub(crate) fn params(titulo: &str, fecha_limite: &str) -> CardCreateParams {
         CardCreateParams {
             r#type: None,
             title: titulo.into(),
@@ -784,7 +979,7 @@ pub(crate) mod pruebas {
         }
     }
 
-    fn crear(
+    pub(crate) fn crear(
         servicio: &ServicioDelPlanificador<CalendarioDePrueba>,
         p: CardCreateParams,
     ) -> Result<ConMensaje<Card>, AppError> {

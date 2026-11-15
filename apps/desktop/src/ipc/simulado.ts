@@ -115,6 +115,22 @@ const respuestas: Respuestas = {
   // HE-09-HU01: el tablero con las columnas por defecto y las tarjetas creadas.
   card_list_board: () => ({ ok: true, value: { columns: tableroSimulado() } }),
   column_list: () => ({ ok: true, value: tableroSimulado().map((c) => c.column) }),
+  // HE-07-HU04: aplica los cambios a la tarjeta creada.
+  card_update: ({ id, patch }) => {
+    const t = tarjetasSimuladas.find((c) => c.id === id);
+    if (!t) return error({ code: 'card.not_found', message: textos.TARJETA_NO_EXISTE });
+    if (patch.type !== undefined) t.type = patch.type;
+    if (patch.title !== undefined) t.title = patch.title;
+    if (patch.due_date !== undefined) t.due_date = patch.due_date;
+    if (patch.description !== undefined) t.description = patch.description;
+    if (patch.priority !== undefined) t.priority = patch.priority;
+    if (patch.label_ids !== undefined) t.label_ids = patch.label_ids;
+    return {
+      ok: true,
+      value: t,
+      result_message: { code: 'card_update', message: textos.TARJETA_ACTUALIZADA },
+    };
+  },
   // HE-07-HU03: el detalle de una tarjeta creada (el simulado no tiene etiquetas ni bloques horarios).
   card_get: ({ id }) => {
     const t = tarjetasSimuladas.find((c) => c.id === id);

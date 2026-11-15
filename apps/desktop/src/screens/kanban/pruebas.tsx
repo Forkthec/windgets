@@ -9,6 +9,7 @@ import type {
   Card,
   CardCreateParams,
   CardDetail,
+  CardUpdateParams,
   Column,
   CommandMap,
   CommandName,
@@ -124,6 +125,27 @@ export function crearNucleo(tarjetas: Card[] = []): {
     ['label_list', () => ({ ok: true, value: ETIQUETAS })],
     ['card_list_board', () => ({ ok: true, value: { columns: tablero() } })],
     ['column_list', () => ({ ok: true, value: tablero().map((c) => c.column) })],
+    [
+      'card_update',
+      (params) => {
+        const { id, patch } = params as CardUpdateParams;
+        const t = nucleo.tarjetas.find((c) => c.id === id);
+        if (!t) {
+          return { ok: false, error: { code: 'card.not_found', message: 'Esta tarjeta ya no existe.' } };
+        }
+        if (patch.type !== undefined) t.type = patch.type;
+        if (patch.title !== undefined) t.title = patch.title;
+        if (patch.due_date !== undefined) t.due_date = patch.due_date;
+        if (patch.description !== undefined) t.description = patch.description;
+        if (patch.priority !== undefined) t.priority = patch.priority;
+        if (patch.label_ids !== undefined) t.label_ids = patch.label_ids;
+        return {
+          ok: true,
+          value: t,
+          result_message: { code: 'card_update', message: 'Tarjeta actualizada.' },
+        };
+      },
+    ],
     [
       'card_get',
       (params) => {

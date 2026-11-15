@@ -34,6 +34,7 @@ pub fn run() {
             puente_ipc::card_list_board,
             puente_ipc::column_list,
             puente_ipc::card_get,
+            puente_ipc::card_update,
         ])
         .setup(|app| {
             puente_ipc::vigilar_conexion(app.handle().clone());

@@ -40,3 +40,14 @@ pub use ipc_widgets::*;
 pub use ipc_windi::*;
 pub use mapa_comandos::*;
 pub use rpc::*;
+
+/// Campo de un `patch` que puede faltar (no cambiar), venir en `null` (quitar el valor) o traer un valor:
+/// serde lee `null` como ausente en un `Option<Option<T>>`; con esto `null` llega como `Some(None)`
+/// (IPC-CARD-02 `card_update`: `description?|null`, `priority?|null`).
+pub(crate) fn doble_opcion<'de, D, T>(d: D) -> Result<Option<Option<T>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: serde::Deserialize<'de>,
+{
+    serde::Deserialize::deserialize(d).map(Some)
+}

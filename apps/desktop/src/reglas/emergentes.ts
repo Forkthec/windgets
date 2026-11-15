@@ -11,6 +11,8 @@ export function useVentanasEmergentes<V>() {
   const abrir = useCallback((ventana: V) => setPila([ventana]), []);
   const pasarA = useCallback((ventana: V) => setPila((p) => [...p, ventana]), []);
   const volver = useCallback(() => setPila((p) => p.slice(0, -1)), []);
+  /** Cierra todas las ventanas: la tarjeta que se editaba ya no existe (HE-07-HU04-CA11). */
+  const cerrarTodas = useCallback(() => setPila([]), []);
   const actual: V | undefined = pila[pila.length - 1];
-  return { actual, abrir, pasarA, volver };
+  return { actual, abrir, pasarA, volver, cerrarTodas };
 }

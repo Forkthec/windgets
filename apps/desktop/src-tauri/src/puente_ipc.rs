@@ -16,8 +16,8 @@ use crate::servicio_del_planificador::{CalendarioDelSistema, ServicioDelPlanific
 use crate::tipos::{
     AppError, AuthRegisterStartParams, AuthRegisterStartResult, AuthRegisterVerifyParams,
     AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, Card, CardCreateParams,
-    CardDetail, CardIdParams, CardListBoardResult, ChangeOp, CodeSent, Column, Connectivity,
-    EntityChange, ErrorCode, EventMapConnectivityChanged, EventMapSessionChanged,
+    CardDetail, CardIdParams, CardListBoardResult, CardUpdateParams, ChangeOp, CodeSent, Column,
+    Connectivity, EntityChange, ErrorCode, EventMapConnectivityChanged, EventMapSessionChanged,
     EventMapSessionChangedReason, EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, Label,
     NoParams, OriginKind, SessionInfo,
 };
@@ -321,4 +321,27 @@ pub async fn card_get(
         Ok(user_id) => nucleo.planificador.detalle(&user_id, &params.id.0).await,
         Err(e) => Err(e),
     }))
+}
+
+/// IPC-CARD-02 `card_update` (HE-07-HU04). Emite `cards_changed` para que el tablero y las demás vistas
+/// muestren el cambio en tiempo real (ET10).
+#[tauri::command]
+pub async fn card_update(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: CardUpdateParams,
+) -> Result<IpcResult<Card>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .actualizar_tarjeta(&user_id, params)
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if let Ok(editada) = &r {
+        avisar_tarjetas(&app, vec![editada.valor.id.clone()], ChangeOp::Upsert);
+    }
+    Ok(con_mensaje(r))
 }

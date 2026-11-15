@@ -21,6 +21,8 @@
   "SERVICIO_NO_DISPONIBLE": "No pudimos completar la operación. Intenta de nuevo más tarde.",
   "SIN_CONEXION_INICIO": "No hay conexión a internet. Conéctate para iniciar sesión.",
   "SIN_CONEXION_REGISTRO": "No hay conexión a internet. Conéctate para crear tu cuenta.",
+  "TARJETA_ACTUALIZADA": "Tarjeta actualizada.",
+  "TARJETA_ACTUALIZADA_SIN_BLOQUE": "Tarjeta actualizada. Se quitó de su bloque horario porque quedó después de la nueva fecha límite.",
   "TARJETA_CREADA": "Tarjeta creada.",
   "TARJETA_NO_EXISTE": "Esta tarjeta ya no existe.",
   "TITULO_MUY_LARGO": "El título no puede superar los 100 caracteres."
