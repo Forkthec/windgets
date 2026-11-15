@@ -85,6 +85,17 @@ pub const TARJETA_ACTUALIZADA_SIN_BLOQUE: &str = "Tarjeta actualizada. Se quitó
 /// Resultado de `card_delete` (HE-07-HU05-CA02; ET06).
 pub const TARJETA_ELIMINADA: &str = "Tarjeta eliminada.";
 
+// HE-11-HU02 · Asignar una tarjeta a un bloque horario (IPC-CARD-10 card_assign_time_block).
+
+/// Resultado de `card_assign_time_block` (HE-11-HU02-CA01, CA03; ET09, D-169).
+pub const TARJETA_ASIGNADA_AL_BLOQUE: &str =
+    "Tarjeta asignada al bloque <hora de inicio> – <hora de fin>.";
+/// `time_block.past` (HE-11-HU02-CA04; ET10).
+pub const BLOQUE_YA_PASO: &str = "No puedes asignar tarjetas a un bloque horario que ya pasó.";
+/// `time_block.after_due_date` (HE-11-HU02-CA05; ET11).
+pub const BLOQUE_DESPUES_DE_FECHA_LIMITE: &str =
+    "No puedes programar la tarjeta después de su fecha límite.";
+
 // HE-07-HU03 · Consultar el detalle de una tarjeta (IPC-CARD-04 card_get).
 
 /// `card.not_found` (HE-07-HU04-CA11; DP-04: el mismo texto al consultar, eliminar o mover).
@@ -123,6 +134,12 @@ pub const TEXTOS: &[(&str, &str)] = &[
         TARJETA_ACTUALIZADA_SIN_BLOQUE,
     ),
     ("TARJETA_ELIMINADA", TARJETA_ELIMINADA),
+    ("TARJETA_ASIGNADA_AL_BLOQUE", TARJETA_ASIGNADA_AL_BLOQUE),
+    ("BLOQUE_YA_PASO", BLOQUE_YA_PASO),
+    (
+        "BLOQUE_DESPUES_DE_FECHA_LIMITE",
+        BLOQUE_DESPUES_DE_FECHA_LIMITE,
+    ),
 ];
 
 #[cfg(test)]

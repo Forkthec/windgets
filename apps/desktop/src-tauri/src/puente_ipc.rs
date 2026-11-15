@@ -16,9 +16,9 @@ use crate::servicio_del_planificador::{CalendarioDelSistema, ServicioDelPlanific
 use crate::tipos::{
     AgendaDay, AgendaDayParams, AppError, AuthRegisterStartParams, AuthRegisterStartResult,
     AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, Card,
-    CardCreateParams, CardDetail, CardIdParams, CardListBoardResult, CardMoveParams,
-    CardUpdateParams, ChangeOp, CodeSent, Column, Connectivity, EntityChange, ErrorCode,
-    EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
+    CardAssignTimeBlockParams, CardCreateParams, CardDetail, CardIdParams, CardListBoardResult,
+    CardMoveParams, CardUpdateParams, ChangeOp, CodeSent, Column, Connectivity, EntityChange,
+    ErrorCode, EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
     EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, Label, NoParams, OriginKind,
     SessionInfo,
 };
@@ -397,4 +397,22 @@ pub async fn agenda_get_day(
         Ok(user_id) => nucleo.planificador.agenda(&user_id, &params.date.0).await,
         Err(e) => Err(e),
     }))
+}
+
+/// IPC-CARD-10 `card_assign_time_block` (HE-11-HU02). Emite `cards_changed` para que la agenda, el planificador
+/// diario y el widget Tareas del día muestren la tarjeta en su bloque (ET02).
+#[tauri::command]
+pub async fn card_assign_time_block(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: CardAssignTimeBlockParams,
+) -> Result<IpcResult<Card>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.asignar_bloque(&user_id, params).await,
+        Err(e) => Err(e),
+    };
+    if let Ok(asignada) = &r {
+        avisar_tarjetas(&app, vec![asignada.valor.id.clone()], ChangeOp::Upsert);
+    }
+    Ok(con_mensaje(r))
 }

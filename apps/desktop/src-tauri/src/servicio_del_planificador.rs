@@ -15,10 +15,10 @@ use crate::messages;
 use crate::repositorios_y_archivos_locales::{BaseLocal, encolar_cambio};
 use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, instante};
 use crate::tipos::{
-    AgendaBlock, AgendaDay, AppError, BoardColumn, Card, CardCreateParams, CardDetail,
-    CardDetailColumn, CardDetailLabelsItem, CardDetailTimeBlock, CardListBoardResult,
-    CardMoveParams, CardType, CardUpdateParams, Column, ColumnRole, DateIso, ErrorCode, Hex, Hour,
-    Instant, Label, Placement, Priority, ResultMessage, Uuid,
+    AgendaBlock, AgendaDay, AppError, BoardColumn, Card, CardAssignTimeBlockParams,
+    CardCreateParams, CardDetail, CardDetailColumn, CardDetailLabelsItem, CardDetailTimeBlock,
+    CardListBoardResult, CardMoveParams, CardType, CardUpdateParams, Column, ColumnRole, DateIso,
+    ErrorCode, Hex, Hour, Instant, Label, Placement, Priority, ResultMessage, Uuid,
 };
 
 /// Clave para ordenar nombres de la A a la Z sin distinguir mayúsculas ni tildes (D-165): «Árbol» va con la A.
@@ -856,6 +856,87 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 color_hex: Hex(hex),
             },
             time_block: bloque,
+        })
+    }
+
+    /// IPC-CARD-10 `card_assign_time_block` (HE-11-HU02): asigna la tarjeta a un bloque horario; una tarjeta
+    /// ocupa un solo bloque (ET03) y un bloque admite varias (ET04). No asigna a un bloque cuya hora de fin ya
+    /// pasó (ET06) ni a un día posterior a la fecha límite (ET08).
+    pub async fn asignar_bloque(
+        &self,
+        user_id: &str,
+        params: CardAssignTimeBlockParams,
+    ) -> Result<ConMensaje<Card>, AppError> {
+        let id = params.card_id.0.to_lowercase();
+        let actual = self
+            .tarjeta(user_id, &id)
+            .await?
+            .ok_or_else(tarjeta_no_existe)?;
+        let dia = fecha(&params.date.0).ok_or_else(inesperado)?;
+        let hora = params.hour.0;
+        if hora > 23 {
+            return Err(inesperado());
+        }
+        let hoy = self.calendario.hoy();
+        // El bloque de las <hora> termina a las <hora + 1>: ya pasó si su hora de fin no es posterior a ahora.
+        if dia < hoy || (dia == hoy && hora < self.calendario.hora()) {
+            return Err(error(
+                ErrorCode::TimeBlockPast,
+                messages::BLOQUE_YA_PASO,
+                None,
+            ));
+        }
+        if fecha(&actual.due_date.0).is_some_and(|limite| dia > limite) {
+            return Err(error(
+                ErrorCode::TimeBlockAfterDueDate,
+                messages::BLOQUE_DESPUES_DE_FECHA_LIMITE,
+                None,
+            ));
+        }
+        let dia = dia.format("%Y-%m-%d").to_string();
+        let ahora = instante(self.calendario.ahora_ms()).0;
+        let (fields, mods) = campos(
+            &[
+                ("scheduled_date", Value::from(dia.as_str())),
+                ("scheduled_hour", Value::from(hora)),
+            ],
+            &ahora,
+        );
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let mut tx = pool.begin().await.map_err(de_sqlx)?;
+        sqlx::query(
+            "UPDATE card SET scheduled_date = ?, scheduled_hour = ?, \
+             field_mods = json_patch(field_mods, ?) WHERE id = ? AND user_id = ?",
+        )
+        .bind(&dia)
+        .bind(i64::from(hora))
+        .bind(mods.to_string())
+        .bind(&id)
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(de_sqlx)?;
+        encolar_cambio(&mut tx, "card", &id, "upsert", &fields, &ahora)
+            .await
+            .map_err(de_sqlx)?;
+        tx.commit().await.map_err(de_sqlx)?;
+        let tarjeta = self
+            .tarjeta(user_id, &id)
+            .await?
+            .ok_or_else(tarjeta_no_existe)?;
+        let (inicio, fin) = texto_del_bloque(hora)
+            .split_once(" – ")
+            .map(|(a, b)| (a.to_string(), b.to_string()))
+            .unwrap_or_default();
+        let mensaje = resultado(
+            "card_assign_time_block",
+            &messages::TARJETA_ASIGNADA_AL_BLOQUE
+                .replace("<hora de inicio>", &inicio)
+                .replace("<hora de fin>", &fin),
+        );
+        Ok(ConMensaje {
+            valor: tarjeta,
+            mensaje,
         })
     }
 

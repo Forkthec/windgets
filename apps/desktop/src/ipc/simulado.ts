@@ -155,6 +155,27 @@ const respuestas: Respuestas = {
       },
     };
   },
+  // HE-11-HU02: asigna la tarjeta a un bloque, salvo un bloque que ya terminó o un día después de su fecha límite.
+  card_assign_time_block: ({ card_id, date, hour }) => {
+    const t = tarjetasSimuladas.find((c) => c.id === card_id);
+    if (!t) return error({ code: 'card.not_found', message: textos.TARJETA_NO_EXISTE });
+    const ahora = new Date();
+    const dos = (n: number) => String(n).padStart(2, '0');
+    const hoy = `${ahora.getFullYear()}-${dos(ahora.getMonth() + 1)}-${dos(ahora.getDate())}`;
+    if (date < hoy || (date === hoy && hour < ahora.getHours())) {
+      return error({ code: 'time_block.past', message: textos.BLOQUE_YA_PASO });
+    }
+    if (date > t.due_date) {
+      return error({ code: 'time_block.after_due_date', message: textos.BLOQUE_DESPUES_DE_FECHA_LIMITE });
+    }
+    t.scheduled_date = date;
+    t.scheduled_hour = hour;
+    const message = textos.TARJETA_ASIGNADA_AL_BLOQUE.replace('<hora de inicio>', `${dos(hour)}:00`).replace(
+      '<hora de fin>',
+      `${dos((hour + 1) % 24)}:00`,
+    );
+    return { ok: true, value: t, result_message: { code: 'card_assign_time_block', message } };
+  },
   // HE-09-HU02: mueve la tarjeta, con las reglas de la columna Hecho.
   card_move: ({ card_id, column_id, placement }) => {
     const t = tarjetasSimuladas.find((c) => c.id === card_id);
