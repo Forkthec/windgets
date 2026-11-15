@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { CompletedReport, ReportMeta, ResolvedRange } from '@/types';
+import type { CompletedReport, ComplianceReport, ReportMeta, ResolvedRange } from '@/types';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { fechaVisible } from '../tarjeta/fechas';
 import { GraficaCompletadas } from './GraficaCompletadas';
 import { SelectorRango } from './SelectorRango';
+import { TasaCumplimiento } from './TasaCumplimiento';
 
 // P-REP-01 Reportes (Menú principal > Planificador > Reportes; HE-13). Arriba la barra de filtros y debajo las
 // secciones (HE-13-HU02-ET01); el rango de fechas aplica a todas (HE-13-HU01-ET09). Cada sección pide su cálculo
@@ -17,6 +18,7 @@ export function Reports() {
   const [meta, setMeta] = useState<ReportMeta | null>(null);
   const [rango, setRango] = useState<ResolvedRange | null>(null);
   const [completadas, setCompletadas] = useState<CompletedReport | null>(null);
+  const [cumplimiento, setCumplimiento] = useState<ComplianceReport | null>(null);
 
   useEffect(() => {
     let vigente = true;
@@ -33,6 +35,7 @@ export function Reports() {
     (nuevo: ResolvedRange) => {
       setRango(nuevo);
       setCompletadas(null);
+      setCumplimiento(null);
       // DUDA: HE-13-HU02 el filtro Etiquetas es de HE-13-HU05; hasta entonces, «Todas las etiquetas» (ET02).
       const filter = {
         range: { kind: 'custom' as const, start: nuevo.start, end: nuevo.end },
@@ -40,6 +43,10 @@ export function Reports() {
       };
       void invocar('report_get_completed', { filter }).then((r) => {
         if (r.ok) setCompletadas(r.value);
+      });
+      // HE-13-HU03-ET05: la tasa de cumplimiento con los mismos filtros.
+      void invocar('report_get_compliance', { filter }).then((r) => {
+        if (r.ok) setCumplimiento(r.value);
       });
     },
     [invocar],
@@ -71,7 +78,12 @@ export function Reports() {
       {sinTarjetas ? (
         <EstadoVacio texto={SIN_TARJETAS} />
       ) : (
-        meta && <GraficaCompletadas reporte={completadas} />
+        meta && (
+          <>
+            <GraficaCompletadas reporte={completadas} />
+            <TasaCumplimiento reporte={cumplimiento} />
+          </>
+        )
       )}
     </main>
   );

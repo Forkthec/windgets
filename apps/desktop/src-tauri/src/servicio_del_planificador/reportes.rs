@@ -5,8 +5,9 @@ use chrono::{Datelike, Duration, Months, NaiveDate};
 
 use super::*;
 use crate::tipos::{
-    CompletedPoint, CompletedReport, RangeInput, RangeInputVariant1Kind, ReportFilter,
-    ReportFilterParams, ReportGrouping, ReportMeta, ReportResolveRangeParams, ResolvedRange,
+    CompletedPoint, CompletedReport, ComplianceReport, RangeInput, RangeInputVariant1Kind,
+    ReportFilter, ReportFilterParams, ReportGrouping, ReportMeta, ReportResolveRangeParams,
+    ResolvedRange,
 };
 
 /// Máximo del rango personalizado: 366 días contados ambos extremos (HE-13-HU01-ET08, D-170).
@@ -175,7 +176,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         })
     }
 
-    /// Las tarjetas del usuario que pasan el filtro de etiquetas: su fecha de creación y de completado.
+    /// Las tarjetas del usuario que pasan el filtro de etiquetas: su fecha de creación, de completado y límite.
     /// Sin etiquetas elegidas, todas («Todas las etiquetas», HE-13-HU02-ET02). DUDA: HE-13-HU02 con varias
     /// etiquetas elegidas (HE-13-HU05) se toma la tarjeta que tenga cualquiera de ellas.
     pub(super) async fn tarjetas_del_filtro(
@@ -184,8 +185,8 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         filtro: &ReportFilter,
     ) -> Result<Vec<TarjetaDelReporte>, AppError> {
         let pool = self.base.pool().await.map_err(de_sqlx)?;
-        let filas: Vec<(String, String, Option<String>)> = sqlx::query_as(
-            "SELECT id, substr(created_at, 1, 10), completed_on FROM card WHERE user_id = ?",
+        let filas: Vec<(String, String, Option<String>, String)> = sqlx::query_as(
+            "SELECT id, substr(created_at, 1, 10), completed_on, due_date FROM card WHERE user_id = ?",
         )
         .bind(user_id)
         .fetch_all(pool)
@@ -207,16 +208,17 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         };
         Ok(filas
             .into_iter()
-            .filter(|(id, _, _)| {
+            .filter(|(id, _, _, _)| {
                 elegidas.is_empty()
                     || uniones
                         .iter()
                         .any(|(tarjeta, etiqueta)| tarjeta == id && elegidas.contains(etiqueta))
             })
-            .filter_map(|(_, creada, completada)| {
+            .filter_map(|(_, creada, completada, limite)| {
                 Some(TarjetaDelReporte {
                     creada: fecha(&creada)?,
                     completada: completada.as_deref().and_then(fecha),
+                    limite: fecha(&limite)?,
                 })
             })
             .collect())
@@ -270,12 +272,44 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
             is_empty: false,
         })
     }
+
+    /// IPC-REP-04 `report_get_compliance` (HE-13-HU03): tarjetas con fecha límite en el rango que llegaron a Hecho
+    /// en o antes de su fecha límite ÷ las que ya están completadas o vencidas, × 100 (ET03). Las pendientes no
+    /// cuentan hasta que se completan o vencen (ET06, D-045). Vencida: pendiente con fecha límite anterior a hoy.
+    /// Sin tarjetas que evaluar, `is_empty` y sin porcentaje (regla de vacío, D-060).
+    pub async fn cumplimiento_del_reporte(
+        &self,
+        user_id: &str,
+        params: &ReportFilterParams,
+    ) -> Result<ComplianceReport, AppError> {
+        let hoy = self.calendario.hoy();
+        let rango = resolver_rango(&params.filter.range, hoy)?;
+        let (inicio, fin) = (dia_de(&rango.start), dia_de(&rango.end));
+        let tarjetas = self.tarjetas_del_filtro(user_id, &params.filter).await?;
+        let evaluadas: Vec<&TarjetaDelReporte> = tarjetas
+            .iter()
+            .filter(|t| t.limite >= inicio && t.limite <= fin)
+            .filter(|t| t.completada.is_some() || t.limite < hoy)
+            .collect();
+        let total = evaluadas.len() as i64;
+        let on_time = evaluadas
+            .iter()
+            .filter(|t| t.completada.is_some_and(|d| d <= t.limite))
+            .count() as i64;
+        Ok(ComplianceReport {
+            percent: (total > 0).then(|| on_time as f64 * 100.0 / total as f64),
+            on_time,
+            total,
+            is_empty: total == 0,
+        })
+    }
 }
 
 /// Lo que los reportes necesitan de cada tarjeta.
 pub(super) struct TarjetaDelReporte {
     pub creada: NaiveDate,
     pub completada: Option<NaiveDate>,
+    pub limite: NaiveDate,
 }
 
 #[cfg(test)]

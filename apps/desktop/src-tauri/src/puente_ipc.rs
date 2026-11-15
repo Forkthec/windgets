@@ -454,6 +454,23 @@ pub async fn report_get_meta(
     }))
 }
 
+/// IPC-REP-04 `report_get_compliance` (HE-13-HU03): la tasa de cumplimiento.
+#[tauri::command]
+pub async fn report_get_compliance(
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::ReportFilterParams,
+) -> Result<IpcResult<crate::tipos::ComplianceReport>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .cumplimiento_del_reporte(&user_id, &params)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
 /// IPC-REP-03 `report_get_completed` (HE-13-HU02): la gráfica de tarjetas completadas.
 #[tauri::command]
 pub async fn report_get_completed(

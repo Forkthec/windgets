@@ -219,3 +219,223 @@ fn ca_he_13_hu02_ca10() {
     let r = completadas(&servicio, predefinido(RangeInputVariant1Kind::Last30));
     assert_eq!(r.points.iter().map(|p| p.count).sum::<i64>(), 1);
 }
+
+fn cumplimiento(
+    servicio: &ServicioDelPlanificador<CalendarioDePrueba>,
+    params: ReportFilterParams,
+) -> crate::tipos::ComplianceReport {
+    bloquear(servicio.cumplimiento_del_reporte(USUARIO, &params)).unwrap()
+}
+
+fn tasa(r: &crate::tipos::ComplianceReport) -> (String, i64, i64) {
+    (format!("{:.1}", r.percent.unwrap()), r.on_time, r.total)
+}
+
+// Hoy es 14/11/2026: «Últimos 30 días» va del 16/10 al 14/11 y «Últimos 7 días» del 08/11 al 14/11.
+
+#[test]
+fn ca_he_13_hu03_ca01() {
+    // HE-13-HU03-CA01 · 2 completadas a tiempo y 1 vencida: 66,7 %, 2 de 3 (ET03).
+    let servicio = con_semilla();
+    tarjeta_del_reporte(
+        &servicio,
+        "task",
+        "2026-10-01",
+        "2026-11-01",
+        Some("2026-10-30"),
+    );
+    tarjeta_del_reporte(
+        &servicio,
+        "event",
+        "2026-10-01",
+        "2026-11-05",
+        Some("2026-11-05"),
+    );
+    tarjeta_del_reporte(&servicio, "reminder", "2026-10-01", "2026-11-10", None);
+    let r = cumplimiento(
+        &servicio,
+        filtro(predefinido(RangeInputVariant1Kind::Last30)),
+    );
+    assert_eq!(tasa(&r), ("66.7".into(), 2, 3));
+}
+
+#[test]
+fn ca_he_13_hu03_ca02() {
+    // HE-13-HU03-CA02 · Completada el día límite y otra un día después: 50,0 %, 1 de 2.
+    let servicio = con_semilla();
+    tarjeta_del_reporte(
+        &servicio,
+        "task",
+        "2026-10-01",
+        "2026-11-05",
+        Some("2026-11-05"),
+    );
+    tarjeta_del_reporte(
+        &servicio,
+        "task",
+        "2026-10-01",
+        "2026-11-05",
+        Some("2026-11-06"),
+    );
+    let r = cumplimiento(
+        &servicio,
+        filtro(predefinido(RangeInputVariant1Kind::Last30)),
+    );
+    assert_eq!(tasa(&r), ("50.0".into(), 1, 2));
+}
+
+#[test]
+fn ca_he_13_hu03_ca03() {
+    // HE-13-HU03-CA03 · Con «Últimos 7 días» la vencida del 20/10 queda fuera: 100,0 %, 2 de 2.
+    let servicio = con_semilla();
+    tarjeta_del_reporte(
+        &servicio,
+        "task",
+        "2026-10-01",
+        "2026-11-10",
+        Some("2026-11-09"),
+    );
+    tarjeta_del_reporte(
+        &servicio,
+        "task",
+        "2026-10-01",
+        "2026-11-12",
+        Some("2026-11-12"),
+    );
+    tarjeta_del_reporte(&servicio, "task", "2026-10-01", "2026-10-20", None);
+    let r30 = cumplimiento(
+        &servicio,
+        filtro(predefinido(RangeInputVariant1Kind::Last30)),
+    );
+    assert_eq!((r30.on_time, r30.total), (2, 3));
+    let r7 = cumplimiento(
+        &servicio,
+        filtro(predefinido(RangeInputVariant1Kind::Last7)),
+    );
+    assert_eq!(tasa(&r7), ("100.0".into(), 2, 2));
+}
+
+#[test]
+fn ca_he_13_hu03_ca04() {
+    // HE-13-HU03-CA04 · Filtro «Trabajo»: solo su tarjeta, 100,0 %, 1 de 1 (ET05).
+    let servicio = con_semilla();
+    let trabajo = tarjeta_del_reporte(
+        &servicio,
+        "task",
+        "2026-10-01",
+        "2026-11-05",
+        Some("2026-11-04"),
+    );
+    let casa = tarjeta_del_reporte(&servicio, "task", "2026-10-01", "2026-11-05", None);
+    let mut ids = Vec::new();
+    for (nombre, tarjeta) in [("Trabajo", &trabajo), ("Casa", &casa)] {
+        let etiqueta = uuid::Uuid::new_v4().to_string();
+        bloquear(async {
+            let pool = servicio.base().pool().await.unwrap();
+            sqlx::query(
+                "INSERT INTO label (id, user_id, created_at, name, color_id) \
+                 VALUES (?, ?, '2026-10-01T12:00:00.000Z', ?, 'blue')",
+            )
+            .bind(&etiqueta)
+            .bind(USUARIO)
+            .bind(nombre)
+            .execute(pool)
+            .await
+            .unwrap();
+            sqlx::query(
+                "INSERT INTO card_label (id, user_id, created_at, card_id, label_id) \
+                 VALUES (?, ?, '2026-10-01T12:00:00.000Z', ?, ?)",
+            )
+            .bind(uuid::Uuid::new_v4().to_string())
+            .bind(USUARIO)
+            .bind(tarjeta)
+            .bind(&etiqueta)
+            .execute(pool)
+            .await
+            .unwrap();
+        });
+        ids.push(etiqueta);
+    }
+    let mut params = filtro(predefinido(RangeInputVariant1Kind::Last30));
+    params.filter.label_ids = vec![crate::tipos::Uuid(ids[0].clone())];
+    let r = cumplimiento(&servicio, params);
+    assert_eq!(tasa(&r), ("100.0".into(), 1, 1));
+}
+
+#[test]
+fn ca_he_13_hu03_ca05() {
+    // HE-13-HU03-CA05 · Sin completadas ni vencidas en el rango: vacío, sin porcentaje.
+    let servicio = con_semilla();
+    tarjeta_del_reporte(&servicio, "task", "2026-10-01", "2026-11-20", None);
+    let r = cumplimiento(
+        &servicio,
+        filtro(predefinido(RangeInputVariant1Kind::Last30)),
+    );
+    assert!(r.is_empty);
+    assert_eq!((r.percent, r.total), (None, 0));
+}
+
+#[test]
+fn ca_he_13_hu03_ca06() {
+    // HE-13-HU03-CA06 · 2 vencidas y 1 completada tarde: 0,0 %, 0 de 3 (regla de 0, ET08).
+    let servicio = con_semilla();
+    tarjeta_del_reporte(&servicio, "task", "2026-10-01", "2026-11-01", None);
+    tarjeta_del_reporte(&servicio, "task", "2026-10-01", "2026-11-02", None);
+    tarjeta_del_reporte(
+        &servicio,
+        "task",
+        "2026-10-01",
+        "2026-11-03",
+        Some("2026-11-04"),
+    );
+    let r = cumplimiento(
+        &servicio,
+        filtro(predefinido(RangeInputVariant1Kind::Last30)),
+    );
+    assert!(!r.is_empty);
+    assert_eq!(tasa(&r), ("0.0".into(), 0, 3));
+}
+
+#[test]
+fn ca_he_13_hu03_ca07() {
+    // HE-13-HU03-CA07 · La pendiente que vence hoy aún no cuenta: 100,0 %, 2 de 2 (ET06, D-045).
+    let servicio = con_semilla();
+    tarjeta_del_reporte(
+        &servicio,
+        "task",
+        "2026-10-01",
+        "2026-11-01",
+        Some("2026-11-01"),
+    );
+    tarjeta_del_reporte(
+        &servicio,
+        "task",
+        "2026-10-01",
+        "2026-11-02",
+        Some("2026-10-31"),
+    );
+    tarjeta_del_reporte(&servicio, "task", "2026-10-01", "2026-11-14", None);
+    let r = cumplimiento(
+        &servicio,
+        filtro(predefinido(RangeInputVariant1Kind::Last30)),
+    );
+    assert_eq!(tasa(&r), ("100.0".into(), 2, 2));
+}
+
+#[test]
+fn ca_he_13_hu03_ca08() {
+    // HE-13-HU03-CA08 · Una sola tarjeta a tiempo: 100,0 %, 1 de 1.
+    let servicio = con_semilla();
+    tarjeta_del_reporte(
+        &servicio,
+        "task",
+        "2026-10-01",
+        "2026-11-05",
+        Some("2026-11-05"),
+    );
+    let r = cumplimiento(
+        &servicio,
+        filtro(predefinido(RangeInputVariant1Kind::Last30)),
+    );
+    assert_eq!(tasa(&r), ("100.0".into(), 1, 1));
+}
