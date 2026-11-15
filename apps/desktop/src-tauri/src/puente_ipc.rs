@@ -17,7 +17,7 @@ use crate::tipos::{
     AgendaDay, AgendaDayParams, AppError, AuthRegisterStartParams, AuthRegisterStartResult,
     AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, Card,
     CardAssignTimeBlockParams, CardCreateParams, CardDetail, CardIdParams, CardListBoardResult,
-    CardMoveParams, CardUpdateParams, ChangeOp, CodeSent, Column, Connectivity, EntityChange,
+    CardMoveParams, CardUpdateParams, CatalogItem, CatalogKind, CatalogListParams, LabelCreateParams, ChangeOp, CodeSent, Column, Connectivity, EntityChange,
     ErrorCode, EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
     EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, Label, NoParams, OriginKind,
     PlannerToday, SessionInfo,
@@ -273,6 +273,49 @@ pub async fn label_list(
             error,
         }),
     })
+}
+
+/// EV-08 `labels_changed` tras crear, editar o eliminar etiquetas en este computador.
+fn avisar_etiquetas(app: &AppHandle, ids: Vec<crate::tipos::Uuid>, op: ChangeOp) {
+    let _ = app.emit(
+        "labels_changed",
+        EntityChange {
+            ids,
+            op,
+            origin: OriginKind::Local,
+        },
+    );
+}
+
+/// IPC-LABEL-02 `label_create` (HE-08-HU02). Guarda en la base local, con o sin conexión (ET15), y emite
+/// `labels_changed` para que la pantalla Etiquetas y el Formulario de tarjeta la muestren (ET08).
+#[tauri::command]
+pub async fn label_create(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: LabelCreateParams,
+) -> Result<IpcResult<Label>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.crear_etiqueta(&user_id, params).await,
+        Err(e) => Err(e),
+    };
+    if let Ok(creada) = &r {
+        avisar_etiquetas(&app, vec![creada.valor.id.clone()], ChangeOp::Upsert);
+    }
+    Ok(con_mensaje(r))
+}
+
+/// IPC-CAT-01 `catalog_list`. Por ahora solo el catálogo de colores (HE-08-HU02-ET05). DUDA: HE-08-HU02 los
+/// demás catálogos llegan con los pasos del wallpaper y los temas; mientras tanto responden una lista vacía.
+#[tauri::command]
+pub async fn catalog_list(
+    nucleo: State<'_, Nucleo>,
+    params: CatalogListParams,
+) -> Result<IpcResult<Vec<CatalogItem>>, ()> {
+    Ok(leido(match params.kind {
+        CatalogKind::Color => nucleo.planificador.colores().await,
+        _ => Ok(Vec::new()),
+    }))
 }
 
 /// Respuesta de un comando de lectura sin mensaje de resultado.

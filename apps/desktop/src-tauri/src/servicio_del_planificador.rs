@@ -15,7 +15,7 @@ use crate::messages;
 use crate::repositorios_y_archivos_locales::{BaseLocal, encolar_cambio};
 use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, instante};
 use crate::tipos::{
-    AgendaBlock, AgendaDay, AppError, BoardColumn, Card, CardAssignTimeBlockParams,
+    AgendaBlock, AgendaDay, AppError, BoardColumn, CatalogItem, LabelCreateParams, Card, CardAssignTimeBlockParams,
     CardCreateParams, CardDetail, CardDetailColumn, CardDetailLabelsItem, CardDetailTimeBlock,
     CardListBoardResult, CardMoveParams, CardType, CardUpdateParams, Column, ColumnRole, DateIso,
     ErrorCode, Hex, Hour, Instant, Label, Placement, PlannerItem, PlannerSummary, PlannerToday,
@@ -45,6 +45,10 @@ pub const TITULO_MAX: usize = 100;
 pub const DESCRIPCION_MAX: usize = 1000;
 /// Etiquetas por tarjeta (HE-07-HU02-ET04).
 pub const ETIQUETAS_MAX: usize = 5;
+/// Nombre de etiqueta: de 1 a 30 caracteres (HE-08-HU02-ET03).
+pub const NOMBRE_DE_ETIQUETA_MAX: usize = 30;
+/// Etiquetas por usuario (HE-08-HU02-ET06).
+pub const ETIQUETAS_POR_USUARIO_MAX: i64 = 20;
 /// Distancia entre posiciones al poner una tarjeta al final de una columna. DUDA: HE-07-HU01 el paso no está
 /// definido; se usa el del ejemplo de `contratos.md` (RPC-02, `position: 1024`).
 pub const PASO_DE_POSICION: f64 = 1024.0;
@@ -779,6 +783,128 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
             .map_err(de_sqlx)?;
         etiquetas.sort_by_cached_key(|e| clave_alfabetica(&e.name));
         Ok(etiquetas)
+    }
+
+    /// IPC-LABEL-02 `label_create` (HE-08-HU02). Nombre obligatorio de 1 a 30 caracteres (ET03), único sin
+    /// distinguir mayúsculas (ET04), color del catálogo sin valor por defecto (ET05, ET14) y máximo 20 etiquetas
+    /// (ET06). Guarda en SQLite y encola el cambio en la misma transacción, con o sin conexión (ET15).
+    pub async fn crear_etiqueta(
+        &self,
+        user_id: &str,
+        params: LabelCreateParams,
+    ) -> Result<ConMensaje<Label>, AppError> {
+        let nombre = params.name.trim().to_string();
+        let color = params.color_id.trim().to_string();
+        if nombre.is_empty() {
+            return Err(error(ErrorCode::NameRequired, messages::CAMPO_OBLIGATORIO, Some("name")));
+        }
+        if nombre.chars().count() > NOMBRE_DE_ETIQUETA_MAX {
+            return Err(error(
+                ErrorCode::NameTooLong,
+                messages::NOMBRE_DE_ETIQUETA_MUY_LARGO,
+                Some("name"),
+            ));
+        }
+        if color.is_empty() {
+            return Err(error(ErrorCode::ColorRequired, messages::CAMPO_OBLIGATORIO, Some("color_id")));
+        }
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let mut tx = pool.begin().await.map_err(de_sqlx)?;
+
+        let existentes: Vec<String> = sqlx::query_scalar("SELECT name FROM label WHERE user_id = ?")
+            .bind(user_id)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(de_sqlx)?;
+        if existentes.len() as i64 >= ETIQUETAS_POR_USUARIO_MAX {
+            return Err(error(
+                ErrorCode::LabelLimitReached,
+                messages::MAXIMO_DE_ETIQUETAS_CREADAS,
+                None,
+            ));
+        }
+        // ET04: sin distinguir mayúsculas de minúsculas, también en letras con tilde (`lower()` de SQLite solo
+        // convierte ASCII).
+        let clave = nombre.to_lowercase();
+        if existentes.iter().any(|e| e.trim().to_lowercase() == clave) {
+            return Err(error(ErrorCode::NameDuplicate, messages::ETIQUETA_DUPLICADA, Some("name")));
+        }
+        let existe_el_color: i64 =
+            sqlx::query_scalar("SELECT count(*) FROM catalog_color WHERE id = ? AND is_active = 1")
+                .bind(&color)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(de_sqlx)?;
+        if existe_el_color == 0 {
+            // La vista solo ofrece colores del catálogo (ET05): uno que no está cuenta como sin color.
+            return Err(error(ErrorCode::ColorRequired, messages::CAMPO_OBLIGATORIO, Some("color_id")));
+        }
+
+        let id = uuid::Uuid::new_v4().to_string();
+        let ahora = instante(self.calendario.ahora_ms()).0;
+        let (fields, mods) = campos(
+            &[
+                ("name", Value::from(nombre.as_str())),
+                ("color_id", Value::from(color.as_str())),
+            ],
+            &ahora,
+        );
+        sqlx::query(
+            "INSERT INTO label (id, user_id, created_at, field_mods, name, color_id) VALUES (?, ?, ?, ?, ?, ?)",
+        )
+        .bind(&id)
+        .bind(user_id)
+        .bind(&ahora)
+        .bind(mods.to_string())
+        .bind(&nombre)
+        .bind(&color)
+        .execute(&mut *tx)
+        .await
+        .map_err(de_sqlx)?;
+        encolar_cambio(&mut tx, "label", &id, "upsert", &fields, &ahora)
+            .await
+            .map_err(de_sqlx)?;
+        tx.commit().await.map_err(de_sqlx)?;
+
+        let etiqueta = self
+            .etiquetas(user_id)
+            .await?
+            .into_iter()
+            .find(|e| e.id.0 == id)
+            .ok_or_else(inesperado)?;
+        Ok(ConMensaje {
+            valor: etiqueta,
+            mensaje: resultado("label_create", messages::ETIQUETA_CREADA),
+        })
+    }
+
+    /// IPC-CAT-01 `catalog_list` con `kind: 'color'`: el catálogo de colores activo, ordenado por `sort_order`
+    /// (datos.md, Modelo · 3.2). DUDA: HE-08-HU02 un color no tiene miniatura; `thumbnail_url` va vacía.
+    pub async fn colores(&self) -> Result<Vec<CatalogItem>, AppError> {
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let filas = sqlx::query(
+            "SELECT id, name, hex FROM catalog_color WHERE is_active = 1 ORDER BY sort_order, id",
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        filas
+            .into_iter()
+            .map(|f| {
+                Ok(CatalogItem {
+                    id: f.try_get("id")?,
+                    name: f.try_get("name")?,
+                    thumbnail_url: String::new(),
+                    is_cached: true,
+                    hex: Some(Hex(f.try_get("hex")?)),
+                    color_primary: None,
+                    color_secondary: None,
+                    color_text: None,
+                    format: None,
+                })
+            })
+            .collect::<Result<Vec<_>, sqlx::Error>>()
+            .map_err(de_sqlx)
     }
 
     /// Una tarjeta del usuario con sus etiquetas, o `None` si no existe.

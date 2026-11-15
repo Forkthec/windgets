@@ -143,6 +143,37 @@ export function crearNucleo(tarjetas: Card[] = []): {
       () => ({ ok: true, value: { state: 'signed_in', alias: 'Prueba', token: 'valid' } }),
     ],
     ['label_list', () => ({ ok: true, value: [...nucleo.etiquetas] })],
+    // Catálogo de colores de la semilla de la cuenta (HE-08-HU02-ET05).
+    [
+      'catalog_list',
+      () => ({
+        ok: true,
+        value: [
+          { id: 'gray', name: 'Gris', thumbnail_url: '', is_cached: true, hex: '#9E9E9E' },
+          { id: 'blue', name: 'Azul', thumbnail_url: '', is_cached: true, hex: '#2196F3' },
+          { id: 'green', name: 'Verde', thumbnail_url: '', is_cached: true, hex: '#4CAF50' },
+        ],
+      }),
+    ],
+    [
+      'label_create',
+      (params) => {
+        const { name, color_id } = params as { name: string; color_id: string };
+        const creada: Label = {
+          id: `e${nucleo.etiquetas.length + 1}`,
+          name,
+          color_id,
+          color_hex: '#4CAF50',
+          card_count: 0,
+        };
+        nucleo.etiquetas.push(creada);
+        return {
+          ok: true,
+          value: creada,
+          result_message: { code: 'label_create', message: 'Etiqueta creada.' },
+        };
+      },
+    ],
     ['card_list_board', () => ({ ok: true, value: { columns: tablero() } })],
     ['column_list', () => ({ ok: true, value: tablero().map((c) => c.column) })],
     [
