@@ -20,7 +20,7 @@ use crate::tipos::{
     CardMoveParams, CardUpdateParams, ChangeOp, CodeSent, Column, Connectivity, EntityChange,
     ErrorCode, EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
     EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, Label, NoParams, OriginKind,
-    SessionInfo,
+    PlannerToday, SessionInfo,
 };
 
 /// El Núcleo que ven los comandos.
@@ -415,4 +415,17 @@ pub async fn card_assign_time_block(
         avisar_tarjetas(&app, vec![asignada.valor.id.clone()], ChangeOp::Upsert);
     }
     Ok(con_mensaje(r))
+}
+
+/// IPC-CARD-08 `planner_get_today` (HE-12-HU01): el planificador diario de hoy.
+#[tauri::command]
+pub async fn planner_get_today(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<PlannerToday>, ()> {
+    let _ = params;
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.planificador_de_hoy(&user_id).await,
+        Err(e) => Err(e),
+    }))
 }

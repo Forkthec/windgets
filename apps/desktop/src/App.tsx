@@ -1,5 +1,6 @@
 import { Agenda } from '@/screens/agenda/Agenda';
 import { Kanban } from '@/screens/kanban/Kanban';
+import { PlannerDaily } from '@/screens/planner_daily/PlannerDaily';
 import { Register } from '@/screens/register/Register';
 import { SignIn } from '@/screens/sign_in/SignIn';
 import { VentanaPrincipal } from '@/ventana_principal/VentanaPrincipal';
@@ -8,7 +9,7 @@ import { VentanaPrincipal } from '@/ventana_principal/VentanaPrincipal';
 export default function App() {
   return (
     <VentanaPrincipal
-      pantallas={{ agenda: Agenda, kanban: Kanban }}
+      pantallas={{ agenda: Agenda, kanban: Kanban, planner_daily: PlannerDaily }}
       pantallasDeCuenta={{ register: Register, sign_in: SignIn }}
     />
   );

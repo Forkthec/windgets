@@ -133,6 +133,31 @@ const respuestas: Respuestas = {
       result_message: { code: 'card_update', message: textos.TARJETA_ACTUALIZADA },
     };
   },
+  // HE-12-HU01: las tarjetas de hoy (fecha límite o bloque de hoy), por hora y después las sin hora.
+  planner_get_today: () => {
+    const ahora = new Date();
+    const dos = (n: number) => String(n).padStart(2, '0');
+    const hoy = `${ahora.getFullYear()}-${dos(ahora.getMonth() + 1)}-${dos(ahora.getDate())}`;
+    const items = tarjetasSimuladas
+      .filter((t) => t.due_date === hoy || t.scheduled_date === hoy)
+      .map((card) => ({ card, hour: card.scheduled_date === hoy ? card.scheduled_hour : null }))
+      .sort((a, b) => (a.hour ?? 99) - (b.hour ?? 99));
+    const completed = items.filter((i) => i.card.is_completed).length;
+    const total = items.length;
+    return {
+      ok: true,
+      value: {
+        date: hoy,
+        items,
+        summary: {
+          total,
+          completed,
+          remaining: total - completed,
+          percent: total ? Math.round((completed * 100) / total) : 0,
+        },
+      },
+    };
+  },
   // HE-11-HU01: la agenda de un día con la fecha y la hora del navegador.
   agenda_get_day: ({ date }) => {
     const ahora = new Date();

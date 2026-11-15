@@ -486,3 +486,12 @@ button.wg-tarjeta__titulo:focus-visible {
   margin: 0 0 calc(var(--wg-unidad) * 2);
   font-size: inherit;
 }
+
+/* Planificador diario (P-PLA-01, HE-12-HU01-ET07): una tarjeta completada va tachada (y con la casilla marcada:
+   no depende solo del estilo). */
+.wg-planificador .wg-tarjeta {
+  align-items: center;
+}
+.wg-tachada .wg-tarjeta__titulo {
+  text-decoration: line-through;
+}

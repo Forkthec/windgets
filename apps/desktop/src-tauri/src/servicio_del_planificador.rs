@@ -18,7 +18,8 @@ use crate::tipos::{
     AgendaBlock, AgendaDay, AppError, BoardColumn, Card, CardAssignTimeBlockParams,
     CardCreateParams, CardDetail, CardDetailColumn, CardDetailLabelsItem, CardDetailTimeBlock,
     CardListBoardResult, CardMoveParams, CardType, CardUpdateParams, Column, ColumnRole, DateIso,
-    ErrorCode, Hex, Hour, Instant, Label, Placement, Priority, ResultMessage, Uuid,
+    ErrorCode, Hex, Hour, Instant, Label, Placement, PlannerItem, PlannerSummary, PlannerToday,
+    Priority, ResultMessage, Uuid,
 };
 
 /// Clave para ordenar nombres de la A a la Z sin distinguir mayúsculas ni tildes (D-165): «Árbol» va con la A.
@@ -940,6 +941,62 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         })
     }
 
+    /// IPC-CARD-08 `planner_get_today` (HE-12-HU01): las tarjetas con fecha límite hoy y las asignadas a un
+    /// bloque de hoy, sin duplicados (ET02, ET08); primero las de bloque por hora y después las sin hora (ET03).
+    /// La hora es la de inicio del bloque de hoy (ET05). El resumen cuenta las completadas (HE-12-HU03).
+    pub async fn planificador_de_hoy(&self, user_id: &str) -> Result<PlannerToday, AppError> {
+        let hoy = self.calendario.hoy().format("%Y-%m-%d").to_string();
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let filas = sqlx::query(&format!(
+            "{SELECT_TARJETA} WHERE c.user_id = ? AND (c.due_date = ? OR c.scheduled_date = ?) \
+             ORDER BY c.scheduled_date = ? DESC, c.scheduled_hour, c.position, c.created_at"
+        ))
+        .bind(user_id)
+        .bind(&hoy)
+        .bind(&hoy)
+        .bind(&hoy)
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        let etiquetas = self.etiquetas_por_tarjeta(user_id).await?;
+        let dia = self.calendario.hoy();
+        let mut items = Vec::with_capacity(filas.len());
+        for fila in &filas {
+            let id: String = fila.try_get("id").map_err(de_sqlx)?;
+            let tarjeta =
+                tarjeta_de_fila(fila, etiquetas.get(&id).cloned().unwrap_or_default(), dia)
+                    .map_err(de_sqlx)?;
+            let hora = (tarjeta.scheduled_date.as_ref().map(|d| d.0.as_str())
+                == Some(hoy.as_str()))
+            .then(|| tarjeta.scheduled_hour.clone())
+            .flatten();
+            items.push(PlannerItem {
+                card: tarjeta,
+                hour: hora,
+            });
+        }
+        let total = i64::try_from(items.len()).unwrap_or(i64::MAX);
+        let completadas =
+            i64::try_from(items.iter().filter(|i| i.card.is_completed).count()).unwrap_or(0);
+        // `percent` entero redondeado (contratos.md, IPC-CARD-08).
+        #[allow(clippy::cast_precision_loss)]
+        let porcentaje = if total == 0 {
+            0.0
+        } else {
+            (completadas as f64 * 100.0 / total as f64).round()
+        };
+        Ok(PlannerToday {
+            date: DateIso(hoy),
+            items,
+            summary: PlannerSummary {
+                total,
+                completed: completadas,
+                remaining: total - completadas,
+                percent: porcentaje,
+            },
+        })
+    }
+
     /// IPC-CARD-09 `agenda_get_day` (HE-11-HU01): los 24 bloques horarios del día con sus tarjetas (ET01, ET03)
     /// y las tarjetas sin horario: las que no están en Hecho ni tienen bloque (ET04). Lee solo la base local,
     /// así que funciona igual sin conexión (ET08).
@@ -1160,6 +1217,8 @@ fn tarjeta_de_fila(
 mod pruebas_de_edicion;
 #[cfg(test)]
 mod pruebas_de_la_agenda;
+#[cfg(test)]
+mod pruebas_del_planificador_diario;
 #[cfg(test)]
 mod pruebas_del_tablero;
 

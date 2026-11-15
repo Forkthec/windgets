@@ -18,6 +18,7 @@ import type {
   EventMap,
   Invoke,
   Label,
+  PlannerToday,
   Result,
   ScreenId,
 } from '@/types';
@@ -161,6 +162,28 @@ export function crearNucleo(tarjetas: Card[] = []): {
           value: t,
           result_message: { code: 'card_update', message: 'Tarjeta actualizada.' },
         };
+      },
+    ],
+    [
+      'planner_get_today',
+      () => {
+        const deHoy = nucleo.tarjetas
+          .filter((t) => t.due_date === HOY || t.scheduled_date === HOY)
+          .map((card) => ({ card, hour: card.scheduled_date === HOY ? card.scheduled_hour : null }))
+          .sort((a, b) => (a.hour ?? 99) - (b.hour ?? 99));
+        const completed = deHoy.filter((i) => i.card.is_completed).length;
+        const total = deHoy.length;
+        const hoy: PlannerToday = {
+          date: HOY,
+          items: deHoy,
+          summary: {
+            total,
+            completed,
+            remaining: total - completed,
+            percent: total ? Math.round((completed * 100) / total) : 0,
+          },
+        };
+        return { ok: true, value: hoy };
       },
     ],
     [
