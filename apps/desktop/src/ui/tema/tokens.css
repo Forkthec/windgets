@@ -211,6 +211,9 @@ body {
   font-size: inherit;
 }
 .wg-menu__opcion {
+  /* Una opción por línea: con inline-flex el ancho natural del menú era el de todas las opciones seguidas y la
+     columna del menú ocupaba casi toda la ventana (RT-01-ET01, menú a la izquierda de la pantalla). */
+  display: flex;
   width: 100%;
   border-color: var(--wg-superficie-alta);
   background: var(--wg-superficie-alta);
@@ -224,7 +227,9 @@ body {
 /* RT-01: ventana principal con el menú principal a la izquierda de la pantalla actual. */
 .wg-ventana-principal {
   display: grid;
-  grid-template-columns: auto 1fr;
+  /* minmax(0, 1fr): una pantalla con contenido ancho (el Tablero Kanban) se desplaza dentro de su panel en lugar
+     de ensanchar la rejilla y empujar el menú principal. */
+  grid-template-columns: auto minmax(0, 1fr);
   gap: calc(var(--wg-unidad) * 4);
   min-height: 100vh;
   box-sizing: border-box;
