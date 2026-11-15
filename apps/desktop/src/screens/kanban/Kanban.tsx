@@ -20,7 +20,7 @@ import { fechaVisible } from '../tarjeta/fechas';
 import { MoverA } from '../tarjeta/MoverA';
 import { NOMBRE_DE_PRIORIDAD, NOMBRE_DE_TIPO } from '../tarjeta/nombres';
 import { useVentanasDeTarjeta } from '../tarjeta/useVentanasDeTarjeta';
-import { type LugarDeSoltar, movimientoDelArrastre } from './arrastre';
+import { ENCABEZADO, type LugarDeSoltar, movimientoDelArrastre, ordenDelArrastre } from './arrastre';
 
 // P-KAN-01 Tablero Kanban (Menú principal > Planificador > Tablero Kanban; HE-09-HU01). Las columnas y las
 // tarjetas vienen del Núcleo (IPC-CARD-05); la pantalla se vuelve a leer con cards_changed y columns_changed.
@@ -89,13 +89,17 @@ function Columna({ columna, alEditar }: { columna: BoardColumn; alEditar: (colum
   const { column, cards } = columna;
   const lugar: LugarDeSoltar = { columna: column.id };
   const soltar = useDroppable({ id: `columna:${column.id}`, data: lugar });
+  // HE-09-HU05-ET01: el encabezado se arrastra para cambiar el orden de las columnas.
+  const arrastre = useDraggable({ id: `${ENCABEZADO}${column.id}` });
+  const { transform } = arrastre;
   return (
     <section
       ref={soltar.setNodeRef}
       className={`wg-columna${soltar.isOver ? ' wg-columna--destino' : ''}`}
       aria-label={column.name}
+      style={transform ? { transform: `translate(${transform.x}px, ${transform.y}px)` } : undefined}
     >
-      <h2 className="wg-fila wg-columna__encabezado">
+      <h2 ref={arrastre.setNodeRef} className="wg-fila wg-columna__encabezado" {...arrastre.listeners}>
         {/* El color acompaña al nombre: el significado no depende solo del color (interfaz.md). */}
         <span className="wg-muestra-color" style={{ background: column.color_hex }} aria-hidden="true" />
         <span>{column.name}</span>
@@ -154,15 +158,31 @@ export function Kanban() {
   );
   // Arrastrar empieza al desplazar el puntero unos píxeles: así seleccionar el título o «Mover a» no arrastra.
   const sensores = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  // HE-09-HU05: reordenar con el encabezado. Sin mensaje de resultado (DP-05); el tablero se vuelve a leer.
+  const reordenar = useCallback(
+    async (orden: string[]) => {
+      await invocar('column_reorder', { column_ids: orden });
+      await leer();
+    },
+    [invocar, leer],
+  );
   const soltada = useCallback(
     ({ active, over }: DragEndEvent) => {
-      const movimiento = movimientoDelArrastre(
-        String(active.id),
-        over?.data.current as LugarDeSoltar | undefined,
-      );
+      const id = String(active.id);
+      const lugar = over?.data.current as LugarDeSoltar | undefined;
+      if (id.startsWith(ENCABEZADO)) {
+        const orden = ordenDelArrastre(
+          columnas?.map((c) => c.column.id) ?? [],
+          id.slice(ENCABEZADO.length),
+          lugar,
+        );
+        if (orden) void reordenar(orden);
+        return;
+      }
+      const movimiento = movimientoDelArrastre(id, lugar);
       if (movimiento) void mover(movimiento);
     },
-    [mover],
+    [columnas, mover, reordenar],
   );
   const { abrirDetalle } = tarjetas;
   const acciones = useMemo<AccionesDelTablero>(

@@ -503,3 +503,54 @@ fn ipc_col_03_columna_que_ya_no_existe() {
     .unwrap_err();
     assert_eq!(e.code, ErrorCode::ColumnNotFound);
 }
+
+fn reordenar(
+    servicio: &ServicioDelPlanificador<CalendarioDePrueba>,
+    ids: &[&str],
+) -> Result<Vec<Column>, AppError> {
+    bloquear(servicio.reordenar_columnas(
+        USUARIO,
+        ColumnReorderParams {
+            column_ids: ids.iter().map(|i| Uuid((*i).into())).collect(),
+        },
+    ))
+}
+
+#[test]
+fn ca_he_09_hu05_ca01() {
+    // HE-09-HU05-CA01 · Hecho a la primera posición: Hecho, Por hacer, En progreso (ET03), guardado al volver a
+    // abrir el tablero (ET04) y en la cola para sincronizar.
+    let servicio = con_semilla();
+    let r = reordenar(&servicio, &[HECHO, POR_HACER, EN_PROGRESO]).unwrap();
+    let nombres: Vec<&str> = r.iter().map(|c| c.name.as_str()).collect();
+    assert_eq!(nombres, ["Hecho", "Por hacer", "En progreso"]);
+    assert_eq!(
+        nombres_de_columnas(&servicio),
+        ["Hecho", "Por hacer", "En progreso"]
+    );
+    assert!(
+        contar(
+            &servicio,
+            "SELECT count(*) FROM pending_change WHERE entity_kind = 'kanban_column'"
+        ) >= 1
+    );
+}
+
+#[test]
+fn ca_he_09_hu05_ca02() {
+    // HE-09-HU05-CA02 · Soltar fuera del área: la vista no llama al Núcleo. Una lista incompleta o con columnas
+    // ajenas responde `column.order_invalid` y mantiene el orden anterior (ET02).
+    let servicio = con_semilla();
+    for ids in [
+        vec![HECHO, POR_HACER],
+        vec![HECHO, POR_HACER, "00000000-0000-4000-8000-0000000000ff"],
+    ] {
+        let e = reordenar(&servicio, &ids).unwrap_err();
+        assert_eq!(e.code, ErrorCode::ColumnOrderInvalid);
+    }
+    assert_eq!(
+        nombres_de_columnas(&servicio),
+        ["Por hacer", "En progreso", "Hecho"]
+    );
+    assert_eq!(contar(&servicio, "SELECT count(*) FROM pending_change"), 0);
+}

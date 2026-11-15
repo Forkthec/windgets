@@ -18,9 +18,9 @@ use crate::tipos::{
     AgendaBlock, AgendaDay, AppError, BoardColumn, Card, CardAssignTimeBlockParams,
     CardCreateParams, CardDetail, CardDetailColumn, CardDetailLabelsItem, CardDetailTimeBlock,
     CardListBoardResult, CardMoveParams, CardType, CardUpdateParams, CatalogItem, Column,
-    ColumnCreateParams, ColumnRole, ColumnUpdateParams, DateIso, ErrorCode, Hex, Hour, Instant,
-    Label, LabelCreateParams, Placement, PlannerItem, PlannerSummary, PlannerToday, Priority,
-    ResultMessage, Uuid,
+    ColumnCreateParams, ColumnReorderParams, ColumnRole, ColumnUpdateParams, DateIso, ErrorCode,
+    Hex, Hour, Instant, Label, LabelCreateParams, Placement, PlannerItem, PlannerSummary,
+    PlannerToday, Priority, ResultMessage, Uuid,
 };
 
 /// Clave para ordenar nombres de la A a la Z sin distinguir mayúsculas ni tildes (D-165): «Árbol» va con la A.
@@ -1439,6 +1439,66 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
             valor: columna,
             mensaje: resultado("column_update", messages::COLUMNA_ACTUALIZADA),
         })
+    }
+
+    /// IPC-COL-04 `column_reorder` (HE-09-HU05): el orden completo de las columnas. Cada columna queda en la
+    /// posición de su lugar en la lista y solo las que cambian se encolan (ET03, ET04). Una lista que no tiene
+    /// exactamente las columnas del usuario responde `column.order_invalid`, sin texto, y no cambia nada.
+    pub async fn reordenar_columnas(
+        &self,
+        user_id: &str,
+        params: ColumnReorderParams,
+    ) -> Result<Vec<Column>, AppError> {
+        let pedidas: Vec<String> = params
+            .column_ids
+            .into_iter()
+            .map(|u| u.0.to_lowercase())
+            .collect();
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let mut tx = pool.begin().await.map_err(de_sqlx)?;
+        let actuales: Vec<(String, f64)> =
+            sqlx::query_as("SELECT id, position FROM kanban_column WHERE user_id = ?")
+                .bind(user_id)
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(de_sqlx)?;
+        let mut ordenadas_pedidas = pedidas.clone();
+        ordenadas_pedidas.sort();
+        let mut ordenadas_actuales: Vec<String> =
+            actuales.iter().map(|(id, _)| id.clone()).collect();
+        ordenadas_actuales.sort();
+        if ordenadas_pedidas != ordenadas_actuales {
+            return Err(error(ErrorCode::ColumnOrderInvalid, "", None));
+        }
+
+        let ahora = instante(self.calendario.ahora_ms()).0;
+        for (i, id) in pedidas.iter().enumerate() {
+            let posicion = (i as f64 + 1.0) * PASO_DE_POSICION;
+            let anterior = actuales
+                .iter()
+                .find(|(otra, _)| otra == id)
+                .map(|(_, p)| *p);
+            if anterior == Some(posicion) {
+                continue;
+            }
+            let (fields, mods) = campos(&[("position", json!(posicion))], &ahora);
+            sqlx::query(
+                "UPDATE kanban_column SET position = ?, field_mods = json_patch(field_mods, ?) \
+                 WHERE id = ? AND user_id = ?",
+            )
+            .bind(posicion)
+            .bind(mods.to_string())
+            .bind(id)
+            .bind(user_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(de_sqlx)?;
+            encolar_cambio(&mut tx, "kanban_column", id, "upsert", &fields, &ahora)
+                .await
+                .map_err(de_sqlx)?;
+        }
+        tx.commit().await.map_err(de_sqlx)?;
+        self.columnas(user_id).await
     }
 
     pub async fn columnas(&self, user_id: &str) -> Result<Vec<Column>, AppError> {

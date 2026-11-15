@@ -18,10 +18,10 @@ use crate::tipos::{
     AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, Card,
     CardAssignTimeBlockParams, CardCreateParams, CardDetail, CardIdParams, CardListBoardResult,
     CardMoveParams, CardUpdateParams, CatalogItem, CatalogKind, CatalogListParams, ChangeOp,
-    CodeSent, Column, ColumnCreateParams, ColumnUpdateParams, Connectivity, EntityChange,
-    ErrorCode, EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
-    EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, Label, LabelCreateParams, NoParams,
-    OriginKind, PlannerToday, SessionInfo,
+    CodeSent, Column, ColumnCreateParams, ColumnReorderParams, ColumnUpdateParams, Connectivity,
+    EntityChange, ErrorCode, EventMapConnectivityChanged, EventMapSessionChanged,
+    EventMapSessionChangedReason, EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, Label,
+    LabelCreateParams, NoParams, OriginKind, PlannerToday, SessionInfo,
 };
 
 /// El Núcleo que ven los comandos.
@@ -394,6 +394,33 @@ pub async fn column_update(
         avisar_columnas(&app, vec![editada.valor.id.clone()], ChangeOp::Upsert);
     }
     Ok(con_mensaje(r))
+}
+
+/// IPC-COL-04 `column_reorder` (HE-09-HU05). Sin mensaje de resultado (DP-05). Emite `columns_changed` para que
+/// el tablero y el widget Kanban muestren el orden nuevo (ET03).
+#[tauri::command]
+pub async fn column_reorder(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: ColumnReorderParams,
+) -> Result<IpcResult<Vec<Column>>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .reordenar_columnas(&user_id, params)
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if let Ok(columnas) = &r {
+        avisar_columnas(
+            &app,
+            columnas.iter().map(|c| c.id.clone()).collect(),
+            ChangeOp::Upsert,
+        );
+    }
+    Ok(leido(r))
 }
 
 /// IPC-COL-01 `column_list` (HE-09-HU01): columnas por `position`.

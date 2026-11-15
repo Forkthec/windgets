@@ -117,6 +117,18 @@ const respuestas: Respuestas = {
   // HE-09-HU01: el tablero con las columnas por defecto y las tarjetas creadas.
   card_list_board: () => ({ ok: true, value: { columns: tableroSimulado() } }),
   column_list: () => ({ ok: true, value: tableroSimulado().map((c) => c.column) }),
+  // HE-09-HU05: el orden completo de las columnas.
+  column_reorder: ({ column_ids }) => {
+    const ids = [...column_ids].sort();
+    const actuales = COLUMNAS_SIMULADAS.map((c) => c.id).sort();
+    if (ids.join() !== actuales.join()) return error({ code: 'column.order_invalid', message: '' });
+    column_ids.forEach((id, i) => {
+      const c = COLUMNAS_SIMULADAS.find((x) => x.id === id);
+      if (c) c.position = 1024 * (i + 1);
+    });
+    COLUMNAS_SIMULADAS.sort((a, b) => a.position - b.position);
+    return { ok: true, value: tableroSimulado().map((c) => c.column) };
+  },
   // HE-07-HU04: aplica los cambios a la tarjeta creada.
   card_update: ({ id, patch }) => {
     const t = tarjetasSimuladas.find((c) => c.id === id);
