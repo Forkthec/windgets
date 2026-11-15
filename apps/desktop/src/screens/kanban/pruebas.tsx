@@ -143,6 +143,50 @@ export function crearNucleo(tarjetas: Card[] = []): {
       () => ({ ok: true, value: { state: 'signed_in', alias: 'Prueba', token: 'valid' } }),
     ],
     ['label_list', () => ({ ok: true, value: [...nucleo.etiquetas] })],
+    // HE-13-HU02: una cuenta con tarjetas, desde antes del rango, y la gráfica de «Últimos 30 días».
+    [
+      'report_get_meta',
+      () => ({ ok: true, value: { has_cards: true, first_card_date: '2026-01-01', has_labels: true } }),
+    ],
+    [
+      'report_get_status_breakdown',
+      () => ({
+        ok: true,
+        value: {
+          overdue: 2,
+          pending: 3,
+          completed: 5,
+          total: 10,
+          percent_overdue: 20,
+          percent_pending: 30,
+          percent_completed: 50,
+          is_empty: false,
+        },
+      }),
+    ],
+    [
+      'report_get_compliance',
+      () => ({ ok: true, value: { percent: 200 / 3, on_time: 2, total: 3, is_empty: false } }),
+    ],
+    [
+      'report_get_completed',
+      () => ({
+        ok: true,
+        value: {
+          grouping: 'day',
+          points: [{ period_start: '2026-11-10', period_end: '2026-11-10', count: 3 }],
+          is_empty: false,
+        },
+      }),
+    ],
+    // HE-13-HU01: «Últimos 30 días» con hoy 14/11/2026; las pruebas del rango responden lo suyo.
+    [
+      'report_resolve_range',
+      () => ({
+        ok: true,
+        value: { start: '2026-10-16', end: '2026-11-14', days: 30, grouping: 'day', clipped_start: null },
+      }),
+    ],
     // Catálogo de colores de la semilla de la cuenta (HE-08-HU02-ET05).
     [
       'catalog_list',
@@ -405,8 +449,11 @@ export async function abrirPantalla(
   nombre: string,
   componente: ComponentType,
   tarjetas: Card[] = [],
+  /** Respuestas propias del Núcleo antes de abrir la pantalla. */
+  preparar?: (nucleo: NucleoDelPlanificador) => void,
 ): Promise<NucleoDelPlanificador> {
   const { nucleo, invocar, escuchar } = crearNucleo(tarjetas);
+  preparar?.(nucleo);
   render(<VentanaPrincipal invocar={invocar} escuchar={escuchar} pantallas={{ [pantalla]: componente }} />);
   const menu = await screen.findByRole('navigation', { name: 'Menú principal' });
   fireEvent.click(within(menu).getByRole('button', { name: nombre }));

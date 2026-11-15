@@ -1,4 +1,4 @@
-# Traspaso · estado de la construcción (15-nov-2026)
+# Traspaso · estado de la construcción (14-nov-2026)
 
 Para el agente o la persona que sigue en otra computadora. Lee primero `docs/AGENTS.md` y las skills de
 `.claude/skills/` (`/retomar`, `/siguiente-paso`, `/verificar`, `/cerrar-paso`). Este archivo no reemplaza

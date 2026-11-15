@@ -1641,12 +1641,17 @@ fn tarjeta_de_fila(
     })
 }
 
+mod reportes;
+pub use reportes::{agrupacion, resolver_rango};
+
 #[cfg(test)]
 mod pruebas_de_edicion;
 #[cfg(test)]
 mod pruebas_de_etiquetas;
 #[cfg(test)]
 mod pruebas_de_la_agenda;
+#[cfg(test)]
+mod pruebas_de_reportes;
 #[cfg(test)]
 mod pruebas_del_planificador_diario;
 #[cfg(test)]
