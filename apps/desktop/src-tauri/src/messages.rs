@@ -80,6 +80,11 @@ pub const TARJETA_ACTUALIZADA: &str = "Tarjeta actualizada.";
 /// Resultado de `card_update` cuando la tarjeta sale de su bloque horario (HE-07-HU04-CA10; ET15).
 pub const TARJETA_ACTUALIZADA_SIN_BLOQUE: &str = "Tarjeta actualizada. Se quitó de su bloque horario porque quedó después de la nueva fecha límite.";
 
+// HE-07-HU05 · Eliminar una tarjeta (IPC-CARD-03 card_delete).
+
+/// Resultado de `card_delete` (HE-07-HU05-CA02; ET06).
+pub const TARJETA_ELIMINADA: &str = "Tarjeta eliminada.";
+
 // HE-07-HU03 · Consultar el detalle de una tarjeta (IPC-CARD-04 card_get).
 
 /// `card.not_found` (HE-07-HU04-CA11; DP-04: el mismo texto al consultar, eliminar o mover).
@@ -117,6 +122,7 @@ pub const TEXTOS: &[(&str, &str)] = &[
         "TARJETA_ACTUALIZADA_SIN_BLOQUE",
         TARJETA_ACTUALIZADA_SIN_BLOQUE,
     ),
+    ("TARJETA_ELIMINADA", TARJETA_ELIMINADA),
 ];
 
 #[cfg(test)]

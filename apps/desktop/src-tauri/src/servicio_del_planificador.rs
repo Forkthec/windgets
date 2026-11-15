@@ -588,6 +588,54 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         })
     }
 
+    /// IPC-CARD-03 `card_delete` (HE-07-HU05): elimina la tarjeta de forma definitiva (ET03) con sus etiquetas
+    /// de tarjeta, y encola las eliminaciones en la misma transacción. Si ya no existe: `card.not_found`
+    /// (DP-04).
+    pub async fn eliminar_tarjeta(
+        &self,
+        user_id: &str,
+        id: &str,
+    ) -> Result<ConMensaje<()>, AppError> {
+        let id = id.to_lowercase();
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let mut tx = pool.begin().await.map_err(de_sqlx)?;
+        let uniones: Vec<String> = sqlx::query_scalar(
+            "SELECT cl.id FROM card_label cl JOIN card c ON c.id = cl.card_id \
+             WHERE cl.card_id = ? AND c.user_id = ?",
+        )
+        .bind(&id)
+        .bind(user_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(de_sqlx)?;
+        let borradas = sqlx::query("DELETE FROM card WHERE id = ? AND user_id = ?")
+            .bind(&id)
+            .bind(user_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(de_sqlx)?
+            .rows_affected();
+        if borradas == 0 {
+            return Err(tarjeta_no_existe());
+        }
+        let ahora = instante(self.calendario.ahora_ms()).0;
+        // Las etiquetas de la tarjeta se borran en cascada (sqlite_esquema.sql); sus cambios pendientes pasan a
+        // eliminación para no enviar altas de una tarjeta que ya no existe.
+        for union in &uniones {
+            encolar_cambio(&mut tx, "card_label", union, "delete", &Value::Null, &ahora)
+                .await
+                .map_err(de_sqlx)?;
+        }
+        encolar_cambio(&mut tx, "card", &id, "delete", &Value::Null, &ahora)
+            .await
+            .map_err(de_sqlx)?;
+        tx.commit().await.map_err(de_sqlx)?;
+        Ok(ConMensaje {
+            valor: (),
+            mensaje: resultado("card_delete", messages::TARJETA_ELIMINADA),
+        })
+    }
+
     /// IPC-LABEL-01 `label_list`: las etiquetas del usuario en orden alfabético por nombre, de la A a la Z
     /// (D-165). El Formulario de tarjeta solo ofrece estas (HE-07-HU02-ET03).
     pub async fn etiquetas(&self, user_id: &str) -> Result<Vec<Label>, AppError> {

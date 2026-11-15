@@ -345,3 +345,26 @@ pub async fn card_update(
     }
     Ok(con_mensaje(r))
 }
+
+/// IPC-CARD-03 `card_delete` (HE-07-HU05). Emite `cards_changed` con `op: 'delete'` para que la tarjeta
+/// desaparezca de todas las vistas (ET04).
+#[tauri::command]
+pub async fn card_delete(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: CardIdParams,
+) -> Result<IpcResult<()>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .eliminar_tarjeta(&user_id, &params.id.0)
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if r.is_ok() {
+        avisar_tarjetas(&app, vec![params.id], ChangeOp::Delete);
+    }
+    Ok(con_mensaje(r))
+}

@@ -297,3 +297,70 @@ fn editar_quita_la_descripcion_y_cambia_las_etiquetas() {
     });
     assert_eq!(op, "delete");
 }
+
+#[test]
+fn ca_he_07_hu05_ca02() {
+    // HE-07-HU05-CA02 · Eliminar confirmado: la tarjeta deja de existir en todas las vistas (ET04), con sus
+    // etiquetas de tarjeta, y responde «Tarjeta eliminada.» (ET06). Es definitivo (ET03): queda la orden de
+    // eliminación en la cola para la nube.
+    let servicio = con_semilla();
+    let a = etiqueta(&servicio, "A");
+    let t = crear(
+        &servicio,
+        CardCreateParams {
+            label_ids: Some(vec![Uuid(a.clone())]),
+            ..params("Borrar", "2026-11-20")
+        },
+    )
+    .unwrap()
+    .valor;
+    let otra = una_tarjeta(&servicio);
+    let r = bloquear(servicio.eliminar_tarjeta(USUARIO, &t.id.0)).unwrap();
+    assert_eq!(
+        (r.mensaje.code.as_str(), r.mensaje.message.as_str()),
+        ("card_delete", "Tarjeta eliminada.")
+    );
+    assert_eq!(bloquear(servicio.tarjeta(USUARIO, &t.id.0)).unwrap(), None);
+    assert_eq!(contar(&servicio, "SELECT count(*) FROM card_label"), 0);
+    let tablero = bloquear(servicio.tablero(USUARIO)).unwrap();
+    let ids: Vec<_> = tablero.columns[0]
+        .cards
+        .iter()
+        .map(|c| c.id.clone())
+        .collect();
+    assert_eq!(ids, [otra.id]);
+    let (op, fields): (String, String) = bloquear(async {
+        sqlx::query_as("SELECT op, fields FROM pending_change WHERE entity_id = ?")
+            .bind(&t.id.0)
+            .fetch_one(servicio.base().pool().await.unwrap())
+            .await
+            .unwrap()
+    });
+    assert_eq!((op.as_str(), fields.as_str()), ("delete", "{}"));
+    let union = id_de_card_label(&t.id.0, &a);
+    let op: String = bloquear(async {
+        sqlx::query_scalar("SELECT op FROM pending_change WHERE entity_id = ?")
+            .bind(&union)
+            .fetch_one(servicio.base().pool().await.unwrap())
+            .await
+            .unwrap()
+    });
+    assert_eq!(op, "delete");
+}
+
+#[test]
+fn eliminar_una_tarjeta_que_ya_no_existe_es_card_not_found() {
+    // DP-04; tampoco se elimina la tarjeta de otro usuario (RNF-21).
+    let servicio = con_semilla();
+    let t = una_tarjeta(&servicio);
+    let e = bloquear(servicio.eliminar_tarjeta(OTRO_USUARIO, &t.id.0)).unwrap_err();
+    assert_eq!(
+        (e.code, e.message.as_str()),
+        (ErrorCode::CardNotFound, "Esta tarjeta ya no existe.")
+    );
+    assert!(
+        bloquear(servicio.tarjeta(USUARIO, &t.id.0))
+            .unwrap()
+            .is_some()
+    );
+}

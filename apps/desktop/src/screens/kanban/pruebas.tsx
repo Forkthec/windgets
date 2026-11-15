@@ -147,6 +147,21 @@ export function crearNucleo(tarjetas: Card[] = []): {
       },
     ],
     [
+      'card_delete',
+      (params) => {
+        const i = nucleo.tarjetas.findIndex((c) => c.id === (params as { id: string }).id);
+        if (i < 0) {
+          return { ok: false, error: { code: 'card.not_found', message: 'Esta tarjeta ya no existe.' } };
+        }
+        nucleo.tarjetas.splice(i, 1);
+        return {
+          ok: true,
+          value: null,
+          result_message: { code: 'card_delete', message: 'Tarjeta eliminada.' },
+        };
+      },
+    ],
+    [
       'card_get',
       (params) => {
         const t = nucleo.tarjetas.find((c) => c.id === (params as { id: string }).id);

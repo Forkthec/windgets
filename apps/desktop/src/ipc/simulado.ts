@@ -131,6 +131,17 @@ const respuestas: Respuestas = {
       result_message: { code: 'card_update', message: textos.TARJETA_ACTUALIZADA },
     };
   },
+  // HE-07-HU05: elimina la tarjeta creada.
+  card_delete: ({ id }) => {
+    const i = tarjetasSimuladas.findIndex((c) => c.id === id);
+    if (i < 0) return error({ code: 'card.not_found', message: textos.TARJETA_NO_EXISTE });
+    tarjetasSimuladas.splice(i, 1);
+    return {
+      ok: true,
+      value: null,
+      result_message: { code: 'card_delete', message: textos.TARJETA_ELIMINADA },
+    };
+  },
   // HE-07-HU03: el detalle de una tarjeta creada (el simulado no tiene etiquetas ni bloques horarios).
   card_get: ({ id }) => {
     const t = tarjetasSimuladas.find((c) => c.id === id);

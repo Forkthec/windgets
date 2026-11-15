@@ -43,3 +43,4 @@ Datos «NO DEFINIDO» y contradicciones encontradas al construir (AGENTS.md, «C
 - **HE-07-HU01** · Falta la distancia entre posiciones al poner una tarjeta al final de una columna. Valor usado: 1024, la del ejemplo de `contratos.md` (RPC-02) (`servicio_del_planificador.rs`).
 - **HE-07-HU01** · Falta el espacio de nombres del UUID v5 de `card_label.id` («UUID v5 de card_id:label_id», `datos.md`). Valor usado: `NAMESPACE_OID` (`servicio_del_planificador.rs`).
 - **HE-07-HU01** · Falta el texto de la opción vacía del campo Prioridad (opcional, empieza vacío según ET27). Valor usado: una opción sin texto (`screens/tarjeta/FormularioTarjeta.tsx`).
+- **HE-07-HU05** · Falta el título de la ventana emergente de la confirmación M-08 (la Ventana emergente de RT-02 muestra un título). Valor usado: «Eliminar», el texto de la opción (`screens/tarjeta/ConfirmarEliminacion.tsx`).

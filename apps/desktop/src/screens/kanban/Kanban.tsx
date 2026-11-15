@@ -5,6 +5,7 @@ import { Boton } from '@/ui/Boton/Boton';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { ConfirmarEliminacion } from '../tarjeta/ConfirmarEliminacion';
 import { DetalleTarjeta } from '../tarjeta/DetalleTarjeta';
 import { fechaVisible } from '../tarjeta/fechas';
 import { FormularioTarjeta } from '../tarjeta/FormularioTarjeta';
@@ -14,7 +15,10 @@ import { NOMBRE_DE_PRIORIDAD, NOMBRE_DE_TIPO } from '../tarjeta/nombres';
 // tarjetas vienen del Núcleo (IPC-CARD-05); la pantalla se vuelve a leer con cards_changed y columns_changed.
 
 type Ventana =
-  { tipo: 'formulario' } | { tipo: 'detalle'; id: string } | { tipo: 'edicion'; tarjeta: CardDetail };
+  | { tipo: 'formulario' }
+  | { tipo: 'detalle'; id: string }
+  | { tipo: 'edicion'; tarjeta: CardDetail }
+  | { tipo: 'eliminar'; tarjeta: CardDetail };
 
 /** Una tarjeta en la vista compacta (ET05): tipo (HE-07-HU01-ET15), título, fecha límite y prioridad. */
 function Tarjeta({ tarjeta, alAbrir }: { tarjeta: Card; alAbrir: (id: string) => void }) {
@@ -103,6 +107,17 @@ export function Kanban() {
     [emergentes, leer, mostrarResultado],
   );
 
+  // HE-07-HU05-CA02: al eliminar, cierra las ventanas, sigue en el tablero sin la tarjeta (ET04, ET05) y
+  // muestra «Tarjeta eliminada.» (ET06).
+  const eliminada = useCallback(
+    (mensaje: string) => {
+      emergentes.cerrarTodas();
+      mostrarResultado(mensaje);
+      void leer();
+    },
+    [emergentes, leer, mostrarResultado],
+  );
+
   // HE-07-HU04-CA01: al guardar la edición, regresa al Detalle de tarjeta actualizado (ET03) con el mensaje.
   const editada = useCallback(
     (_: Card, mensaje: string) => {
@@ -143,6 +158,16 @@ export function Kanban() {
           alNoExistir={noExiste}
           // HE-07-HU04-ET01: «Editar» reemplaza el detalle por el formulario en modo edición (RT-02).
           alEditar={(tarjeta) => emergentes.pasarA({ tipo: 'edicion', tarjeta })}
+          // HE-07-HU05-ET01: «Eliminar» abre la confirmación sobre el detalle.
+          alEliminar={(tarjeta) => emergentes.pasarA({ tipo: 'eliminar', tarjeta })}
+        />
+      )}
+      {ventana?.tipo === 'eliminar' && (
+        <ConfirmarEliminacion
+          tarjeta={ventana.tarjeta}
+          alEliminar={eliminada}
+          alCancelar={emergentes.volver}
+          alNoExistir={noExiste}
         />
       )}
       {ventana?.tipo === 'edicion' && (
