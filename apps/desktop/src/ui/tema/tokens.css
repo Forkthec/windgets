@@ -135,6 +135,11 @@ body {
 .wg-emergente {
   min-width: calc(var(--wg-unidad) * 90);
   max-width: calc(100vw - var(--wg-unidad) * 16);
+  /* Un contenido más alto que la ventana se desplaza dentro de la ventana emergente: sus opciones siguen al
+     alcance (RT-02-ET05, «Guardar» y «Cancelar»). */
+  max-height: calc(100vh - var(--wg-unidad) * 16);
+  overflow-y: auto;
+  box-sizing: border-box;
   padding: calc(var(--wg-unidad) * 6);
   border: var(--wg-borde-ancho) solid var(--wg-borde);
   border-radius: var(--wg-radio);
@@ -214,6 +219,9 @@ body {
   font-size: inherit;
 }
 .wg-menu__opcion {
+  /* Una opción por línea: con inline-flex el ancho natural del menú era el de todas las opciones seguidas y la
+     columna del menú ocupaba casi toda la ventana (RT-01-ET01, menú a la izquierda de la pantalla). */
+  display: flex;
   width: 100%;
   border-color: var(--wg-superficie-alta);
   background: var(--wg-superficie-alta);
@@ -227,7 +235,9 @@ body {
 /* RT-01: ventana principal con el menú principal a la izquierda de la pantalla actual. */
 .wg-ventana-principal {
   display: grid;
-  grid-template-columns: auto 1fr;
+  /* minmax(0, 1fr): una pantalla con contenido ancho (el Tablero Kanban) se desplaza dentro de su panel en lugar
+     de ensanchar la rejilla y empujar el menú principal. */
+  grid-template-columns: auto minmax(0, 1fr);
   gap: calc(var(--wg-unidad) * 4);
   min-height: 100vh;
   box-sizing: border-box;
@@ -304,4 +314,197 @@ body {
 .wg-enlace:focus-visible {
   outline: var(--wg-borde-ancho) solid var(--wg-accion);
   outline-offset: calc(var(--wg-unidad) / 2);
+}
+
+/* Tablero Kanban (P-KAN-01, HE-09-HU01): columnas una al lado de otra, con desplazamiento horizontal. */
+.wg-tablero {
+  display: flex;
+  align-items: flex-start;
+  gap: calc(var(--wg-unidad) * 4);
+  overflow-x: auto;
+  padding-block: calc(var(--wg-unidad) * 4);
+}
+.wg-columna {
+  flex: 0 0 calc(var(--wg-unidad) * 70);
+  box-sizing: border-box;
+  padding: calc(var(--wg-unidad) * 3);
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-radius: var(--wg-radio);
+}
+.wg-columna__encabezado {
+  margin: 0 0 calc(var(--wg-unidad) * 3);
+  font-size: inherit;
+}
+.wg-columna__cantidad {
+  margin-left: auto;
+}
+.wg-columna__tarjetas {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--wg-unidad) * 2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wg-muestra-color {
+  width: calc(var(--wg-unidad) * 3);
+  height: calc(var(--wg-unidad) * 3);
+  border-radius: 50%;
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+}
+.wg-tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wg-unidad);
+  padding: calc(var(--wg-unidad) * 3);
+  background: var(--wg-superficie);
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-radius: var(--wg-radio);
+}
+.wg-tarjeta__tipo {
+  font-size: 0.85em;
+}
+.wg-tarjeta__titulo {
+  font-weight: 700;
+}
+/* «Vencida» con texto y borde: no depende solo del color (interfaz.md). */
+.wg-indicador {
+  padding: 0 var(--wg-unidad);
+  border: var(--wg-borde-ancho) solid var(--wg-tinta);
+  border-radius: var(--wg-radio);
+  font-size: 0.85em;
+}
+
+/* Título de una tarjeta: abre el Detalle de tarjeta (HE-07-HU03-ET02). */
+button.wg-tarjeta__titulo {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+button.wg-tarjeta__titulo:focus-visible {
+  outline: var(--wg-borde-ancho) solid var(--wg-accion);
+  outline-offset: calc(var(--wg-unidad) / 2);
+}
+
+/* Detalle de tarjeta (P-TAR-01): el nombre de cada dato sobre su valor. */
+.wg-detalle {
+  display: grid;
+  gap: var(--wg-unidad);
+  margin: 0;
+}
+.wg-detalle dd {
+  margin: 0 0 calc(var(--wg-unidad) * 2);
+}
+.wg-lista-en-linea {
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Drag-and-drop del tablero (HE-09-HU02-ET01): la tarjeta que se arrastra queda encima y el destino se marca con
+   un borde más grueso, sin transparencias (interfaz.md). */
+.wg-tarjeta {
+  position: relative;
+  touch-action: none;
+}
+.wg-tarjeta--arrastrada {
+  z-index: 1;
+  box-shadow: var(--wg-sombra);
+  cursor: grabbing;
+}
+.wg-tarjeta--destino,
+.wg-columna--destino {
+  outline: calc(var(--wg-borde-ancho) * 2) solid var(--wg-accion);
+}
+
+/* «Mover a» (HE-09-HU02-ET10, ET11): la columna actual va marcada y deshabilitada (RT-04). */
+.wg-mover-a {
+  position: relative;
+}
+.wg-mover-a__menu {
+  position: absolute;
+  z-index: 2;
+  margin: var(--wg-unidad) 0 0;
+  padding: var(--wg-unidad);
+  list-style: none;
+  background: var(--wg-superficie);
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-radius: var(--wg-radio);
+  box-shadow: var(--wg-sombra);
+}
+.wg-mover-a__opcion {
+  display: block;
+  width: 100%;
+  padding: var(--wg-unidad) calc(var(--wg-unidad) * 2);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.wg-mover-a__opcion[aria-checked='true'] {
+  font-weight: 700;
+  text-decoration: underline;
+}
+.wg-mover-a__opcion:disabled {
+  color: var(--wg-borde);
+  cursor: default;
+}
+
+/* Agenda diaria (P-AGE-01, HE-11-HU01): los 24 bloques a la izquierda y Tarjetas sin horario a la derecha. */
+.wg-agenda {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  align-items: start;
+  gap: calc(var(--wg-unidad) * 4);
+  padding-block: calc(var(--wg-unidad) * 4);
+}
+.wg-agenda__fecha {
+  margin: 0 0 0 auto;
+  font-size: inherit;
+}
+.wg-agenda__bloques {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wg-agenda__bloque {
+  padding: calc(var(--wg-unidad) * 2) 0;
+  border-top: var(--wg-borde-ancho) solid var(--wg-borde);
+  scroll-margin-top: calc(var(--wg-unidad) * 2);
+}
+/* El bloque de la hora actual se marca con un borde más grueso, no solo con color (interfaz.md). */
+.wg-agenda__bloque--actual {
+  border-top-width: calc(var(--wg-borde-ancho) * 4);
+}
+.wg-agenda__hora {
+  margin: 0 0 var(--wg-unidad);
+  font-size: inherit;
+  font-weight: 400;
+}
+.wg-agenda__sin-horario {
+  padding: calc(var(--wg-unidad) * 3);
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-radius: var(--wg-radio);
+}
+.wg-agenda__sin-horario h3 {
+  margin: 0 0 calc(var(--wg-unidad) * 2);
+  font-size: inherit;
+}
+
+/* Planificador diario (P-PLA-01, HE-12-HU01-ET07): una tarjeta completada va tachada (y con la casilla marcada:
+   no depende solo del estilo). */
+.wg-planificador .wg-tarjeta {
+  align-items: center;
+}
+.wg-tachada .wg-tarjeta__titulo {
+  text-decoration: line-through;
 }

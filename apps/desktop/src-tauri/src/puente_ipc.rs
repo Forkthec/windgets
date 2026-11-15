@@ -10,18 +10,23 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::cliente_de_supabase::ClienteDeSupabase;
-use crate::repositorios_y_archivos_locales::almacen_de_la_aplicacion;
+use crate::repositorios_y_archivos_locales::{BaseLocal, almacen_de_la_aplicacion};
 use crate::servicio_de_sesion::{ConMensaje, RelojDelSistema, ServicioDeSesion};
+use crate::servicio_del_planificador::{CalendarioDelSistema, ServicioDelPlanificador};
 use crate::tipos::{
-    AppError, AuthRegisterStartParams, AuthRegisterStartResult, AuthRegisterVerifyParams,
-    AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, CodeSent, Connectivity,
-    EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
-    EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, NoParams, SessionInfo,
+    AgendaDay, AgendaDayParams, AppError, AuthRegisterStartParams, AuthRegisterStartResult,
+    AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, Card,
+    CardAssignTimeBlockParams, CardCreateParams, CardDetail, CardIdParams, CardListBoardResult,
+    CardMoveParams, CardUpdateParams, ChangeOp, CodeSent, Column, Connectivity, EntityChange,
+    ErrorCode, EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
+    EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, Label, NoParams, OriginKind,
+    PlannerToday, SessionInfo,
 };
 
 /// El Núcleo que ven los comandos.
 pub struct Nucleo {
     pub sesion: ServicioDeSesion<ClienteDeSupabase, RelojDelSistema>,
+    pub planificador: ServicioDelPlanificador<CalendarioDelSistema>,
 }
 
 impl Nucleo {
@@ -31,6 +36,10 @@ impl Nucleo {
                 ClienteDeSupabase::desde_compilacion(),
                 RelojDelSistema,
                 almacen_de_la_aplicacion(),
+            ),
+            planificador: ServicioDelPlanificador::nuevo(
+                BaseLocal::de_la_aplicacion(),
+                CalendarioDelSistema,
             ),
         }
     }
@@ -198,4 +207,225 @@ pub fn auth_get_session(
 ) -> IpcResult<AuthSessionState> {
     let _ = params;
     correcto(nucleo.sesion.estado_de_sesion())
+}
+
+/// El `user_id` de la sesión guardada: los comandos del planificador solo se usan con la sesión iniciada
+/// (RT-01). Sin sesión no hay pantalla que los llame; si pasara, la respuesta es `internal.unexpected`.
+fn usuario(nucleo: &Nucleo) -> Result<String, AppError> {
+    nucleo
+        .sesion
+        .sesion_guardada()
+        .map(|s| s.user_id.to_lowercase())
+        .ok_or(AppError {
+            code: ErrorCode::InternalUnexpected,
+            message: String::new(),
+            field: None,
+            params: None,
+        })
+}
+
+/// EV-07 `cards_changed` tras crear, editar, mover, completar o eliminar tarjetas en este computador.
+fn avisar_tarjetas(app: &AppHandle, ids: Vec<crate::tipos::Uuid>, op: ChangeOp) {
+    let _ = app.emit(
+        "cards_changed",
+        EntityChange {
+            ids,
+            op,
+            origin: OriginKind::Local,
+        },
+    );
+}
+
+/// IPC-CARD-01 `card_create` (HE-07-HU01). Guarda en la base local, con o sin conexión (CA12), y emite
+/// `cards_changed` para que el tablero y las demás vistas muestren la tarjeta (ET14).
+#[tauri::command]
+pub async fn card_create(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: CardCreateParams,
+) -> Result<IpcResult<Card>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.crear_tarjeta(&user_id, params).await,
+        Err(e) => Err(e),
+    };
+    if let Ok(creada) = &r {
+        avisar_tarjetas(&app, vec![creada.valor.id.clone()], ChangeOp::Upsert);
+    }
+    Ok(con_mensaje(r))
+}
+
+/// IPC-LABEL-01 `label_list`: etiquetas en orden alfabético (D-165), para el campo Etiquetas del Formulario de
+/// tarjeta (HE-07-HU01-ET12). Los textos de estado vacío los pone la vista (HE-08-HU01, HE-07-HU02).
+#[tauri::command]
+pub async fn label_list(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<Vec<Label>>, ()> {
+    let _ = params;
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.etiquetas(&user_id).await,
+        Err(e) => Err(e),
+    };
+    Ok(match r {
+        Ok(etiquetas) => correcto(etiquetas),
+        Err(error) => IpcResult::Err(IpcErr {
+            ok: false.into(),
+            error,
+        }),
+    })
+}
+
+/// Respuesta de un comando de lectura sin mensaje de resultado.
+fn leido<T>(r: Result<T, AppError>) -> IpcResult<T> {
+    match r {
+        Ok(valor) => correcto(valor),
+        Err(error) => IpcResult::Err(IpcErr {
+            ok: false.into(),
+            error,
+        }),
+    }
+}
+
+/// IPC-CARD-05 `card_list_board` (HE-09-HU01): columnas y tarjetas del tablero Kanban.
+#[tauri::command]
+pub async fn card_list_board(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<CardListBoardResult>, ()> {
+    let _ = params;
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.tablero(&user_id).await,
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-COL-01 `column_list` (HE-09-HU01): columnas por `position`.
+#[tauri::command]
+pub async fn column_list(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<Vec<Column>>, ()> {
+    let _ = params;
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.columnas(&user_id).await,
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-CARD-04 `card_get` (HE-07-HU03): el Detalle de tarjeta.
+#[tauri::command]
+pub async fn card_get(
+    nucleo: State<'_, Nucleo>,
+    params: CardIdParams,
+) -> Result<IpcResult<CardDetail>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.detalle(&user_id, &params.id.0).await,
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-CARD-02 `card_update` (HE-07-HU04). Emite `cards_changed` para que el tablero y las demás vistas
+/// muestren el cambio en tiempo real (ET10).
+#[tauri::command]
+pub async fn card_update(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: CardUpdateParams,
+) -> Result<IpcResult<Card>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .actualizar_tarjeta(&user_id, params)
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if let Ok(editada) = &r {
+        avisar_tarjetas(&app, vec![editada.valor.id.clone()], ChangeOp::Upsert);
+    }
+    Ok(con_mensaje(r))
+}
+
+/// IPC-CARD-03 `card_delete` (HE-07-HU05). Emite `cards_changed` con `op: 'delete'` para que la tarjeta
+/// desaparezca de todas las vistas (ET04).
+#[tauri::command]
+pub async fn card_delete(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: CardIdParams,
+) -> Result<IpcResult<()>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .eliminar_tarjeta(&user_id, &params.id.0)
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if r.is_ok() {
+        avisar_tarjetas(&app, vec![params.id], ChangeOp::Delete);
+    }
+    Ok(con_mensaje(r))
+}
+
+/// IPC-CARD-06 `card_move` (HE-09-HU02): drag-and-drop y «Mover a». Emite `cards_changed` (EV-07).
+#[tauri::command]
+pub async fn card_move(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: CardMoveParams,
+) -> Result<IpcResult<Card>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.mover_tarjeta(&user_id, params).await,
+        Err(e) => Err(e),
+    };
+    if let Ok(movida) = &r {
+        avisar_tarjetas(&app, vec![movida.id.clone()], ChangeOp::Upsert);
+    }
+    Ok(leido(r))
+}
+
+/// IPC-CARD-09 `agenda_get_day` (HE-11-HU01): la agenda diaria de un día.
+#[tauri::command]
+pub async fn agenda_get_day(
+    nucleo: State<'_, Nucleo>,
+    params: AgendaDayParams,
+) -> Result<IpcResult<AgendaDay>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.agenda(&user_id, &params.date.0).await,
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-CARD-10 `card_assign_time_block` (HE-11-HU02). Emite `cards_changed` para que la agenda, el planificador
+/// diario y el widget Tareas del día muestren la tarjeta en su bloque (ET02).
+#[tauri::command]
+pub async fn card_assign_time_block(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: CardAssignTimeBlockParams,
+) -> Result<IpcResult<Card>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.asignar_bloque(&user_id, params).await,
+        Err(e) => Err(e),
+    };
+    if let Ok(asignada) = &r {
+        avisar_tarjetas(&app, vec![asignada.valor.id.clone()], ChangeOp::Upsert);
+    }
+    Ok(con_mensaje(r))
+}
+
+/// IPC-CARD-08 `planner_get_today` (HE-12-HU01): el planificador diario de hoy.
+#[tauri::command]
+pub async fn planner_get_today(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<PlannerToday>, ()> {
+    let _ = params;
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.planificador_de_hoy(&user_id).await,
+        Err(e) => Err(e),
+    }))
 }

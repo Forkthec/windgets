@@ -36,10 +36,18 @@ pub struct CardPatch {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub due_date: Option<DateIso>,
     #[ts(optional)]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "super::doble_opcion"
+    )]
     pub description: Option<Option<String>>,
     #[ts(optional)]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "super::doble_opcion"
+    )]
     pub priority: Option<Option<Priority>>,
     #[ts(optional)]
     #[serde(default, skip_serializing_if = "Option::is_none")]

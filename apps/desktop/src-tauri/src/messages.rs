@@ -58,6 +58,49 @@ pub const CREDENCIALES_INCORRECTAS: &str = "Correo electrónico o contraseña in
 /// `net.offline` en Inicio de sesión (HE-01-HU04-CA10).
 pub const SIN_CONEXION_INICIO: &str = "No hay conexión a internet. Conéctate para iniciar sesión.";
 
+// HE-07-HU01 · Crear una tarjeta de tipo Tarea, Recordatorio o Evento (IPC-CARD-01 card_create).
+
+/// Resultado de `card_create` (HE-07-HU01-CA01, CA02, CA12; ET16).
+pub const TARJETA_CREADA: &str = "Tarjeta creada.";
+/// `title.too_long` (HE-07-HU01-CA06, ET18).
+pub const TITULO_MUY_LARGO: &str = "El título no puede superar los 100 caracteres.";
+/// `due_date.invalid` (HE-07-HU01-CA08, ET19).
+pub const FECHA_INVALIDA: &str = "Diligencia una fecha válida.";
+/// `due_date.in_past` (HE-07-HU01-CA09, ET20).
+pub const FECHA_LIMITE_ANTERIOR_A_HOY: &str = "La fecha límite no puede ser anterior a hoy.";
+/// `description.too_long` (HE-07-HU01-CA10, ET21).
+pub const DESCRIPCION_MUY_LARGA: &str = "La descripción no puede superar los 1000 caracteres.";
+/// `labels.too_many` (HE-07-HU02-CA02, ET06; IPC-CARD-01).
+pub const MAXIMO_ETIQUETAS: &str = "Puedes asignar máximo 5 etiquetas por tarjeta.";
+
+// HE-07-HU04 · Editar una tarjeta (IPC-CARD-02 card_update).
+
+/// Resultado de `card_update` (HE-07-HU04-CA01, CA03; ET14).
+pub const TARJETA_ACTUALIZADA: &str = "Tarjeta actualizada.";
+/// Resultado de `card_update` cuando la tarjeta sale de su bloque horario (HE-07-HU04-CA10; ET15).
+pub const TARJETA_ACTUALIZADA_SIN_BLOQUE: &str = "Tarjeta actualizada. Se quitó de su bloque horario porque quedó después de la nueva fecha límite.";
+
+// HE-07-HU05 · Eliminar una tarjeta (IPC-CARD-03 card_delete).
+
+/// Resultado de `card_delete` (HE-07-HU05-CA02; ET06).
+pub const TARJETA_ELIMINADA: &str = "Tarjeta eliminada.";
+
+// HE-11-HU02 · Asignar una tarjeta a un bloque horario (IPC-CARD-10 card_assign_time_block).
+
+/// Resultado de `card_assign_time_block` (HE-11-HU02-CA01, CA03; ET09, D-169).
+pub const TARJETA_ASIGNADA_AL_BLOQUE: &str =
+    "Tarjeta asignada al bloque <hora de inicio> – <hora de fin>.";
+/// `time_block.past` (HE-11-HU02-CA04; ET10).
+pub const BLOQUE_YA_PASO: &str = "No puedes asignar tarjetas a un bloque horario que ya pasó.";
+/// `time_block.after_due_date` (HE-11-HU02-CA05; ET11).
+pub const BLOQUE_DESPUES_DE_FECHA_LIMITE: &str =
+    "No puedes programar la tarjeta después de su fecha límite.";
+
+// HE-07-HU03 · Consultar el detalle de una tarjeta (IPC-CARD-04 card_get).
+
+/// `card.not_found` (HE-07-HU04-CA11; DP-04: el mismo texto al consultar, eliminar o mover).
+pub const TARJETA_NO_EXISTE: &str = "Esta tarjeta ya no existe.";
+
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
     ("SERVICIO_NO_DISPONIBLE", SERVICIO_NO_DISPONIBLE),
@@ -78,6 +121,25 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("REENVIO_EN_SEGUNDOS", REENVIO_EN_SEGUNDOS),
     ("CREDENCIALES_INCORRECTAS", CREDENCIALES_INCORRECTAS),
     ("SIN_CONEXION_INICIO", SIN_CONEXION_INICIO),
+    ("TARJETA_CREADA", TARJETA_CREADA),
+    ("TITULO_MUY_LARGO", TITULO_MUY_LARGO),
+    ("FECHA_INVALIDA", FECHA_INVALIDA),
+    ("FECHA_LIMITE_ANTERIOR_A_HOY", FECHA_LIMITE_ANTERIOR_A_HOY),
+    ("DESCRIPCION_MUY_LARGA", DESCRIPCION_MUY_LARGA),
+    ("MAXIMO_ETIQUETAS", MAXIMO_ETIQUETAS),
+    ("TARJETA_NO_EXISTE", TARJETA_NO_EXISTE),
+    ("TARJETA_ACTUALIZADA", TARJETA_ACTUALIZADA),
+    (
+        "TARJETA_ACTUALIZADA_SIN_BLOQUE",
+        TARJETA_ACTUALIZADA_SIN_BLOQUE,
+    ),
+    ("TARJETA_ELIMINADA", TARJETA_ELIMINADA),
+    ("TARJETA_ASIGNADA_AL_BLOQUE", TARJETA_ASIGNADA_AL_BLOQUE),
+    ("BLOQUE_YA_PASO", BLOQUE_YA_PASO),
+    (
+        "BLOQUE_DESPUES_DE_FECHA_LIMITE",
+        BLOQUE_DESPUES_DE_FECHA_LIMITE,
+    ),
 ];
 
 #[cfg(test)]

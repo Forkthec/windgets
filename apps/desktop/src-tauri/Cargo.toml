@@ -22,6 +22,14 @@ ts-rs = { version = "=12.0.1", features = ["no-serde-warnings"] }
 # Cliente HTTPS del Núcleo hacia Supabase (INT-01, arquitectura.md: «Rust, reqwest»). La misma versión que
 # ya trae Tauri; TLS del sistema (Schannel en Windows) con mínimo TLS 1.2 (RNF-18).
 reqwest = { version = "=0.13.5", default-features = false, features = ["json", "native-tls"] }
+# Base local SQLite (arquitectura.md, vista 3a: «Rust, sqlx (SQLite)»), en WAL (RNF-14).
+sqlx = { version = "=0.8.6", default-features = false, features = ["sqlite", "runtime-tokio"] }
+# Identificadores de las entidades locales (v4) y de card_label (v5 de card_id:label_id, sqlite_esquema.sql).
+uuid = { version = "=1.29.2", features = ["v4", "v5"] }
+# Fecha actual del computador para «no puede ser anterior a hoy» (HE-07-HU01-ET08).
+chrono = { version = "=0.4.45", default-features = false, features = ["clock", "std"] }
+# Preparar la base local una sola vez en el primer uso (OnceCell asíncrono); la misma versión que trae Tauri.
+tokio = { version = "=1.54.1", default-features = false, features = ["sync"] }
 
 # API de Windows para el Host del wallpaper (INT-07, contratos.md): la misma versión que ya trae Tauri.
 [target.'cfg(windows)'.dependencies]
