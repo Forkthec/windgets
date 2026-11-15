@@ -96,6 +96,37 @@ pub const BLOQUE_YA_PASO: &str = "No puedes asignar tarjetas a un bloque horario
 pub const BLOQUE_DESPUES_DE_FECHA_LIMITE: &str =
     "No puedes programar la tarjeta después de su fecha límite.";
 
+// HE-08-HU02 · Crear una etiqueta con nombre y color (IPC-LABEL-02 label_create).
+
+/// Resultado de `label_create` (HE-08-HU02-CA01, CA08; ET09).
+pub const ETIQUETA_CREADA: &str = "Etiqueta creada.";
+/// `name.too_long` (HE-08-HU02-CA03; ET11).
+pub const NOMBRE_DE_ETIQUETA_MUY_LARGO: &str =
+    "El nombre de la etiqueta no puede superar los 30 caracteres.";
+/// `name.duplicate` (HE-08-HU02-CA04; ET12).
+pub const ETIQUETA_DUPLICADA: &str = "Ya existe una etiqueta con ese nombre.";
+/// `label.limit_reached` (HE-08-HU02-CA06; ET07).
+pub const MAXIMO_DE_ETIQUETAS_CREADAS: &str =
+    "Alcanzaste el máximo de 20 etiquetas. Elimina una para crear otra.";
+
+// HE-09-HU03 · Crear una columna (IPC-COL-02 column_create).
+
+/// Resultado de `column_create` (HE-09-HU03-CA01, CA02).
+pub const COLUMNA_CREADA: &str = "Columna creada.";
+/// `name.too_long` (HE-09-HU03-CA04).
+pub const NOMBRE_DE_COLUMNA_MUY_LARGO: &str =
+    "El nombre de la columna no puede superar los 30 caracteres.";
+/// `name.duplicate` (HE-09-HU03-CA05; ET04).
+pub const COLUMNA_DUPLICADA: &str = "Ya existe una columna con ese nombre.";
+/// `column.limit_reached` (HE-09-HU03-CA06; ET08).
+pub const MAXIMO_DE_COLUMNAS: &str =
+    "Alcanzaste el máximo de 10 columnas. Elimina una para crear otra.";
+
+// HE-09-HU04 · Editar una columna (IPC-COL-03 column_update).
+
+/// Resultado de `column_update` (HE-09-HU04-CA01, CA02).
+pub const COLUMNA_ACTUALIZADA: &str = "Columna actualizada.";
+
 // HE-07-HU03 · Consultar el detalle de una tarjeta (IPC-CARD-04 card_get).
 
 /// `card.not_found` (HE-07-HU04-CA11; DP-04: el mismo texto al consultar, eliminar o mover).
@@ -128,6 +159,15 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("DESCRIPCION_MUY_LARGA", DESCRIPCION_MUY_LARGA),
     ("MAXIMO_ETIQUETAS", MAXIMO_ETIQUETAS),
     ("TARJETA_NO_EXISTE", TARJETA_NO_EXISTE),
+    ("COLUMNA_CREADA", COLUMNA_CREADA),
+    ("NOMBRE_DE_COLUMNA_MUY_LARGO", NOMBRE_DE_COLUMNA_MUY_LARGO),
+    ("COLUMNA_DUPLICADA", COLUMNA_DUPLICADA),
+    ("MAXIMO_DE_COLUMNAS", MAXIMO_DE_COLUMNAS),
+    ("COLUMNA_ACTUALIZADA", COLUMNA_ACTUALIZADA),
+    ("ETIQUETA_CREADA", ETIQUETA_CREADA),
+    ("NOMBRE_DE_ETIQUETA_MUY_LARGO", NOMBRE_DE_ETIQUETA_MUY_LARGO),
+    ("ETIQUETA_DUPLICADA", ETIQUETA_DUPLICADA),
+    ("MAXIMO_DE_ETIQUETAS_CREADAS", MAXIMO_DE_ETIQUETAS_CREADAS),
     ("TARJETA_ACTUALIZADA", TARJETA_ACTUALIZADA),
     (
         "TARJETA_ACTUALIZADA_SIN_BLOQUE",

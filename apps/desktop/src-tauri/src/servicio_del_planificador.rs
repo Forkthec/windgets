@@ -17,9 +17,10 @@ use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, instante};
 use crate::tipos::{
     AgendaBlock, AgendaDay, AppError, BoardColumn, Card, CardAssignTimeBlockParams,
     CardCreateParams, CardDetail, CardDetailColumn, CardDetailLabelsItem, CardDetailTimeBlock,
-    CardListBoardResult, CardMoveParams, CardType, CardUpdateParams, Column, ColumnRole, DateIso,
-    ErrorCode, Hex, Hour, Instant, Label, Placement, PlannerItem, PlannerSummary, PlannerToday,
-    Priority, ResultMessage, Uuid,
+    CardListBoardResult, CardMoveParams, CardType, CardUpdateParams, CatalogItem, Column,
+    ColumnCreateParams, ColumnReorderParams, ColumnRole, ColumnUpdateParams, DateIso, ErrorCode,
+    Hex, Hour, Instant, Label, LabelCreateParams, Placement, PlannerItem, PlannerSummary,
+    PlannerToday, Priority, ResultMessage, Uuid,
 };
 
 /// Clave para ordenar nombres de la A a la Z sin distinguir mayúsculas ni tildes (D-165): «Árbol» va con la A.
@@ -45,6 +46,14 @@ pub const TITULO_MAX: usize = 100;
 pub const DESCRIPCION_MAX: usize = 1000;
 /// Etiquetas por tarjeta (HE-07-HU02-ET04).
 pub const ETIQUETAS_MAX: usize = 5;
+/// Nombre de etiqueta: de 1 a 30 caracteres (HE-08-HU02-ET03).
+pub const NOMBRE_DE_ETIQUETA_MAX: usize = 30;
+/// Etiquetas por usuario (HE-08-HU02-ET06).
+pub const ETIQUETAS_POR_USUARIO_MAX: i64 = 20;
+/// Nombre de columna: de 1 a 30 caracteres (HE-09-HU03-ET03).
+pub const NOMBRE_DE_COLUMNA_MAX: usize = 30;
+/// Columnas del tablero, contadas las tres por defecto (HE-09-HU03-ET07, D-167).
+pub const COLUMNAS_MAX: usize = 10;
 /// Distancia entre posiciones al poner una tarjeta al final de una columna. DUDA: HE-07-HU01 el paso no está
 /// definido; se usa el del ejemplo de `contratos.md` (RPC-02, `position: 1024`).
 pub const PASO_DE_POSICION: f64 = 1024.0;
@@ -102,6 +111,25 @@ fn resultado(code: &str, message: &str) -> ResultMessage {
 /// Un campo vacío o formado solo por espacios (HE-07-HU01-ET07; RT-04-ET21).
 fn vacio(valor: &str) -> bool {
     valor.trim().is_empty()
+}
+
+/// Nombre de columna (HE-09-HU03-ET03; HE-09-HU04-ET03, ET09): obligatorio, de 1 a 30 caracteres.
+pub fn validar_nombre_de_columna(nombre: &str) -> Option<AppError> {
+    if vacio(nombre) {
+        return Some(error(
+            ErrorCode::NameRequired,
+            messages::CAMPO_OBLIGATORIO,
+            Some("name"),
+        ));
+    }
+    if nombre.trim().chars().count() > NOMBRE_DE_COLUMNA_MAX {
+        return Some(error(
+            ErrorCode::NameTooLong,
+            messages::NOMBRE_DE_COLUMNA_MUY_LARGO,
+            Some("name"),
+        ));
+    }
+    None
 }
 
 /// Título (HE-07-HU01-ET06, ET07): obligatorio, de 1 a 100 caracteres; solo espacios cuenta como vacío.
@@ -781,6 +809,145 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         Ok(etiquetas)
     }
 
+    /// IPC-LABEL-02 `label_create` (HE-08-HU02). Nombre obligatorio de 1 a 30 caracteres (ET03), único sin
+    /// distinguir mayúsculas (ET04), color del catálogo sin valor por defecto (ET05, ET14) y máximo 20 etiquetas
+    /// (ET06). Guarda en SQLite y encola el cambio en la misma transacción, con o sin conexión (ET15).
+    pub async fn crear_etiqueta(
+        &self,
+        user_id: &str,
+        params: LabelCreateParams,
+    ) -> Result<ConMensaje<Label>, AppError> {
+        let nombre = params.name.trim().to_string();
+        let color = params.color_id.trim().to_string();
+        if nombre.is_empty() {
+            return Err(error(
+                ErrorCode::NameRequired,
+                messages::CAMPO_OBLIGATORIO,
+                Some("name"),
+            ));
+        }
+        if nombre.chars().count() > NOMBRE_DE_ETIQUETA_MAX {
+            return Err(error(
+                ErrorCode::NameTooLong,
+                messages::NOMBRE_DE_ETIQUETA_MUY_LARGO,
+                Some("name"),
+            ));
+        }
+        if color.is_empty() {
+            return Err(error(
+                ErrorCode::ColorRequired,
+                messages::CAMPO_OBLIGATORIO,
+                Some("color_id"),
+            ));
+        }
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let mut tx = pool.begin().await.map_err(de_sqlx)?;
+
+        let existentes: Vec<String> =
+            sqlx::query_scalar("SELECT name FROM label WHERE user_id = ?")
+                .bind(user_id)
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(de_sqlx)?;
+        if existentes.len() as i64 >= ETIQUETAS_POR_USUARIO_MAX {
+            return Err(error(
+                ErrorCode::LabelLimitReached,
+                messages::MAXIMO_DE_ETIQUETAS_CREADAS,
+                None,
+            ));
+        }
+        // ET04: sin distinguir mayúsculas de minúsculas, también en letras con tilde (`lower()` de SQLite solo
+        // convierte ASCII).
+        let clave = nombre.to_lowercase();
+        if existentes.iter().any(|e| e.trim().to_lowercase() == clave) {
+            return Err(error(
+                ErrorCode::NameDuplicate,
+                messages::ETIQUETA_DUPLICADA,
+                Some("name"),
+            ));
+        }
+        let existe_el_color: i64 =
+            sqlx::query_scalar("SELECT count(*) FROM catalog_color WHERE id = ? AND is_active = 1")
+                .bind(&color)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(de_sqlx)?;
+        if existe_el_color == 0 {
+            // La vista solo ofrece colores del catálogo (ET05): uno que no está cuenta como sin color.
+            return Err(error(
+                ErrorCode::ColorRequired,
+                messages::CAMPO_OBLIGATORIO,
+                Some("color_id"),
+            ));
+        }
+
+        let id = uuid::Uuid::new_v4().to_string();
+        let ahora = instante(self.calendario.ahora_ms()).0;
+        let (fields, mods) = campos(
+            &[
+                ("name", Value::from(nombre.as_str())),
+                ("color_id", Value::from(color.as_str())),
+            ],
+            &ahora,
+        );
+        sqlx::query(
+            "INSERT INTO label (id, user_id, created_at, field_mods, name, color_id) VALUES (?, ?, ?, ?, ?, ?)",
+        )
+        .bind(&id)
+        .bind(user_id)
+        .bind(&ahora)
+        .bind(mods.to_string())
+        .bind(&nombre)
+        .bind(&color)
+        .execute(&mut *tx)
+        .await
+        .map_err(de_sqlx)?;
+        encolar_cambio(&mut tx, "label", &id, "upsert", &fields, &ahora)
+            .await
+            .map_err(de_sqlx)?;
+        tx.commit().await.map_err(de_sqlx)?;
+
+        let etiqueta = self
+            .etiquetas(user_id)
+            .await?
+            .into_iter()
+            .find(|e| e.id.0 == id)
+            .ok_or_else(inesperado)?;
+        Ok(ConMensaje {
+            valor: etiqueta,
+            mensaje: resultado("label_create", messages::ETIQUETA_CREADA),
+        })
+    }
+
+    /// IPC-CAT-01 `catalog_list` con `kind: 'color'`: el catálogo de colores activo, ordenado por `sort_order`
+    /// (datos.md, Modelo · 3.2). DUDA: HE-08-HU02 un color no tiene miniatura; `thumbnail_url` va vacía.
+    pub async fn colores(&self) -> Result<Vec<CatalogItem>, AppError> {
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let filas = sqlx::query(
+            "SELECT id, name, hex FROM catalog_color WHERE is_active = 1 ORDER BY sort_order, id",
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        filas
+            .into_iter()
+            .map(|f| {
+                Ok(CatalogItem {
+                    id: f.try_get("id")?,
+                    name: f.try_get("name")?,
+                    thumbnail_url: String::new(),
+                    is_cached: true,
+                    hex: Some(Hex(f.try_get("hex")?)),
+                    color_primary: None,
+                    color_secondary: None,
+                    color_text: None,
+                    format: None,
+                })
+            })
+            .collect::<Result<Vec<_>, sqlx::Error>>()
+            .map_err(de_sqlx)
+    }
+
     /// Una tarjeta del usuario con sus etiquetas, o `None` si no existe.
     pub async fn tarjeta(&self, user_id: &str, id: &str) -> Result<Option<Card>, AppError> {
         let pool = self.base.pool().await.map_err(de_sqlx)?;
@@ -1073,6 +1240,267 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
 
     /// IPC-COL-01 `column_list`: las columnas del usuario por `position`, con su cantidad de tarjetas
     /// (HE-09-HU01-ET01). Las tres por defecto son las de función `todo`, `in_progress` y `done` (ET02).
+    /// IPC-COL-02 `column_create` (HE-09-HU03). Nombre obligatorio de 1 a 30 caracteres (ET03), único sin
+    /// distinguir mayúsculas (ET04), color del catálogo con gris por defecto (ET05, ET06), máximo 10 columnas
+    /// contadas las tres por defecto (ET07, D-167). Se agrega al final del tablero (ET09).
+    pub async fn crear_columna(
+        &self,
+        user_id: &str,
+        params: ColumnCreateParams,
+    ) -> Result<ConMensaje<Column>, AppError> {
+        let nombre = params.name.trim().to_string();
+        let color = params
+            .color_id
+            .map(|c| c.trim().to_string())
+            .filter(|c| !c.is_empty())
+            .unwrap_or_else(|| "gray".to_string());
+        if let Some(e) = validar_nombre_de_columna(&nombre) {
+            return Err(e);
+        }
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let mut tx = pool.begin().await.map_err(de_sqlx)?;
+
+        let existentes: Vec<(String, f64)> =
+            sqlx::query_as("SELECT name, position FROM kanban_column WHERE user_id = ?")
+                .bind(user_id)
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(de_sqlx)?;
+        if existentes.len() >= COLUMNAS_MAX {
+            return Err(error(
+                ErrorCode::ColumnLimitReached,
+                messages::MAXIMO_DE_COLUMNAS,
+                None,
+            ));
+        }
+        let clave = nombre.to_lowercase();
+        if existentes
+            .iter()
+            .any(|(n, _)| n.trim().to_lowercase() == clave)
+        {
+            return Err(error(
+                ErrorCode::NameDuplicate,
+                messages::COLUMNA_DUPLICADA,
+                Some("name"),
+            ));
+        }
+        let existe_el_color: i64 =
+            sqlx::query_scalar("SELECT count(*) FROM catalog_color WHERE id = ? AND is_active = 1")
+                .bind(&color)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(de_sqlx)?;
+        if existe_el_color == 0 {
+            // La vista solo ofrece colores del catálogo (ET05). DUDA: HE-09-HU03 el contrato no tiene un error
+            // para un color que no está en el catálogo; se responde `internal.unexpected`.
+            return Err(inesperado());
+        }
+        let posicion =
+            existentes.iter().map(|(_, p)| *p).fold(0.0_f64, f64::max) + PASO_DE_POSICION;
+
+        let id = uuid::Uuid::new_v4().to_string();
+        let ahora = instante(self.calendario.ahora_ms()).0;
+        let (fields, mods) = campos(
+            &[
+                ("name", Value::from(nombre.as_str())),
+                ("color_id", Value::from(color.as_str())),
+                ("role", Value::from("custom")),
+                ("position", json!(posicion)),
+            ],
+            &ahora,
+        );
+        sqlx::query(
+            "INSERT INTO kanban_column (id, user_id, created_at, field_mods, name, color_id, role, position) \
+             VALUES (?, ?, ?, ?, ?, ?, 'custom', ?)",
+        )
+        .bind(&id)
+        .bind(user_id)
+        .bind(&ahora)
+        .bind(mods.to_string())
+        .bind(&nombre)
+        .bind(&color)
+        .bind(posicion)
+        .execute(&mut *tx)
+        .await
+        .map_err(de_sqlx)?;
+        encolar_cambio(&mut tx, "kanban_column", &id, "upsert", &fields, &ahora)
+            .await
+            .map_err(de_sqlx)?;
+        tx.commit().await.map_err(de_sqlx)?;
+
+        let columna = self
+            .columnas(user_id)
+            .await?
+            .into_iter()
+            .find(|c| c.id.0 == id)
+            .ok_or_else(inesperado)?;
+        Ok(ConMensaje {
+            valor: columna,
+            mensaje: resultado("column_create", messages::COLUMNA_CREADA),
+        })
+    }
+
+    /// IPC-COL-03 `column_update` (HE-09-HU04). Mismas reglas de nombre que al crear (ET03, ET04, ET09) y color
+    /// del catálogo (ET05). No cambia la función de la columna (`role`): renombrar Hecho conserva sus tarjetas
+    /// completadas (ET06). Si la columna ya no existe, `column.not_found`.
+    pub async fn actualizar_columna(
+        &self,
+        user_id: &str,
+        params: ColumnUpdateParams,
+    ) -> Result<ConMensaje<Column>, AppError> {
+        let id = params.id.0.to_lowercase();
+        let nombre = params.name.map(|n| n.trim().to_string());
+        let color = params
+            .color_id
+            .map(|c| c.trim().to_string())
+            .filter(|c| !c.is_empty());
+        if let Some(e) = nombre.as_deref().and_then(validar_nombre_de_columna) {
+            return Err(e);
+        }
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let mut tx = pool.begin().await.map_err(de_sqlx)?;
+
+        let existe: i64 =
+            sqlx::query_scalar("SELECT count(*) FROM kanban_column WHERE id = ? AND user_id = ?")
+                .bind(&id)
+                .bind(user_id)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(de_sqlx)?;
+        if existe == 0 {
+            return Err(error(ErrorCode::ColumnNotFound, "", None));
+        }
+        if let Some(nombre) = &nombre {
+            let otras: Vec<String> =
+                sqlx::query_scalar("SELECT name FROM kanban_column WHERE user_id = ? AND id <> ?")
+                    .bind(user_id)
+                    .bind(&id)
+                    .fetch_all(&mut *tx)
+                    .await
+                    .map_err(de_sqlx)?;
+            let clave = nombre.to_lowercase();
+            if otras.iter().any(|n| n.trim().to_lowercase() == clave) {
+                return Err(error(
+                    ErrorCode::NameDuplicate,
+                    messages::COLUMNA_DUPLICADA,
+                    Some("name"),
+                ));
+            }
+        }
+        if let Some(color) = &color {
+            let existe_el_color: i64 = sqlx::query_scalar(
+                "SELECT count(*) FROM catalog_color WHERE id = ? AND is_active = 1",
+            )
+            .bind(color)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(de_sqlx)?;
+            if existe_el_color == 0 {
+                // Igual que al crear (DUDA: HE-09-HU03): el contrato no tiene un error para este caso.
+                return Err(inesperado());
+            }
+        }
+
+        let ahora = instante(self.calendario.ahora_ms()).0;
+        let mut valores: Vec<(&str, Value)> = Vec::new();
+        if let Some(nombre) = &nombre {
+            valores.push(("name", Value::from(nombre.as_str())));
+        }
+        if let Some(color) = &color {
+            valores.push(("color_id", Value::from(color.as_str())));
+        }
+        if !valores.is_empty() {
+            let (fields, mods) = campos(&valores, &ahora);
+            sqlx::query(
+                "UPDATE kanban_column SET name = coalesce(?, name), color_id = coalesce(?, color_id), \
+                 field_mods = json_patch(field_mods, ?) WHERE id = ? AND user_id = ?",
+            )
+            .bind(&nombre)
+            .bind(&color)
+            .bind(mods.to_string())
+            .bind(&id)
+            .bind(user_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(de_sqlx)?;
+            encolar_cambio(&mut tx, "kanban_column", &id, "upsert", &fields, &ahora)
+                .await
+                .map_err(de_sqlx)?;
+        }
+        tx.commit().await.map_err(de_sqlx)?;
+
+        let columna = self
+            .columnas(user_id)
+            .await?
+            .into_iter()
+            .find(|c| c.id.0 == id)
+            .ok_or_else(inesperado)?;
+        Ok(ConMensaje {
+            valor: columna,
+            mensaje: resultado("column_update", messages::COLUMNA_ACTUALIZADA),
+        })
+    }
+
+    /// IPC-COL-04 `column_reorder` (HE-09-HU05): el orden completo de las columnas. Cada columna queda en la
+    /// posición de su lugar en la lista y solo las que cambian se encolan (ET03, ET04). Una lista que no tiene
+    /// exactamente las columnas del usuario responde `column.order_invalid`, sin texto, y no cambia nada.
+    pub async fn reordenar_columnas(
+        &self,
+        user_id: &str,
+        params: ColumnReorderParams,
+    ) -> Result<Vec<Column>, AppError> {
+        let pedidas: Vec<String> = params
+            .column_ids
+            .into_iter()
+            .map(|u| u.0.to_lowercase())
+            .collect();
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let mut tx = pool.begin().await.map_err(de_sqlx)?;
+        let actuales: Vec<(String, f64)> =
+            sqlx::query_as("SELECT id, position FROM kanban_column WHERE user_id = ?")
+                .bind(user_id)
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(de_sqlx)?;
+        let mut ordenadas_pedidas = pedidas.clone();
+        ordenadas_pedidas.sort();
+        let mut ordenadas_actuales: Vec<String> =
+            actuales.iter().map(|(id, _)| id.clone()).collect();
+        ordenadas_actuales.sort();
+        if ordenadas_pedidas != ordenadas_actuales {
+            return Err(error(ErrorCode::ColumnOrderInvalid, "", None));
+        }
+
+        let ahora = instante(self.calendario.ahora_ms()).0;
+        for (i, id) in pedidas.iter().enumerate() {
+            let posicion = (i as f64 + 1.0) * PASO_DE_POSICION;
+            let anterior = actuales
+                .iter()
+                .find(|(otra, _)| otra == id)
+                .map(|(_, p)| *p);
+            if anterior == Some(posicion) {
+                continue;
+            }
+            let (fields, mods) = campos(&[("position", json!(posicion))], &ahora);
+            sqlx::query(
+                "UPDATE kanban_column SET position = ?, field_mods = json_patch(field_mods, ?) \
+                 WHERE id = ? AND user_id = ?",
+            )
+            .bind(posicion)
+            .bind(mods.to_string())
+            .bind(id)
+            .bind(user_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(de_sqlx)?;
+            encolar_cambio(&mut tx, "kanban_column", id, "upsert", &fields, &ahora)
+                .await
+                .map_err(de_sqlx)?;
+        }
+        tx.commit().await.map_err(de_sqlx)?;
+        self.columnas(user_id).await
+    }
+
     pub async fn columnas(&self, user_id: &str) -> Result<Vec<Column>, AppError> {
         let pool = self.base.pool().await.map_err(de_sqlx)?;
         let filas = sqlx::query(
@@ -1215,6 +1643,8 @@ fn tarjeta_de_fila(
 
 #[cfg(test)]
 mod pruebas_de_edicion;
+#[cfg(test)]
+mod pruebas_de_etiquetas;
 #[cfg(test)]
 mod pruebas_de_la_agenda;
 #[cfg(test)]

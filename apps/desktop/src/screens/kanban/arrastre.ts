@@ -18,3 +18,24 @@ export function movimientoDelArrastre(id: string, lugar: LugarDeSoltar | undefin
     placement: lugar.tarjeta ? { kind: 'before', card_id: lugar.tarjeta } : { kind: 'end' },
   };
 }
+
+/** Prefijo del id de arrastre del encabezado de una columna (HE-09-HU05-ET01). */
+export const ENCABEZADO = 'encabezado:';
+
+/**
+ * El orden completo de las columnas (IPC-COL-04) al soltar el encabezado de la columna `id` en `lugar`: la
+ * columna queda en el lugar de la columna donde se soltó (también al soltarla sobre una de sus tarjetas). Fuera
+ * del área de columnas, o sobre sí misma, no hay cambio y se mantiene el orden anterior (HE-09-HU05-ET02).
+ */
+export function ordenDelArrastre(
+  orden: readonly string[],
+  id: string,
+  lugar: LugarDeSoltar | undefined,
+): string[] | null {
+  if (!lugar || lugar.columna === id) return null;
+  const destino = orden.indexOf(lugar.columna);
+  if (destino < 0 || !orden.includes(id)) return null;
+  const sin = orden.filter((c) => c !== id);
+  sin.splice(destino, 0, id);
+  return sin;
+}

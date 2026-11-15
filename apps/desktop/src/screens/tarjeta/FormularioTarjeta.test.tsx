@@ -81,6 +81,7 @@ describe('HE-07-HU01 · Crear una tarjeta', () => {
     escribir('Fecha límite', '20/11/2026');
     escribir('Descripción', 'Stand 4');
     fireEvent.change(screen.getByLabelText('Prioridad'), { target: { value: 'high' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Etiquetas asignadas' }));
     fireEvent.click(screen.getByLabelText('Casa'));
     await guardar();
     expect(llamadasA(nucleo, 'card_create')).toEqual([

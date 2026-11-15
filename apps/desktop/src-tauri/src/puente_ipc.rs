@@ -17,10 +17,11 @@ use crate::tipos::{
     AgendaDay, AgendaDayParams, AppError, AuthRegisterStartParams, AuthRegisterStartResult,
     AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, Card,
     CardAssignTimeBlockParams, CardCreateParams, CardDetail, CardIdParams, CardListBoardResult,
-    CardMoveParams, CardUpdateParams, ChangeOp, CodeSent, Column, Connectivity, EntityChange,
-    ErrorCode, EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
-    EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, Label, NoParams, OriginKind,
-    PlannerToday, SessionInfo,
+    CardMoveParams, CardUpdateParams, CatalogItem, CatalogKind, CatalogListParams, ChangeOp,
+    CodeSent, Column, ColumnCreateParams, ColumnReorderParams, ColumnUpdateParams, Connectivity,
+    EntityChange, ErrorCode, EventMapConnectivityChanged, EventMapSessionChanged,
+    EventMapSessionChangedReason, EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, Label,
+    LabelCreateParams, NoParams, OriginKind, PlannerToday, SessionInfo,
 };
 
 /// El Núcleo que ven los comandos.
@@ -275,6 +276,49 @@ pub async fn label_list(
     })
 }
 
+/// EV-08 `labels_changed` tras crear, editar o eliminar etiquetas en este computador.
+fn avisar_etiquetas(app: &AppHandle, ids: Vec<crate::tipos::Uuid>, op: ChangeOp) {
+    let _ = app.emit(
+        "labels_changed",
+        EntityChange {
+            ids,
+            op,
+            origin: OriginKind::Local,
+        },
+    );
+}
+
+/// IPC-LABEL-02 `label_create` (HE-08-HU02). Guarda en la base local, con o sin conexión (ET15), y emite
+/// `labels_changed` para que la pantalla Etiquetas y el Formulario de tarjeta la muestren (ET08).
+#[tauri::command]
+pub async fn label_create(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: LabelCreateParams,
+) -> Result<IpcResult<Label>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.crear_etiqueta(&user_id, params).await,
+        Err(e) => Err(e),
+    };
+    if let Ok(creada) = &r {
+        avisar_etiquetas(&app, vec![creada.valor.id.clone()], ChangeOp::Upsert);
+    }
+    Ok(con_mensaje(r))
+}
+
+/// IPC-CAT-01 `catalog_list`. Por ahora solo el catálogo de colores (HE-08-HU02-ET05). DUDA: HE-08-HU02 los
+/// demás catálogos llegan con los pasos del wallpaper y los temas; mientras tanto responden una lista vacía.
+#[tauri::command]
+pub async fn catalog_list(
+    nucleo: State<'_, Nucleo>,
+    params: CatalogListParams,
+) -> Result<IpcResult<Vec<CatalogItem>>, ()> {
+    Ok(leido(match params.kind {
+        CatalogKind::Color => nucleo.planificador.colores().await,
+        _ => Ok(Vec::new()),
+    }))
+}
+
 /// Respuesta de un comando de lectura sin mensaje de resultado.
 fn leido<T>(r: Result<T, AppError>) -> IpcResult<T> {
     match r {
@@ -297,6 +341,86 @@ pub async fn card_list_board(
         Ok(user_id) => nucleo.planificador.tablero(&user_id).await,
         Err(e) => Err(e),
     }))
+}
+
+/// EV-09 `columns_changed` tras crear, editar, reordenar o eliminar columnas en este computador.
+fn avisar_columnas(app: &AppHandle, ids: Vec<crate::tipos::Uuid>, op: ChangeOp) {
+    let _ = app.emit(
+        "columns_changed",
+        EntityChange {
+            ids,
+            op,
+            origin: OriginKind::Local,
+        },
+    );
+}
+
+/// IPC-COL-02 `column_create` (HE-09-HU03). Emite `columns_changed` para que el tablero y el widget Kanban
+/// agreguen la columna al final (ET09).
+#[tauri::command]
+pub async fn column_create(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: ColumnCreateParams,
+) -> Result<IpcResult<Column>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.crear_columna(&user_id, params).await,
+        Err(e) => Err(e),
+    };
+    if let Ok(creada) = &r {
+        avisar_columnas(&app, vec![creada.valor.id.clone()], ChangeOp::Upsert);
+    }
+    Ok(con_mensaje(r))
+}
+
+/// IPC-COL-03 `column_update` (HE-09-HU04). Emite `columns_changed` para que el tablero y el widget Kanban
+/// muestren el nombre y el color nuevos (ET07).
+#[tauri::command]
+pub async fn column_update(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: ColumnUpdateParams,
+) -> Result<IpcResult<Column>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .actualizar_columna(&user_id, params)
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if let Ok(editada) = &r {
+        avisar_columnas(&app, vec![editada.valor.id.clone()], ChangeOp::Upsert);
+    }
+    Ok(con_mensaje(r))
+}
+
+/// IPC-COL-04 `column_reorder` (HE-09-HU05). Sin mensaje de resultado (DP-05). Emite `columns_changed` para que
+/// el tablero y el widget Kanban muestren el orden nuevo (ET03).
+#[tauri::command]
+pub async fn column_reorder(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: ColumnReorderParams,
+) -> Result<IpcResult<Vec<Column>>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .reordenar_columnas(&user_id, params)
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if let Ok(columnas) = &r {
+        avisar_columnas(
+            &app,
+            columnas.iter().map(|c| c.id.clone()).collect(),
+            ChangeOp::Upsert,
+        );
+    }
+    Ok(leido(r))
 }
 
 /// IPC-COL-01 `column_list` (HE-09-HU01): columnas por `position`.

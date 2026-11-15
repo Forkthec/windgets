@@ -2,6 +2,7 @@ export * from './tema/tokens';
 export * from './Boton/Boton';
 export * from './CampoTexto/CampoTexto';
 export * from './Casilla/Casilla';
+export * from './CatalogoColores/CatalogoColores';
 export * from './Interruptor/Interruptor';
 export * from './Selector/Selector';
 export * from './SelectorColores/SelectorColores';

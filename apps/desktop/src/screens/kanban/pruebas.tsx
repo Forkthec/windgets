@@ -91,6 +91,7 @@ type Respuesta = (params: unknown) => Result<unknown>;
 
 export interface NucleoDelPlanificador {
   tarjetas: Card[];
+  etiquetas: Label[];
   columnas: Column[];
   llamadas: Array<{ comando: string; params: unknown }>;
   responder: <K extends CommandName>(
@@ -117,6 +118,7 @@ export function crearNucleo(tarjetas: Card[] = []): {
 } {
   const nucleo: NucleoDelPlanificador = {
     tarjetas: [...tarjetas],
+    etiquetas: [...ETIQUETAS],
     columnas: [POR_HACER, EN_PROGRESO, HECHO],
     llamadas: [],
     responder: (comando, respuesta) => respuestas.set(comando, respuesta as Respuesta),
@@ -140,9 +142,80 @@ export function crearNucleo(tarjetas: Card[] = []): {
       'auth_get_session',
       () => ({ ok: true, value: { state: 'signed_in', alias: 'Prueba', token: 'valid' } }),
     ],
-    ['label_list', () => ({ ok: true, value: ETIQUETAS })],
+    ['label_list', () => ({ ok: true, value: [...nucleo.etiquetas] })],
+    // Catálogo de colores de la semilla de la cuenta (HE-08-HU02-ET05).
+    [
+      'catalog_list',
+      () => ({
+        ok: true,
+        value: [
+          { id: 'gray', name: 'Gris', thumbnail_url: '', is_cached: true, hex: '#9E9E9E' },
+          { id: 'blue', name: 'Azul', thumbnail_url: '', is_cached: true, hex: '#2196F3' },
+          { id: 'green', name: 'Verde', thumbnail_url: '', is_cached: true, hex: '#4CAF50' },
+        ],
+      }),
+    ],
+    [
+      'label_create',
+      (params) => {
+        const { name, color_id } = params as { name: string; color_id: string };
+        const creada: Label = {
+          id: `e${nucleo.etiquetas.length + 1}`,
+          name,
+          color_id,
+          color_hex: '#4CAF50',
+          card_count: 0,
+        };
+        nucleo.etiquetas.push(creada);
+        return {
+          ok: true,
+          value: creada,
+          result_message: { code: 'label_create', message: 'Etiqueta creada.' },
+        };
+      },
+    ],
     ['card_list_board', () => ({ ok: true, value: { columns: tablero() } })],
     ['column_list', () => ({ ok: true, value: tablero().map((c) => c.column) })],
+    [
+      'column_update',
+      (params) => {
+        const { id, name, color_id } = params as { id: string; name?: string; color_id?: string };
+        const i = nucleo.columnas.findIndex((x) => x.id === id);
+        const actual = nucleo.columnas[i];
+        if (!actual) return { ok: false, error: { code: 'column.not_found', message: '' } };
+        // Sin tocar las columnas compartidas entre pruebas (POR_HACER, EN_PROGRESO, HECHO).
+        const c: Column = { ...actual, name: name ?? actual.name, color_id: color_id ?? actual.color_id };
+        nucleo.columnas[i] = c;
+        return {
+          ok: true,
+          value: c,
+          result_message: { code: 'column_update', message: 'Columna actualizada.' },
+        };
+      },
+    ],
+    [
+      'column_create',
+      (params) => {
+        const { name, color_id } = params as { name: string; color_id?: string };
+        const ultima = Math.max(0, ...nucleo.columnas.map((c) => c.position));
+        const creada: Column = {
+          id: `col-${nucleo.columnas.length + 1}`,
+          name,
+          color_id: color_id ?? 'gray',
+          color_hex: '#2196F3',
+          role: 'custom',
+          position: ultima + 1024,
+          card_count: 0,
+          is_default: false,
+        };
+        nucleo.columnas.push(creada);
+        return {
+          ok: true,
+          value: creada,
+          result_message: { code: 'column_create', message: 'Columna creada.' },
+        };
+      },
+    ],
     [
       'card_update',
       (params) => {
@@ -260,11 +333,13 @@ export function crearNucleo(tarjetas: Card[] = []): {
         const hora = t.scheduled_hour ?? 0;
         const detalle: CardDetail = {
           ...t,
-          labels: ETIQUETAS.filter((e) => t.label_ids.includes(e.id)).map(({ id, name, color_hex }) => ({
-            id,
-            name,
-            color_hex,
-          })),
+          labels: nucleo.etiquetas
+            .filter((e) => t.label_ids.includes(e.id))
+            .map(({ id, name, color_hex }) => ({
+              id,
+              name,
+              color_hex,
+            })),
           column: { id: columna.id, name: columna.name, color_hex: columna.color_hex },
           time_block: t.scheduled_date
             ? {

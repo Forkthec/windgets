@@ -32,7 +32,9 @@ async function abrirEdicion(datos: Parameters<typeof tarjeta>[0] = INFORME): Pro
     fireEvent.click(screen.getByRole('button', { name: datos.title }));
   });
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'Editar' }));
+    // «Editar» del Detalle de tarjeta (cada columna del tablero también tiene «Editar», HE-09-HU04).
+    const detalle = screen.getByRole('dialog', { name: 'Detalle de tarjeta' });
+    fireEvent.click(within(detalle).getByRole('button', { name: 'Editar' }));
   });
   screen.getByRole('dialog', { name: 'Formulario de tarjeta' });
   return nucleo;

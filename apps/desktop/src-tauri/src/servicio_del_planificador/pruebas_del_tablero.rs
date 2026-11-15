@@ -243,3 +243,314 @@ fn mover_a_una_columna_o_tarjeta_que_no_existe() {
     );
     assert_eq!(cantidades(&servicio), [1, 0, 0]);
 }
+
+fn nueva_columna(nombre: &str, color: Option<&str>) -> ColumnCreateParams {
+    ColumnCreateParams {
+        name: nombre.into(),
+        color_id: color.map(str::to_string),
+    }
+}
+
+fn nombres_de_columnas(servicio: &ServicioDelPlanificador<CalendarioDePrueba>) -> Vec<String> {
+    bloquear(servicio.columnas(USUARIO))
+        .unwrap()
+        .into_iter()
+        .map(|c| c.name)
+        .collect()
+}
+
+#[test]
+fn ca_he_09_hu03_ca01() {
+    // HE-09-HU03-CA01 · Con el color elegido, al final del tablero (ET05, ET09), y encola el cambio.
+    let servicio = con_semilla();
+    let creada =
+        bloquear(servicio.crear_columna(USUARIO, nueva_columna("Revisión", Some("blue")))).unwrap();
+    assert_eq!(creada.mensaje.message, "Columna creada.");
+    assert_eq!(
+        (creada.valor.name.as_str(), creada.valor.color_id.as_str()),
+        ("Revisión", "blue")
+    );
+    assert_eq!(nombres_de_columnas(&servicio).last().unwrap(), "Revisión");
+    assert_eq!(
+        contar(
+            &servicio,
+            "SELECT count(*) FROM pending_change WHERE entity_kind = 'kanban_column'"
+        ),
+        1
+    );
+}
+
+#[test]
+fn ca_he_09_hu03_ca02() {
+    // HE-09-HU03-CA02 · Sin color, gris por defecto (ET06; IPC-COL-02 `color_id` def. 'gray').
+    let servicio = con_semilla();
+    let creada =
+        bloquear(servicio.crear_columna(USUARIO, nueva_columna("Revisión", None))).unwrap();
+    assert_eq!(creada.valor.color_id, "gray");
+    assert_eq!(creada.mensaje.message, "Columna creada.");
+}
+
+#[test]
+fn ca_he_09_hu03_ca03() {
+    // HE-09-HU03-CA03 · Nombre vacío o solo espacios.
+    let servicio = con_semilla();
+    for nombre in ["", "  "] {
+        let e = bloquear(servicio.crear_columna(USUARIO, nueva_columna(nombre, None))).unwrap_err();
+        assert_eq!(
+            (e.code, e.message.as_str(), e.field.as_deref()),
+            (
+                ErrorCode::NameRequired,
+                "Este campo es obligatorio.",
+                Some("name")
+            )
+        );
+    }
+    assert_eq!(nombres_de_columnas(&servicio).len(), 3);
+}
+
+#[test]
+fn ca_he_09_hu03_ca04() {
+    // HE-09-HU03-CA04 · 31 caracteres se rechaza; 30 se acepta (ET03).
+    let servicio = con_semilla();
+    let e = bloquear(servicio.crear_columna(USUARIO, nueva_columna(&"a".repeat(31), None)))
+        .unwrap_err();
+    assert_eq!(
+        (e.code, e.message.as_str()),
+        (
+            ErrorCode::NameTooLong,
+            "El nombre de la columna no puede superar los 30 caracteres."
+        )
+    );
+    bloquear(servicio.crear_columna(USUARIO, nueva_columna(&"a".repeat(30), None))).unwrap();
+}
+
+#[test]
+fn ca_he_09_hu03_ca05() {
+    // HE-09-HU03-CA05 · «revisión» con «Revisión» ya creada (ET04).
+    let servicio = con_semilla();
+    bloquear(servicio.crear_columna(USUARIO, nueva_columna("Revisión", None))).unwrap();
+    let e = bloquear(servicio.crear_columna(USUARIO, nueva_columna("revisión", None))).unwrap_err();
+    assert_eq!(
+        (e.code, e.message.as_str(), e.field.as_deref()),
+        (
+            ErrorCode::NameDuplicate,
+            "Ya existe una columna con ese nombre.",
+            Some("name")
+        )
+    );
+}
+
+#[test]
+fn ca_he_09_hu03_ca06() {
+    // HE-09-HU03-CA06 · 10 columnas, contadas las tres por defecto (ET07, D-167).
+    let servicio = con_semilla();
+    for i in 0..7 {
+        bloquear(servicio.crear_columna(USUARIO, nueva_columna(&format!("C{i}"), None))).unwrap();
+    }
+    let e = bloquear(servicio.crear_columna(USUARIO, nueva_columna("Otra", None))).unwrap_err();
+    assert_eq!(
+        (e.code, e.message.as_str()),
+        (
+            ErrorCode::ColumnLimitReached,
+            "Alcanzaste el máximo de 10 columnas. Elimina una para crear otra."
+        )
+    );
+    assert_eq!(nombres_de_columnas(&servicio).len(), 10);
+}
+
+fn editar_columna(
+    servicio: &ServicioDelPlanificador<CalendarioDePrueba>,
+    id: &str,
+    nombre: Option<&str>,
+    color: Option<&str>,
+) -> Result<ConMensaje<Column>, AppError> {
+    bloquear(servicio.actualizar_columna(
+        USUARIO,
+        ColumnUpdateParams {
+            id: Uuid(id.into()),
+            name: nombre.map(str::to_string),
+            color_id: color.map(str::to_string),
+        },
+    ))
+}
+
+fn crear_revision(servicio: &ServicioDelPlanificador<CalendarioDePrueba>) -> String {
+    bloquear(servicio.crear_columna(USUARIO, nueva_columna("Revisión", None)))
+        .unwrap()
+        .valor
+        .id
+        .0
+}
+
+#[test]
+fn ca_he_09_hu04_ca01() {
+    // HE-09-HU04-CA01 · Cambia el nombre, el tablero lo muestra (ET07) y queda en la cola.
+    let servicio = con_semilla();
+    let id = crear_revision(&servicio);
+    let r = editar_columna(&servicio, &id, Some("Revisión final"), Some("gray")).unwrap();
+    assert_eq!(r.mensaje.message, "Columna actualizada.");
+    assert_eq!(r.valor.name, "Revisión final");
+    assert!(nombres_de_columnas(&servicio).contains(&"Revisión final".to_string()));
+    // La cola guarda un cambio por columna con el nombre nuevo (datos.md, Modelo · 6).
+    let fields: String = bloquear(async {
+        sqlx::query_scalar("SELECT fields FROM pending_change WHERE entity_id = ?")
+            .bind(&id)
+            .fetch_one(servicio.base().pool().await.unwrap())
+            .await
+            .unwrap()
+    });
+    let fields: Value = serde_json::from_str(&fields).unwrap();
+    assert_eq!(fields["name"]["value"], "Revisión final");
+}
+
+#[test]
+fn ca_he_09_hu04_ca02() {
+    // HE-09-HU04-CA02 · Cambia el color por otro del catálogo (ET05).
+    let servicio = con_semilla();
+    let id = crear_revision(&servicio);
+    let r = editar_columna(&servicio, &id, Some("Revisión"), Some("blue")).unwrap();
+    assert_eq!(
+        (r.valor.color_id.as_str(), r.valor.color_hex.0.as_str()),
+        ("blue", "#2196F3")
+    );
+    assert_eq!(r.mensaje.message, "Columna actualizada.");
+}
+
+#[test]
+fn ca_he_09_hu04_ca03() {
+    // HE-09-HU04-CA03 · Renombrar Hecho conserva su función y la tarjeta sigue completada (ET06).
+    let servicio = con_semilla();
+    let id = tarjeta_en(&servicio, POR_HACER, "Informe", "2026-11-20", 1024.0);
+    mover(&servicio, &id, HECHO, al_final()).unwrap();
+    let r = editar_columna(&servicio, HECHO, Some("Terminadas"), None).unwrap();
+    assert_eq!(
+        (r.valor.name.as_str(), &r.valor.role),
+        ("Terminadas", &ColumnRole::Done)
+    );
+    assert_eq!(
+        contar(
+            &servicio,
+            &format!("SELECT count(*) FROM card WHERE id = '{id}' AND completed_on IS NOT NULL")
+        ),
+        1
+    );
+}
+
+#[test]
+fn ca_he_09_hu04_ca04() {
+    // HE-09-HU04-CA04 · Nombre vacío: no guarda.
+    let servicio = con_semilla();
+    let id = crear_revision(&servicio);
+    let e = editar_columna(&servicio, &id, Some(" "), None).unwrap_err();
+    assert_eq!(
+        (e.code, e.message.as_str(), e.field.as_deref()),
+        (
+            ErrorCode::NameRequired,
+            "Este campo es obligatorio.",
+            Some("name")
+        )
+    );
+    assert!(nombres_de_columnas(&servicio).contains(&"Revisión".to_string()));
+}
+
+#[test]
+fn ca_he_09_hu04_ca05() {
+    // HE-09-HU04-CA05 · 31 caracteres: no guarda (ET09: mismas reglas de HE-09-HU03).
+    let servicio = con_semilla();
+    let id = crear_revision(&servicio);
+    let e = editar_columna(&servicio, &id, Some(&"a".repeat(31)), None).unwrap_err();
+    assert_eq!(
+        (e.code, e.message.as_str()),
+        (
+            ErrorCode::NameTooLong,
+            "El nombre de la columna no puede superar los 30 caracteres."
+        )
+    );
+}
+
+#[test]
+fn ca_he_09_hu04_ca06() {
+    // HE-09-HU04-CA06 · Bloqueadas por «revisión» con Revisión creada; conservar el propio nombre sí se puede.
+    let servicio = con_semilla();
+    crear_revision(&servicio);
+    let bloqueadas = bloquear(servicio.crear_columna(USUARIO, nueva_columna("Bloqueadas", None)))
+        .unwrap()
+        .valor
+        .id
+        .0;
+    let e = editar_columna(&servicio, &bloqueadas, Some("revisión"), None).unwrap_err();
+    assert_eq!(
+        (e.code, e.message.as_str(), e.field.as_deref()),
+        (
+            ErrorCode::NameDuplicate,
+            "Ya existe una columna con ese nombre.",
+            Some("name")
+        )
+    );
+    editar_columna(&servicio, &bloqueadas, Some("BLOQUEADAS"), None).unwrap();
+}
+
+#[test]
+fn ipc_col_03_columna_que_ya_no_existe() {
+    // IPC-COL-03: una columna que ya no existe responde `column.not_found` sin texto.
+    let servicio = con_semilla();
+    let e = editar_columna(
+        &servicio,
+        "00000000-0000-4000-8000-0000000000ff",
+        Some("X"),
+        None,
+    )
+    .unwrap_err();
+    assert_eq!(e.code, ErrorCode::ColumnNotFound);
+}
+
+fn reordenar(
+    servicio: &ServicioDelPlanificador<CalendarioDePrueba>,
+    ids: &[&str],
+) -> Result<Vec<Column>, AppError> {
+    bloquear(servicio.reordenar_columnas(
+        USUARIO,
+        ColumnReorderParams {
+            column_ids: ids.iter().map(|i| Uuid((*i).into())).collect(),
+        },
+    ))
+}
+
+#[test]
+fn ca_he_09_hu05_ca01() {
+    // HE-09-HU05-CA01 · Hecho a la primera posición: Hecho, Por hacer, En progreso (ET03), guardado al volver a
+    // abrir el tablero (ET04) y en la cola para sincronizar.
+    let servicio = con_semilla();
+    let r = reordenar(&servicio, &[HECHO, POR_HACER, EN_PROGRESO]).unwrap();
+    let nombres: Vec<&str> = r.iter().map(|c| c.name.as_str()).collect();
+    assert_eq!(nombres, ["Hecho", "Por hacer", "En progreso"]);
+    assert_eq!(
+        nombres_de_columnas(&servicio),
+        ["Hecho", "Por hacer", "En progreso"]
+    );
+    assert!(
+        contar(
+            &servicio,
+            "SELECT count(*) FROM pending_change WHERE entity_kind = 'kanban_column'"
+        ) >= 1
+    );
+}
+
+#[test]
+fn ca_he_09_hu05_ca02() {
+    // HE-09-HU05-CA02 · Soltar fuera del área: la vista no llama al Núcleo. Una lista incompleta o con columnas
+    // ajenas responde `column.order_invalid` y mantiene el orden anterior (ET02).
+    let servicio = con_semilla();
+    for ids in [
+        vec![HECHO, POR_HACER],
+        vec![HECHO, POR_HACER, "00000000-0000-4000-8000-0000000000ff"],
+    ] {
+        let e = reordenar(&servicio, &ids).unwrap_err();
+        assert_eq!(e.code, ErrorCode::ColumnOrderInvalid);
+    }
+    assert_eq!(
+        nombres_de_columnas(&servicio),
+        ["Por hacer", "En progreso", "Hecho"]
+    );
+    assert_eq!(contar(&servicio, "SELECT count(*) FROM pending_change"), 0);
+}
