@@ -91,6 +91,7 @@ type Respuesta = (params: unknown) => Result<unknown>;
 
 export interface NucleoDelPlanificador {
   tarjetas: Card[];
+  etiquetas: Label[];
   columnas: Column[];
   llamadas: Array<{ comando: string; params: unknown }>;
   responder: <K extends CommandName>(
@@ -117,6 +118,7 @@ export function crearNucleo(tarjetas: Card[] = []): {
 } {
   const nucleo: NucleoDelPlanificador = {
     tarjetas: [...tarjetas],
+    etiquetas: [...ETIQUETAS],
     columnas: [POR_HACER, EN_PROGRESO, HECHO],
     llamadas: [],
     responder: (comando, respuesta) => respuestas.set(comando, respuesta as Respuesta),
@@ -140,7 +142,7 @@ export function crearNucleo(tarjetas: Card[] = []): {
       'auth_get_session',
       () => ({ ok: true, value: { state: 'signed_in', alias: 'Prueba', token: 'valid' } }),
     ],
-    ['label_list', () => ({ ok: true, value: ETIQUETAS })],
+    ['label_list', () => ({ ok: true, value: [...nucleo.etiquetas] })],
     ['card_list_board', () => ({ ok: true, value: { columns: tablero() } })],
     ['column_list', () => ({ ok: true, value: tablero().map((c) => c.column) })],
     [
@@ -260,11 +262,13 @@ export function crearNucleo(tarjetas: Card[] = []): {
         const hora = t.scheduled_hour ?? 0;
         const detalle: CardDetail = {
           ...t,
-          labels: ETIQUETAS.filter((e) => t.label_ids.includes(e.id)).map(({ id, name, color_hex }) => ({
-            id,
-            name,
-            color_hex,
-          })),
+          labels: nucleo.etiquetas
+            .filter((e) => t.label_ids.includes(e.id))
+            .map(({ id, name, color_hex }) => ({
+              id,
+              name,
+              color_hex,
+            })),
           column: { id: columna.id, name: columna.name, color_hex: columna.color_hex },
           time_block: t.scheduled_date
             ? {

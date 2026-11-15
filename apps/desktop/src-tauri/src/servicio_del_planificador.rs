@@ -1216,6 +1216,8 @@ fn tarjeta_de_fila(
 #[cfg(test)]
 mod pruebas_de_edicion;
 #[cfg(test)]
+mod pruebas_de_etiquetas;
+#[cfg(test)]
 mod pruebas_de_la_agenda;
 #[cfg(test)]
 mod pruebas_del_planificador_diario;
