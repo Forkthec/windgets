@@ -127,6 +127,14 @@ pub const MAXIMO_DE_COLUMNAS: &str =
 /// Resultado de `column_update` (HE-09-HU04-CA01, CA02).
 pub const COLUMNA_ACTUALIZADA: &str = "Columna actualizada.";
 
+// HE-13-HU01 · Seleccionar el rango de fechas de los reportes (IPC-REP-01 report_resolve_range).
+
+/// `range.start_after_end` (HE-13-HU01-CA03; ET11).
+pub const INICIO_POSTERIOR_AL_FIN: &str =
+    "La fecha de inicio no puede ser posterior a la fecha de fin.";
+/// `range.too_long` (HE-13-HU01-CA06; ET13).
+pub const RANGO_MUY_LARGO: &str = "El rango máximo es de un año.";
+
 // HE-07-HU03 · Consultar el detalle de una tarjeta (IPC-CARD-04 card_get).
 
 /// `card.not_found` (HE-07-HU04-CA11; DP-04: el mismo texto al consultar, eliminar o mover).
@@ -164,6 +172,8 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("COLUMNA_DUPLICADA", COLUMNA_DUPLICADA),
     ("MAXIMO_DE_COLUMNAS", MAXIMO_DE_COLUMNAS),
     ("COLUMNA_ACTUALIZADA", COLUMNA_ACTUALIZADA),
+    ("INICIO_POSTERIOR_AL_FIN", INICIO_POSTERIOR_AL_FIN),
+    ("RANGO_MUY_LARGO", RANGO_MUY_LARGO),
     ("ETIQUETA_CREADA", ETIQUETA_CREADA),
     ("NOMBRE_DE_ETIQUETA_MUY_LARGO", NOMBRE_DE_ETIQUETA_MUY_LARGO),
     ("ETIQUETA_DUPLICADA", ETIQUETA_DUPLICADA),

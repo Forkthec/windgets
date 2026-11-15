@@ -423,6 +423,16 @@ pub async fn column_reorder(
     Ok(leido(r))
 }
 
+/// IPC-REP-01 `report_resolve_range` (HE-13-HU01): el rango de fechas resuelto con la fecha de hoy, o el error
+/// de campo del rango personalizado.
+#[tauri::command]
+pub async fn report_resolve_range(
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::ReportResolveRangeParams,
+) -> Result<IpcResult<crate::tipos::ResolvedRange>, ()> {
+    Ok(leido(nucleo.planificador.rango_del_reporte(&params)))
+}
+
 /// IPC-COL-01 `column_list` (HE-09-HU01): columnas por `position`.
 #[tauri::command]
 pub async fn column_list(

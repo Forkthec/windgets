@@ -1641,6 +1641,9 @@ fn tarjeta_de_fila(
     })
 }
 
+mod reportes;
+pub use reportes::{agrupacion, resolver_rango};
+
 #[cfg(test)]
 mod pruebas_de_edicion;
 #[cfg(test)]

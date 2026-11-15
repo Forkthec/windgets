@@ -143,6 +143,14 @@ export function crearNucleo(tarjetas: Card[] = []): {
       () => ({ ok: true, value: { state: 'signed_in', alias: 'Prueba', token: 'valid' } }),
     ],
     ['label_list', () => ({ ok: true, value: [...nucleo.etiquetas] })],
+    // HE-13-HU01: «Últimos 30 días» con hoy 14/11/2026; las pruebas del rango responden lo suyo.
+    [
+      'report_resolve_range',
+      () => ({
+        ok: true,
+        value: { start: '2026-10-16', end: '2026-11-14', days: 30, grouping: 'day', clipped_start: null },
+      }),
+    ],
     // Catálogo de colores de la semilla de la cuenta (HE-08-HU02-ET05).
     [
       'catalog_list',
