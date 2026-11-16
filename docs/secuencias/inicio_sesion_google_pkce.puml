@@ -6,7 +6,7 @@ actor "Usuario" as U #FCEBD9
 boundary "Ventana principal" as VP
 control "Núcleo" as N
 database "Archivos locales" as AL
-participant "Windows 10 22H2 / 11" as W #FCEBD9
+participant "Windows 11" as W #FCEBD9
 participant "Navegador predeterminado" as B #FCEBD9
 participant "Supabase Auth" as A
 participant "Google" as G #FCEBD9

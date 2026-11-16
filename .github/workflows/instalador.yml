@@ -3,7 +3,7 @@ name: instalador
 # P04 · Instalador (CD-02). Genera el instalador NSIS con la plantilla de installer/, lo sella para su
 # verificación de integridad (CD-02-HU01-CA12) y lo prueba en Windows en modo silencioso
 # (installer/pruebas/instalador.ps1). Sube el .exe como artefacto para la prueba manual en máquina virtual con
-# Windows 10 22H2 y Windows 11 (plan_construccion.md, P04). No publica nada: eso lo hace release.yml.
+# Windows 11 (plan_construccion.md, P04; D-207). No publica nada: eso lo hace release.yml.
 on:
   push:
     branches: ['paso-*']
@@ -66,7 +66,7 @@ jobs:
 
   # Pruebas de la interfaz (installer/pruebas/interfaz.py): abren el instalador, pulsan sus opciones, leen sus
   # textos y toman capturas. windows-2025 (compilación 26100) cumple los requisitos; windows-2022 (compilación
-  # 20348) no los cumple y prueba CD-02-HU01-CA03. Windows 10 22H2 no está en GitHub: se prueba a mano.
+  # 20348) no los cumple y prueba CD-02-HU01-CA03. Windows 11 de escritorio se prueba a mano.
   interfaz:
     needs: instalador
     strategy:

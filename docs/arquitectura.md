@@ -59,9 +59,10 @@ El Núcleo tiene las reglas de negocio, las validaciones definitivas, SQLite, la
 | D-199 | Convención de los modelos: estándar C4 del curso (personas en verde, sistema y contenedores propios en azul, externos en rojo, relaciones discontinuas con descripción y tecnología). |
 | D-200 | Un repositorio `windgets` (ver `convenciones.md`). |
 | D-203 | El indicador de sincronización está siempre visible en la ventana principal, junto al menú principal. |
-| D-207 | Soporte solo para Windows 11 (compilación 22000 o posterior), de 64 bits (x64), por decisión del equipo del 15-nov-2026. Windows 10 22H2 deja de ser requisito mínimo y de probarse; D-050, D-057 y D-131 se leen con esa salvedad. Los textos literales y el código del instalador, la landing y el spike no cambian hasta que el equipo lo decida (`DUDAS.md`). En los modelos, «Windows 10 22H2 / 11» se lee «Windows 11». |
+| D-207 | Soporte solo para Windows 11 (compilación 22000 o posterior), de 64 bits (x64), por decisión del equipo del 15-nov-2026. Windows 10 22H2 deja de ser requisito mínimo y de probarse. |
+| D-208 | Con D-207, D-050 (requisitos del sistema), D-057 (Windows 10 22H2 como mínimo) y D-131 (técnica WorkerW en Windows 10 y 11) se reducen a Windows 11: los textos literales de la landing y del instalador, la comprobación del instalador (compilación 22000 o posterior; la 19045 deja de pasar) y los modelos dicen «Windows 11». Decidido por Paula el 15-nov-2026, sin Jira. |
 
-Decisiones anteriores que también rigen: D-048 (conflictos por campo, gana la hora más reciente), D-049 (primero lo guardado; máximo una consulta por minuto), D-050 (requisitos del sistema), D-131 (WorkerW), D-132 y D-180 (Gemini y Supabase como backend), D-135 (una configuración para todos los monitores), D-164 (trabajo sin conexión), D-175 (SMTC).
+Decisiones anteriores que también rigen: D-048 (conflictos por campo, gana la hora más reciente), D-049 (primero lo guardado; máximo una consulta por minuto), D-050 (requisitos del sistema; D-208), D-131 (WorkerW; D-208), D-132 y D-180 (Gemini y Supabase como backend), D-135 (una configuración para todos los monitores), D-164 (trabajo sin conexión), D-175 (SMTC).
 
 ## Atributos de calidad
 
@@ -83,7 +84,7 @@ Los RNF aplicables a cada HU están en su sección; los seleccionados son Eficie
 | RNF-20, RNF-36 | Permisos mínimos de Google e inicio en el navegador | Permisos openid, email y profile; navegador predeterminado, PKCE y `windgets://` (D-191). |
 | RNF-21 | Aislamiento por usuario | RLS en PostgreSQL y en Storage; clave pública en el ejecutable y clave de servicio solo en las Edge Functions (D-192). |
 | RNF-22, RNF-23 | Validación de imágenes propias | El Núcleo verifica firma, tipo y tamaño antes de subir; Storage impone tamaño y tipo MIME. |
-| RNF-32 a RNF-34 | Plataforma, requisitos y resoluciones | Instalador y landing comprueban Windows 10 22H2 o Windows 11 x64; MonitorMap entrega rectángulos y escalas (D-187). |
+| RNF-32 a RNF-34 | Plataforma, requisitos y resoluciones | Instalador y landing comprueban Windows 11 x64; MonitorMap entrega rectángulos y escalas (D-187). |
 | RNF-35 | Convivir con el escritorio de Windows | La capa queda detrás de los íconos y los íconos tienen prioridad (D-186). |
 | RNF-26 a RNF-31 | Usabilidad y legibilidad | Biblioteca de interfaz compartida con el tema aplicado, mensajes definidos y recorrido con teclado. |
 
@@ -101,7 +102,7 @@ Muestra a Windgets como una sola caja, las dos personas que la usan y los sistem
 | Usuario | Persona | — | Persona con cuenta: personaliza el wallpaper y los widgets, organiza tarjetas y conversa con el agente de IA. | HE-02 a HE-17; D-025 |
 | Visitante | Persona | — | Persona sin cuenta o sin sesión iniciada: conoce la aplicación, revisa los requisitos del sistema y descarga el instalador. | CD-01, CD-02, HE-01; D-025 |
 | Reproductores de música | Sistema de software externo | — | Spotify de escritorio, YouTube Music en el navegador u otra aplicación que publique su sesión de reproducción en Windows. | HE-04-HU11; D-175 |
-| Windows 10 22H2 / 11 | Sistema de software externo | x64 | Escritorio (WorkerW), área de notificación, controles multimedia (SMTC), registro, DPAPI y WebView2. | D-050, D-131, D-175, D-192; RNF-32, RNF-33 |
+| Windows 11 | Sistema de software externo | x64 | Escritorio (WorkerW), área de notificación, controles multimedia (SMTC), registro, DPAPI y WebView2. | D-050, D-131, D-175, D-192; RNF-32, RNF-33 |
 | Navegador predeterminado | Sistema de software externo | — | Abre el inicio de sesión con Google y las noticias; devuelve el resultado con el esquema windgets://. | HE-01-HU05, HE-06-HU10; RNF-36; D-191 |
 | Google | Sistema de software externo | OAuth 2.0 / OpenID Connect | Autentica la cuenta de Google con los permisos openid, email y profile. | HE-01-HU05; RNF-20; D-181 |
 | Windgets | Sistema de software | — | Wallpaper personalizable como fondo real de Windows, widgets interactivos y planificador con sincronización y agente de IA; incluye landing page e instalador. | HE-01 a HE-17, CD-01, CD-02; D-179, D-133 |
@@ -118,8 +119,8 @@ Muestra a Windgets como una sola caja, las dos personas que la usan y los sistem
 | Visitante | Windgets | Consulta los requisitos del sistema | HTTPS |
 | Visitante | GitHub | Descarga el instalador | HTTPS |
 | Usuario | Windgets | Personaliza el escritorio, planifica y conversa con Windi | ventanas de la aplicación |
-| Reproductores de música | Windows 10 22H2 / 11 | Publican su sesión de reproducción | SMTC |
-| Windgets | Windows 10 22H2 / 11 | Muestra el wallpaper, guarda el token y lee la música | Win32, DPAPI, SMTC |
+| Reproductores de música | Windows 11 | Publican su sesión de reproducción | SMTC |
+| Windgets | Windows 11 | Muestra el wallpaper, guarda el token y lee la música | Win32, DPAPI, SMTC |
 | Windgets | Navegador predeterminado | Abre el inicio con Google y las noticias | ShellExecute |
 | Navegador predeterminado | Windgets | Devuelve el resultado del inicio con Google | esquema windgets:// |
 | Windgets | Google | Autentica la cuenta de Google | OAuth 2.0, OpenID Connect, PKCE |
@@ -153,7 +154,7 @@ Contenedores de Windgets que se ejecutan en el computador del usuario: tres vist
 | API de datos | Contenedor | PostgREST, funciones RPC | Expone las funciones RPC de sincronización, catálogos y actividad diaria con el JWT del usuario. | HE-15; RNF-03, RNF-04, RNF-21; D-048, D-049, D-189 |
 | Edge Functions | Contenedor | Deno + TypeScript (Supabase) | windi-chat, weather-geocode, weather-current y news-headlines; guardan las claves de terceros y exigen el JWT. | HE-14, HE-04-HU05, HE-04-HU06; RNF-09, RNF-11; D-132, D-180, D-192 |
 | Almacenamiento de archivos | Contenedor | Supabase Storage (user-images, catalog) | Imágenes propias del usuario (privadas por carpeta) y catálogos de plantillas, imágenes, tipografías y animaciones. | RNF-21, RNF-22, RNF-23; D-180, D-198 |
-| Windows 10 22H2 / 11 | Sistema de software externo | x64 | Escritorio (WorkerW), área de notificación, controles multimedia (SMTC), registro, DPAPI y WebView2. | D-050, D-131, D-175, D-192; RNF-32, RNF-33 |
+| Windows 11 | Sistema de software externo | x64 | Escritorio (WorkerW), área de notificación, controles multimedia (SMTC), registro, DPAPI y WebView2. | D-050, D-131, D-175, D-192; RNF-32, RNF-33 |
 | Navegador predeterminado | Sistema de software externo | — | Abre el inicio de sesión con Google y las noticias; devuelve el resultado con el esquema windgets://. | HE-01-HU05, HE-06-HU10; RNF-36; D-191 |
 
 ### Límites de la vista 2a
@@ -178,7 +179,7 @@ Contenedores de Windgets que se ejecutan en el computador del usuario: tres vist
 | Núcleo | API de datos | Envía y trae cambios y pide catálogos | PostgREST RPC, JWT |
 | Núcleo | Edge Functions | Chatea con Windi y pide clima y noticias | HTTPS (functions/v1), JWT |
 | Núcleo | Almacenamiento de archivos | Sube y descarga archivos | HTTPS (storage/v1), JWT |
-| Núcleo | Windows 10 22H2 / 11 | Ancla la capa, lee el mouse y la música, y registra el inicio | Win32, Raw Input, SMTC, registro |
+| Núcleo | Windows 11 | Ancla la capa, lee el mouse y la música, y registra el inicio | Win32, Raw Input, SMTC, registro |
 | Núcleo | Navegador predeterminado | Abre el inicio con Google y las noticias | ShellExecute |
 | Navegador predeterminado | Núcleo | Devuelve el resultado del inicio con Google | esquema windgets://auth/callback |
 
@@ -371,7 +372,7 @@ Componentes del Núcleo que se integran con Windows y con el navegador predeterm
 | Host del wallpaper | Componente | Rust, Win32 (crate windows) | Ancla la capa a WorkerW, reenvía la selección del mouse (Raw Input), reparte monitores, pausa animaciones por carga y restaura el fondo al salir. | HE-02-HU01, HE-06-HU01; RNF-06, RNF-35; D-131, D-186, D-187 |
 | Integración con el sistema | Componente | Rust, plugins de Tauri | Área de notificación, instancia única, esquema windgets://, inicio automático y apertura de enlaces en el navegador. | HE-16-HU02, HE-17, HE-01-HU05; D-051, D-191 |
 | Servicio de sesión | Componente | Rust, reqwest, DPAPI | Registro, inicio con correo o Google (PKCE), recuperación y renovación del JWT; guarda el token con DPAPI y lo borra al cerrar sesión. | HE-01, HE-16-HU03; RNF-19, RNF-36; D-190, D-191, D-192 |
-| Windows 10 22H2 / 11 | Sistema de software externo | x64 | Escritorio (WorkerW), área de notificación, controles multimedia (SMTC), registro, DPAPI y WebView2. | D-050, D-131, D-175, D-192; RNF-32, RNF-33 |
+| Windows 11 | Sistema de software externo | x64 | Escritorio (WorkerW), área de notificación, controles multimedia (SMTC), registro, DPAPI y WebView2. | D-050, D-131, D-175, D-192; RNF-32, RNF-33 |
 | Navegador predeterminado | Sistema de software externo | — | Abre el inicio de sesión con Google y las noticias; devuelve el resultado con el esquema windgets://. | HE-01-HU05, HE-06-HU10; RNF-36; D-191 |
 
 ### Límites de la vista 3c
@@ -389,9 +390,9 @@ Componentes del Núcleo que se integran con Windows y con el navegador predeterm
 | Servicio de personalización y configuración | Host del wallpaper | Aplica el tema y los widgets | llamada interna |
 | Servicio de personalización y configuración | Integración con el sistema | Activa el inicio automático | llamada interna |
 | Integración con el sistema | Servicio de sesión | Entrega el regreso de Google | llamada interna |
-| Controlador multimedia | Windows 10 22H2 / 11 | Lee y controla la sesión de música | SMTC (WinRT) |
-| Host del wallpaper | Windows 10 22H2 / 11 | Ancla la capa a WorkerW y lee el mouse | Win32, Raw Input |
-| Integración con el sistema | Windows 10 22H2 / 11 | Registra el inicio, la bandeja y windgets:// | registro, Shell_NotifyIcon |
+| Controlador multimedia | Windows 11 | Lee y controla la sesión de música | SMTC (WinRT) |
+| Host del wallpaper | Windows 11 | Ancla la capa a WorkerW y lee el mouse | Win32, Raw Input |
+| Integración con el sistema | Windows 11 | Registra el inicio, la bandeja y windgets:// | registro, Shell_NotifyIcon |
 | Integración con el sistema | Navegador predeterminado | Abre el inicio con Google y las noticias | ShellExecute |
 | Navegador predeterminado | Integración con el sistema | Devuelve el resultado del inicio con Google | esquema windgets://auth/callback |
 
@@ -592,7 +593,7 @@ Clases y estructuras del componente Host del wallpaper, con sus funciones y las 
 | MonitorMap | Clase (struct) | Rust · Win32 | `refresh()  // EnumDisplayMonitors, GetDpiForMonitor`; `virtual_rect() -> Rect`; `on_display_change()  // monitors_changed` | HE-02-HU01-ET12; RNF-34; D-187 |
 | RawInputSink | Clase (struct) | Rust · Win32 | `register()  // RIDEV_INPUTSINK`; `on_wm_input(msg)  // botón principal`; `hit_test(point) -> Target  // escritorio, LVM_HITTEST`; `forward(point)  // evento pointer_forwarded` | HE-06-HU01; RNF-35; D-186 |
 | LoadMonitor | Clase (struct) | Rust · contadores PDH | `sample()  // CPU y GPU cada 1 s`; `should_pause() -> bool  // más de 80 % durante 10 s`; `should_resume() -> bool  // menos de 60 % durante 30 s`; `emit_pause(paused)  // animation_pause_changed` | HE-04-HU09; RNF-06; D-054 |
-| Windows 10 22H2 / 11 | Sistema de software externo | x64 | Escritorio (WorkerW), área de notificación, controles multimedia (SMTC), registro, DPAPI y WebView2. | D-050, D-131, D-175, D-192; RNF-32, RNF-33 |
+| Windows 11 | Sistema de software externo | x64 | Escritorio (WorkerW), área de notificación, controles multimedia (SMTC), registro, DPAPI y WebView2. | D-050, D-131, D-175, D-192; RNF-32, RNF-33 |
 
 ### Límites de la vista 4b
 
@@ -607,16 +608,16 @@ Clases y estructuras del componente Host del wallpaper, con sus funciones y las 
 | WallpaperHost | MonitorMap | Consulta rectángulos y escalas | llamada interna |
 | WallpaperHost | RawInputSink | Registra la entrada del mouse | llamada interna |
 | WallpaperHost | LoadMonitor | Pide pausar o reanudar animaciones | llamada interna |
-| WallpaperHost | Windows 10 22H2 / 11 | Ancla la capa a WorkerW | Win32 (Progman 0x052C, SetParent) |
-| MonitorMap | Windows 10 22H2 / 11 | Enumera monitores y escalas | EnumDisplayMonitors, GetDpiForMonitor |
-| RawInputSink | Windows 10 22H2 / 11 | Lee el mouse y prueba el impacto en los íconos | Raw Input, LVM_HITTEST |
-| LoadMonitor | Windows 10 22H2 / 11 | Lee la carga de CPU y GPU | contadores PDH |
+| WallpaperHost | Windows 11 | Ancla la capa a WorkerW | Win32 (Progman 0x052C, SetParent) |
+| MonitorMap | Windows 11 | Enumera monitores y escalas | EnumDisplayMonitors, GetDpiForMonitor |
+| RawInputSink | Windows 11 | Lee el mouse y prueba el impacto en los íconos | Raw Input, LVM_HITTEST |
+| LoadMonitor | Windows 11 | Lee la carga de CPU y GPU | contadores PDH |
 
 ## C4 · 14. Vista D1 · Despliegue: computador del usuario y Supabase
 
 ![Diagrama de despliegue · Windgets · computador del usuario y Supabase](img/c4_depa.png)
 
-Dónde se ejecuta cada contenedor: el computador del usuario (Windows 10 22H2 o Windows 11, x64), con el proceso Windgets.exe, WebView2 y las carpetas `%APPDATA%` y `%LOCALAPPDATA%`, y el proyecto de Supabase en su plan gratuito.
+Dónde se ejecuta cada contenedor: el computador del usuario (Windows 11, x64), con el proceso Windgets.exe, WebView2 y las carpetas `%APPDATA%` y `%LOCALAPPDATA%`, y el proyecto de Supabase en su plan gratuito.
 
 Los sistemas externos de terceros (Gmail, Google, Gemini, clima y noticias) no los despliega Windgets y no son nodos de despliegue: están en las vistas 1 y 2b.
 
@@ -640,7 +641,7 @@ Los sistemas externos de terceros (Gmail, Google, Gemini, clima y noticias) no l
 
 | Límite | Tipo | Tecnología | Contiene |
 |---|---|---|---|
-| Computador del usuario | Nodo de despliegue | Windows 10 22H2 (19045) o Windows 11 (22000 o superior), x64 | Proceso Windgets.exe, Carpetas de datos del usuario |
+| Computador del usuario | Nodo de despliegue | Windows 11 (22000 o superior), x64 | Proceso Windgets.exe, Carpetas de datos del usuario |
 | Proceso Windgets.exe | Nodo de despliegue | %LOCALAPPDATA%\Programs\Windgets | Núcleo, WebView2 Runtime |
 | WebView2 Runtime | Nodo de infraestructura | Microsoft, incluido en el instalador | Ventana principal, Capa del wallpaper y los widgets, Ventana de edición de la distribución |
 | Carpetas de datos del usuario | Nodo de despliegue | %APPDATA%\Windgets y %LOCALAPPDATA%\Windgets | Base de datos local, Archivos locales |
@@ -691,7 +692,7 @@ Dónde se aloja y cómo llega la distribución: la landing page en Vercel, el in
 |---|---|---|---|
 | Vercel | Nodo de despliegue de terceros | plan gratuito, sitio estático | Landing page |
 | GitHub | Nodo de despliegue de terceros | GitHub Releases y GitHub Actions | Instalador .exe todo en uno, GitHub Actions |
-| Computador del usuario | Nodo de despliegue | Windows 10 22H2 (19045) o Windows 11 (22000 o superior), x64 | Proceso Windgets.exe |
+| Computador del usuario | Nodo de despliegue | Windows 11 (22000 o superior), x64 | Proceso Windgets.exe |
 | Proceso Windgets.exe | Nodo de despliegue | %LOCALAPPDATA%\Programs\Windgets | Núcleo |
 | Proyecto de Supabase | Nodo de despliegue | servicio gestionado, plan gratuito | API de datos |
 
@@ -770,7 +771,7 @@ Cada flujo se resume aquí; el detalle paso a paso está en los diagramas de sec
 
 1. El visitante consulta la landing page, que detecta el sistema operativo solo con la información del navegador, y pulsa «Descargar para Windows».
 2. El navegador descarga `Windgets-Setup.exe` de la última release de GitHub Releases, publicada por GitHub Actions.
-3. El instalador verifica su integridad, comprueba Windows 10 22H2 (compilación 19045) o Windows 11, x64 y 500 MB libres, y muestra el paso Opciones.
+3. El instalador verifica su integridad, comprueba Windows 11 (compilación 22000 o posterior), x64 y 500 MB libres, y muestra el paso Opciones.
 4. Instala por usuario en `%LOCALAPPDATA%\Programs\Windgets` con WebView2 incluido, crea los accesos directos, registra `windgets://` y, si la casilla está marcada, el inicio automático; ante una falla revierte los cambios.
 5. Al abrir Windgets por primera vez se muestra Inicio de sesión y el fondo original de Windows no se toca.
 
@@ -778,7 +779,7 @@ Cada flujo se resume aquí; el detalle paso a paso está en los diagramas de sec
 
 | Riesgo | Efecto | Mitigación |
 |---|---|---|
-| WorkerW y Raw Input (RI-16): la técnica no está documentada por Microsoft y el reenvío del mouse puede fallar en Windows 10 22H2 o Windows 11. | Los widgets interactivos no reciben la selección o rompen el comportamiento del escritorio. | Spike de HE-02-HU01 con permisos estándar en ambos sistemas antes de construir (HE-02-HU01-ET11, D-186); si falla, se informa al Gerente de Proyecto y al patrocinador. |
+| WorkerW y Raw Input (RI-16): la técnica no está documentada por Microsoft y el reenvío del mouse puede fallar en Windows 11. | Los widgets interactivos no reciben la selección o rompen el comportamiento del escritorio. | Spike de HE-02-HU01 con permisos estándar en Windows 11 antes de construir (HE-02-HU01-ET11, D-186); si falla, se informa al Gerente de Proyecto y al patrocinador. |
 | Memoria con tres vistas WebView2 y un Núcleo (RNF-07). | Superar 200 MB o 3 % de CPU en reposo. | La ventana de edición es temporal (D-185); medir en el spike; si no cabe, cambia el límite o la estructura de vistas. |
 | Límites del plan gratuito de Supabase: 500 MB de base, 1 GB de almacenamiento, 5 GB de salida, pausa por inactividad y límites de Auth por IP. | Servicio detenido o rechazado con muchos usuarios o una sola IP compartida. | `keepalive` diario por GitHub Actions (D-197); caché compartida en las Edge Functions; un servicio de pago requiere aprobación del patrocinador. |
 | Cuota del nivel gratuito de Gemini y uso del contenido por el proveedor. | Windi no disponible o datos enviados a un tercero. | Mensaje de servicio no disponible, modelo configurable y envío de datos mínimos (D-132, D-193). |

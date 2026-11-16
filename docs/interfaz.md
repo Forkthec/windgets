@@ -578,7 +578,7 @@ El tipo sigue los seis de RT-04 (resultado, campo, opción deshabilitada, aviso,
 | P-LAN-01 Landing page | «No pudimos iniciar la descarga. Intenta de nuevo.» | aviso | CD-01-HU02-CA02 |
 | P-INS-01 Instalador, paso Opciones | «El instalador está incompleto o dañado. Descárgalo de nuevo desde la landing page.» | resultado | CD-02-HU01-CA12 |
 | P-INS-01 Instalador, paso Opciones | «Encontramos una instalación incompleta. Vamos a repararla.» | aviso | CD-02-HU01-CA09 |
-| P-INS-01 Instalador, paso Opciones | «Este computador no es compatible. Necesitas Windows 10 versión 22H2 o Windows 11, de 64 bits (x64).» | resultado | CD-02-HU01-CA03 |
+| P-INS-01 Instalador, paso Opciones | «Este computador no es compatible. Necesitas Windows 11, de 64 bits (x64).» | resultado | CD-02-HU01-CA03 |
 | P-INS-01 Instalador, paso Opciones | «Instalación completada.» | resultado | CD-02-HU01-CA01, CD-02-HU01-CA06, CD-02-HU01-CA10 |
 | P-INS-01 Instalador, paso Opciones | «No hay suficiente espacio en disco. Libera al menos 500 MB e intenta de nuevo.» | opción deshabilitada | CD-02-HU01-CA04 |
 | P-INS-01 Instalador, paso Opciones | «No pudimos completar la instalación. No se hicieron cambios en tu computador.» | aviso | CD-02-HU01-CA08 |

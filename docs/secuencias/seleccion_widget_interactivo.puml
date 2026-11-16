@@ -3,7 +3,7 @@
 title Diagrama de secuencia: selección con el mouse sobre un widget interactivo
 
 actor "Usuario" as U #FCEBD9
-participant "Windows 10 22H2 / 11" as W #FCEBD9
+participant "Windows 11" as W #FCEBD9
 control "Host del wallpaper" as H
 control "Puente IPC" as IPC
 control "Servicio del planificador" as PL

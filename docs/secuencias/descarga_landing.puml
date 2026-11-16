@@ -10,7 +10,7 @@ V -> L ++ : Abre la landing page
 L -->> V : Muestra la descripción, las funciones, el botón «Descargar para Windows» y los requisitos
 L -> L : Detecta el sistema con navigator.userAgentData o navigator.userAgent
 alt El sistema no es Windows
-  L -->> V : «Windgets está disponible solo para Windows 10 versión 22H2 y Windows 11, de 64 bits.» (el botón sigue habilitado)
+  L -->> V : «Windgets está disponible solo para Windows 11, de 64 bits.» (el botón sigue habilitado)
 else Windows con arquitectura distinta de x64
   L -->> V : «Es posible que tu equipo no cumpla los requisitos. El instalador lo comprobará antes de instalar.» (descarga habilitada)
 end

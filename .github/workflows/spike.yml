@@ -2,11 +2,10 @@ name: spike
 
 # P01 · Spike WorkerW y Raw Input (D-131: técnica WorkerW; D-186: reenvío del mouse con Raw Input).
 # Compila el prototipo en Windows (feature `spike`) y sube el .exe como artefacto para que una persona del
-# equipo lo pruebe en Windows 10 22H2 y en Windows 11 (plan_construccion.md, P01). Un runner de Linux no puede
-# compilar ni probar el código Win32. No publica nada: el artefacto queda solo en la corrida.
+# equipo lo pruebe en Windows 11 (plan_construccion.md, P01; D-207). Un runner de Linux no puede compilar ni
+# probar el código Win32. No publica nada: el artefacto queda solo en la corrida. Solo se dispara a mano
+# (workflow_dispatch) porque P01 ya está aprobado; el código se queda hasta que P06 integre la técnica.
 on:
-  push:
-    branches: ['paso-01-*']
   workflow_dispatch:
 
 concurrency:
