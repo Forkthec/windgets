@@ -1371,3 +1371,23 @@ pub async fn app_set_last_screen(
         .map_err(crate::servicio_del_planificador::de_sqlx),
     ))
 }
+
+/// IPC-DESK-07 `app_request_exit` (HE-17-HU03-CA02, CA04): si salir pide confirmar los cambios sin guardar.
+#[tauri::command]
+pub fn app_request_exit(
+    app: AppHandle,
+    params: NoParams,
+) -> IpcResult<crate::tipos::AppRequestExitResult> {
+    let _ = params;
+    correcto(crate::tipos::AppRequestExitResult {
+        requires_confirmation:
+            crate::integracion_con_el_sistema::area_de_notificacion::requiere_confirmacion(&app),
+    })
+}
+
+/// IPC-DESK-08 `app_exit` (HE-17-HU03-CA01, CA03): cierra el programa sin cerrar la sesión.
+#[tauri::command]
+pub fn app_exit(app: AppHandle, params: crate::tipos::AppExitParams) -> IpcResult<()> {
+    crate::integracion_con_el_sistema::area_de_notificacion::salir(&app, params.discard_changes);
+    correcto(())
+}

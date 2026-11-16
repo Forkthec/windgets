@@ -45,6 +45,7 @@
   "NO_SE_PUDO_MOSTRAR_EL_WALLPAPER": "No pudimos mostrar tu wallpaper. Se aplicó el wallpaper por defecto.",
   "RANGO_MUY_LARGO": "El rango máximo es de un año.",
   "REENVIO_EN_SEGUNDOS": "Puedes pedir un nuevo código en <segundos restantes> s.",
+  "SALIR_SIN_GUARDAR": "Tienes cambios sin guardar. ¿Deseas salir sin guardarlos?",
   "SERVICIO_NO_DISPONIBLE": "No pudimos completar la operación. Intenta de nuevo más tarde.",
   "SESION_CERRADA": "Sesión cerrada.",
   "SIN_CAMBIOS_PARA_GUARDAR": "No hay cambios para guardar.",

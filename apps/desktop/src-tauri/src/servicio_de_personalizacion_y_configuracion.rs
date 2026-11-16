@@ -129,6 +129,12 @@ impl ServicioDePersonalizacion {
         Self::default()
     }
 
+    /// HE-17-HU03-CA02 (IPC-DESK-07 `app_request_exit`): hay cambios de la vista previa sin guardar en el tema.
+    /// DUDA: HE-17-HU03 la distribución de widgets (HE-05, P14) también tendrá su borrador; hoy solo el del tema.
+    pub fn hay_cambios_sin_guardar(&self) -> bool {
+        self.con_borrador(|b| b.as_ref().is_some_and(Borrador::dirty))
+    }
+
     /// Al cerrar sesión se descarta el borrador en memoria: era de la cuenta que salió (HE-16-HU03, D-190).
     pub fn olvidar_borrador(&self) {
         self.con_borrador(|b| *b = None);
@@ -533,6 +539,8 @@ mod pruebas_de_guardado;
 mod pruebas_de_imagenes;
 #[cfg(test)]
 mod pruebas_de_plantillas;
+#[cfg(test)]
+mod pruebas_de_salir;
 #[cfg(test)]
 mod pruebas_de_widgets;
 #[cfg(test)]

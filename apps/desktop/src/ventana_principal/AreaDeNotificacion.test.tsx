@@ -45,3 +45,47 @@ describe('HE-17-HU02 · Abrir la ventana desde el ícono del área de notificaci
     expect(screen.getByRole('navigation', { name: 'Menú principal' })).toBeTruthy();
   });
 });
+
+describe('HE-17-HU03 · Salir de la aplicación desde el ícono del área de notificación', () => {
+  const MENSAJE = 'Tienes cambios sin guardar. ¿Deseas salir sin guardarlos?';
+
+  it('HE-17-HU03-CA01 · Salir de la aplicación', async () => {
+    const { nucleo } = await abrirAplicacion();
+    // Sin cambios sin guardar, el Núcleo sale sin preguntar; si avisa a la vista, ella pide salir sin descartar.
+    nucleo.emitir('exit_requested', { requires_confirmation: false });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(llamadasA(nucleo, 'app_exit')).toEqual([{ discard_changes: false }]);
+    // ET01: salir no cierra la sesión.
+    expect(llamadasA(nucleo, 'auth_sign_out')).toHaveLength(0);
+  });
+
+  it('HE-17-HU03-CA02 · Salir con cambios sin guardar', async () => {
+    const { nucleo } = await abrirAplicacion();
+    nucleo.emitir('exit_requested', { requires_confirmation: true });
+    // ET06: confirmación en ventana emergente con «Salir sin guardar» y «Seguir editando»; la aplicación sigue.
+    const dialogo = await screen.findByRole('dialog');
+    expect(within(dialogo).getByText(MENSAJE)).toBeTruthy();
+    expect(within(dialogo).getByRole('button', { name: 'Salir sin guardar' })).toBeTruthy();
+    expect(within(dialogo).getByRole('button', { name: 'Seguir editando' })).toBeTruthy();
+    expect(llamadasA(nucleo, 'app_exit')).toHaveLength(0);
+  });
+
+  it('HE-17-HU03-CA03 · Salir sin guardar los cambios', async () => {
+    const { nucleo } = await abrirAplicacion();
+    nucleo.emitir('exit_requested', { requires_confirmation: true });
+    const dialogo = await screen.findByRole('dialog');
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Salir sin guardar' }));
+    expect(llamadasA(nucleo, 'app_exit')).toEqual([{ discard_changes: true }]);
+    expect(llamadasA(nucleo, 'auth_sign_out')).toHaveLength(0);
+  });
+
+  it('HE-17-HU03-CA04 · Seguir editando al salir', async () => {
+    const { nucleo } = await abrirAplicacion();
+    nucleo.emitir('exit_requested', { requires_confirmation: true });
+    const dialogo = await screen.findByRole('dialog');
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Seguir editando' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(llamadasA(nucleo, 'app_exit')).toHaveLength(0);
+    expect(screen.getByRole('navigation', { name: 'Menú principal' })).toBeTruthy();
+  });
+});

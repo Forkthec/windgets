@@ -37,6 +37,8 @@ pub fn run() {
             puente_ipc::app_hide_main_window,
             puente_ipc::app_get_last_screen,
             puente_ipc::app_set_last_screen,
+            puente_ipc::app_request_exit,
+            puente_ipc::app_exit,
             puente_ipc::card_create,
             puente_ipc::label_list,
             puente_ipc::label_create,

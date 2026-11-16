@@ -6,7 +6,7 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{AppHandle, Emitter, Manager, Runtime, Window, WindowEvent};
 
 use crate::servicio_de_personalizacion_y_configuracion::ultima_pantalla;
-use crate::tipos::EventMapNavigateRequested;
+use crate::tipos::{EventMapExitRequested, EventMapNavigateRequested};
 
 /// Etiqueta de la ventana principal (C-01) en `tauri.conf.json`.
 pub const VENTANA_PRINCIPAL: &str = "main";
@@ -50,6 +50,8 @@ pub fn ocultar_ventana<R: Runtime>(app: &AppHandle<R>) {
 
 /// Opción «Abrir» del menú del ícono (HE-17-HU02-CA02, ET06).
 const ABRIR: &str = "abrir";
+/// Opción «Salir» del menú del ícono (HE-17-HU03-ET03).
+const SALIR: &str = "salir";
 
 /// Abre de nuevo la ventana principal, al frente, sin reiniciar la aplicación ni cerrar la sesión; la capa del
 /// wallpaper no se toca (HE-17-HU02-CA01, CA02, ET02). Después pide a la vista la última pantalla visitada,
@@ -76,21 +78,63 @@ pub fn abrir_ventana(app: &AppHandle) {
     });
 }
 
+/// IPC-DESK-07 `app_request_exit` (HE-17-HU03-CA02): pide confirmación si la vista previa tiene cambios sin guardar.
+pub fn requiere_confirmacion(app: &AppHandle) -> bool {
+    app.state::<crate::puente_ipc::Nucleo>()
+        .personalizacion
+        .hay_cambios_sin_guardar()
+}
+
+/// «Salir» en el menú del ícono. Sin cambios sin guardar, sale (CA01). Con ellos, muestra la ventana y avisa a la
+/// vista con EV-24 `exit_requested`, que abre «Tienes cambios sin guardar. ¿Deseas salir sin guardarlos?»; la
+/// aplicación sigue abierta hasta que la persona elija (CA02, ET07).
+pub fn pedir_salida(app: &AppHandle) {
+    if !requiere_confirmacion(app) {
+        salir(app, false);
+        return;
+    }
+    if let Some(ventana) = app.get_webview_window(VENTANA_PRINCIPAL) {
+        let _ = ventana.show();
+        let _ = ventana.unminimize();
+        let _ = ventana.set_focus();
+    }
+    let _ = app.emit(
+        "exit_requested",
+        EventMapExitRequested {
+            requires_confirmation: true,
+        },
+    );
+}
+
+/// IPC-DESK-08 `app_exit`: cierra el programa sin cerrar la sesión (`session.bin` queda) y muestra el fondo
+/// original de Windows al ocultar la capa (CA01, CA03; ET01, ET02, ET05). Con `discard_changes` descarta antes
+/// los cambios de la vista previa (CA03). Al abrirla de nuevo se ve el tema aplicado (ET04).
+pub fn salir(app: &AppHandle, descartar: bool) {
+    if descartar {
+        app.state::<crate::puente_ipc::Nucleo>()
+            .personalizacion
+            .olvidar_borrador();
+    }
+    crate::host_del_wallpaper::mostrar_capa(app, false);
+    app.exit(0);
+}
+
 /// Crea el ícono de la aplicación en el área de notificación, junto al reloj. Está mientras la aplicación se
 /// ejecuta, también con la ventana cerrada (HE-17-HU01-ET03). Seleccionar el ícono, o «Abrir» en su menú, abre de
 /// nuevo la ventana (HE-17-HU02-ET01, ET06).
 /// DUDA: HE-17-HU01 el texto al pasar el mouse sobre el ícono no está definido. Valor usado: «Windgets».
 pub fn crear_icono(app: &AppHandle) -> tauri::Result<()> {
     let abrir = MenuItem::with_id(app, ABRIR, "Abrir", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&abrir])?;
+    let salir = MenuItem::with_id(app, SALIR, "Salir", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&abrir, &salir])?;
     let mut icono = TrayIconBuilder::with_id("windgets")
         .tooltip("Windgets")
         .menu(&menu)
         .show_menu_on_left_click(false)
-        .on_menu_event(|app, evento| {
-            if evento.id().as_ref() == ABRIR {
-                abrir_ventana(app);
-            }
+        .on_menu_event(|app, evento| match evento.id().as_ref() {
+            ABRIR => abrir_ventana(app),
+            SALIR => pedir_salida(app),
+            _ => {}
         })
         .on_tray_icon_event(|icono, evento| {
             if let TrayIconEvent::Click {

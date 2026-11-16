@@ -225,6 +225,11 @@ pub const INICIO_AUTOMATICO_DESACTIVADO: &str = "Inicio automático desactivado.
 pub const NO_PUDIMOS_CAMBIAR_EL_INICIO_AUTOMATICO: &str =
     "No pudimos cambiar el inicio automático. Intenta de nuevo.";
 
+// HE-17-HU03 · Salir de la aplicación desde el ícono del área de notificación (IPC-DESK-07, IPC-DESK-08).
+
+/// Confirmación al salir con cambios sin guardar en la vista previa (HE-17-HU03-CA02, ET06).
+pub const SALIR_SIN_GUARDAR: &str = "Tienes cambios sin guardar. ¿Deseas salir sin guardarlos?";
+
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
     ("SERVICIO_NO_DISPONIBLE", SERVICIO_NO_DISPONIBLE),
@@ -322,6 +327,7 @@ pub const TEXTOS: &[(&str, &str)] = &[
         "NO_PUDIMOS_CAMBIAR_EL_INICIO_AUTOMATICO",
         NO_PUDIMOS_CAMBIAR_EL_INICIO_AUTOMATICO,
     ),
+    ("SALIR_SIN_GUARDAR", SALIR_SIN_GUARDAR),
 ];
 
 #[cfg(test)]
