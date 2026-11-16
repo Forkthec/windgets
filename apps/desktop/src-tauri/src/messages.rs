@@ -201,6 +201,10 @@ pub fn con_nombre_del_tema(texto: &str, nombre: &str) -> String {
     texto.replace("<nombre del tema>", nombre)
 }
 
+/// Opción deshabilitada del catálogo de widgets: Noticias o Reproductor de música ya agregados (HE-04-HU04-CA02,
+/// RT-04).
+pub const WIDGET_YA_AGREGADO: &str = "Ya agregaste este widget.";
+
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
     ("SERVICIO_NO_DISPONIBLE", SERVICIO_NO_DISPONIBLE),
@@ -282,6 +286,7 @@ pub const TEXTOS: &[(&str, &str)] = &[
         "BLOQUE_DESPUES_DE_FECHA_LIMITE",
         BLOQUE_DESPUES_DE_FECHA_LIMITE,
     ),
+    ("WIDGET_YA_AGREGADO", WIDGET_YA_AGREGADO),
 ];
 
 #[cfg(test)]

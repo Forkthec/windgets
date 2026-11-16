@@ -162,7 +162,7 @@ export function Personalization() {
             )}
             alCambiar={(id) => void seleccionar(id)}
           />
-          {/* ET01: vista previa del escritorio. Los widgets activos llegan con P07. */}
+          {/* ET01: vista previa del escritorio. Los widgets activos quedan para P14 (docs/DUDAS.md, HE-04-HU01). */}
           <section
             aria-label="Vista previa del escritorio"
             className="wg-vista-previa"

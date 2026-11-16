@@ -32,8 +32,9 @@ use crate::tipos::{
 use crate::tipos::{
     AppliedThemeView, ApplyMode, AssetResolveParams, AssetResolveResult,
     EventMapAppliedThemeChanged, EventMapCatalogUpdated, EventMapWallpaperStatusChanged,
-    LayerInitialState, ThemeDraftApplyParams, ThemeDraftSaveResult, ThemeIdResult, WallpaperState,
-    WallpaperStatus,
+    EventMapWidgetsChanged, LayerInitialState, ThemeDraftApplyParams, ThemeDraftSaveResult,
+    ThemeIdResult, WallpaperState, WallpaperStatus, WidgetCatalog, WidgetItem,
+    WidgetSetActiveParams,
 };
 
 /// El Núcleo que ven los comandos.
@@ -654,7 +655,7 @@ async fn estado_de_la_capa(
     nucleo: &Nucleo,
 ) -> Result<LayerInitialState, AppError> {
     let user_id = usuario(nucleo).unwrap_or_default();
-    nucleo
+    let capa = nucleo
         .personalizacion
         .estado_de_la_capa(
             nucleo.planificador.base(),
@@ -663,7 +664,19 @@ async fn estado_de_la_capa(
             nucleo.host.monitores(),
             estado_del_host(nucleo),
         )
-        .await
+        .await;
+    // El host reenvía la selección del mouse solo a los widgets que la capa pinta; oculta, a ninguno
+    // (HE-06-HU01, D-186).
+    if let Ok(estado) = &capa {
+        nucleo
+            .host
+            .guardar_widgets(if estado.wallpaper_state == WallpaperState::Hidden {
+                Vec::new()
+            } else {
+                estado.widgets.clone()
+            });
+    }
+    capa
 }
 
 /// EV-16 `wallpaper_status_changed`: la ventana principal muestra el aviso con `fallback_default` y la capa vuelve
@@ -752,6 +765,79 @@ pub async fn wallpaper_get_status(
             state: c.wallpaper_state,
         }
     })))
+}
+
+/// IPC-WID-01 `widget_list` (HE-04-HU01): los widgets del tema aplicado con su estado activo o inactivo.
+#[tauri::command]
+pub async fn widget_list(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<Vec<WidgetItem>>, ()> {
+    let _ = params;
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .widgets(nucleo.planificador.base(), &user_id)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-WID-02 `widget_catalog_get` (HE-04-HU04): el catálogo de widgets que se pueden agregar.
+#[tauri::command]
+pub async fn widget_catalog_get(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<WidgetCatalog>, ()> {
+    let _ = params;
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .catalogo_de_widgets(nucleo.planificador.base(), &user_id)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-WID-03 `widget_set_active` (HE-04-HU02): activa o desactiva un widget del tema aplicado. Avisa con
+/// EV-12 `widgets_changed` para que la lista y la capa vuelvan a leer (ET01; RNF-01, 5 s o menos).
+#[tauri::command]
+pub async fn widget_set_active(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: WidgetSetActiveParams,
+) -> Result<IpcResult<WidgetItem>, ()> {
+    let ahora = RelojDelSistema.ahora_ms();
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .activar_widget(
+                    nucleo.planificador.base(),
+                    &user_id,
+                    &params.widget_id.0,
+                    params.active,
+                    ahora,
+                )
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if r.is_ok() {
+        let _ = app.emit(
+            "widgets_changed",
+            EventMapWidgetsChanged {
+                widget_ids: vec![params.widget_id.clone()],
+                op: ChangeOp::Upsert,
+                origin: OriginKind::Local,
+            },
+        );
+    }
+    Ok(leido(r))
 }
 
 /// `%APPDATA%\Windgets\files`; sin `APPDATA`, la carpeta temporal.

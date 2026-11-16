@@ -1,0 +1,66 @@
+import { useEffect, useState } from 'react';
+import { EncabezadoDeRuta } from '@/reglas/ruta';
+import type { WidgetCatalog, WidgetCatalogEntry } from '@/types';
+import { Boton } from '@/ui/Boton/Boton';
+import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+
+// P-WID-02 Agregar widget (Menú principal > Personalización > Widgets > Agregar widget; HE-04-HU04). El
+// catálogo sale del Núcleo (IPC-WID-02 widget_catalog_get) sin los widgets por defecto. Seleccionar un widget
+// abre su subpantalla con HE-04-HU05 a HU11 (P21) (docs/DUDAS.md).
+
+export interface AgregarWidgetProps {
+  /** «Regresar» y «Widgets» en la miga de pan vuelven a la pantalla Widgets (RT-03). */
+  alRegresar: () => void;
+}
+
+function Grupo({ titulo, entradas }: { titulo: string; entradas: WidgetCatalogEntry[] }) {
+  return (
+    <section aria-label={titulo}>
+      <h2>{titulo}</h2>
+      <ul className="wg-lista">
+        {entradas.map((e) => (
+          // ET02: nombre, ícono y descripción de una línea; CA02: deshabilitado con su motivo (RT-04).
+          <li key={e.type} className="wg-lista__elemento">
+            <Boton disabled={!e.enabled} motivo={e.disabled_reason ?? undefined}>
+              {/* DUDA: HE-04-HU04 el ícono de cada widget no está definido; recuadro neutro. */}
+              <span className="wg-icono-widget" data-tipo={e.type} aria-hidden="true" />
+              <span className="wg-lista__nombre">{e.name}</span>
+              <span>{e.description}</span>
+            </Boton>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+export function AgregarWidget({ alRegresar }: AgregarWidgetProps) {
+  const { invocar } = useNucleo();
+  const [catalogo, setCatalogo] = useState<WidgetCatalog | null>(null);
+
+  useEffect(() => {
+    let vigente = true;
+    void invocar('widget_catalog_get', {}).then((r) => {
+      if (vigente && r.ok) setCatalogo(r.value);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [invocar]);
+
+  return (
+    <main aria-label="Agregar widget" aria-busy={catalogo === null}>
+      {/* ET01: miga de pan «Widgets > Agregar widget» y «Regresar» (RT-03). */}
+      <EncabezadoDeRuta
+        niveles={[{ texto: 'Widgets', alElegir: alRegresar }, { texto: 'Agregar widget' }]}
+        alRegresar={alRegresar}
+      />
+      {catalogo && (
+        <>
+          <Grupo titulo="Widgets externos" entradas={catalogo.external} />
+          <Grupo titulo="Widgets locales" entradas={catalogo.local} />
+        </>
+      )}
+    </main>
+  );
+}
