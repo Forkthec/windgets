@@ -4,7 +4,7 @@ title Diagrama de secuencia: instalación con el instalador .exe
 
 actor "Visitante" as V #FCEBD9
 boundary "Instalador .exe todo en uno" as I
-participant "Windows 10 22H2 / 11" as W #FCEBD9
+participant "Windows 11" as W #FCEBD9
 participant "Proceso Windgets.exe" as AD
 
 V -> I ++ : Abre Windgets-Setup.exe
@@ -12,10 +12,10 @@ I -> I : Verifica la integridad del archivo
 alt Archivo incompleto o dañado
   I -->> V : «El instalador está incompleto o dañado. Descárgalo de nuevo desde la landing page.» (salida 3)
 else Archivo íntegro
-  I -> W ++ : Comprobación previa: Windows 10 22H2 (compilación 19045) o Windows 11 (compilación 22000 o posterior), 64 bits x64
+  I -> W ++ : Comprobación previa: Windows 11 (compilación 22000 o posterior), 64 bits x64
   W -->> I -- : versión y arquitectura
   alt Computador no compatible
-    I -->> V : «Este computador no es compatible. Necesitas Windows 10 versión 22H2 o Windows 11, de 64 bits (x64).» (salida 2)
+    I -->> V : «Este computador no es compatible. Necesitas Windows 11, de 64 bits (x64).» (salida 2)
   else Computador compatible
     I -> W ++ : Busca una instalación previa en el disco
     W -->> I -- : sin instalación, instalación completa o incompleta

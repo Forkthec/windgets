@@ -2,9 +2,7 @@
 
 Orden de los pasos. Dentro de cada paso, las HU van en el orden del Backlog (columna Orden). Las tres prioridades del Backlog (Alta, Media, Baja) definen los bloques: P02 a P11 son Alta, P12 a P20 son Media y P21 a P22 son Baja. Ninguna HU aparece antes de las HU de las que depende.
 
-Antes del P02 va el spike (P01): si no funciona en Windows 10 22H2 y en Windows 11, se detiene la construcción (D-131, D-186, HE-02-HU01-ET11). Las reglas transversales se construyen primero (P02) aunque estén al final de la lista del Backlog, porque los CA de casi todas las HU las citan. Desde P05, todo comando de escritura guarda también en `pending_change`; P10 construye el envío y la recepción.
-
-> **Aclaración (15-nov-2026, D-207).** El equipo da soporte solo a Windows 11 (compilación 22000 o posterior), de 64 bits. Windows 10 versión 22H2 deja de ser requisito mínimo y ya no se prueba: donde este documento lo nombra, se lee con esta salvedad. Los textos literales no cambian hasta que el equipo decida modificarlos (ver `DUDAS.md`).
+Antes del P02 va el spike (P01): si no funciona en Windows 11, se detiene la construcción (D-131, D-186, HE-02-HU01-ET11). Las reglas transversales se construyen primero (P02) aunque estén al final de la lista del Backlog, porque los CA de casi todas las HU las citan. Desde P05, todo comando de escritura guarda también en `pending_change`; P10 construye el envío y la recepción.
 
 Cada paso termina cuando todos los CA y las ET de sus HU pasan y se cumple lo que dice «Se prueba al terminar». Un commit por HU.
 
@@ -16,9 +14,9 @@ Repositorio y herramientas (D-200), Supabase, tipos y biblioteca de interfaz. Pa
 
 ## P01 · Spike WorkerW y Raw Input (D-131, D-186)
 
-Demostrar en Windows 10 22H2 y en Windows 11 una ventana WebView2 anclada a WorkerW detrás de los íconos del escritorio y el reenvío del mouse con Raw Input (`RIDEV_INPUTSINK`, `LVM_HITTEST`), con una sola ventana sobre varios monitores (D-187). No cierra ninguna HU; es la condición para seguir (HE-02-HU01-ET11). Lo ejecuta una persona del equipo con un computador (o máquina virtual) con Windows 10 22H2 y otro con Windows 11, siguiendo estos pasos: compilar el prototipo con `pnpm --filter desktop tauri build`, copiar el `.exe` a cada sistema, ejecutarlo, comprobar cada criterio de «Se prueba al terminar» y pegar en `DUDAS.md` el sistema operativo, su versión, la captura de pantalla y el resultado (aprobado o fallido). Un runner de CI de Linux no puede probar WorkerW. Quien ejecuta avisa al Gerente de Proyecto y al patrocinador.
+Demostrar en Windows 11 una ventana WebView2 anclada a WorkerW detrás de los íconos del escritorio y el reenvío del mouse con Raw Input (`RIDEV_INPUTSINK`, `LVM_HITTEST`), con una sola ventana sobre varios monitores (D-187). No cierra ninguna HU; es la condición para seguir (HE-02-HU01-ET11). Lo ejecuta una persona del equipo con un computador (o máquina virtual) con Windows 11, siguiendo estos pasos: compilar el prototipo con `pnpm --filter desktop tauri build`, copiar el `.exe` a cada sistema, ejecutarlo, comprobar cada criterio de «Se prueba al terminar» y pegar en `DUDAS.md` el sistema operativo, su versión, la captura de pantalla y el resultado (aprobado o fallido). Un runner de CI de Linux no puede probar WorkerW. Quien ejecuta avisa al Gerente de Proyecto y al patrocinador.
 
-**Se prueba al terminar.** En ambos sistemas: la ventana queda detrás de los íconos; seleccionar un ícono sigue abriendo el ícono; seleccionar un rectángulo de widget interactivo lo recibe la capa; con tres vistas WebView2 abiertas, CPU promedio de 3 % o menos y memoria de 200 MB o menos en reposo (RNF-07). Si algo falla, se detiene la construcción y se informa al Gerente de Proyecto y al patrocinador (`AGENTS.md`).
+**Se prueba al terminar.** En Windows 11: la ventana queda detrás de los íconos; seleccionar un ícono sigue abriendo el ícono; seleccionar un rectángulo de widget interactivo lo recibe la capa; con tres vistas WebView2 abiertas, CPU promedio de 3 % o menos y memoria de 200 MB o menos en reposo (RNF-07). Si algo falla, se detiene la construcción y se informa al Gerente de Proyecto y al patrocinador (`AGENTS.md`).
 
 ## P02 · Reglas transversales
 
@@ -60,7 +58,7 @@ CD-02 con una aplicación mínima empaquetable (abre Inicio de sesión cuando ex
 
 Puntos del paso: 7.
 
-**Se prueba al terminar.** En máquina virtual con Windows 10 22H2 y con Windows 11: instalar, reinstalar, reparar, cancelar en cada paso, falla con reversión sin residuos (RNF-15), computador no compatible y poco espacio. CD-02-HU01-CA02 («Abrir Windgets» abre Inicio de sesión) se vuelve a ejecutar al cerrar P05.
+**Se prueba al terminar.** En máquina virtual con Windows 11: instalar, reinstalar, reparar, cancelar en cada paso, falla con reversión sin residuos (RNF-15), computador no compatible y poco espacio. CD-02-HU01-CA02 («Abrir Windgets» abre Inicio de sesión) se vuelve a ejecutar al cerrar P05.
 
 ## P05 · Cuentas (parte principal)
 
@@ -364,7 +362,7 @@ Controlar la música y abrir una noticia desde los widgets, editar y eliminar et
 
 Puntos del paso: 19.
 
-**Se prueba al terminar.** Confirmaciones M-09, M-10, M-13 y M-14 con sus textos; todos los CA y ET del backlog en verde; recorrido completo en Windows 10 22H2 y Windows 11; todos los RNF medidos.
+**Se prueba al terminar.** Confirmaciones M-09, M-10, M-13 y M-14 con sus textos; todos los CA y ET del backlog en verde; recorrido completo en Windows 11; todos los RNF medidos.
 
 ## Total
 
