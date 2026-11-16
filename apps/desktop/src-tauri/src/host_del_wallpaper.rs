@@ -3,15 +3,20 @@
 //! pausa animaciones por carga y restaura el fondo al salir.»
 //!
 //! HE-02-HU01 ancla la capa a WorkerW (`anclaje`, solo en Windows) y guarda lo que el resto del Núcleo necesita
-//! saber (`estado`). El prototipo del spike P01 (WorkerW y Raw Input, D-131 y D-186) sigue detrás de la feature
-//! `spike`; con ella no se crea la capa de la aplicación, porque el spike crea la suya.
+//! saber (`estado`). HE-06-HU01 reenvía a la capa la selección sobre los widgets interactivos (`raw_input`, solo
+//! en Windows, con las reglas de `seleccion`) y vuelve a leer los monitores cuando cambian. El prototipo del
+//! spike P01 (WorkerW y Raw Input, D-131 y D-186) sigue detrás de la feature `spike`; con ella no se crea la capa
+//! de la aplicación, porque el spike crea la suya.
 
 pub mod estado;
 #[cfg(any(test, windows))]
 pub mod geometria;
+pub mod seleccion;
 
 #[cfg(all(windows, not(feature = "spike")))]
 pub mod anclaje;
+#[cfg(all(windows, not(feature = "spike")))]
+pub mod raw_input;
 #[cfg(all(windows, feature = "spike"))]
 pub mod spike;
 

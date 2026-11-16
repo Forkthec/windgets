@@ -1,6 +1,8 @@
 //! Anclaje de la capa del wallpaper a WorkerW, detrás de los íconos del escritorio (HE-02-HU01-ET01, ET09;
 //! D-131, D-179, D-187; contrato INT-07, pasos 1 y 4). `anclar`, `buscar_workerw` y `monitores` vienen del spike
-//! P01 (`spike.rs`), aprobado en Windows 11 con 2 monitores (PR #21).
+//! P01 (`spike.rs`), aprobado en Windows 11 con 2 monitores (PR #21). Desde P07 guarda dónde quedó la capa
+//! (origen y escala) para reenviar la selección del mouse y la reubica cuando cambian los monitores
+//! (`reubicar`, HE-06-HU01; INT-07, paso 4).
 //!
 //! La capa es una sola vista WebView2 (`capa.html`) que cubre el escritorio virtual. Se crea oculta al abrir la
 //! aplicación; se muestra con la sesión iniciada y se oculta sin ella (CA05). Si no se puede anclar, el host lo
@@ -19,8 +21,8 @@ use windows::Win32::Graphics::Gdi::{
 };
 use windows::Win32::UI::HiDpi::{GetDpiForMonitor, MDT_EFFECTIVE_DPI};
 use windows::Win32::UI::WindowsAndMessaging::{
-    EnumWindows, FindWindowExW, FindWindowW, GWL_STYLE, GetWindowLongPtrW, SMTO_NORMAL, SW_HIDE,
-    SW_SHOWNOACTIVATE, SWP_NOACTIVATE, SWP_NOZORDER, SendMessageTimeoutW, SetParent,
+    EnumWindows, FindWindowExW, FindWindowW, GWL_STYLE, GetParent, GetWindowLongPtrW, SMTO_NORMAL,
+    SW_HIDE, SW_SHOWNOACTIVATE, SWP_NOACTIVATE, SWP_NOZORDER, SendMessageTimeoutW, SetParent,
     SetWindowLongPtrW, SetWindowPos, ShowWindow, WS_CAPTION, WS_CHILD, WS_POPUP, WS_THICKFRAME,
 };
 use windows::core::{BOOL, PCWSTR, w};
@@ -44,10 +46,41 @@ const ESCRITORIO_POR_DEFECTO: Rect = Rect {
 };
 
 /// Crea la capa oculta, la ancla a WorkerW y guarda los monitores (EV-17). Un fallo no detiene la aplicación:
-/// queda en el host como anclaje fallido (HE-02-HU01-ET05).
+/// queda en el host como anclaje fallido (HE-02-HU01-ET05). Arranca además la lectura del mouse y de los cambios
+/// de monitores (HE-06-HU01, `raw_input`).
 pub fn iniciar(app: &AppHandle) {
+    let virtual_ = leer_monitores(app);
+    let nucleo = app.state::<Nucleo>();
+    let anclaje = WebviewWindowBuilder::new(app, CAPA, WebviewUrl::App("capa.html".into()))
+        .title("Windgets · capa del wallpaper")
+        .decorations(false)
+        .skip_taskbar(true)
+        .resizable(false)
+        .focused(false)
+        .visible(false)
+        .build()
+        .map_err(|error| error.to_string())
+        .and_then(|capa| {
+            let hwnd = capa.hwnd().map_err(|error| error.to_string())?;
+            anclar(hwnd, virtual_)?;
+            Ok(escala_de(&capa))
+        });
+    match anclaje {
+        Ok(escala) => nucleo
+            .host
+            .ubicar_capa((virtual_.izquierda, virtual_.arriba), escala),
+        Err(error) => {
+            eprintln!("No se pudo anclar la capa del wallpaper: {error}");
+            nucleo.host.marcar_anclaje(true);
+        }
+    }
+    super::raw_input::iniciar(app);
+}
+
+/// Lee los monitores, los guarda en el host y los avisa con EV-17 `monitors_changed`. Devuelve el escritorio
+/// virtual que los contiene (D-187).
+fn leer_monitores(app: &AppHandle) -> Rect {
     let monitores = monitores();
-    let virtual_ = geometria::escritorio_virtual(&monitores).unwrap_or(ESCRITORIO_POR_DEFECTO);
     let nucleo = app.state::<Nucleo>();
     nucleo
         .host
@@ -58,21 +91,40 @@ pub fn iniciar(app: &AppHandle) {
             monitors: nucleo.host.monitores(),
         },
     );
+    geometria::escritorio_virtual(&monitores).unwrap_or(ESCRITORIO_POR_DEFECTO)
+}
 
-    let anclaje = WebviewWindowBuilder::new(app, CAPA, WebviewUrl::App("capa.html".into()))
-        .title("Windgets · capa del wallpaper")
-        .decorations(false)
-        .skip_taskbar(true)
-        .resizable(false)
-        .focused(false)
-        .visible(false)
-        .build()
-        .map_err(|error| error.to_string())
-        .and_then(|capa| capa.hwnd().map_err(|error| error.to_string()))
-        .and_then(|hwnd| anclar(hwnd, virtual_));
-    if let Err(error) = anclaje {
-        eprintln!("No se pudo anclar la capa del wallpaper: {error}");
-        nucleo.host.marcar_anclaje(true);
+/// La escala de la capa (píxeles físicos por píxel CSS). DUDA: HE-06-HU01 la capa es una sola ventana sobre
+/// monitores con escalas distintas (D-187) y el contrato no dice cuál usa. Valor usado: la que informa la
+/// ventana (`scale_factor`), o 1 si no la informa.
+fn escala_de(capa: &tauri::WebviewWindow) -> f64 {
+    capa.scale_factor().ok().filter(|e| *e > 0.0).unwrap_or(1.0)
+}
+
+/// Al conectar o desconectar un monitor, o al cambiar su resolución o su escala (`WM_DISPLAYCHANGE`,
+/// `WM_DPICHANGED`), vuelve a leer los monitores (EV-17) y lleva la capa al nuevo escritorio virtual (INT-07,
+/// paso 4). Lo llama la ventana oculta de `raw_input`.
+pub fn reubicar(app: &AppHandle) {
+    let virtual_ = leer_monitores(app);
+    let nucleo = app.state::<Nucleo>();
+    if nucleo.host.anclaje_fallido() {
+        return;
+    }
+    let Some(capa) = app.get_webview_window(CAPA) else {
+        return;
+    };
+    let Ok(hwnd) = capa.hwnd() else {
+        return;
+    };
+    // SAFETY: `hwnd` es la ventana de la capa, de este proceso; GetParent no recibe punteros.
+    let Ok(workerw) = (unsafe { GetParent(hwnd) }) else {
+        return;
+    };
+    match posicionar(hwnd, workerw, virtual_) {
+        Ok(()) => nucleo
+            .host
+            .ubicar_capa((virtual_.izquierda, virtual_.arriba), escala_de(&capa)),
+        Err(error) => eprintln!("No se pudo ajustar la capa a los monitores: {error}"),
     }
 }
 
@@ -141,6 +193,11 @@ fn anclar(capa: HWND, virtual_: Rect) -> Result<(), String> {
     unsafe { SetParent(capa, Some(workerw)) }
         .map_err(|error| format!("SetParent falló: {error}"))?;
 
+    posicionar(capa, workerw, virtual_)
+}
+
+/// Mueve y dimensiona la capa, hija de WorkerW, al rectángulo del escritorio virtual (INT-07, paso 1).
+fn posicionar(capa: HWND, workerw: HWND, virtual_: Rect) -> Result<(), String> {
     // El escritorio virtual en coordenadas del cliente de WorkerW.
     let mut esquina = [POINT {
         x: virtual_.izquierda,

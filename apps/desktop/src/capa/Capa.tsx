@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react';
 import { invocar as invocarNucleo } from '@/ipc/cliente';
 import { escuchar as escucharNucleo, type Escuchar } from '@/ipc/eventos';
 import { urlDeArchivo } from '@/ipc/archivos';
-import type { AssetResolveParams, Invoke, LayerInitialState, ThemeContent, WidgetType } from '@/types';
+import type {
+  AssetResolveParams,
+  EventMapPointerForwarded,
+  Invoke,
+  LayerInitialState,
+  ThemeContent,
+  WidgetType,
+} from '@/types';
 
 // C-02 Capa del wallpaper y los widgets (P-WAL-02, HE-02-HU01). Es la ventana anclada detrás de los íconos del
 // escritorio (D-131): pinta el wallpaper del tema aplicado a partir de lo guardado, sin red (IPC-DESK-01; RNF-08).
@@ -24,6 +31,26 @@ export const NOMBRE_DEL_WIDGET: Record<WidgetType, string> = {
   static_image: 'Imagen estática',
   text: 'Texto',
 };
+
+/** Widgets interactivos: Tareas del día, Kanban, Calendario, Reproductor de música y Noticias (HE-06-HU01-ET01). */
+export const INTERACTIVOS: readonly WidgetType[] = [
+  'daily_tasks',
+  'kanban',
+  'calendar',
+  'music_player',
+  'news',
+];
+
+/**
+ * EV-18 `pointer_forwarded` (HE-06-HU01-CA01, ET03): la capa no recibe el mouse (está detrás de los íconos,
+ * D-186); el Núcleo le reenvía la selección con el botón principal sobre un widget interactivo y la capa la
+ * entrega al elemento del widget que está en ese punto. Fuera de un widget interactivo no hace nada (CA02).
+ */
+export function entregarSeleccion({ x, y }: EventMapPointerForwarded, documento: Document = document) {
+  const elemento = documento.elementFromPoint(x, y);
+  if (!(elemento instanceof HTMLElement) || !elemento.closest('[data-interactivo="true"]')) return;
+  elemento.click();
+}
 
 /** El archivo del fondo del tema: la imagen propia, la del catálogo o la de la plantilla. */
 export function recursoDelFondo(contenido: ThemeContent): AssetResolveParams | null {
@@ -73,11 +100,13 @@ export function Capa({ invocar = invocarNucleo, escuchar = escucharNucleo }: Cap
     const dejarTema = escuchar('applied_theme_changed', () => void leer());
     // EV-12: al activar o desactivar un widget la capa lo muestra u oculta en 5 s o menos (HE-04-HU02-ET01).
     const dejarWidgets = escuchar('widgets_changed', () => void leer());
+    const dejarSeleccion = escuchar('pointer_forwarded', (carga) => entregarSeleccion(carga));
     return () => {
       vigente = false;
       dejarEstado();
       dejarTema();
       dejarWidgets();
+      dejarSeleccion();
     };
   }, [escuchar, invocar]);
 
@@ -108,6 +137,7 @@ export function Capa({ invocar = invocarNucleo, escuchar = escucharNucleo }: Cap
           key={w.widget_id}
           aria-label={NOMBRE_DEL_WIDGET[w.type]}
           data-widget-id={w.widget_id}
+          data-interactivo={INTERACTIVOS.includes(w.type)}
           style={{ position: 'absolute', left: w.x, top: w.y, width: w.width, height: w.height }}
         />
       ))}

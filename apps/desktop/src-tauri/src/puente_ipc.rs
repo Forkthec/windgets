@@ -655,7 +655,7 @@ async fn estado_de_la_capa(
     nucleo: &Nucleo,
 ) -> Result<LayerInitialState, AppError> {
     let user_id = usuario(nucleo).unwrap_or_default();
-    nucleo
+    let capa = nucleo
         .personalizacion
         .estado_de_la_capa(
             nucleo.planificador.base(),
@@ -664,7 +664,19 @@ async fn estado_de_la_capa(
             nucleo.host.monitores(),
             estado_del_host(nucleo),
         )
-        .await
+        .await;
+    // El host reenvía la selección del mouse solo a los widgets que la capa pinta; oculta, a ninguno
+    // (HE-06-HU01, D-186).
+    if let Ok(estado) = &capa {
+        nucleo
+            .host
+            .guardar_widgets(if estado.wallpaper_state == WallpaperState::Hidden {
+                Vec::new()
+            } else {
+                estado.widgets.clone()
+            });
+    }
+    capa
 }
 
 /// EV-16 `wallpaper_status_changed`: la ventana principal muestra el aviso con `fallback_default` y la capa vuelve
