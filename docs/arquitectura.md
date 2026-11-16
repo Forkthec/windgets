@@ -38,7 +38,7 @@ Los niveles 1 a 4 y la vista de despliegue están descritos al final de este arc
 
 El Núcleo tiene las reglas de negocio, las validaciones definitivas, SQLite, la sincronización, los reportes, la cuenta y la integración con Windows. React dibuja las pantallas y repite solo las validaciones de campo para mostrar el mensaje al instante; el Núcleo vuelve a validar. Los tipos se definen en Rust y se generan con ts-rs. La tabla completa por responsabilidad está más abajo («Responsabilidades de Rust y de React»).
 
-## Decisiones D-185 a D-200 (y D-203)
+## Decisiones D-185 a D-200 (y D-203, D-207)
 
 | ID | Decisión (resumen operativo) |
 |---|---|
@@ -59,6 +59,7 @@ El Núcleo tiene las reglas de negocio, las validaciones definitivas, SQLite, la
 | D-199 | Convención de los modelos: estándar C4 del curso (personas en verde, sistema y contenedores propios en azul, externos en rojo, relaciones discontinuas con descripción y tecnología). |
 | D-200 | Un repositorio `windgets` (ver `convenciones.md`). |
 | D-203 | El indicador de sincronización está siempre visible en la ventana principal, junto al menú principal. |
+| D-207 | Soporte solo para Windows 11 (compilación 22000 o posterior), de 64 bits (x64), por decisión del equipo del 15-nov-2026. Windows 10 22H2 deja de ser requisito mínimo y de probarse; D-050, D-057 y D-131 se leen con esa salvedad. Los textos literales y el código del instalador, la landing y el spike no cambian hasta que el equipo lo decida (`DUDAS.md`). En los modelos, «Windows 10 22H2 / 11» se lee «Windows 11». |
 
 Decisiones anteriores que también rigen: D-048 (conflictos por campo, gana la hora más reciente), D-049 (primero lo guardado; máximo una consulta por minuto), D-050 (requisitos del sistema), D-131 (WorkerW), D-132 y D-180 (Gemini y Supabase como backend), D-135 (una configuración para todos los monitores), D-164 (trabajo sin conexión), D-175 (SMTC).
 
@@ -787,7 +788,7 @@ Cada flujo se resume aquí; el detalle paso a paso está en los diagramas de sec
 
 ## C4 · Dudas y propuestas
 
-- Las decisiones D-185 a D-200 y D-203 están ratificadas; un cambio se registra como decisión nueva antes de modificar el modelo.
+- Las decisiones D-185 a D-200, D-203 y D-207 están ratificadas; un cambio se registra como decisión nueva antes de modificar el modelo.
 - Los proveedores de clima (Open-Meteo) y de noticias (GNews) son una propuesta; el backlog no los nombra.
 - Cada contenedor con estructura interna modelada (Núcleo, Ventana principal, Capa del wallpaper y los widgets, Ventana de edición de la distribución, API de datos y Edge Functions) tiene su vista de componentes; Supabase Auth, la base de datos en la nube, el almacenamiento de archivos, la landing page y el instalador no se descomponen porque no tienen estructura propia que modelar (la purga programada con pg_cron es parte de la base de datos en la nube).
 - Cada ventana WebView2 carga su propia instancia del Cliente IPC tipado; por eso aparece en las vistas 3d y 3e con el mismo nombre y el mismo código fuente.
