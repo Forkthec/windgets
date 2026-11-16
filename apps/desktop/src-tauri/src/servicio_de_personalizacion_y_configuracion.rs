@@ -520,6 +520,7 @@ mod aplicar;
 pub mod escritorio;
 mod guardado;
 mod imagenes;
+pub mod ultima_pantalla;
 mod widgets;
 
 #[cfg(test)]

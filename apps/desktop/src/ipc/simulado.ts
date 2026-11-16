@@ -160,6 +160,8 @@ const respuestas: Respuestas = {
   // HE-16-HU03: el simulado no guarda cambios pendientes; cerrar sesión responde el mensaje de CA01.
   auth_get_sign_out_info: () => ({ ok: true, value: { pending_count: 0 } }),
   // HE-16-HU02: el simulado guarda el inicio automático en memoria (fuera de Tauri no hay registro de Windows).
+  // HE-17-HU02: el simulado no guarda la última pantalla (fuera de Tauri no hay área de notificación).
+  app_set_last_screen: () => ({ ok: true, value: null }),
   autostart_get: () => ({ ok: true, value: { enabled: inicioAutomaticoSimulado } }),
   autostart_set: ({ enabled }) => {
     inicioAutomaticoSimulado = enabled;

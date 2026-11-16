@@ -1337,3 +1337,37 @@ pub fn app_hide_main_window(app: AppHandle, params: NoParams) -> IpcResult<()> {
     crate::integracion_con_el_sistema::area_de_notificacion::ocultar_ventana(&app);
     correcto(())
 }
+
+/// IPC-DESK-04 `app_get_last_screen` (HE-17-HU02-ET05; D-156): la última pantalla visitada en este computador.
+#[tauri::command]
+pub async fn app_get_last_screen(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<crate::tipos::LastScreen>, ()> {
+    let _ = params;
+    use crate::servicio_de_personalizacion_y_configuracion::ultima_pantalla;
+    Ok(leido(
+        ultima_pantalla::leer(nucleo.planificador.base())
+            .await
+            .map(|screen| crate::tipos::LastScreen { screen })
+            .map_err(crate::servicio_del_planificador::de_sqlx),
+    ))
+}
+
+/// IPC-DESK-05 `app_set_last_screen` (HE-17-HU02-ET05): la vista la guarda cada vez que abre una pantalla.
+#[tauri::command]
+pub async fn app_set_last_screen(
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::AppSetLastScreenParams,
+) -> Result<IpcResult<()>, ()> {
+    use crate::servicio_de_personalizacion_y_configuracion::ultima_pantalla;
+    Ok(leido(
+        ultima_pantalla::guardar(
+            nucleo.planificador.base(),
+            params.screen,
+            chrono::Utc::now().timestamp_millis(),
+        )
+        .await
+        .map_err(crate::servicio_del_planificador::de_sqlx),
+    ))
+}

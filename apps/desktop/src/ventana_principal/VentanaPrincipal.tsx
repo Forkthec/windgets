@@ -187,6 +187,22 @@ export function VentanaPrincipal({
   );
   const nucleo = useMemo(() => ({ invocar, escuchar }), [escuchar, invocar]);
 
+  // HE-17-HU02-ET05 (D-156): cada pantalla que se abre queda como la última visitada en este computador.
+  useEffect(() => {
+    if (sesion === 'con_sesion') void invocar('app_set_last_screen', { screen: pantalla });
+  }, [invocar, pantalla, sesion]);
+
+  // EV-23: al abrir la ventana desde el ícono del área de notificación, el Núcleo pide la última pantalla visitada
+  // (HE-17-HU02-CA01, CA02).
+  const ultimaNavegacion = useRef(navegacion);
+  useEffect(() => {
+    ultimaNavegacion.current = navegacion;
+  }, [navegacion]);
+  useEffect(
+    () => escuchar('navigate_requested', (carga) => void ultimaNavegacion.current.abrir(carga.screen)),
+    [escuchar],
+  );
+
   let contenido = null;
   if (sesion === 'con_sesion') {
     const Pantalla = pantallas[pantalla];
