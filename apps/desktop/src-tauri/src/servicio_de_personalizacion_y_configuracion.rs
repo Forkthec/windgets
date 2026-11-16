@@ -14,10 +14,11 @@ use sqlx::sqlite::SqliteRow;
 
 use crate::messages;
 use crate::repositorios_y_archivos_locales::BaseLocal;
-use crate::servicio_del_planificador::{de_sqlx, error};
+use crate::servicio_del_planificador::{de_sqlx, error, inesperado};
 use crate::tipos::{
-    AppError, BackgroundSource, ErrorCode, FontSize, Hex, Legibility, ThemeBackground, ThemeColors,
-    ThemeContent, ThemeContentFont, ThemeDraftView, ThemeSummary, Uuid,
+    AppError, BackgroundSource, CatalogItem, ErrorCode, FontSize, Hex, Legibility, ThemeBackground,
+    ThemeColors, ThemeContent, ThemeContentFont, ThemeDraftPatch, ThemeDraftView, ThemeSummary,
+    Uuid,
 };
 
 /// Identificador del tema inicial cuando la base local aún no lo trae (primer inicio sin la primera descarga).
@@ -334,6 +335,73 @@ impl ServicioDePersonalizacion {
             .map_err(de_sqlx)
     }
 
+    /// IPC-CAT-01 `catalog_list` con `kind: 'template'`: las plantillas activas, por `sort_order`
+    /// (HE-02-HU02-CA01, ET01). Solo el catálogo: no hay forma de crear plantillas propias (ET04).
+    /// DUDA: HE-02-HU02 `thumbnail_url` debe ser una URL del protocolo de assets de Tauri; hasta que
+    /// `asset_resolve` (HE-02-HU01) exista, valor neutro: la ruta de la miniatura en el paquete del instalador.
+    pub async fn plantillas(&self, base: &BaseLocal) -> Result<Vec<CatalogItem>, AppError> {
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let filas = sqlx::query(
+            "SELECT id, name, thumbnail_path, default_color_primary, default_color_secondary,              default_color_text FROM catalog_template WHERE is_active = 1 ORDER BY sort_order, name",
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        filas
+            .iter()
+            .map(|f| {
+                Ok(CatalogItem {
+                    id: f.try_get("id")?,
+                    name: f.try_get("name")?,
+                    thumbnail_url: f.try_get("thumbnail_path")?,
+                    is_cached: true,
+                    hex: None,
+                    color_primary: Some(Hex(f.try_get("default_color_primary")?)),
+                    color_secondary: Some(Hex(f.try_get("default_color_secondary")?)),
+                    color_text: Some(Hex(f.try_get("default_color_text")?)),
+                    format: None,
+                })
+            })
+            .collect::<Result<Vec<_>, sqlx::Error>>()
+            .map_err(de_sqlx)
+    }
+
+    /// IPC-THEME-05 `theme_draft_update`: aplica el cambio al borrador y devuelve la vista previa; no toca el
+    /// escritorio ni lo guardado (HE-02-HU02-ET07). Por ahora solo `template_id`: la plantilla cambia y el
+    /// fondo, los colores y la tipografía del tema se quedan como están (CA02, ET06). El resto del parche llega
+    /// con HE-02-HU03 (fondo) y con los pasos de colores, tipografía y paletas.
+    pub async fn actualizar_borrador(
+        &self,
+        base: &BaseLocal,
+        user_id: &str,
+        cambio: &ThemeDraftPatch,
+    ) -> Result<ThemeDraftView, AppError> {
+        // Sin borrador abierto se abre el del tema aplicado, como al entrar a la pantalla.
+        self.abrir_borrador(base, user_id, None).await?;
+        if let Some(plantilla) = &cambio.template_id {
+            let pool = base.pool().await.map_err(de_sqlx)?;
+            let existe: Option<String> = sqlx::query_scalar(
+                "SELECT id FROM catalog_template WHERE id = ? AND is_active = 1",
+            )
+            .bind(plantilla)
+            .fetch_optional(pool)
+            .await
+            .map_err(de_sqlx)?;
+            if existe.is_none() {
+                return Err(error(ErrorCode::TemplateNotFound, "", None));
+            }
+        }
+        self.con_borrador(|b| {
+            b.as_mut().map(|borrador| {
+                if let Some(plantilla) = &cambio.template_id {
+                    borrador.contenido.template_id.clone_from(plantilla);
+                }
+                borrador.vista()
+            })
+        })
+        .ok_or_else(inesperado)
+    }
+
     /// Solo para las pruebas y para las HU que editan: el contenido del borrador.
     #[cfg(test)]
     fn edicion_de_prueba(&self, cambio: impl FnOnce(&mut ThemeContent)) {
@@ -345,5 +413,7 @@ impl ServicioDePersonalizacion {
     }
 }
 
+#[cfg(test)]
+mod pruebas_de_plantillas;
 #[cfg(test)]
 mod pruebas_del_tema_en_edicion;

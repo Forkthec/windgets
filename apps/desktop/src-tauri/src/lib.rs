@@ -54,6 +54,7 @@ pub fn run() {
             puente_ipc::theme_list,
             puente_ipc::theme_draft_open,
             puente_ipc::theme_draft_select,
+            puente_ipc::theme_draft_update,
         ])
         .setup(|app| {
             puente_ipc::vigilar_conexion(app.handle().clone());

@@ -85,3 +85,5 @@ Datos «NO DEFINIDO» y contradicciones encontradas al construir (AGENTS.md, «C
 - **HE-02-HU10** · M-04 no define el título de la ventana emergente. Valor usado: «Cambiar de tema» (`Personalization.tsx`).
 - **HE-02-HU10** · `ThemeDraftView.legibility` se calcula con la edición de colores (HE-02-HU05). Valor usado: `{ ok: true, items: [], suggestion: null }`.
 - **HE-02-HU10** · «Guardar», «Guardar como tema», «Aplicar» y «Cancelar» aparecen (CA01) pero actúan con HE-02-HU11, HU12 y HU13. Valor usado: botones sin acción hasta esas HU.
+- **HE-02-HU02** · `catalog_list` con `kind: 'template'` debe dar una URL del protocolo de assets de Tauri, pero `asset_resolve` llega con HE-02-HU01. Valor usado: `thumbnail_url` es la ruta de la miniatura que dice `catalog_template.thumbnail_path` (`servicio_de_personalizacion_y_configuracion.rs`, `plantillas`).
+- **HE-02-HU02** · El selector «Catálogo de plantillas» no define obligatoriedad, límites ni formato (NO DEFINIDO). Valor usado: lista de botones con miniatura y nombre, una sola elegida, sin límite adicional.

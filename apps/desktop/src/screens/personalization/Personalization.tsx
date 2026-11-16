@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { ThemeDraftView, ThemeSummary } from '@/types';
+import type { CatalogItem, ThemeDraftPatch, ThemeDraftView, ThemeSummary } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { Selector } from '@/ui/Selector/Selector';
@@ -17,6 +17,7 @@ export function Personalization() {
   const { invocar, escuchar } = useNucleo();
   const [temas, setTemas] = useState<ThemeSummary[]>([]);
   const [borrador, setBorrador] = useState<ThemeDraftView | null>(null);
+  const [plantillas, setPlantillas] = useState<CatalogItem[]>([]);
   // M-04: el tema que se quería abrir cuando el Núcleo avisó de cambios sin guardar.
   const [pendiente, setPendiente] = useState<{ id: string; mensaje: string } | null>(null);
 
@@ -31,6 +32,9 @@ export function Personalization() {
       if (vigente && r.ok) setBorrador(r.value);
     });
     void leerTemas();
+    void invocar('catalog_list', { kind: 'template' }).then((r) => {
+      if (vigente && r.ok) setPlantillas(r.value);
+    });
     return () => {
       vigente = false;
     };
@@ -51,6 +55,12 @@ export function Personalization() {
       // CA03: la lista sigue en el tema anterior hasta que se confirme (CA06).
       setPendiente({ id, mensaje: r.error.message });
     }
+  };
+
+  // HE-02-HU02-CA02, ET07: cambia solo la vista previa; el escritorio cambia al aplicar.
+  const cambiar = async (patch: ThemeDraftPatch) => {
+    const r = await invocar('theme_draft_update', { patch });
+    if (r.ok) setBorrador(r.value);
   };
 
   const colores = borrador?.content.colors;
@@ -75,6 +85,28 @@ export function Personalization() {
           {SECCIONES.map((nombre) => (
             <section key={nombre} aria-label={nombre}>
               <h2>{nombre}</h2>
+              {nombre === 'Plantillas' && (
+                // HE-02-HU02-ET01, ET02, ET04: solo el catálogo, sin crear plantillas ni subir archivos.
+                <ul className="wg-lista" aria-label="Catálogo de plantillas">
+                  {plantillas.map((p) => {
+                    const elegida = p.id === borrador.content.template_id;
+                    return (
+                      <li key={p.id}>
+                        <button
+                          type="button"
+                          className="wg-fila"
+                          aria-pressed={elegida}
+                          onClick={() => void cambiar({ template_id: p.id })}
+                        >
+                          <img src={p.thumbnail_url} alt="" width={96} height={54} />
+                          <span>{p.name}</span>
+                          {elegida && <span>Seleccionada</span>}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </section>
           ))}
           <div className="wg-fila">

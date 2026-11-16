@@ -59,6 +59,30 @@ async function abrir(conCambios = false, primerInicio = false) {
           ? [resumen('t1', 'Mi tema', true)]
           : [resumen('t2', 'Verano', false), resumen('t1', 'Mi tema', true)],
       }));
+      n.responder('catalog_list', () => ({
+        ok: true,
+        value: [
+          {
+            id: 'default',
+            name: 'Windgets',
+            thumbnail_url: 'templates/default/thumbnail.png',
+            is_cached: true,
+          },
+          {
+            id: 'minimal',
+            name: 'Minimal',
+            thumbnail_url: 'templates/minimal/thumbnail.png',
+            is_cached: true,
+          },
+        ],
+      }));
+      n.responder('theme_draft_update', ({ patch }) => ({
+        ok: true,
+        value: {
+          ...vista('t1', 'Mi tema', true),
+          content: { ...CONTENIDO, template_id: patch.template_id ?? CONTENIDO.template_id },
+        },
+      }));
       n.responder('theme_draft_open', () => ({ ok: true, value: vista('t1', 'Mi tema', conCambios) }));
       n.responder('theme_draft_select', ({ theme_id, discard_changes }) =>
         conCambios && !discard_changes
@@ -146,5 +170,35 @@ describe('HE-02-HU10 · Personalización del wallpaper', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     // Se mantiene el tema en edición anterior.
     expect(lista().value).toBe('t1');
+  });
+});
+
+describe('HE-02-HU02 · Plantillas', () => {
+  it('HE-02-HU02-CA01 · Consultar el catálogo de plantillas', async () => {
+    await abrir();
+    const catalogo = await screen.findByRole('list', { name: 'Catálogo de plantillas' });
+    const plantillas = within(catalogo).getAllByRole('button');
+    // ET01: miniatura y nombre de cada plantilla; ET02: «Seleccionada» solo en la del tema en edición.
+    expect(plantillas.map((b) => b.textContent)).toEqual(['WindgetsSeleccionada', 'Minimal']);
+    expect(catalogo.querySelectorAll('img')).toHaveLength(2);
+    expect(within(catalogo).getAllByText('Seleccionada')).toHaveLength(1);
+    // ET04, ET05: nada para crear plantillas propias ni para subir archivos.
+    const seccion = screen.getByRole('region', { name: 'Plantillas' });
+    expect(within(seccion).queryByRole('button', { name: /crear|subir|importar/i })).toBeNull();
+  });
+
+  it('HE-02-HU02-CA02 · Seleccionar una plantilla', async () => {
+    const nucleo = await abrir();
+    const catalogo = await screen.findByRole('list', { name: 'Catálogo de plantillas' });
+    fireEvent.click(within(catalogo).getByRole('button', { name: /Minimal/ }));
+    // La etiqueta se mueve a la plantilla elegida y no se pide nada que cambie el escritorio (ET07).
+    await waitFor(() =>
+      expect(within(catalogo).getByRole('button', { name: /Minimal/ }).textContent).toContain('Seleccionada'),
+    );
+    expect(within(catalogo).getByRole('button', { name: /Windgets/ }).textContent).not.toContain(
+      'Seleccionada',
+    );
+    expect(llamadasA(nucleo, 'theme_draft_update')).toEqual([{ patch: { template_id: 'minimal' } }]);
+    expect(llamadasA(nucleo, 'theme_apply')).toEqual([]);
   });
 });

@@ -24,7 +24,7 @@ use crate::tipos::{
     EntityChange, ErrorCode, EventMapConnectivityChanged, EventMapSessionChanged,
     EventMapSessionChangedReason, EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, Label,
     LabelCreateParams, NoParams, OriginKind, PlannerToday, SessionInfo, ThemeDraftOpenParams,
-    ThemeDraftSelectParams, ThemeDraftView, ThemeSummary,
+    ThemeDraftSelectParams, ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
 };
 
 /// El Núcleo que ven los comandos.
@@ -477,6 +477,12 @@ pub async fn catalog_list(
 ) -> Result<IpcResult<Vec<CatalogItem>>, ()> {
     Ok(leido(match params.kind {
         CatalogKind::Color => nucleo.planificador.colores().await,
+        CatalogKind::Template => {
+            nucleo
+                .personalizacion
+                .plantillas(nucleo.planificador.base())
+                .await
+        }
         _ => Ok(Vec::new()),
     }))
 }
@@ -854,6 +860,23 @@ pub async fn theme_draft_select(
                     &params.theme_id.0,
                     params.discard_changes.unwrap_or(false),
                 )
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-THEME-05 `theme_draft_update` (HE-02-HU02): cambia la vista previa sin tocar el escritorio.
+#[tauri::command]
+pub async fn theme_draft_update(
+    nucleo: State<'_, Nucleo>,
+    params: ThemeDraftUpdateParams,
+) -> Result<IpcResult<ThemeDraftView>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .actualizar_borrador(nucleo.planificador.base(), &user_id, &params.patch)
                 .await
         }
         Err(e) => Err(e),
