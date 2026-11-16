@@ -2,11 +2,24 @@
 //! Responsabilidad: «Ancla la capa a WorkerW, reenvía la selección del mouse (Raw Input), reparte monitores,
 //! pausa animaciones por carga y restaura el fondo al salir.»
 //!
-//! Por ahora solo contiene el prototipo del spike P01 (WorkerW y Raw Input, D-131 y D-186), detrás de la
-//! feature `spike`. No cierra ninguna HU: es la condición para seguir (HE-02-HU01-ET11).
+//! HE-02-HU01 ancla la capa a WorkerW (`anclaje`, solo en Windows) y guarda lo que el resto del Núcleo necesita
+//! saber (`estado`). El prototipo del spike P01 (WorkerW y Raw Input, D-131 y D-186) sigue detrás de la feature
+//! `spike`; con ella no se crea la capa de la aplicación, porque el spike crea la suya.
 
-#[cfg(any(test, feature = "spike"))]
+pub mod estado;
+#[cfg(any(test, windows))]
 pub mod geometria;
 
+#[cfg(all(windows, not(feature = "spike")))]
+pub mod anclaje;
 #[cfg(all(windows, feature = "spike"))]
 pub mod spike;
+
+/// Muestra la capa con la sesión iniciada y el anclaje bien hecho, y la oculta en otro caso (HE-02-HU01-CA01,
+/// CA05). Fuera de Windows no hay capa.
+pub fn mostrar_capa(app: &tauri::AppHandle, visible: bool) {
+    #[cfg(all(windows, not(feature = "spike")))]
+    anclaje::mostrar(app, visible);
+    #[cfg(not(all(windows, not(feature = "spike"))))]
+    let _ = (app, visible);
+}

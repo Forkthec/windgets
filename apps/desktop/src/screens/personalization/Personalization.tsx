@@ -1,6 +1,6 @@
-import { convertFileSrc } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useEffect, useState } from 'react';
+import { urlDeArchivo } from '@/ipc/archivos';
 import textos from '@/types/messages.es.json';
 import type { CatalogItem, ThemeDraftPatch, ThemeDraftView, ThemeSummary } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
@@ -13,15 +13,6 @@ import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 // HE-02-HU10). Esta HU construye la lista «Tema en edición», la vista previa, las secciones y las opciones; el
 // contenido de cada sección llega con HE-02-HU02, HU03, HU05 a HU08, y «Guardar», «Aplicar» y «Cancelar» actúan
 // con HE-02-HU11, HU12 y HU13.
-
-/** La URL con la que la ventana muestra un archivo del computador (fuera de Tauri, la misma ruta). */
-function urlDeArchivo(ruta: string): string {
-  try {
-    return convertFileSrc(ruta);
-  } catch {
-    return ruta;
-  }
-}
 
 /** Las secciones de la pantalla (HE-02-HU10-ET01), en este orden. */
 const SECCIONES = ['Plantillas', 'Imagen de fondo', 'Colores', 'Tipografía', 'Paletas'] as const;

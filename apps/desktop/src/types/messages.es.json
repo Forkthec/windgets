@@ -35,6 +35,7 @@
   "MAXIMO_ETIQUETAS": "Puedes asignar máximo 5 etiquetas por tarjeta.",
   "NOMBRE_DE_COLUMNA_MUY_LARGO": "El nombre de la columna no puede superar los 30 caracteres.",
   "NOMBRE_DE_ETIQUETA_MUY_LARGO": "El nombre de la etiqueta no puede superar los 30 caracteres.",
+  "NO_SE_PUDO_MOSTRAR_EL_WALLPAPER": "No pudimos mostrar tu wallpaper. Se aplicó el wallpaper por defecto.",
   "RANGO_MUY_LARGO": "El rango máximo es de un año.",
   "REENVIO_EN_SEGUNDOS": "Puedes pedir un nuevo código en <segundos restantes> s.",
   "SERVICIO_NO_DISPONIBLE": "No pudimos completar la operación. Intenta de nuevo más tarde.",

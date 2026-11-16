@@ -172,6 +172,10 @@ pub const CAMBIOS_GUARDADOS_EN_EL_TEMA_APLICADO: &str =
 /// `draft.no_changes` (HE-02-HU11-CA03): texto de la opción «Guardar» deshabilitada.
 pub const SIN_CAMBIOS_PARA_GUARDAR: &str = "No hay cambios para guardar.";
 
+/// Aviso cuando el wallpaper aplicado no se puede mostrar (HE-02-HU01-CA04, P-WAL-02).
+pub const NO_SE_PUDO_MOSTRAR_EL_WALLPAPER: &str =
+    "No pudimos mostrar tu wallpaper. Se aplicó el wallpaper por defecto.";
+
 /// El mensaje de CA01 con el nombre del tema.
 pub fn cambios_guardados_en_el_tema(nombre: &str) -> String {
     CAMBIOS_GUARDADOS_EN_EL_TEMA.replace("<nombre del tema>", nombre)
@@ -238,6 +242,10 @@ pub const TEXTOS: &[(&str, &str)] = &[
         CAMBIOS_GUARDADOS_EN_EL_TEMA_APLICADO,
     ),
     ("SIN_CAMBIOS_PARA_GUARDAR", SIN_CAMBIOS_PARA_GUARDAR),
+    (
+        "NO_SE_PUDO_MOSTRAR_EL_WALLPAPER",
+        NO_SE_PUDO_MOSTRAR_EL_WALLPAPER,
+    ),
     ("BLOQUE_YA_PASO", BLOQUE_YA_PASO),
     (
         "BLOQUE_DESPUES_DE_FECHA_LIMITE",

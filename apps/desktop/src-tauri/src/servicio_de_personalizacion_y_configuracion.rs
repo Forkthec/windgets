@@ -501,9 +501,12 @@ impl ServicioDePersonalizacion {
     }
 }
 
+pub mod escritorio;
 mod guardado;
 mod imagenes;
 
+#[cfg(test)]
+mod pruebas_de_escritorio;
 #[cfg(test)]
 mod pruebas_de_guardado;
 #[cfg(test)]

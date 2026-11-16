@@ -10,12 +10,13 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::cliente_de_supabase::ClienteDeSupabase;
+use crate::host_del_wallpaper::estado::EstadoDelHost;
 use crate::motor_de_sincronizacion;
 use crate::repositorios_y_archivos_locales::{BaseLocal, almacen_de_la_aplicacion};
 use crate::servicio_de_personalizacion_y_configuracion::ServicioDePersonalizacion;
+use crate::servicio_de_personalizacion_y_configuracion::escritorio::Carpetas;
 use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, ServicioDeSesion};
 use crate::servicio_del_planificador::{CalendarioDelSistema, ServicioDelPlanificador};
-use crate::tipos::ThemeDraftSaveResult;
 use crate::tipos::{
     AgendaDay, AgendaDayParams, AppError, AuthRegisterStartParams, AuthRegisterStartResult,
     AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, Card,
@@ -28,12 +29,17 @@ use crate::tipos::{
     PlannerToday, SessionInfo, ThemeDraftOpenParams, ThemeDraftSelectParams,
     ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
 };
+use crate::tipos::{
+    AppliedThemeView, AssetResolveParams, AssetResolveResult, EventMapWallpaperStatusChanged,
+    LayerInitialState, ThemeDraftSaveResult, WallpaperState, WallpaperStatus,
+};
 
 /// El Núcleo que ven los comandos.
 pub struct Nucleo {
     pub sesion: ServicioDeSesion<ClienteDeSupabase, RelojDelSistema>,
     pub planificador: ServicioDelPlanificador<CalendarioDelSistema>,
     pub personalizacion: ServicioDePersonalizacion,
+    pub host: EstadoDelHost,
 }
 
 impl Nucleo {
@@ -49,6 +55,7 @@ impl Nucleo {
                 CalendarioDelSistema,
             ),
             personalizacion: ServicioDePersonalizacion::nuevo(),
+            host: EstadoDelHost::default(),
         }
     }
 }
@@ -315,6 +322,7 @@ pub async fn auth_register_verify(
             &creada.valor.alias,
             EventMapSessionChangedReason::Registered,
         );
+        avisar_wallpaper(&app).await;
     }
     Ok(con_mensaje(r))
 }
@@ -354,6 +362,7 @@ pub async fn auth_sign_in(
     avisar_conectividad(&app, antes);
     if let Ok(sesion) = &r {
         avisar_sesion_iniciada(&app, &sesion.alias, EventMapSessionChangedReason::SignIn);
+        avisar_wallpaper(&app).await;
     }
     Ok(match r {
         Ok(sesion) => correcto(sesion),
@@ -550,6 +559,137 @@ pub async fn image_import(
         }
         Err(e) => Err(e),
     }))
+}
+
+/// Dónde están los archivos de la persona y los recursos que trae el instalador.
+fn carpetas(app: &AppHandle) -> Carpetas {
+    Carpetas {
+        archivos: carpeta_de_archivos(),
+        // DUDA: HE-02-HU01 sin carpeta de recursos (no debería pasar en la app instalada) se usa la actual.
+        recursos: app
+            .path()
+            .resource_dir()
+            .unwrap_or_else(|_| std::path::PathBuf::from(".")),
+    }
+}
+
+/// Lo que dice el host: sin sesión la capa está oculta (HE-02-HU01-CA05); si no pudo anclarse, pide el
+/// wallpaper por defecto (ET05).
+fn estado_del_host(nucleo: &Nucleo) -> WallpaperState {
+    if nucleo.sesion.sesion_guardada().is_none() {
+        WallpaperState::Hidden
+    } else if nucleo.host.anclaje_fallido() {
+        WallpaperState::FallbackDefault
+    } else {
+        WallpaperState::Ok
+    }
+}
+
+/// El estado de la capa para quien lo pida; sin sesión no hay cuenta que leer y se pinta la plantilla por
+/// defecto, oculta.
+async fn estado_de_la_capa(
+    app: &AppHandle,
+    nucleo: &Nucleo,
+) -> Result<LayerInitialState, AppError> {
+    let user_id = usuario(nucleo).unwrap_or_default();
+    nucleo
+        .personalizacion
+        .estado_de_la_capa(
+            nucleo.planificador.base(),
+            &user_id,
+            &carpetas(app),
+            nucleo.host.monitores(),
+            estado_del_host(nucleo),
+        )
+        .await
+}
+
+/// EV-16 `wallpaper_status_changed`: la ventana principal muestra el aviso con `fallback_default` y la capa vuelve
+/// a leer su estado. Antes, el host muestra la capa con sesión y anclaje, y la oculta sin sesión (CA05). Lo llaman
+/// el arranque, el inicio de sesión y la creación de la cuenta. DUDA: HE-02-HU01 el cierre de sesión (P12) debe
+/// llamarlo también para ocultar la capa.
+pub async fn avisar_wallpaper(app: &AppHandle) {
+    let nucleo = app.state::<Nucleo>();
+    crate::host_del_wallpaper::mostrar_capa(
+        app,
+        estado_del_host(&nucleo) != WallpaperState::Hidden && !nucleo.host.anclaje_fallido(),
+    );
+    if let Ok(capa) = estado_de_la_capa(app, &nucleo).await {
+        let _ = app.emit(
+            "wallpaper_status_changed",
+            EventMapWallpaperStatusChanged {
+                state: capa.wallpaper_state,
+            },
+        );
+    }
+}
+
+/// IPC-THEME-02 `theme_get_applied` (HE-02-HU01-ET02): el tema aplicado, o la plantilla por defecto.
+#[tauri::command]
+pub async fn theme_get_applied(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<AppliedThemeView>, ()> {
+    let _ = params;
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .tema_aplicado(nucleo.planificador.base(), &user_id)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-CAT-04 `asset_resolve` (HE-02-HU01-ET05): la ruta local de un archivo del catálogo o de la persona.
+#[tauri::command]
+pub async fn asset_resolve(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: AssetResolveParams,
+) -> Result<IpcResult<AssetResolveResult>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .recurso(
+                    nucleo.planificador.base(),
+                    &user_id,
+                    &carpetas(&app),
+                    &params.kind,
+                    &params.id,
+                )
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-DESK-01 `layer_get_initial_state` (HE-02-HU01): el primer pintado de la capa.
+#[tauri::command]
+pub async fn layer_get_initial_state(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<LayerInitialState>, ()> {
+    let _ = params;
+    Ok(leido(estado_de_la_capa(&app, &nucleo).await))
+}
+
+/// IPC-DESK-02 `wallpaper_get_status` (HE-02-HU01-CA04): el estado que la ventana principal avisa.
+#[tauri::command]
+pub async fn wallpaper_get_status(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<WallpaperStatus>, ()> {
+    let _ = params;
+    Ok(leido(estado_de_la_capa(&app, &nucleo).await.map(|c| {
+        WallpaperStatus {
+            state: c.wallpaper_state,
+        }
+    })))
 }
 
 /// `%APPDATA%\Windgets\files`; sin `APPDATA`, la carpeta temporal.
