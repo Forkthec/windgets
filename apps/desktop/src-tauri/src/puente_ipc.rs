@@ -31,8 +31,9 @@ use crate::tipos::{
 };
 use crate::tipos::{
     AppliedThemeView, ApplyMode, AssetResolveParams, AssetResolveResult,
-    EventMapAppliedThemeChanged, EventMapWallpaperStatusChanged, LayerInitialState,
-    ThemeDraftApplyParams, ThemeDraftSaveResult, ThemeIdResult, WallpaperState, WallpaperStatus,
+    EventMapAppliedThemeChanged, EventMapCatalogUpdated, EventMapWallpaperStatusChanged,
+    LayerInitialState, ThemeDraftApplyParams, ThemeDraftSaveResult, ThemeIdResult, WallpaperState,
+    WallpaperStatus,
 };
 
 /// El Núcleo que ven los comandos.
@@ -178,6 +179,25 @@ pub fn sincronizar(app: AppHandle) {
                     && (reconectado
                         || envio.llamo
                         || ahora - ultima_consulta >= CONSULTA_PERIODICA_MS);
+                // HE-02-HU01-CA01: los catálogos van antes que `sync_pull`, porque los temas y la copia aplicada
+                // que llegan los referencian.
+                let catalogos = if consultar {
+                    motor_de_sincronizacion::catalogo::descargar_catalogo(
+                        base,
+                        cliente,
+                        &credenciales,
+                        ahora,
+                    )
+                    .await?
+                } else {
+                    Vec::new()
+                };
+                if !catalogos.is_empty() {
+                    let _ = app.emit(
+                        "catalog_updated",
+                        EventMapCatalogUpdated { kinds: catalogos },
+                    );
+                }
                 let descarga = if consultar {
                     motor_de_sincronizacion::descargar(base, cliente, &credenciales).await?
                 } else {
