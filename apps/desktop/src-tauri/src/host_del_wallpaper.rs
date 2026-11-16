@@ -8,6 +8,9 @@
 //! spike P01 (WorkerW y Raw Input, D-131 y D-186) sigue detrás de la feature `spike`; con ella no se crea la capa
 //! de la aplicación, porque el spike crea la suya.
 
+/// Etiqueta de la ventana de la capa (`capabilities/capa.json`).
+pub const CAPA: &str = "capa";
+
 pub mod estado;
 #[cfg(any(test, windows))]
 pub mod geometria;

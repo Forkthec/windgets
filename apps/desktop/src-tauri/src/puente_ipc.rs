@@ -1329,3 +1329,11 @@ pub fn autostart_set(
         &ejecutable,
     ))
 }
+
+/// IPC-DESK-06 `app_hide_main_window` (HE-17-HU01-CA01): cierra la ventana y deja la aplicación en segundo plano.
+#[tauri::command]
+pub fn app_hide_main_window(app: AppHandle, params: NoParams) -> IpcResult<()> {
+    let _ = params;
+    crate::integracion_con_el_sistema::area_de_notificacion::ocultar_ventana(&app);
+    correcto(())
+}
