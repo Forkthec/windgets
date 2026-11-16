@@ -1,6 +1,6 @@
 [package]
 name = "windgets"
-version = "0.1.0"
+version = "0.2.0"
 description = "Windgets: wallpaper y planificador de escritorio para Windows"
 authors = ["ForkTech"]
 edition = "2024"
