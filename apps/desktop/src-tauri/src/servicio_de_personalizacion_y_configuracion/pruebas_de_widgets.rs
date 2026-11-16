@@ -294,3 +294,67 @@ fn widget_set_active_de_un_widget_fuera_del_tema_aplicado_es_widget_not_found() 
         assert_eq!(error.code, ErrorCode::WidgetNotFound);
     }
 }
+
+fn catalogo(base: &BaseLocal, servicio: &ServicioDePersonalizacion) -> crate::tipos::WidgetCatalog {
+    bloquear(servicio.catalogo_de_widgets(base, USUARIO)).unwrap()
+}
+
+#[test]
+fn ca_he_04_hu04_ca01() {
+    // HE-04-HU04-CA01 · Consultar el catálogo de widgets: «Widgets externos» (Clima y Noticias) y «Widgets
+    // locales» (Animación, Carrusel de imágenes, Imagen estática, Reproductor de música y Texto), cada uno con
+    // su nombre y una descripción, sin los widgets por defecto (ET02, ET03).
+    let (base, servicio) = con_widgets_por_defecto();
+    let c = catalogo(&base, &servicio);
+    let nombres = |g: &[crate::tipos::WidgetCatalogEntry]| {
+        g.iter().map(|e| e.name.clone()).collect::<Vec<_>>()
+    };
+    assert_eq!(nombres(&c.external), ["Clima", "Noticias"]);
+    assert_eq!(
+        nombres(&c.local),
+        [
+            "Animación",
+            "Carrusel de imágenes",
+            "Imagen estática",
+            "Reproductor de música",
+            "Texto"
+        ]
+    );
+    let todos: Vec<_> = c.external.iter().chain(&c.local).collect();
+    assert!(
+        todos
+            .iter()
+            .all(|e| e.enabled && e.disabled_reason.is_none() && !e.description.is_empty())
+    );
+    assert!(todos.iter().all(|e| !e.description.contains('\n')));
+}
+
+#[test]
+fn ca_he_04_hu04_ca02() {
+    // HE-04-HU04-CA02 · Widget que ya se agregó: Noticias y Reproductor de música agregados salen deshabilitados
+    // con «Ya agregaste este widget.»; Clima (ya agregado para Bogotá), Animación, Carrusel de imágenes, Imagen
+    // estática y Texto (ya agregado) siguen habilitados (ET04, D-038).
+    let (base, servicio) = con_widgets_agregados();
+    bloquear(async {
+        sqlx::query(
+            "INSERT INTO widget (id, user_id, created_at, type) VALUES \
+             ('00000000-0000-4000-8000-0000000000b8', ?, ?, 'music_player')",
+        )
+        .bind(USUARIO)
+        .bind(T)
+        .execute(base.pool().await.unwrap())
+        .await
+        .unwrap();
+    });
+    let c = catalogo(&base, &servicio);
+    for e in c.external.iter().chain(&c.local) {
+        let deshabilitado = e.name == "Noticias" || e.name == "Reproductor de música";
+        assert_eq!(e.enabled, !deshabilitado, "{}", e.name);
+        assert_eq!(
+            e.disabled_reason.as_deref(),
+            deshabilitado.then_some("Ya agregaste este widget."),
+            "{}",
+            e.name
+        );
+    }
+}

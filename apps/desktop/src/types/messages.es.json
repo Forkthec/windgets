@@ -53,5 +53,6 @@
   "TEMA_APLICADO": "Tema “<nombre del tema>” aplicado.",
   "TEMA_GUARDADO_Y_APLICADO": "Tema “<nombre del tema>” guardado y aplicado.",
   "TEMA_YA_APLICADO": "Este tema ya está aplicado.",
-  "TITULO_MUY_LARGO": "El título no puede superar los 100 caracteres."
+  "TITULO_MUY_LARGO": "El título no puede superar los 100 caracteres.",
+  "WIDGET_YA_AGREGADO": "Ya agregaste este widget."
 }

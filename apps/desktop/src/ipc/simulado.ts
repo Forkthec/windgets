@@ -111,6 +111,41 @@ const respuestas: Respuestas = {
   }),
   theme_draft_open: () => ({ ok: true, value: TEMA_SIMULADO }),
   widget_list: () => ({ ok: true, value: WIDGETS_SIMULADOS.map((w) => ({ ...w })) }),
+  // HE-04-HU04: el catálogo con todo habilitado (el simulado no agrega widgets).
+  widget_catalog_get: () => ({
+    ok: true,
+    value: {
+      external: [
+        ['weather', 'Clima', 'Conocer el clima actual sin abrir otra aplicación.'],
+        ['news', 'Noticias', 'Conocer los titulares recientes desde el escritorio.'],
+      ].map(([type, name, description]) => ({
+        type: type as 'weather' | 'news',
+        name: name as string,
+        description: description as string,
+        enabled: true,
+        disabled_reason: null,
+      })),
+      local: (
+        [
+          ['animation', 'Animación', 'Dar movimiento al escritorio.'],
+          [
+            'image_carousel',
+            'Carrusel de imágenes',
+            'Ver varias imágenes que cambian automáticamente sobre el wallpaper.',
+          ],
+          ['static_image', 'Imagen estática', 'Mostrar una imagen preferida sobre el wallpaper.'],
+          ['music_player', 'Reproductor de música', 'Seguir la música que suena desde el escritorio.'],
+          ['text', 'Texto', 'Tener a la vista una frase o nota breve.'],
+        ] as const
+      ).map(([type, name, description]) => ({
+        type,
+        name,
+        description,
+        enabled: true,
+        disabled_reason: null,
+      })),
+    },
+  }),
   widget_set_active: ({ widget_id, active }) => {
     const w = WIDGETS_SIMULADOS.find((x) => x.widget_id === widget_id);
     if (!w) return error({ code: 'widget.not_found', message: '' });

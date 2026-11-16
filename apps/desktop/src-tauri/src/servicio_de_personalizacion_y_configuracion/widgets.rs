@@ -1,5 +1,5 @@
-//! Widgets del tema aplicado (HE-04): IPC-WID-01 `widget_list`, IPC-WID-03 `widget_set_active` y los
-//! rectángulos que pinta la capa (IPC-DESK-01 `layer_get_initial_state`). Todo sale de la base local
+//! Widgets (HE-04): IPC-WID-01 `widget_list`, IPC-WID-02 `widget_catalog_get`, IPC-WID-03 `widget_set_active`
+//! y los rectángulos que pinta la capa (IPC-DESK-01 `layer_get_initial_state`). Todo sale de la base local
 //! (`widget`, `theme_widget`).
 
 use serde_json::Value;
@@ -9,8 +9,9 @@ use crate::repositorios_y_archivos_locales::encolar_cambio;
 use crate::servicio_de_sesion::instante;
 use crate::servicio_del_planificador::campos;
 use crate::tipos::{
-    AnimationConfig, CarouselConfig, EmptyConfig, ImageRef, ImageSource, StaticImageConfig,
-    TextConfig, WeatherConfig, WidgetConfig, WidgetItem, WidgetRect, WidgetType,
+    AddableWidgetType, AnimationConfig, CarouselConfig, EmptyConfig, ImageRef, ImageSource,
+    StaticImageConfig, TextConfig, WeatherConfig, WidgetCatalog, WidgetCatalogEntry, WidgetConfig,
+    WidgetItem, WidgetRect, WidgetType,
 };
 
 /// Los cuatro widgets por defecto, en el orden de la lista (HE-04-HU01-ET04).
@@ -59,6 +60,70 @@ fn imagen(origen: Option<String>, catalogo: Option<String>, propia: Option<Strin
         },
         catalog_image_id: catalogo,
         uploaded_image_id: propia.map(Uuid),
+    }
+}
+
+/// El catálogo de widgets, sin los widgets por defecto (HE-04-HU04-ET02, ET03): tipo, nombre y descripción de
+/// una línea, y si se agrega una sola vez (D-038: Noticias y Reproductor de música).
+/// DUDA: HE-04-HU04 ningún CA define la descripción de una línea. Valor usado: el «Para…» de la HU que agrega
+/// cada widget (HE-04-HU05 a HU11).
+const CATALOGO_EXTERNO: [(AddableWidgetType, &str, &str, bool); 2] = [
+    (
+        AddableWidgetType::Weather,
+        "Clima",
+        "Conocer el clima actual sin abrir otra aplicación.",
+        false,
+    ),
+    (
+        AddableWidgetType::News,
+        "Noticias",
+        "Conocer los titulares recientes desde el escritorio.",
+        true,
+    ),
+];
+
+const CATALOGO_LOCAL: [(AddableWidgetType, &str, &str, bool); 5] = [
+    (
+        AddableWidgetType::Animation,
+        "Animación",
+        "Dar movimiento al escritorio.",
+        false,
+    ),
+    (
+        AddableWidgetType::ImageCarousel,
+        "Carrusel de imágenes",
+        "Ver varias imágenes que cambian automáticamente sobre el wallpaper.",
+        false,
+    ),
+    (
+        AddableWidgetType::StaticImage,
+        "Imagen estática",
+        "Mostrar una imagen preferida sobre el wallpaper.",
+        false,
+    ),
+    (
+        AddableWidgetType::MusicPlayer,
+        "Reproductor de música",
+        "Seguir la música que suena desde el escritorio.",
+        true,
+    ),
+    (
+        AddableWidgetType::Text,
+        "Texto",
+        "Tener a la vista una frase o nota breve.",
+        false,
+    ),
+];
+
+fn texto_del_agregable(tipo: &AddableWidgetType) -> &'static str {
+    match tipo {
+        AddableWidgetType::Weather => "weather",
+        AddableWidgetType::News => "news",
+        AddableWidgetType::MusicPlayer => "music_player",
+        AddableWidgetType::Animation => "animation",
+        AddableWidgetType::ImageCarousel => "image_carousel",
+        AddableWidgetType::StaticImage => "static_image",
+        AddableWidgetType::Text => "text",
     }
 }
 
@@ -302,5 +367,44 @@ impl ServicioDePersonalizacion {
             .into_iter()
             .find(|w| w.widget_id.0 == widget_id)
             .ok_or_else(no_existe)
+    }
+
+    /// IPC-WID-02 `widget_catalog_get`: los widgets que se pueden agregar, en «Widgets externos» y «Widgets
+    /// locales», sin los cuatro por defecto (HE-04-HU04-CA01, ET02, ET03). Noticias y Reproductor de música ya
+    /// agregados salen deshabilitados con «Ya agregaste este widget.»; los demás siempre habilitados: Clima va
+    /// una vez por ciudad y los locales, varias veces (CA02, ET04, D-038).
+    pub async fn catalogo_de_widgets(
+        &self,
+        base: &BaseLocal,
+        user_id: &str,
+    ) -> Result<WidgetCatalog, AppError> {
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let agregados: Vec<String> =
+            sqlx::query_scalar("SELECT DISTINCT type FROM widget WHERE user_id = ?")
+                .bind(user_id)
+                .fetch_all(pool)
+                .await
+                .map_err(de_sqlx)?;
+        let entradas = |grupo: &[(AddableWidgetType, &str, &str, bool)]| {
+            grupo
+                .iter()
+                .map(|(tipo, nombre, descripcion, una_vez)| {
+                    let ya_agregado =
+                        *una_vez && agregados.iter().any(|t| t == texto_del_agregable(tipo));
+                    WidgetCatalogEntry {
+                        r#type: tipo.clone(),
+                        name: (*nombre).to_string(),
+                        description: (*descripcion).to_string(),
+                        enabled: !ya_agregado,
+                        disabled_reason: ya_agregado
+                            .then(|| messages::WIDGET_YA_AGREGADO.to_string()),
+                    }
+                })
+                .collect()
+        };
+        Ok(WidgetCatalog {
+            external: entradas(&CATALOGO_EXTERNO),
+            local: entradas(&CATALOGO_LOCAL),
+        })
     }
 }

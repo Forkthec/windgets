@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useRuta } from '@/reglas/ruta';
 import type { WidgetItem } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { Interruptor } from '@/ui/Interruptor/Interruptor';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { AgregarWidget } from './AgregarWidget';
 
 // P-WID-01 Widgets (Menú principal > Personalización > Widgets; HE-04-HU01). La lista sale del Núcleo ya en
 // orden: primero los widgets por defecto y luego los agregados (IPC-WID-01 widget_list). «Editar escritorio»
@@ -18,6 +20,8 @@ export function tipoDeWidget(widget: WidgetItem): string {
 export function Widgets() {
   const { invocar, escuchar } = useNucleo();
   const [widgets, setWidgets] = useState<WidgetItem[] | null>(null);
+  // T-064: «Agregar widget» abre la subpantalla Agregar widget (HE-04-HU04-CA01).
+  const ruta = useRuta<'widgets' | 'agregar'>('widgets');
 
   const leer = useCallback(async () => {
     const r = await invocar('widget_list', {});
@@ -40,11 +44,15 @@ export function Widgets() {
     return escuchar('widgets_changed', () => void leer());
   }, [escuchar, leer]);
 
+  if (ruta.actual === 'agregar') return <AgregarWidget alRegresar={ruta.regresar} />;
+
   return (
     <main aria-label="Widgets" aria-busy={widgets === null}>
       {/* ET01: «Agregar widget» y «Editar escritorio» encima de la lista. */}
       <div className="wg-fila">
-        <Boton principal>Agregar widget</Boton>
+        <Boton principal onClick={() => ruta.avanzar('agregar')}>
+          Agregar widget
+        </Boton>
         <Boton>Editar escritorio</Boton>
       </div>
       {widgets && (

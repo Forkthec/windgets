@@ -33,7 +33,8 @@ use crate::tipos::{
     AppliedThemeView, ApplyMode, AssetResolveParams, AssetResolveResult,
     EventMapAppliedThemeChanged, EventMapCatalogUpdated, EventMapWallpaperStatusChanged,
     EventMapWidgetsChanged, LayerInitialState, ThemeDraftApplyParams, ThemeDraftSaveResult,
-    ThemeIdResult, WallpaperState, WallpaperStatus, WidgetItem, WidgetSetActiveParams,
+    ThemeIdResult, WallpaperState, WallpaperStatus, WidgetCatalog, WidgetItem,
+    WidgetSetActiveParams,
 };
 
 /// El Núcleo que ven los comandos.
@@ -766,6 +767,24 @@ pub async fn widget_list(
             nucleo
                 .personalizacion
                 .widgets(nucleo.planificador.base(), &user_id)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-WID-02 `widget_catalog_get` (HE-04-HU04): el catálogo de widgets que se pueden agregar.
+#[tauri::command]
+pub async fn widget_catalog_get(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<WidgetCatalog>, ()> {
+    let _ = params;
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .catalogo_de_widgets(nucleo.planificador.base(), &user_id)
                 .await
         }
         Err(e) => Err(e),

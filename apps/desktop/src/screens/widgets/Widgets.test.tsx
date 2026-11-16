@@ -4,7 +4,14 @@ import { act, fireEvent, render, screen as pantalla, within } from '@testing-lib
 import { describe, expect, it } from 'vitest';
 import { Capa } from '@/capa/Capa';
 import type { Escuchar } from '@/ipc/eventos';
-import type { Invoke, LayerInitialState, WidgetItem, WidgetRect } from '@/types';
+import type {
+  Invoke,
+  LayerInitialState,
+  WidgetCatalog,
+  WidgetCatalogEntry,
+  WidgetItem,
+  WidgetRect,
+} from '@/types';
 import { abrirPantalla, screen, type NucleoDelPlanificador } from '../kanban/pruebas';
 import { Widgets } from './Widgets';
 
@@ -253,5 +260,89 @@ describe('HE-04-HU02 · Alternar un widget', () => {
       '300px',
     ]);
     capa.unmount();
+  });
+});
+
+function entrada(type: WidgetCatalogEntry['type'], name: string, yaAgregado = false): WidgetCatalogEntry {
+  return {
+    type,
+    name,
+    description: `Descripción de ${name}.`,
+    enabled: !yaAgregado,
+    disabled_reason: yaAgregado ? 'Ya agregaste este widget.' : null,
+  };
+}
+
+function catalogo(yaAgregados: string[] = []): WidgetCatalog {
+  const e = (type: WidgetCatalogEntry['type'], name: string) =>
+    entrada(type, name, yaAgregados.includes(name));
+  return {
+    external: [e('weather', 'Clima'), e('news', 'Noticias')],
+    local: [
+      e('animation', 'Animación'),
+      e('image_carousel', 'Carrusel de imágenes'),
+      e('static_image', 'Imagen estática'),
+      e('music_player', 'Reproductor de música'),
+      e('text', 'Texto'),
+    ],
+  };
+}
+
+/** Abre Widgets y selecciona «Agregar widget» con el catálogo que da el Núcleo. */
+async function abrirCatalogo(c: WidgetCatalog) {
+  const nucleo = await abrir([...POR_DEFECTO, ...AGREGADOS]);
+  nucleo.responder('widget_catalog_get', () => ({ ok: true, value: c }));
+  fireEvent.click(screen.getByRole('button', { name: 'Agregar widget' }));
+  return screen.findByRole('main', { name: 'Agregar widget' });
+}
+
+function nombresDe(grupo: HTMLElement) {
+  return Array.from(grupo.querySelectorAll('.wg-lista__nombre')).map((n) => n.textContent);
+}
+
+describe('HE-04-HU04 · Catálogo de widgets', () => {
+  it('HE-04-HU04-CA01 · Consultar el catálogo de widgets', async () => {
+    const subpantalla = await abrirCatalogo(catalogo());
+    // ET01: miga de pan «Widgets > Agregar widget» y «Regresar» (RT-03).
+    const miga = within(subpantalla).getByRole('navigation', { name: 'Miga de pan' });
+    expect(miga.textContent).toBe('Widgets>Agregar widget');
+    expect(within(subpantalla).getByRole('button', { name: 'Regresar' })).toBeTruthy();
+    // ET02, ET03: los dos grupos, con nombre, ícono y descripción, sin los widgets por defecto.
+    const externos = await within(subpantalla).findByRole('region', { name: 'Widgets externos' });
+    const locales = within(subpantalla).getByRole('region', { name: 'Widgets locales' });
+    expect(nombresDe(externos)).toEqual(['Clima', 'Noticias']);
+    expect(nombresDe(locales)).toEqual([
+      'Animación',
+      'Carrusel de imágenes',
+      'Imagen estática',
+      'Reproductor de música',
+      'Texto',
+    ]);
+    const clima = within(externos).getByRole('button', { name: /Clima/ });
+    expect(clima.querySelector('.wg-icono-widget')).toBeTruthy();
+    expect(within(clima).getByText('Descripción de Clima.')).toBeTruthy();
+    for (const nombre of ['Reloj', 'Calendario', 'Tareas del día', 'Kanban']) {
+      expect(within(subpantalla).queryByText(nombre)).toBeNull();
+    }
+    // «Regresar» vuelve a la pantalla Widgets.
+    fireEvent.click(within(subpantalla).getByRole('button', { name: 'Regresar' }));
+    expect(await screen.findByRole('main', { name: 'Widgets' })).toBeTruthy();
+  });
+
+  it('HE-04-HU04-CA02 · Widget que ya se agregó', async () => {
+    const subpantalla = await abrirCatalogo(catalogo(['Noticias', 'Reproductor de música']));
+    await within(subpantalla).findByRole('region', { name: 'Widgets externos' });
+    // ET04: deshabilitados con «Ya agregaste este widget.» (RT-04); los demás habilitados.
+    for (const nombre of ['Noticias', 'Reproductor de música']) {
+      const boton = within(subpantalla).getByRole('button', { name: new RegExp(nombre) });
+      expect(boton).toHaveProperty('disabled', true);
+      expect(boton.parentElement?.textContent).toContain('Ya agregaste este widget.');
+    }
+    for (const nombre of ['Clima', 'Animación', 'Carrusel de imágenes', 'Imagen estática', 'Texto']) {
+      expect(within(subpantalla).getByRole('button', { name: new RegExp(nombre) })).toHaveProperty(
+        'disabled',
+        false,
+      );
+    }
   });
 });
