@@ -18,6 +18,8 @@ Demostrar en Windows 11 una ventana WebView2 anclada a WorkerW detrás de los í
 
 **Se prueba al terminar.** En Windows 11: la ventana queda detrás de los íconos; seleccionar un ícono sigue abriendo el ícono; seleccionar un rectángulo de widget interactivo lo recibe la capa; con tres vistas WebView2 abiertas, CPU promedio de 3 % o menos y memoria de 200 MB o menos en reposo (RNF-07). Si algo falla, se detiene la construcción y se informa al Gerente de Proyecto y al patrocinador (`AGENTS.md`).
 
+**Estado (15-nov-2026).** Aprobado en un equipo real con Windows 11 (compilación 26200) y 2 monitores: capa detrás de los íconos (D-131), selección de ícono y de widget (D-186), una sola ventana sobre varios monitores (D-187) y RNF-07 con 0,01 % de CPU y 112,9 MB. Evidencia en `DUDAS.md` y `docs/evidencia/p01-spike/` (PR #21). Con P01 aprobado quedan libres P06, P07, P09, P11 completo, P13 a P15, P17, P21, P22 y HE-15-HU04. Observación para P06: el contenido de la capa se ve desplazado 8 px a la derecha y 1 px hacia abajo.
+
 ## P02 · Reglas transversales
 
 Menú principal, ventanas emergentes, formularios y tipos de mensaje. Se construyen antes que las HU porque casi todos los CA las citan (según RT-nn).
@@ -59,6 +61,8 @@ CD-02 con una aplicación mínima empaquetable (abre Inicio de sesión cuando ex
 Puntos del paso: 7.
 
 **Se prueba al terminar.** En máquina virtual con Windows 11: instalar, reinstalar, reparar, cancelar en cada paso, falla con reversión sin residuos (RNF-15), computador no compatible y poco espacio. CD-02-HU01-CA02 («Abrir Windgets» abre Inicio de sesión) se vuelve a ejecutar al cerrar P05.
+
+**Estado (15-nov-2026).** Fusionado (#7, #8, #10). Pruebas a mano en Windows 11 real: 8 silenciosas (`instalador.ps1`) en verde; la interfaz (`interfaz.py`) se prueba en la CI (13 en verde en `windows-2025`, la de «no compatible» en `windows-2022`, compilación 20348). Pendiente y opcional: la interfaz a mano en un Windows 11 de escritorio. Evidencia en `DUDAS.md` y `docs/evidencia/p01-spike/` (PR #21). Sin firma de código (D-194; ver `DUDAS.md`).
 
 ## P05 · Cuentas (parte principal)
 
