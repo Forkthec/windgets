@@ -12,6 +12,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use crate::cliente_de_supabase::ClienteDeSupabase;
 use crate::motor_de_sincronizacion;
 use crate::repositorios_y_archivos_locales::{BaseLocal, almacen_de_la_aplicacion};
+use crate::servicio_de_personalizacion_y_configuracion::ServicioDePersonalizacion;
 use crate::servicio_de_sesion::{ConMensaje, RelojDelSistema, ServicioDeSesion};
 use crate::servicio_del_planificador::{CalendarioDelSistema, ServicioDelPlanificador};
 use crate::tipos::{
@@ -22,13 +23,15 @@ use crate::tipos::{
     CodeSent, Column, ColumnCreateParams, ColumnReorderParams, ColumnUpdateParams, Connectivity,
     EntityChange, ErrorCode, EventMapConnectivityChanged, EventMapSessionChanged,
     EventMapSessionChangedReason, EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, Label,
-    LabelCreateParams, NoParams, OriginKind, PlannerToday, SessionInfo,
+    LabelCreateParams, NoParams, OriginKind, PlannerToday, SessionInfo, ThemeDraftOpenParams,
+    ThemeDraftSelectParams, ThemeDraftView, ThemeSummary,
 };
 
 /// El Núcleo que ven los comandos.
 pub struct Nucleo {
     pub sesion: ServicioDeSesion<ClienteDeSupabase, RelojDelSistema>,
     pub planificador: ServicioDelPlanificador<CalendarioDelSistema>,
+    pub personalizacion: ServicioDePersonalizacion,
 }
 
 impl Nucleo {
@@ -43,6 +46,7 @@ impl Nucleo {
                 BaseLocal::de_la_aplicacion(),
                 CalendarioDelSistema,
             ),
+            personalizacion: ServicioDePersonalizacion::nuevo(),
         }
     }
 }
@@ -790,6 +794,68 @@ pub async fn planner_get_today(
     let _ = params;
     Ok(leido(match usuario(&nucleo) {
         Ok(user_id) => nucleo.planificador.planificador_de_hoy(&user_id).await,
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-THEME-01 `theme_list` (HE-02-HU10): los temas guardados, el más reciente primero.
+#[tauri::command]
+pub async fn theme_list(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<Vec<ThemeSummary>>, ()> {
+    let _ = params;
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .temas(nucleo.planificador.base(), &user_id)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-THEME-03 `theme_draft_open` (HE-02-HU10): abre la pantalla Personalización del wallpaper con el tema
+/// aplicado (o el pedido) como tema en edición.
+#[tauri::command]
+pub async fn theme_draft_open(
+    nucleo: State<'_, Nucleo>,
+    params: ThemeDraftOpenParams,
+) -> Result<IpcResult<ThemeDraftView>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .abrir_borrador(
+                    nucleo.planificador.base(),
+                    &user_id,
+                    params.theme_id.as_ref().map(|id| id.0.as_str()),
+                )
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-THEME-04 `theme_draft_select` (HE-02-HU10): cambia el tema en edición sin tocar el escritorio.
+#[tauri::command]
+pub async fn theme_draft_select(
+    nucleo: State<'_, Nucleo>,
+    params: ThemeDraftSelectParams,
+) -> Result<IpcResult<ThemeDraftView>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .seleccionar_borrador(
+                    nucleo.planificador.base(),
+                    &user_id,
+                    &params.theme_id.0,
+                    params.discard_changes.unwrap_or(false),
+                )
+                .await
+        }
         Err(e) => Err(e),
     }))
 }

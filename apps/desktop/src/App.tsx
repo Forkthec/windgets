@@ -1,6 +1,7 @@
 import { Agenda } from '@/screens/agenda/Agenda';
 import { Kanban } from '@/screens/kanban/Kanban';
 import { Labels } from '@/screens/labels/Labels';
+import { Personalization } from '@/screens/personalization/Personalization';
 import { Reports } from '@/screens/reports/Reports';
 import { PlannerDaily } from '@/screens/planner_daily/PlannerDaily';
 import { Register } from '@/screens/register/Register';
@@ -15,6 +16,7 @@ export default function App() {
         agenda: Agenda,
         kanban: Kanban,
         labels: Labels,
+        personalization: Personalization,
         planner_daily: PlannerDaily,
         reports: Reports,
       }}

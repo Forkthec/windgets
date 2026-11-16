@@ -140,6 +140,16 @@ pub const RANGO_MUY_LARGO: &str = "El rango máximo es de un año.";
 /// `card.not_found` (HE-07-HU04-CA11; DP-04: el mismo texto al consultar, eliminar o mover).
 pub const TARJETA_NO_EXISTE: &str = "Esta tarjeta ya no existe.";
 
+// HE-02-HU10 · Seleccionar el tema en edición (IPC-THEME-04 theme_draft_select).
+
+/// `draft.unsaved_changes` (HE-02-HU10-CA03, M-04). `<nombre del tema en edición>` es el dato variable.
+pub const CAMBIOS_SIN_GUARDAR_AL_CAMBIAR_DE_TEMA: &str = "Tienes cambios sin guardar en el tema “<nombre del tema en edición>”. ¿Deseas cambiar de tema sin guardarlos?";
+
+/// El mensaje de M-04 con el nombre del tema en edición.
+pub fn cambios_sin_guardar_al_cambiar_de_tema(nombre: &str) -> String {
+    CAMBIOS_SIN_GUARDAR_AL_CAMBIAR_DE_TEMA.replace("<nombre del tema en edición>", nombre)
+}
+
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
     ("SERVICIO_NO_DISPONIBLE", SERVICIO_NO_DISPONIBLE),
@@ -184,6 +194,10 @@ pub const TEXTOS: &[(&str, &str)] = &[
         TARJETA_ACTUALIZADA_SIN_BLOQUE,
     ),
     ("TARJETA_ELIMINADA", TARJETA_ELIMINADA),
+    (
+        "CAMBIOS_SIN_GUARDAR_AL_CAMBIAR_DE_TEMA",
+        CAMBIOS_SIN_GUARDAR_AL_CAMBIAR_DE_TEMA,
+    ),
     ("TARJETA_ASIGNADA_AL_BLOQUE", TARJETA_ASIGNADA_AL_BLOQUE),
     ("BLOQUE_YA_PASO", BLOQUE_YA_PASO),
     (

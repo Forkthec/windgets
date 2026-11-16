@@ -83,7 +83,7 @@ impl Calendario for CalendarioDelSistema {
     }
 }
 
-fn error(code: ErrorCode, message: &str, field: Option<&str>) -> AppError {
+pub(crate) fn error(code: ErrorCode, message: &str, field: Option<&str>) -> AppError {
     AppError {
         code,
         message: message.to_string(),
@@ -92,7 +92,7 @@ fn error(code: ErrorCode, message: &str, field: Option<&str>) -> AppError {
     }
 }
 
-fn inesperado() -> AppError {
+pub(crate) fn inesperado() -> AppError {
     error(ErrorCode::InternalUnexpected, "", None)
 }
 

@@ -51,6 +51,9 @@ pub fn run() {
             puente_ipc::card_assign_time_block,
             puente_ipc::planner_get_today,
             puente_ipc::sync_get_status,
+            puente_ipc::theme_list,
+            puente_ipc::theme_draft_open,
+            puente_ipc::theme_draft_select,
         ])
         .setup(|app| {
             puente_ipc::vigilar_conexion(app.handle().clone());
