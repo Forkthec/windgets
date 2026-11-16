@@ -336,3 +336,69 @@ describe('HE-02-HU03 · Imagen de fondo', () => {
     expect(vistaPrevia().style.backgroundImage).toBe('');
   });
 });
+
+describe('HE-02-HU11 · Guardar los cambios de la vista previa', () => {
+  const guardar = () => screen.getByRole('button', { name: 'Guardar' }) as HTMLButtonElement;
+
+  /** Con cambios sin guardar; al guardar el Núcleo responde `mensaje` y la vista queda sin cambios. */
+  async function abrirConCambios(mensaje: string, esAplicado: boolean) {
+    const nucleo = await abrir(true);
+    await waitFor(() => expect(guardar().disabled).toBe(false));
+    nucleo.responder('theme_draft_save', () => ({
+      ok: true,
+      value: { theme_id: 't1', is_applied: esAplicado },
+      result_message: { code: 'theme_draft_save', message: mensaje },
+    }));
+    nucleo.responder('theme_draft_open', () => ({ ok: true, value: vista('t1', 'Mi tema', false) }));
+    return nucleo;
+  }
+
+  it('HE-02-HU11-CA01 · Guardar cambios en un tema no aplicado', async () => {
+    const nucleo = await abrirConCambios('Cambios guardados en el tema “Verano”.', false);
+    fireEvent.click(guardar());
+    // ET01, ET02: guarda en el tema en edición, muestra el mensaje y no aplica nada al escritorio.
+    expect((await screen.findByRole('status')).textContent).toContain(
+      'Cambios guardados en el tema “Verano”.',
+    );
+    expect(llamadasA(nucleo, 'theme_draft_save')).toEqual([{}]);
+    expect(llamadasA(nucleo, 'theme_apply')).toEqual([]);
+    await waitFor(() => expect(guardar().disabled).toBe(true));
+  });
+
+  it('HE-02-HU11-CA02 · Guardar cambios en el tema aplicado', async () => {
+    const nucleo = await abrirConCambios(textos.CAMBIOS_GUARDADOS_EN_EL_TEMA_APLICADO, true);
+    fireEvent.click(guardar());
+    // ET03: el mensaje manda a «Aplicar»; el escritorio no cambia hasta entonces.
+    expect((await screen.findByRole('status')).textContent).toContain(
+      'Cambios guardados. Selecciona Aplicar para verlos en tu escritorio.',
+    );
+    expect(llamadasA(nucleo, 'theme_apply')).toEqual([]);
+  });
+
+  it('HE-02-HU11-CA03 · Guardar sin cambios', async () => {
+    const nucleo = await abrir();
+    await waitFor(() => expect(lista().value).toBe('t1'));
+    // ET04: «Guardar» deshabilitada con el texto «No hay cambios para guardar.».
+    expect(guardar().disabled).toBe(true);
+    expect(screen.getByText('No hay cambios para guardar.')).toBeTruthy();
+    fireEvent.click(guardar());
+    expect(llamadasA(nucleo, 'theme_draft_save')).toEqual([]);
+  });
+
+  it('HE-02-HU11-CA04 · Guardar la plantilla sin aplicarla', async () => {
+    const nucleo = await abrir();
+    const catalogo = await screen.findByRole('list', { name: 'Catálogo de plantillas' });
+    nucleo.responder('theme_draft_save', () => ({
+      ok: true,
+      value: { theme_id: 't1', is_applied: true },
+      result_message: { code: 'theme_draft_save', message: textos.CAMBIOS_GUARDADOS_EN_EL_TEMA_APLICADO },
+    }));
+    nucleo.responder('theme_draft_update', () => ({ ok: true, value: vista('t1', 'Mi tema', true) }));
+    fireEvent.click(within(catalogo).getByRole('button', { name: /Minimal/ }));
+    await waitFor(() => expect(guardar().disabled).toBe(false));
+    fireEvent.click(guardar());
+    await waitFor(() => expect(llamadasA(nucleo, 'theme_draft_save')).toEqual([{}]));
+    // El escritorio sigue con la plantilla anterior: nada se aplicó.
+    expect(llamadasA(nucleo, 'theme_apply')).toEqual([]);
+  });
+});

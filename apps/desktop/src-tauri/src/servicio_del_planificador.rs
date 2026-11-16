@@ -100,7 +100,7 @@ pub(crate) fn de_sqlx(_: sqlx::Error) -> AppError {
     inesperado()
 }
 
-fn resultado(code: &str, message: &str) -> ResultMessage {
+pub(crate) fn resultado(code: &str, message: &str) -> ResultMessage {
     ResultMessage {
         code: code.to_string(),
         message: message.to_string(),

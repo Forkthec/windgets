@@ -1,9 +1,11 @@
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useEffect, useState } from 'react';
+import textos from '@/types/messages.es.json';
 import type { CatalogItem, ThemeDraftPatch, ThemeDraftView, ThemeSummary } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
+import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { Selector } from '@/ui/Selector/Selector';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 
@@ -26,6 +28,7 @@ const SECCIONES = ['Plantillas', 'Imagen de fondo', 'Colores', 'Tipografía', 'P
 
 export function Personalization() {
   const { invocar, escuchar } = useNucleo();
+  const mostrarResultado = useMensajeDeResultado();
   const [temas, setTemas] = useState<ThemeSummary[]>([]);
   const [borrador, setBorrador] = useState<ThemeDraftView | null>(null);
   const [plantillas, setPlantillas] = useState<CatalogItem[]>([]);
@@ -106,6 +109,19 @@ export function Personalization() {
   const abrirCatalogoDeImagenes = async () => {
     const r = await invocar('catalog_list', { kind: 'image' });
     if (r.ok) setImagenes(r.value);
+  };
+
+  // HE-02-HU11: «Guardar» actualiza el tema en edición (no crea otro) y no toca el escritorio (ET01, ET02).
+  const guardar = async () => {
+    const r = await invocar('theme_draft_save', {});
+    if (!r.ok) {
+      if (r.error.message) mostrarResultado(r.error.message);
+      return;
+    }
+    mostrarResultado(r.result_message?.message ?? '');
+    const abierto = await invocar('theme_draft_open', {});
+    if (abierto.ok) setBorrador(abierto.value);
+    void leerTemas();
   };
 
   const fondo = borrador?.content.background;
@@ -212,7 +228,14 @@ export function Personalization() {
             </section>
           ))}
           <div className="wg-fila">
-            <Boton>Guardar</Boton>
+            {/* ET04: sin cambios sin guardar, «Guardar» queda deshabilitada con su motivo. */}
+            <Boton
+              disabled={!borrador.dirty}
+              motivo={textos.SIN_CAMBIOS_PARA_GUARDAR}
+              onClick={() => void guardar()}
+            >
+              Guardar
+            </Boton>
             <Boton>Guardar como tema</Boton>
             <Boton principal>Aplicar</Boton>
             <Boton>Cancelar</Boton>

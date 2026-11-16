@@ -15,6 +15,7 @@ use crate::repositorios_y_archivos_locales::{BaseLocal, almacen_de_la_aplicacion
 use crate::servicio_de_personalizacion_y_configuracion::ServicioDePersonalizacion;
 use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, ServicioDeSesion};
 use crate::servicio_del_planificador::{CalendarioDelSistema, ServicioDelPlanificador};
+use crate::tipos::ThemeDraftSaveResult;
 use crate::tipos::{
     AgendaDay, AgendaDayParams, AppError, AuthRegisterStartParams, AuthRegisterStartResult,
     AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, Card,
@@ -492,6 +493,37 @@ pub async fn catalog_list(
         }
         _ => Ok(Vec::new()),
     }))
+}
+
+/// IPC-THEME-07 `theme_draft_save` (HE-02-HU11): guarda la vista previa en el tema en edición, sin tocar el
+/// escritorio. Avisa con `themes_changed` (EV-12) para que la lista de temas marque «Cambios sin aplicar».
+#[tauri::command]
+pub async fn theme_draft_save(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    _params: NoParams,
+) -> Result<IpcResult<ThemeDraftSaveResult>, ()> {
+    let ahora = RelojDelSistema.ahora_ms();
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .guardar_borrador(nucleo.planificador.base(), &user_id, ahora)
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if let Ok(guardado) = &r {
+        let _ = app.emit(
+            "themes_changed",
+            EntityChange {
+                ids: vec![guardado.valor.theme_id.clone()],
+                op: ChangeOp::Upsert,
+                origin: OriginKind::Local,
+            },
+        );
+    }
+    Ok(con_mensaje(r))
 }
 
 /// IPC-CAT-03 `image_import`: valida y copia la imagen propia a `%APPDATA%\Windgets\files` (HE-02-HU03).

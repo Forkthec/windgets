@@ -161,6 +161,22 @@ pub const IMAGEN_MUY_GRANDE: &str = "La imagen supera el tamaño máximo de 20 M
 pub const IMAGEN_ILEGIBLE: &str =
     "No pudimos leer la imagen. Verifica que el archivo no esté dañado.";
 
+// HE-02-HU11 · Guardar en el tema en edición los cambios de la vista previa (IPC-THEME-07 theme_draft_save).
+
+/// Resultado de `theme_draft_save` con un tema que no es el aplicado (HE-02-HU11-CA01). `<nombre del tema>` es el
+/// dato variable.
+pub const CAMBIOS_GUARDADOS_EN_EL_TEMA: &str = "Cambios guardados en el tema “<nombre del tema>”.";
+/// Resultado de `theme_draft_save` con el tema aplicado (HE-02-HU11-CA02).
+pub const CAMBIOS_GUARDADOS_EN_EL_TEMA_APLICADO: &str =
+    "Cambios guardados. Selecciona Aplicar para verlos en tu escritorio.";
+/// `draft.no_changes` (HE-02-HU11-CA03): texto de la opción «Guardar» deshabilitada.
+pub const SIN_CAMBIOS_PARA_GUARDAR: &str = "No hay cambios para guardar.";
+
+/// El mensaje de CA01 con el nombre del tema.
+pub fn cambios_guardados_en_el_tema(nombre: &str) -> String {
+    CAMBIOS_GUARDADOS_EN_EL_TEMA.replace("<nombre del tema>", nombre)
+}
+
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
     ("SERVICIO_NO_DISPONIBLE", SERVICIO_NO_DISPONIBLE),
@@ -216,6 +232,12 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ),
     ("IMAGEN_MUY_GRANDE", IMAGEN_MUY_GRANDE),
     ("IMAGEN_ILEGIBLE", IMAGEN_ILEGIBLE),
+    ("CAMBIOS_GUARDADOS_EN_EL_TEMA", CAMBIOS_GUARDADOS_EN_EL_TEMA),
+    (
+        "CAMBIOS_GUARDADOS_EN_EL_TEMA_APLICADO",
+        CAMBIOS_GUARDADOS_EN_EL_TEMA_APLICADO,
+    ),
+    ("SIN_CAMBIOS_PARA_GUARDAR", SIN_CAMBIOS_PARA_GUARDAR),
     ("BLOQUE_YA_PASO", BLOQUE_YA_PASO),
     (
         "BLOQUE_DESPUES_DE_FECHA_LIMITE",

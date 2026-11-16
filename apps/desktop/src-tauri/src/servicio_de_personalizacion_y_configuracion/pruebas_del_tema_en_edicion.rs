@@ -4,7 +4,7 @@ use super::*;
 use crate::servicio_del_planificador::pruebas::{USUARIO, bloquear};
 
 pub(super) const MI_TEMA: &str = "00000000-0000-4000-8000-0000000000a1";
-const OTRO_TEMA: &str = "00000000-0000-4000-8000-0000000000a2";
+pub(super) const OTRO_TEMA: &str = "00000000-0000-4000-8000-0000000000a2";
 pub(super) const T: &str = "2026-11-01T00:00:00.000Z";
 
 /// La cuenta con dos temas: «Mi tema» (aplicado) y «Verano», más la plantilla por defecto.
@@ -70,7 +70,7 @@ pub(super) fn con_temas() -> (BaseLocal, ServicioDePersonalizacion) {
     (base, ServicioDePersonalizacion::nuevo())
 }
 
-fn editar_un_color(servicio: &ServicioDePersonalizacion) {
+pub(super) fn editar_un_color(servicio: &ServicioDePersonalizacion) {
     servicio.edicion_de_prueba(|c| c.colors.primary = Hex("#112233".into()));
 }
 

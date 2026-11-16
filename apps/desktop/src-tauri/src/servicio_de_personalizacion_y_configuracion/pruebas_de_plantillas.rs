@@ -4,7 +4,7 @@ use super::pruebas_del_tema_en_edicion::{T, con_temas};
 use super::*;
 use crate::servicio_del_planificador::pruebas::{USUARIO, bloquear};
 
-fn con_otra_plantilla() -> (BaseLocal, ServicioDePersonalizacion) {
+pub(super) fn con_otra_plantilla() -> (BaseLocal, ServicioDePersonalizacion) {
     let (base, servicio) = con_temas();
     bloquear(async {
         let pool = base.pool().await.unwrap();
@@ -22,7 +22,7 @@ fn con_otra_plantilla() -> (BaseLocal, ServicioDePersonalizacion) {
     (base, servicio)
 }
 
-fn cambio(plantilla: &str) -> ThemeDraftPatch {
+pub(super) fn cambio(plantilla: &str) -> ThemeDraftPatch {
     ThemeDraftPatch {
         template_id: Some(plantilla.to_string()),
         background: None,

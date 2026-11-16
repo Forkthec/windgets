@@ -501,8 +501,11 @@ impl ServicioDePersonalizacion {
     }
 }
 
+mod guardado;
 mod imagenes;
 
+#[cfg(test)]
+mod pruebas_de_guardado;
 #[cfg(test)]
 mod pruebas_de_imagenes;
 #[cfg(test)]
