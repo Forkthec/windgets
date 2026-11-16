@@ -20,6 +20,7 @@ pub mod tipos;
 /// (solo en Windows) arranca además el prototipo del spike P01 (WorkerW y Raw Input, D-131 y D-186).
 pub fn run() {
     let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .manage(puente_ipc::Nucleo::nuevo())
         .invoke_handler(tauri::generate_handler![
             puente_ipc::connectivity_get,
@@ -55,6 +56,7 @@ pub fn run() {
             puente_ipc::theme_draft_open,
             puente_ipc::theme_draft_select,
             puente_ipc::theme_draft_update,
+            puente_ipc::image_import,
         ])
         .setup(|app| {
             puente_ipc::vigilar_conexion(app.handle().clone());

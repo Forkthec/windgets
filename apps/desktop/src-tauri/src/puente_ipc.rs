@@ -13,7 +13,7 @@ use crate::cliente_de_supabase::ClienteDeSupabase;
 use crate::motor_de_sincronizacion;
 use crate::repositorios_y_archivos_locales::{BaseLocal, almacen_de_la_aplicacion};
 use crate::servicio_de_personalizacion_y_configuracion::ServicioDePersonalizacion;
-use crate::servicio_de_sesion::{ConMensaje, RelojDelSistema, ServicioDeSesion};
+use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, ServicioDeSesion};
 use crate::servicio_del_planificador::{CalendarioDelSistema, ServicioDelPlanificador};
 use crate::tipos::{
     AgendaDay, AgendaDayParams, AppError, AuthRegisterStartParams, AuthRegisterStartResult,
@@ -22,9 +22,10 @@ use crate::tipos::{
     CardMoveParams, CardUpdateParams, CatalogItem, CatalogKind, CatalogListParams, ChangeOp,
     CodeSent, Column, ColumnCreateParams, ColumnReorderParams, ColumnUpdateParams, Connectivity,
     EntityChange, ErrorCode, EventMapConnectivityChanged, EventMapSessionChanged,
-    EventMapSessionChangedReason, EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, Label,
-    LabelCreateParams, NoParams, OriginKind, PlannerToday, SessionInfo, ThemeDraftOpenParams,
-    ThemeDraftSelectParams, ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
+    EventMapSessionChangedReason, EventMapSessionChangedState, ImageImportParams,
+    ImageImportResult, IpcErr, IpcOk, IpcResult, Label, LabelCreateParams, NoParams, OriginKind,
+    PlannerToday, SessionInfo, ThemeDraftOpenParams, ThemeDraftSelectParams,
+    ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
 };
 
 /// El Núcleo que ven los comandos.
@@ -483,8 +484,48 @@ pub async fn catalog_list(
                 .plantillas(nucleo.planificador.base())
                 .await
         }
+        CatalogKind::Image => {
+            nucleo
+                .personalizacion
+                .imagenes(nucleo.planificador.base())
+                .await
+        }
         _ => Ok(Vec::new()),
     }))
+}
+
+/// IPC-CAT-03 `image_import`: valida y copia la imagen propia a `%APPDATA%\Windgets\files` (HE-02-HU03).
+#[tauri::command]
+pub async fn image_import(
+    nucleo: State<'_, Nucleo>,
+    params: ImageImportParams,
+) -> Result<IpcResult<ImageImportResult>, ()> {
+    let carpeta = carpeta_de_archivos();
+    let ahora = RelojDelSistema.ahora_ms();
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .importar_imagen(
+                    nucleo.planificador.base(),
+                    &user_id,
+                    &params.path,
+                    &params.purpose,
+                    &carpeta,
+                    ahora,
+                )
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// `%APPDATA%\Windgets\files`; sin `APPDATA`, la carpeta temporal.
+fn carpeta_de_archivos() -> std::path::PathBuf {
+    std::env::var_os("APPDATA")
+        .map_or_else(std::env::temp_dir, std::path::PathBuf::from)
+        .join("Windgets")
+        .join("files")
 }
 
 /// Respuesta de un comando de lectura sin mensaje de resultado.

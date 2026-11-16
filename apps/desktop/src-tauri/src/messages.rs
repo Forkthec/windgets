@@ -150,6 +150,17 @@ pub fn cambios_sin_guardar_al_cambiar_de_tema(nombre: &str) -> String {
     CAMBIOS_SIN_GUARDAR_AL_CAMBIAR_DE_TEMA.replace("<nombre del tema en edición>", nombre)
 }
 
+// HE-02-HU03 · Seleccionar la imagen de fondo de la plantilla (IPC-CAT-03 image_import).
+
+/// `image.format_not_allowed` (HE-02-HU03-CA05).
+pub const FORMATO_DE_IMAGEN_NO_PERMITIDO: &str =
+    "Formato no permitido. Selecciona imágenes JPG, JPEG o PNG.";
+/// `image.too_large` (HE-02-HU03-CA06).
+pub const IMAGEN_MUY_GRANDE: &str = "La imagen supera el tamaño máximo de 20 MB.";
+/// `image.unreadable` (HE-02-HU03-CA07).
+pub const IMAGEN_ILEGIBLE: &str =
+    "No pudimos leer la imagen. Verifica que el archivo no esté dañado.";
+
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
     ("SERVICIO_NO_DISPONIBLE", SERVICIO_NO_DISPONIBLE),
@@ -199,6 +210,12 @@ pub const TEXTOS: &[(&str, &str)] = &[
         CAMBIOS_SIN_GUARDAR_AL_CAMBIAR_DE_TEMA,
     ),
     ("TARJETA_ASIGNADA_AL_BLOQUE", TARJETA_ASIGNADA_AL_BLOQUE),
+    (
+        "FORMATO_DE_IMAGEN_NO_PERMITIDO",
+        FORMATO_DE_IMAGEN_NO_PERMITIDO,
+    ),
+    ("IMAGEN_MUY_GRANDE", IMAGEN_MUY_GRANDE),
+    ("IMAGEN_ILEGIBLE", IMAGEN_ILEGIBLE),
     ("BLOQUE_YA_PASO", BLOQUE_YA_PASO),
     (
         "BLOQUE_DESPUES_DE_FECHA_LIMITE",

@@ -267,7 +267,7 @@ pub fn id_de_card_label(card_id: &str, label_id: &str) -> String {
 }
 
 /// Campos de un cambio pendiente con la misma hora (datos.md, «Grupos atómicos»).
-fn campos(valores: &[(&str, Value)], ahora: &str) -> (Value, Value) {
+pub(crate) fn campos(valores: &[(&str, Value)], ahora: &str) -> (Value, Value) {
     let mut fields = Map::new();
     let mut mods = Map::new();
     for (campo, valor) in valores {

@@ -1,3 +1,5 @@
+import { convertFileSrc } from '@tauri-apps/api/core';
+import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useEffect, useState } from 'react';
 import type { CatalogItem, ThemeDraftPatch, ThemeDraftView, ThemeSummary } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
@@ -10,6 +12,15 @@ import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 // contenido de cada sección llega con HE-02-HU02, HU03, HU05 a HU08, y «Guardar», «Aplicar» y «Cancelar» actúan
 // con HE-02-HU11, HU12 y HU13.
 
+/** La URL con la que la ventana muestra un archivo del computador (fuera de Tauri, la misma ruta). */
+function urlDeArchivo(ruta: string): string {
+  try {
+    return convertFileSrc(ruta);
+  } catch {
+    return ruta;
+  }
+}
+
 /** Las secciones de la pantalla (HE-02-HU10-ET01), en este orden. */
 const SECCIONES = ['Plantillas', 'Imagen de fondo', 'Colores', 'Tipografía', 'Paletas'] as const;
 
@@ -19,6 +30,11 @@ export function Personalization() {
   const [borrador, setBorrador] = useState<ThemeDraftView | null>(null);
   const [plantillas, setPlantillas] = useState<CatalogItem[]>([]);
   // M-04: el tema que se quería abrir cuando el Núcleo avisó de cambios sin guardar.
+  // HE-02-HU03: el catálogo de imágenes (abierto con «Catálogo de imágenes»), la imagen propia que se muestra
+  // y el rechazo del último archivo elegido.
+  const [imagenes, setImagenes] = useState<CatalogItem[] | null>(null);
+  const [vistasPropias, setVistasPropias] = useState<Record<string, string>>({});
+  const [rechazo, setRechazo] = useState('');
   const [pendiente, setPendiente] = useState<{ id: string; mensaje: string } | null>(null);
 
   const leerTemas = useCallback(async () => {
@@ -63,6 +79,42 @@ export function Personalization() {
     if (r.ok) setBorrador(r.value);
   };
 
+  // HE-02-HU03-ET06: «Subir imagen» abre el explorador de archivos; «Cancelar» lo cierra sin cambios (CA08).
+  const subirImagen = async () => {
+    let ruta: string | null = null;
+    try {
+      ruta = await open({
+        multiple: false,
+        directory: false,
+        filters: [{ name: 'Imágenes', extensions: ['jpg', 'jpeg', 'png'] }],
+      });
+    } catch {
+      return;
+    }
+    if (!ruta) return;
+    const r = await invocar('image_import', { path: ruta, purpose: 'background' });
+    if (!r.ok) {
+      // CA05 a CA07: el archivo no se sube y la vista previa sigue igual.
+      setRechazo(r.error.message);
+      return;
+    }
+    setRechazo('');
+    setVistasPropias((v) => ({ ...v, [r.value.uploaded_image_id]: urlDeArchivo(r.value.preview_url) }));
+    await cambiar({ background: { source: 'own', uploaded_image_id: r.value.uploaded_image_id } });
+  };
+
+  const abrirCatalogoDeImagenes = async () => {
+    const r = await invocar('catalog_list', { kind: 'image' });
+    if (r.ok) setImagenes(r.value);
+  };
+
+  const fondo = borrador?.content.background;
+  const imagenDeFondo =
+    fondo?.source === 'own' && fondo.uploaded_image_id
+      ? vistasPropias[fondo.uploaded_image_id]
+      : fondo?.source === 'catalog'
+        ? imagenes?.find((i) => i.id === fondo.catalog_image_id)?.thumbnail_url
+        : undefined;
   const colores = borrador?.content.colors;
   return (
     <main aria-label="Personalización del wallpaper" aria-busy={borrador === null}>
@@ -80,7 +132,18 @@ export function Personalization() {
           <section
             aria-label="Vista previa del escritorio"
             className="wg-vista-previa"
-            style={{ background: colores?.primary, color: colores?.text }}
+            style={{
+              background: colores?.primary,
+              color: colores?.text,
+              // HE-02-HU03-ET05: la imagen se ajusta al escritorio sin deformarse.
+              ...(imagenDeFondo
+                ? {
+                    backgroundImage: `url("${imagenDeFondo}")`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                  }
+                : {}),
+            }}
           />
           {SECCIONES.map((nombre) => (
             <section key={nombre} aria-label={nombre}>
@@ -106,6 +169,45 @@ export function Personalization() {
                     );
                   })}
                 </ul>
+              )}
+              {nombre === 'Imagen de fondo' && (
+                // HE-02-HU03-ET01, ET02: la imagen actual y las tres opciones.
+                <>
+                  <p>
+                    {fondo?.source === 'template_default'
+                      ? 'Imagen de fondo de la plantilla'
+                      : fondo?.source === 'own'
+                        ? 'Imagen propia'
+                        : 'Imagen del catálogo de imágenes'}
+                  </p>
+                  <div className="wg-fila">
+                    <Boton onClick={() => void subirImagen()}>Subir imagen</Boton>
+                    <Boton onClick={() => void abrirCatalogoDeImagenes()}>Catálogo de imágenes</Boton>
+                    <Boton>Quitar imagen</Boton>
+                  </div>
+                  <p>JPG, JPEG o PNG. Máximo 20 MB.</p>
+                  {rechazo && <p role="alert">{rechazo}</p>}
+                  {imagenes && (
+                    // ET07, ET08: solo miniaturas para elegir; no se agregan imágenes al catálogo.
+                    <ul className="wg-lista" aria-label="Catálogo de imágenes">
+                      {imagenes.map((i) => (
+                        <li key={i.id}>
+                          <button
+                            type="button"
+                            className="wg-fila"
+                            aria-pressed={fondo?.catalog_image_id === i.id}
+                            onClick={() =>
+                              void cambiar({ background: { source: 'catalog', catalog_image_id: i.id } })
+                            }
+                          >
+                            <img src={i.thumbnail_url} alt="" width={96} height={54} />
+                            <span>{i.name}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
               )}
             </section>
           ))}

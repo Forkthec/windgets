@@ -17,8 +17,8 @@ use crate::repositorios_y_archivos_locales::BaseLocal;
 use crate::servicio_del_planificador::{de_sqlx, error, inesperado};
 use crate::tipos::{
     AppError, BackgroundSource, CatalogItem, ErrorCode, FontSize, Hex, Legibility, ThemeBackground,
-    ThemeColors, ThemeContent, ThemeContentFont, ThemeDraftPatch, ThemeDraftView, ThemeSummary,
-    Uuid,
+    ThemeColors, ThemeContent, ThemeContentFont, ThemeDraftPatch, ThemeDraftPatchBackground,
+    ThemeDraftView, ThemeSummary, Uuid,
 };
 
 /// Identificador del tema inicial cuando la base local aún no lo trae (primer inicio sin la primera descarga).
@@ -391,15 +391,103 @@ impl ServicioDePersonalizacion {
                 return Err(error(ErrorCode::TemplateNotFound, "", None));
             }
         }
+        let fondo = match &cambio.background {
+            Some(pedido) => Some(Self::fondo_pedido(base, user_id, pedido).await?),
+            None => None,
+        };
         self.con_borrador(|b| {
             b.as_mut().map(|borrador| {
                 if let Some(plantilla) = &cambio.template_id {
                     borrador.contenido.template_id.clone_from(plantilla);
                 }
+                if let Some(fondo) = fondo {
+                    borrador.contenido.background = fondo;
+                }
                 borrador.vista()
             })
         })
         .ok_or_else(inesperado)
+    }
+
+    /// El fondo que pide el parche, ya comprobado: la imagen del catálogo o la propia debe existir
+    /// (`image.not_found`, sin texto; HE-02-HU03-ET03).
+    async fn fondo_pedido(
+        base: &BaseLocal,
+        user_id: &str,
+        pedido: &ThemeDraftPatchBackground,
+    ) -> Result<ThemeBackground, AppError> {
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let sin_imagen = || error(ErrorCode::ImageNotFound, "", None);
+        match pedido.source {
+            BackgroundSource::TemplateDefault => Ok(ThemeBackground {
+                source: BackgroundSource::TemplateDefault,
+                catalog_image_id: None,
+                uploaded_image_id: None,
+            }),
+            BackgroundSource::Catalog => {
+                let id = pedido.catalog_image_id.clone().ok_or_else(sin_imagen)?;
+                let existe: Option<String> = sqlx::query_scalar(
+                    "SELECT id FROM catalog_image WHERE id = ? AND is_active = 1",
+                )
+                .bind(&id)
+                .fetch_optional(pool)
+                .await
+                .map_err(de_sqlx)?;
+                existe.ok_or_else(sin_imagen)?;
+                Ok(ThemeBackground {
+                    source: BackgroundSource::Catalog,
+                    catalog_image_id: Some(id),
+                    uploaded_image_id: None,
+                })
+            }
+            BackgroundSource::Own => {
+                let id = pedido.uploaded_image_id.clone().ok_or_else(sin_imagen)?;
+                let existe: Option<String> = sqlx::query_scalar(
+                    "SELECT id FROM uploaded_image WHERE id = ? AND user_id = ?",
+                )
+                .bind(&id.0)
+                .bind(user_id)
+                .fetch_optional(pool)
+                .await
+                .map_err(de_sqlx)?;
+                existe.ok_or_else(sin_imagen)?;
+                Ok(ThemeBackground {
+                    source: BackgroundSource::Own,
+                    catalog_image_id: None,
+                    uploaded_image_id: Some(id),
+                })
+            }
+        }
+    }
+
+    /// IPC-CAT-01 `catalog_list` con `kind: 'image'`: las imágenes activas del catálogo, por `sort_order`
+    /// (HE-02-HU03-CA02, ET07). Solo lectura: no hay forma de agregar imágenes al catálogo (ET08).
+    /// DUDA: HE-02-HU03 `thumbnail_url` con la ruta de la miniatura hasta que exista `asset_resolve` (HE-02-HU01).
+    pub async fn imagenes(&self, base: &BaseLocal) -> Result<Vec<CatalogItem>, AppError> {
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let filas = sqlx::query(
+            "SELECT id, name, thumbnail_path FROM catalog_image WHERE is_active = 1 ORDER BY sort_order, name",
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        filas
+            .iter()
+            .map(|f| {
+                Ok(CatalogItem {
+                    id: f.try_get("id")?,
+                    name: f.try_get("name")?,
+                    thumbnail_url: f.try_get("thumbnail_path")?,
+                    is_cached: true,
+                    hex: None,
+                    color_primary: None,
+                    color_secondary: None,
+                    color_text: None,
+                    format: None,
+                })
+            })
+            .collect::<Result<Vec<_>, sqlx::Error>>()
+            .map_err(de_sqlx)
     }
 
     /// Solo para las pruebas y para las HU que editan: el contenido del borrador.
@@ -413,6 +501,10 @@ impl ServicioDePersonalizacion {
     }
 }
 
+mod imagenes;
+
+#[cfg(test)]
+mod pruebas_de_imagenes;
 #[cfg(test)]
 mod pruebas_de_plantillas;
 #[cfg(test)]
