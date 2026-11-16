@@ -4,6 +4,8 @@ Orden de los pasos. Dentro de cada paso, las HU van en el orden del Backlog (col
 
 Antes del P02 va el spike (P01): si no funciona en Windows 10 22H2 y en Windows 11, se detiene la construcción (D-131, D-186, HE-02-HU01-ET11). Las reglas transversales se construyen primero (P02) aunque estén al final de la lista del Backlog, porque los CA de casi todas las HU las citan. Desde P05, todo comando de escritura guarda también en `pending_change`; P10 construye el envío y la recepción.
 
+> **Aclaración (15-nov-2026, D-207).** El equipo da soporte solo a Windows 11 (compilación 22000 o posterior), de 64 bits. Windows 10 versión 22H2 deja de ser requisito mínimo y ya no se prueba: donde este documento lo nombra, se lee con esta salvedad. Los textos literales no cambian hasta que el equipo decida modificarlos (ver `DUDAS.md`).
+
 Cada paso termina cuando todos los CA y las ET de sus HU pasan y se cumple lo que dice «Se prueba al terminar». Un commit por HU.
 
 ## P00 · Fundaciones

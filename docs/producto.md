@@ -28,6 +28,8 @@ Los textos literales de la landing page están en `CD-01.md` (CD-01-HU01-CA01).
 ## Plataforma
 
 - Windows 10 versión 22H2 (compilación 19045) y Windows 11 (compilación 22000 o posterior), 64 bits (x64) (D-050).
+
+> **Aclaración (15-nov-2026, D-207).** El equipo da soporte solo a Windows 11 (compilación 22000 o posterior), de 64 bits. Windows 10 versión 22H2 deja de ser requisito mínimo y ya no se prueba: donde este documento lo nombra, se lee con esta salvedad. Los textos literales no cambian hasta que el equipo decida modificarlos (ver `DUDAS.md`).
 - 500 MB libres. Internet para el primer inicio de sesión.
 - Varios monitores: una sola configuración, la misma en todos los monitores (D-135, D-187).
 - Instalación por usuario, sin permisos de administrador (D-194).

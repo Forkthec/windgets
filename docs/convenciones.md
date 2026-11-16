@@ -82,6 +82,8 @@ Secretos de GitHub Actions (Settings > Secrets): `SUPABASE_URL`, `SUPABASE_ANON_
 
 Requisitos: Windows 10 22H2 o Windows 11 de 64 bits, Node.js LTS, pnpm, Rust estable (toolchain MSVC), WebView2, Supabase CLI y Docker (para Supabase local).
 
+> **Aclaración (15-nov-2026, D-207).** El equipo da soporte solo a Windows 11 (compilación 22000 o posterior), de 64 bits. Windows 10 versión 22H2 deja de ser requisito mínimo y ya no se prueba: donde este documento lo nombra, se lee con esta salvedad. Los textos literales no cambian hasta que el equipo decida modificarlos (ver `DUDAS.md`).
+
 ```
 pnpm install
 supabase start && supabase db reset          # Supabase local: migraciones y semilla
