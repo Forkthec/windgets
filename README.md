@@ -11,6 +11,7 @@ En construcción. El plan de pasos está en [`docs/plan_construccion.md`](docs/p
 - Agentes de código y personas: lean primero [`docs/AGENTS.md`](docs/AGENTS.md).
 - Reglas de ramas, commits y pull requests: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - Comandos para ejecutar, probar y empaquetar: [`docs/convenciones.md`](docs/convenciones.md).
+- Firma de código y privacidad (borradores): [`POLITICA_DE_FIRMA.md`](POLITICA_DE_FIRMA.md) y [`PRIVACIDAD.md`](PRIVACIDAD.md).
 
 ## Estructura
 
