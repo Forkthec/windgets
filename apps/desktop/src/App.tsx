@@ -3,6 +3,7 @@ import { Kanban } from '@/screens/kanban/Kanban';
 import { Labels } from '@/screens/labels/Labels';
 import { Personalization } from '@/screens/personalization/Personalization';
 import { Reports } from '@/screens/reports/Reports';
+import { Settings } from '@/screens/settings/Settings';
 import { PlannerDaily } from '@/screens/planner_daily/PlannerDaily';
 import { Register } from '@/screens/register/Register';
 import { SignIn } from '@/screens/sign_in/SignIn';
@@ -20,6 +21,7 @@ export default function App() {
         personalization: Personalization,
         planner_daily: PlannerDaily,
         reports: Reports,
+        settings: Settings,
         widgets: Widgets,
       }}
       pantallasDeCuenta={{ register: Register, sign_in: SignIn }}

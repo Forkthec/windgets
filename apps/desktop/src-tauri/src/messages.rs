@@ -205,6 +205,16 @@ pub fn con_nombre_del_tema(texto: &str, nombre: &str) -> String {
 /// RT-04).
 pub const WIDGET_YA_AGREGADO: &str = "Ya agregaste este widget.";
 
+// HE-16-HU03 · Cerrar sesión desde la pantalla Configuración (IPC-AUTH-13, IPC-AUTH-14).
+
+/// Resultado de `auth_sign_out` (HE-16-HU03-CA01, CA04).
+pub const SESION_CERRADA: &str = "Sesión cerrada.";
+/// M-11 Confirmación de cerrar sesión (HE-16-HU03-CA05, ET02).
+pub const DESEAS_CERRAR_SESION: &str = "¿Deseas cerrar sesión?";
+/// M-12 Confirmación de cerrar sesión con cambios sin sincronizar (HE-16-HU03-CA03, ET05).
+pub const CAMBIOS_SIN_SINCRONIZAR_AL_CERRAR_SESION: &str =
+    "Tienes cambios sin sincronizar. Si cierras sesión ahora, se perderán. ¿Deseas cerrar sesión?";
+
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
     ("SERVICIO_NO_DISPONIBLE", SERVICIO_NO_DISPONIBLE),
@@ -287,6 +297,12 @@ pub const TEXTOS: &[(&str, &str)] = &[
         BLOQUE_DESPUES_DE_FECHA_LIMITE,
     ),
     ("WIDGET_YA_AGREGADO", WIDGET_YA_AGREGADO),
+    ("SESION_CERRADA", SESION_CERRADA),
+    ("DESEAS_CERRAR_SESION", DESEAS_CERRAR_SESION),
+    (
+        "CAMBIOS_SIN_SINCRONIZAR_AL_CERRAR_SESION",
+        CAMBIOS_SIN_SINCRONIZAR_AL_CERRAR_SESION,
+    ),
 ];
 
 #[cfg(test)]

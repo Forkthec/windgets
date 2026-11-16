@@ -90,6 +90,38 @@ impl BaseLocal {
             .await?;
         Ok(&self.pool)
     }
+
+    /// Borra la base local de la cuenta al cerrar sesión (HE-16-HU03, D-190: «una sola base local; se borra al
+    /// cerrar sesión»). Con la aplicación abierta el archivo no se puede quitar, así que se eliminan todas sus
+    /// tablas, se vuelve a crear el esquema vacío y se compacta el archivo para que no queden datos en él. Queda
+    /// igual que una base nueva: la próxima sesión la llena con la primera descarga.
+    pub async fn borrar_todo(&self) -> Result<(), sqlx::Error> {
+        let pool = self.pool().await?;
+        let tablas: Vec<String> = sqlx::query_scalar(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
+        )
+        .fetch_all(pool)
+        .await?;
+        // Un solo guion en una sola conexión: `foreign_keys` vale por conexión y se apaga solo mientras se borra.
+        let mut guion = String::from("PRAGMA foreign_keys = OFF;\n");
+        for tabla in tablas {
+            guion.push_str(&format!("DROP TABLE IF EXISTS \"{tabla}\";\n"));
+        }
+        guion.push_str(ESQUEMA);
+        guion.push_str("\nPRAGMA foreign_keys = ON;\n");
+        sqlx::raw_sql(&guion).execute(pool).await?;
+        sqlx::raw_sql("VACUUM").execute(pool).await?;
+        Ok(())
+    }
+}
+
+/// Borra la carpeta de archivos del usuario (`%APPDATA%\Windgets\files`: imágenes propias y caché de catálogos,
+/// `local_file`) al cerrar sesión (IPC-AUTH-14). Los recursos que trae el instalador no viven aquí.
+pub fn borrar_archivos(carpeta: &Path) -> bool {
+    match std::fs::remove_dir_all(carpeta) {
+        Ok(()) => true,
+        Err(e) => e.kind() == std::io::ErrorKind::NotFound,
+    }
 }
 
 /// Encola un cambio en `pending_change` dentro de la transacción de la escritura (arquitectura.md,
@@ -150,6 +182,8 @@ pub trait AlmacenDeSesion: Send + Sync {
     fn guardar(&self, sesion: &SesionGuardada) -> bool;
     /// La sesión guardada, si hay una legible.
     fn leer(&self) -> Option<SesionGuardada>;
+    /// Borra la sesión al cerrar sesión (RNF-19: 0 tokens tras cerrar sesión). `false` si quedó algo legible.
+    fn borrar(&self) -> bool;
 }
 
 /// Sesión solo en memoria: las pruebas y los sistemas sin DPAPI (la aplicación es solo para Windows).
@@ -163,6 +197,10 @@ impl AlmacenDeSesion for SesionEnMemoria {
 
     fn leer(&self) -> Option<SesionGuardada> {
         self.0.lock().ok().and_then(|s| s.clone())
+    }
+
+    fn borrar(&self) -> bool {
+        self.0.lock().map(|mut s| *s = None).is_ok()
     }
 }
 
@@ -204,6 +242,16 @@ impl AlmacenDeSesion for SesionConDpapi {
         let cifrado = std::fs::read(&self.ruta).ok()?;
         let claro = dpapi::desproteger(&cifrado)?;
         serde_json::from_slice(&claro).ok()
+    }
+
+    /// Quita `session.bin` (INT-11: «al cerrar sesión se borra el archivo»). Si Windows no deja quitarlo, lo
+    /// deja vacío, para que no quede ningún token legible.
+    fn borrar(&self) -> bool {
+        match std::fs::remove_file(&self.ruta) {
+            Ok(()) => true,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => true,
+            Err(_) => std::fs::write(&self.ruta, []).is_ok(),
+        }
     }
 }
 

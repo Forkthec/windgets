@@ -19,14 +19,14 @@ use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, ServicioDeSe
 use crate::servicio_del_planificador::{CalendarioDelSistema, ServicioDelPlanificador};
 use crate::tipos::{
     AgendaDay, AgendaDayParams, AppError, AuthRegisterStartParams, AuthRegisterStartResult,
-    AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, Card,
-    CardAssignTimeBlockParams, CardCreateParams, CardDetail, CardIdParams, CardListBoardResult,
-    CardMoveParams, CardUpdateParams, CatalogItem, CatalogKind, CatalogListParams, ChangeOp,
-    CodeSent, Column, ColumnCreateParams, ColumnReorderParams, ColumnUpdateParams, Connectivity,
-    EntityChange, ErrorCode, EventMapConnectivityChanged, EventMapSessionChanged,
-    EventMapSessionChangedReason, EventMapSessionChangedState, ImageImportParams,
-    ImageImportResult, IpcErr, IpcOk, IpcResult, Label, LabelCreateParams, NoParams, OriginKind,
-    PlannerToday, SessionInfo, ThemeDraftOpenParams, ThemeDraftSelectParams,
+    AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams,
+    AuthSignOutInfo, Card, CardAssignTimeBlockParams, CardCreateParams, CardDetail, CardIdParams,
+    CardListBoardResult, CardMoveParams, CardUpdateParams, CatalogItem, CatalogKind,
+    CatalogListParams, ChangeOp, CodeSent, Column, ColumnCreateParams, ColumnReorderParams,
+    ColumnUpdateParams, Connectivity, EntityChange, ErrorCode, EventMapConnectivityChanged,
+    EventMapSessionChanged, EventMapSessionChangedReason, EventMapSessionChangedState,
+    ImageImportParams, ImageImportResult, IpcErr, IpcOk, IpcResult, Label, LabelCreateParams,
+    NoParams, OriginKind, PlannerToday, SessionInfo, ThemeDraftOpenParams, ThemeDraftSelectParams,
     ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
 };
 use crate::tipos::{
@@ -43,6 +43,9 @@ pub struct Nucleo {
     pub planificador: ServicioDelPlanificador<CalendarioDelSistema>,
     pub personalizacion: ServicioDePersonalizacion,
     pub host: EstadoDelHost,
+    /// Un ciclo de sincronización a la vez con el cierre de sesión (HE-16-HU03): el cierre espera a que termine
+    /// el ciclo en curso antes de vaciar la base.
+    pub ciclo: tokio::sync::Mutex<()>,
 }
 
 impl Nucleo {
@@ -59,6 +62,7 @@ impl Nucleo {
             ),
             personalizacion: ServicioDePersonalizacion::nuevo(),
             host: EstadoDelHost::default(),
+            ciclo: tokio::sync::Mutex::new(()),
         }
     }
 }
@@ -144,7 +148,12 @@ pub fn sincronizar(app: AppHandle) {
         loop {
             std::thread::sleep(REVISION_DE_LA_COLA);
             let nucleo = app.state::<Nucleo>();
+            let _ciclo = nucleo.ciclo.blocking_lock();
             let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+                // Tras cerrar sesión (HE-16-HU03), la próxima sesión empieza como al abrir la aplicación: con la
+                // base vacía, la primera consulta va de inmediato.
+                en_linea_antes = None;
+                anterior = None;
                 continue;
             };
             let base = nucleo.planificador.base();
@@ -1242,4 +1251,51 @@ pub async fn theme_draft_update(
         }
         Err(e) => Err(e),
     }))
+}
+
+/// IPC-AUTH-13 `auth_get_sign_out_info` (HE-16-HU03-CA03): cuántos cambios esperan sincronizarse.
+#[tauri::command]
+pub async fn auth_get_sign_out_info(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<AuthSignOutInfo>, ()> {
+    let _ = params;
+    Ok(leido(
+        nucleo
+            .sesion
+            .informacion_de_cierre(nucleo.planificador.base())
+            .await
+            .map_err(crate::servicio_del_planificador::de_sqlx),
+    ))
+}
+
+/// IPC-AUTH-14 `auth_sign_out` (HE-16-HU03-CA01, CA04; D-190; RNF-19). Espera a que termine el ciclo de
+/// sincronización en curso, para que no escriba en la base recién vaciada; borra el token, la base y los archivos;
+/// oculta la capa, con lo que se ve de nuevo el fondo original de Windows (ET03), y emite `session_changed` con
+/// `reason: 'sign_out'` (EV-01): la ventana principal abre Inicio de sesión (ET06).
+#[tauri::command]
+pub async fn auth_sign_out(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<()>, ()> {
+    let _ = params;
+    let r = {
+        let _ciclo = nucleo.ciclo.lock().await;
+        nucleo
+            .sesion
+            .cerrar_sesion(nucleo.planificador.base(), &carpeta_de_archivos())
+            .await
+    };
+    nucleo.personalizacion.olvidar_borrador();
+    avisar_wallpaper(&app).await;
+    let _ = app.emit(
+        "session_changed",
+        EventMapSessionChanged {
+            state: EventMapSessionChangedState::SignedOut,
+            alias: None,
+            reason: EventMapSessionChangedReason::SignOut,
+        },
+    );
+    Ok(con_mensaje(Ok(r)))
 }

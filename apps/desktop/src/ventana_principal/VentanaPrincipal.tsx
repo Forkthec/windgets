@@ -57,6 +57,11 @@ interface Navegacion {
    * Tauri llega también `session_changed` (EV-01); fuera de Tauri (Núcleo simulado) no llega ningún evento.
    */
   sesionIniciada: () => void;
+  /**
+   * Se cerró la sesión (HE-16-HU03): abre Inicio de sesión. Dentro de Tauri llega también `session_changed`
+   * (EV-01) con `reason: 'sign_out'`; fuera de Tauri (Núcleo simulado) no llega ningún evento.
+   */
+  sesionCerrada: () => void;
   registrarGuardia: (guardia: GuardiaDeSalida | null) => void;
 }
 
@@ -173,11 +178,12 @@ export function VentanaPrincipal({
       },
       correoDeCuenta,
       sesionIniciada: iniciada,
+      sesionCerrada: cerrada,
       registrarGuardia: (nueva) => {
         guardia.current = nueva;
       },
     }),
-    [correoDeCuenta, iniciada, pantalla, sesion],
+    [cerrada, correoDeCuenta, iniciada, pantalla, sesion],
   );
   const nucleo = useMemo(() => ({ invocar, escuchar }), [escuchar, invocar]);
 

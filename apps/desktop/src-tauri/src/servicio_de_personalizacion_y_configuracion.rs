@@ -129,6 +129,11 @@ impl ServicioDePersonalizacion {
         Self::default()
     }
 
+    /// Al cerrar sesión se descarta el borrador en memoria: era de la cuenta que salió (HE-16-HU03, D-190).
+    pub fn olvidar_borrador(&self) {
+        self.con_borrador(|b| *b = None);
+    }
+
     fn con_borrador<T>(&self, f: impl FnOnce(&mut Option<Borrador>) -> T) -> T {
         match self.borrador.lock() {
             Ok(mut guardia) => f(&mut guardia),

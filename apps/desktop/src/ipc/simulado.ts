@@ -156,6 +156,13 @@ const respuestas: Respuestas = {
   connectivity_get: () => ({ ok: true, value: { online: true } }),
   sync_get_status: () => ({ ok: true, value: { status: 'synced', pending_count: 0, last_sync_at: null } }),
   auth_get_session: () => ({ ok: true, value: { state: 'signed_out', token: 'valid' } }),
+  // HE-16-HU03: el simulado no guarda cambios pendientes; cerrar sesión responde el mensaje de CA01.
+  auth_get_sign_out_info: () => ({ ok: true, value: { pending_count: 0 } }),
+  auth_sign_out: () => ({
+    ok: true,
+    value: null,
+    result_message: { code: 'auth_sign_out', message: textos.SESION_CERRADA },
+  }),
   auth_register_start: ({ email }) => {
     if (email.trim().toLowerCase() === CUENTA_SIMULADA.email) {
       return error({ code: 'email.already_registered', message: textos.CORREO_YA_REGISTRADO });

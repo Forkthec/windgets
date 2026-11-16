@@ -12,12 +12,14 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::cliente_de_supabase::{AuthDeSupabase, FallaDeAuth, SesionDeAuth};
 use crate::messages;
-use crate::repositorios_y_archivos_locales::{AlmacenDeSesion, SesionGuardada};
+use crate::repositorios_y_archivos_locales::{
+    AlmacenDeSesion, BaseLocal, SesionGuardada, borrar_archivos,
+};
 use crate::tipos::{
     AppError, AuthRegisterStartParams, AuthRegisterStartResult, AuthRegisterVerifyParams,
     AuthRegisterVerifyResult, AuthSessionState, AuthSessionStateState, AuthSessionStateToken,
-    AuthSignInParams, CodeSent, ErrorCode, ErrorParams, ErrorParamsValue, Instant, ResultMessage,
-    SessionInfo, Uuid,
+    AuthSignInParams, AuthSignOutInfo, CodeSent, ErrorCode, ErrorParams, ErrorParamsValue, Instant,
+    ResultMessage, SessionInfo, Uuid,
 };
 
 /// Largo máximo del alias (HE-01-HU01-ET03, D-023).
@@ -523,6 +525,38 @@ impl<A: AuthDeSupabase, R: Reloj> ServicioDeSesion<A, R> {
                 alias: None,
                 token: AuthSessionStateToken::Valid,
             },
+        }
+    }
+
+    /// IPC-AUTH-13 `auth_get_sign_out_info`: cuántos cambios esperan en `pending_change`. Con alguno, la vista
+    /// abre M-12 en lugar de M-11 (HE-16-HU03-CA03, ET04, ET05).
+    pub async fn informacion_de_cierre(
+        &self,
+        base: &BaseLocal,
+    ) -> Result<AuthSignOutInfo, sqlx::Error> {
+        let pending_count: i64 = sqlx::query_scalar("SELECT count(*) FROM pending_change")
+            .fetch_one(base.pool().await?)
+            .await?;
+        Ok(AuthSignOutInfo { pending_count })
+    }
+
+    /// IPC-AUTH-14 `auth_sign_out` (HE-16-HU03-CA01, CA04; D-190; RNF-19): borra el token (`session.bin`), la
+    /// base local de la cuenta con sus cambios pendientes sin enviarlos, y los archivos del usuario. No llama a
+    /// la nube: funciona igual sin conexión. Ocultar la capa y avisar a las vistas le toca al Puente IPC.
+    /// DUDA: HE-16-HU03 el contrato no define errores (Errores: —); si la base o la carpeta no se pueden borrar,
+    /// la sesión se cierra igual y el token se borra (docs/DUDAS.md).
+    pub async fn cerrar_sesion(
+        &self,
+        base: &BaseLocal,
+        archivos: &std::path::Path,
+    ) -> ConMensaje<()> {
+        let _ = self.almacen.borrar();
+        self.fijar_pendiente(None);
+        let _ = base.borrar_todo().await;
+        let _ = borrar_archivos(archivos);
+        ConMensaje {
+            valor: (),
+            mensaje: resultado("auth_sign_out", messages::SESION_CERRADA),
         }
     }
 
@@ -1497,3 +1531,6 @@ pub(crate) mod pruebas {
         );
     }
 }
+
+#[cfg(test)]
+mod pruebas_de_cierre;
