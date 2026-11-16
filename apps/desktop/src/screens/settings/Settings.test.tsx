@@ -94,3 +94,86 @@ describe('HE-16-HU03 · Cerrar sesión desde la pantalla Configuración', () => 
     expect(llamadasA(nucleo, 'auth_sign_out')).toHaveLength(0);
   });
 });
+
+/** Abre Configuración con el inicio automático de Windows en `windows` y un `autostart_set` que hace `fijar`. */
+async function abrirConInicio(windows: { enabled: boolean }, permitido = true) {
+  const { nucleo, invocar, escuchar } = crearNucleo();
+  nucleo.responder('autostart_get', () => ({ ok: true, value: { ...windows } }));
+  nucleo.responder('autostart_set', ({ enabled }) => {
+    if (!permitido) {
+      return {
+        ok: false,
+        error: {
+          code: 'autostart.failed',
+          message: 'No pudimos cambiar el inicio automático. Intenta de nuevo.',
+        },
+      };
+    }
+    windows.enabled = enabled;
+    return {
+      ok: true,
+      value: { enabled },
+      result_message: {
+        code: 'autostart_set',
+        message: enabled ? 'Inicio automático activado.' : 'Inicio automático desactivado.',
+      },
+    };
+  });
+  render(<VentanaPrincipal invocar={invocar} escuchar={escuchar} pantallas={{ settings: Settings }} />);
+  const menu = await screen.findByRole('navigation', { name: 'Menú principal' });
+  fireEvent.click(within(menu).getByRole('button', { name: 'Configuración' }));
+  const interruptor = await screen.findByRole('switch', { name: 'Inicio automático' });
+  return { nucleo, interruptor };
+}
+
+describe('HE-16-HU02 · Alternar el inicio automático en la pantalla Configuración', () => {
+  it('HE-16-HU02-CA01 · Desactivar inicio automático', async () => {
+    const { nucleo, interruptor } = await abrirConInicio({ enabled: true });
+    // ET01: la pantalla muestra el interruptor «Inicio automático», activado como en Windows.
+    expect(interruptor.getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(interruptor);
+    expect((await screen.findByRole('status')).textContent).toContain('Inicio automático desactivado.');
+    // ET03: guarda la preferencia.
+    expect(llamadasA(nucleo, 'autostart_set')).toEqual([{ enabled: false }]);
+    expect(interruptor.getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('HE-16-HU02-CA02 · Activar inicio automático', async () => {
+    const { nucleo, interruptor } = await abrirConInicio({ enabled: false });
+    fireEvent.click(interruptor);
+    expect((await screen.findByRole('status')).textContent).toContain('Inicio automático activado.');
+    expect(llamadasA(nucleo, 'autostart_set')).toEqual([{ enabled: true }]);
+    expect(interruptor.getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('HE-16-HU02-CA03 · Cambio hecho desde Windows', async () => {
+    const windows = { enabled: true };
+    const { interruptor } = await abrirConInicio(windows);
+    // La persona lo deshabilita en las aplicaciones de arranque de Windows y vuelve a la ventana (ET06).
+    windows.enabled = false;
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+    });
+    expect(interruptor.getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('HE-16-HU02-CA04 · Inicio automático propio de cada computador', async () => {
+    const { nucleo, interruptor } = await abrirConInicio({ enabled: true });
+    const antes = nucleo.llamadas.length;
+    fireEvent.click(interruptor);
+    await screen.findByRole('status');
+    // ET07: alternarlo solo llama a `autostart_set`, que no se sincroniza (el Núcleo no lo encola; ver
+    // ca_he_16_hu02_ca04 en inicio_automatico.rs).
+    expect(nucleo.llamadas.slice(antes).map((l) => l.comando)).toEqual(['autostart_set']);
+  });
+
+  it('HE-16-HU02-CA05 · Error al cambiar el inicio automático', async () => {
+    const { interruptor } = await abrirConInicio({ enabled: false }, false);
+    fireEvent.click(interruptor);
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'No pudimos cambiar el inicio automático. Intenta de nuevo.',
+    );
+    // ET09: el interruptor conserva el estado que tiene Windows.
+    expect(interruptor.getAttribute('aria-checked')).toBe('false');
+  });
+});

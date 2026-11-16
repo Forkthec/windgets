@@ -44,6 +44,7 @@ const COLUMNAS_SIMULADAS: Column[] = [
   is_default: true,
 }));
 const tarjetasSimuladas: Card[] = [];
+let inicioAutomaticoSimulado = false;
 
 function tableroSimulado(): BoardColumn[] {
   return COLUMNAS_SIMULADAS.map((column) => {
@@ -158,6 +159,19 @@ const respuestas: Respuestas = {
   auth_get_session: () => ({ ok: true, value: { state: 'signed_out', token: 'valid' } }),
   // HE-16-HU03: el simulado no guarda cambios pendientes; cerrar sesión responde el mensaje de CA01.
   auth_get_sign_out_info: () => ({ ok: true, value: { pending_count: 0 } }),
+  // HE-16-HU02: el simulado guarda el inicio automático en memoria (fuera de Tauri no hay registro de Windows).
+  autostart_get: () => ({ ok: true, value: { enabled: inicioAutomaticoSimulado } }),
+  autostart_set: ({ enabled }) => {
+    inicioAutomaticoSimulado = enabled;
+    return {
+      ok: true,
+      value: { enabled },
+      result_message: {
+        code: 'autostart_set',
+        message: enabled ? textos.INICIO_AUTOMATICO_ACTIVADO : textos.INICIO_AUTOMATICO_DESACTIVADO,
+      },
+    };
+  },
   auth_sign_out: () => ({
     ok: true,
     value: null,

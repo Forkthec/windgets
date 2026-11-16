@@ -46,6 +46,8 @@ pub struct Nucleo {
     /// Un ciclo de sincronización a la vez con el cierre de sesión (HE-16-HU03): el cierre espera a que termine
     /// el ciclo en curso antes de vaciar la base.
     pub ciclo: tokio::sync::Mutex<()>,
+    /// El registro de Windows para el inicio automático (INT-08).
+    pub arranque: Box<dyn crate::integracion_con_el_sistema::inicio_automatico::RegistroDeArranque>,
 }
 
 impl Nucleo {
@@ -63,6 +65,8 @@ impl Nucleo {
             personalizacion: ServicioDePersonalizacion::nuevo(),
             host: EstadoDelHost::default(),
             ciclo: tokio::sync::Mutex::new(()),
+            arranque:
+                crate::integracion_con_el_sistema::inicio_automatico::registro_de_la_aplicacion(),
         }
     }
 }
@@ -1298,4 +1302,30 @@ pub async fn auth_sign_out(
         },
     );
     Ok(con_mensaje(Ok(r)))
+}
+
+/// IPC-DESK-10 `autostart_get` (HE-16-HU02-CA03, ET06): el estado que tiene Windows.
+#[tauri::command]
+pub fn autostart_get(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> IpcResult<crate::tipos::AutostartState> {
+    let _ = params;
+    correcto(crate::integracion_con_el_sistema::inicio_automatico::estado(nucleo.arranque.as_ref()))
+}
+
+/// IPC-DESK-11 `autostart_set` (HE-16-HU02-CA01, CA02, CA04, CA05). Sin la ruta del ejecutable no se puede
+/// escribir el valor de `Run`: responde `autostart.failed`.
+#[tauri::command]
+pub fn autostart_set(
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::AutostartState,
+) -> IpcResult<crate::tipos::AutostartState> {
+    use crate::integracion_con_el_sistema::inicio_automatico::cambiar;
+    let ejecutable = std::env::current_exe().unwrap_or_default();
+    con_mensaje(cambiar(
+        nucleo.arranque.as_ref(),
+        params.enabled,
+        &ejecutable,
+    ))
 }

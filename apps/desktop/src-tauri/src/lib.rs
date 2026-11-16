@@ -32,6 +32,8 @@ pub fn run() {
             puente_ipc::auth_get_session,
             puente_ipc::auth_get_sign_out_info,
             puente_ipc::auth_sign_out,
+            puente_ipc::autostart_get,
+            puente_ipc::autostart_set,
             puente_ipc::card_create,
             puente_ipc::label_list,
             puente_ipc::label_create,
