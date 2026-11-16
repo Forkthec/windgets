@@ -45,4 +45,4 @@ docs/                especificación de construcción (fuente de verdad)
 
 ## Licencia
 
-Todos los derechos reservados. El código es visible, pero no se puede copiar, modificar ni redistribuir sin permiso escrito del equipo.
+Licencia MIT. Ver [`LICENSE`](LICENSE). Copyright (c) 2026 ForkTech.
