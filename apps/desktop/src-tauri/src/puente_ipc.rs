@@ -10,9 +10,12 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::cliente_de_supabase::ClienteDeSupabase;
+use crate::host_del_wallpaper::estado::EstadoDelHost;
 use crate::motor_de_sincronizacion;
 use crate::repositorios_y_archivos_locales::{BaseLocal, almacen_de_la_aplicacion};
-use crate::servicio_de_sesion::{ConMensaje, RelojDelSistema, ServicioDeSesion};
+use crate::servicio_de_personalizacion_y_configuracion::ServicioDePersonalizacion;
+use crate::servicio_de_personalizacion_y_configuracion::escritorio::Carpetas;
+use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, ServicioDeSesion};
 use crate::servicio_del_planificador::{CalendarioDelSistema, ServicioDelPlanificador};
 use crate::tipos::{
     AgendaDay, AgendaDayParams, AppError, AuthRegisterStartParams, AuthRegisterStartResult,
@@ -21,14 +24,24 @@ use crate::tipos::{
     CardMoveParams, CardUpdateParams, CatalogItem, CatalogKind, CatalogListParams, ChangeOp,
     CodeSent, Column, ColumnCreateParams, ColumnReorderParams, ColumnUpdateParams, Connectivity,
     EntityChange, ErrorCode, EventMapConnectivityChanged, EventMapSessionChanged,
-    EventMapSessionChangedReason, EventMapSessionChangedState, IpcErr, IpcOk, IpcResult, Label,
-    LabelCreateParams, NoParams, OriginKind, PlannerToday, SessionInfo,
+    EventMapSessionChangedReason, EventMapSessionChangedState, ImageImportParams,
+    ImageImportResult, IpcErr, IpcOk, IpcResult, Label, LabelCreateParams, NoParams, OriginKind,
+    PlannerToday, SessionInfo, ThemeDraftOpenParams, ThemeDraftSelectParams,
+    ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
+};
+use crate::tipos::{
+    AppliedThemeView, ApplyMode, AssetResolveParams, AssetResolveResult,
+    EventMapAppliedThemeChanged, EventMapCatalogUpdated, EventMapWallpaperStatusChanged,
+    LayerInitialState, ThemeDraftApplyParams, ThemeDraftSaveResult, ThemeIdResult, WallpaperState,
+    WallpaperStatus,
 };
 
 /// El Núcleo que ven los comandos.
 pub struct Nucleo {
     pub sesion: ServicioDeSesion<ClienteDeSupabase, RelojDelSistema>,
     pub planificador: ServicioDelPlanificador<CalendarioDelSistema>,
+    pub personalizacion: ServicioDePersonalizacion,
+    pub host: EstadoDelHost,
 }
 
 impl Nucleo {
@@ -43,6 +56,8 @@ impl Nucleo {
                 BaseLocal::de_la_aplicacion(),
                 CalendarioDelSistema,
             ),
+            personalizacion: ServicioDePersonalizacion::nuevo(),
+            host: EstadoDelHost::default(),
         }
     }
 }
@@ -164,6 +179,25 @@ pub fn sincronizar(app: AppHandle) {
                     && (reconectado
                         || envio.llamo
                         || ahora - ultima_consulta >= CONSULTA_PERIODICA_MS);
+                // HE-02-HU01-CA01: los catálogos van antes que `sync_pull`, porque los temas y la copia aplicada
+                // que llegan los referencian.
+                let catalogos = if consultar {
+                    motor_de_sincronizacion::catalogo::descargar_catalogo(
+                        base,
+                        cliente,
+                        &credenciales,
+                        ahora,
+                    )
+                    .await?
+                } else {
+                    Vec::new()
+                };
+                if !catalogos.is_empty() {
+                    let _ = app.emit(
+                        "catalog_updated",
+                        EventMapCatalogUpdated { kinds: catalogos },
+                    );
+                }
                 let descarga = if consultar {
                     motor_de_sincronizacion::descargar(base, cliente, &credenciales).await?
                 } else {
@@ -309,6 +343,7 @@ pub async fn auth_register_verify(
             &creada.valor.alias,
             EventMapSessionChangedReason::Registered,
         );
+        avisar_wallpaper(&app).await;
     }
     Ok(con_mensaje(r))
 }
@@ -348,6 +383,7 @@ pub async fn auth_sign_in(
     avisar_conectividad(&app, antes);
     if let Ok(sesion) = &r {
         avisar_sesion_iniciada(&app, &sesion.alias, EventMapSessionChangedReason::SignIn);
+        avisar_wallpaper(&app).await;
     }
     Ok(match r {
         Ok(sesion) => correcto(sesion),
@@ -473,8 +509,257 @@ pub async fn catalog_list(
 ) -> Result<IpcResult<Vec<CatalogItem>>, ()> {
     Ok(leido(match params.kind {
         CatalogKind::Color => nucleo.planificador.colores().await,
+        CatalogKind::Template => {
+            nucleo
+                .personalizacion
+                .plantillas(nucleo.planificador.base())
+                .await
+        }
+        CatalogKind::Image => {
+            nucleo
+                .personalizacion
+                .imagenes(nucleo.planificador.base())
+                .await
+        }
         _ => Ok(Vec::new()),
     }))
+}
+
+/// IPC-THEME-07 `theme_draft_save` (HE-02-HU11): guarda la vista previa en el tema en edición, sin tocar el
+/// escritorio. Avisa con `themes_changed` (EV-12) para que la lista de temas marque «Cambios sin aplicar».
+#[tauri::command]
+pub async fn theme_draft_save(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    _params: NoParams,
+) -> Result<IpcResult<ThemeDraftSaveResult>, ()> {
+    let ahora = RelojDelSistema.ahora_ms();
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .guardar_borrador(nucleo.planificador.base(), &user_id, ahora)
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if let Ok(guardado) = &r {
+        let _ = app.emit(
+            "themes_changed",
+            EntityChange {
+                ids: vec![guardado.valor.theme_id.clone()],
+                op: ChangeOp::Upsert,
+                origin: OriginKind::Local,
+            },
+        );
+    }
+    Ok(con_mensaje(r))
+}
+
+/// IPC-THEME-09 `theme_draft_apply` (HE-02-HU12): lleva la vista previa al escritorio y a la aplicación. Avisa
+/// con EV-11 `applied_theme_changed` y EV-12 `themes_changed`, y con EV-16 para que la capa vuelva a pintar el
+/// wallpaper sin reiniciar la aplicación (CA05, ET05; RNF-01).
+#[tauri::command]
+pub async fn theme_draft_apply(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: ThemeDraftApplyParams,
+) -> Result<IpcResult<ThemeIdResult>, ()> {
+    let ahora = RelojDelSistema.ahora_ms();
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .aplicar_borrador(nucleo.planificador.base(), &user_id, &params.mode, ahora)
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if let Ok(aplicado) = &r {
+        let _ = app.emit(
+            "applied_theme_changed",
+            EventMapAppliedThemeChanged {
+                theme_id: aplicado.valor.theme_id.clone(),
+                origin: OriginKind::Local,
+                has_unsaved_draft: matches!(params.mode, ApplyMode::ApplyWithoutSaving),
+            },
+        );
+        let _ = app.emit(
+            "themes_changed",
+            EntityChange {
+                ids: vec![aplicado.valor.theme_id.clone()],
+                op: ChangeOp::Upsert,
+                origin: OriginKind::Local,
+            },
+        );
+        avisar_wallpaper(&app).await;
+    }
+    Ok(con_mensaje(r))
+}
+
+/// IPC-CAT-03 `image_import`: valida y copia la imagen propia a `%APPDATA%\Windgets\files` (HE-02-HU03).
+#[tauri::command]
+pub async fn image_import(
+    nucleo: State<'_, Nucleo>,
+    params: ImageImportParams,
+) -> Result<IpcResult<ImageImportResult>, ()> {
+    let carpeta = carpeta_de_archivos();
+    let ahora = RelojDelSistema.ahora_ms();
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .importar_imagen(
+                    nucleo.planificador.base(),
+                    &user_id,
+                    &params.path,
+                    &params.purpose,
+                    &carpeta,
+                    ahora,
+                )
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// Dónde están los archivos de la persona y los recursos que trae el instalador.
+fn carpetas(app: &AppHandle) -> Carpetas {
+    Carpetas {
+        archivos: carpeta_de_archivos(),
+        // DUDA: HE-02-HU01 sin carpeta de recursos (no debería pasar en la app instalada) se usa la actual.
+        recursos: app
+            .path()
+            .resource_dir()
+            .unwrap_or_else(|_| std::path::PathBuf::from(".")),
+    }
+}
+
+/// Lo que dice el host: sin sesión la capa está oculta (HE-02-HU01-CA05); si no pudo anclarse, pide el
+/// wallpaper por defecto (ET05).
+fn estado_del_host(nucleo: &Nucleo) -> WallpaperState {
+    if nucleo.sesion.sesion_guardada().is_none() {
+        WallpaperState::Hidden
+    } else if nucleo.host.anclaje_fallido() {
+        WallpaperState::FallbackDefault
+    } else {
+        WallpaperState::Ok
+    }
+}
+
+/// El estado de la capa para quien lo pida; sin sesión no hay cuenta que leer y se pinta la plantilla por
+/// defecto, oculta.
+async fn estado_de_la_capa(
+    app: &AppHandle,
+    nucleo: &Nucleo,
+) -> Result<LayerInitialState, AppError> {
+    let user_id = usuario(nucleo).unwrap_or_default();
+    nucleo
+        .personalizacion
+        .estado_de_la_capa(
+            nucleo.planificador.base(),
+            &user_id,
+            &carpetas(app),
+            nucleo.host.monitores(),
+            estado_del_host(nucleo),
+        )
+        .await
+}
+
+/// EV-16 `wallpaper_status_changed`: la ventana principal muestra el aviso con `fallback_default` y la capa vuelve
+/// a leer su estado. Antes, el host muestra la capa con sesión y anclaje, y la oculta sin sesión (CA05). Lo llaman
+/// el arranque, el inicio de sesión y la creación de la cuenta. DUDA: HE-02-HU01 el cierre de sesión (P12) debe
+/// llamarlo también para ocultar la capa.
+pub async fn avisar_wallpaper(app: &AppHandle) {
+    let nucleo = app.state::<Nucleo>();
+    crate::host_del_wallpaper::mostrar_capa(
+        app,
+        estado_del_host(&nucleo) != WallpaperState::Hidden && !nucleo.host.anclaje_fallido(),
+    );
+    if let Ok(capa) = estado_de_la_capa(app, &nucleo).await {
+        let _ = app.emit(
+            "wallpaper_status_changed",
+            EventMapWallpaperStatusChanged {
+                state: capa.wallpaper_state,
+            },
+        );
+    }
+}
+
+/// IPC-THEME-02 `theme_get_applied` (HE-02-HU01-ET02): el tema aplicado, o la plantilla por defecto.
+#[tauri::command]
+pub async fn theme_get_applied(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<AppliedThemeView>, ()> {
+    let _ = params;
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .tema_aplicado(nucleo.planificador.base(), &user_id)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-CAT-04 `asset_resolve` (HE-02-HU01-ET05): la ruta local de un archivo del catálogo o de la persona.
+#[tauri::command]
+pub async fn asset_resolve(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: AssetResolveParams,
+) -> Result<IpcResult<AssetResolveResult>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .recurso(
+                    nucleo.planificador.base(),
+                    &user_id,
+                    &carpetas(&app),
+                    &params.kind,
+                    &params.id,
+                )
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-DESK-01 `layer_get_initial_state` (HE-02-HU01): el primer pintado de la capa.
+#[tauri::command]
+pub async fn layer_get_initial_state(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<LayerInitialState>, ()> {
+    let _ = params;
+    Ok(leido(estado_de_la_capa(&app, &nucleo).await))
+}
+
+/// IPC-DESK-02 `wallpaper_get_status` (HE-02-HU01-CA04): el estado que la ventana principal avisa.
+#[tauri::command]
+pub async fn wallpaper_get_status(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<WallpaperStatus>, ()> {
+    let _ = params;
+    Ok(leido(estado_de_la_capa(&app, &nucleo).await.map(|c| {
+        WallpaperStatus {
+            state: c.wallpaper_state,
+        }
+    })))
+}
+
+/// `%APPDATA%\Windgets\files`; sin `APPDATA`, la carpeta temporal.
+fn carpeta_de_archivos() -> std::path::PathBuf {
+    std::env::var_os("APPDATA")
+        .map_or_else(std::env::temp_dir, std::path::PathBuf::from)
+        .join("Windgets")
+        .join("files")
 }
 
 /// Respuesta de un comando de lectura sin mensaje de resultado.
@@ -790,6 +1075,85 @@ pub async fn planner_get_today(
     let _ = params;
     Ok(leido(match usuario(&nucleo) {
         Ok(user_id) => nucleo.planificador.planificador_de_hoy(&user_id).await,
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-THEME-01 `theme_list` (HE-02-HU10): los temas guardados, el más reciente primero.
+#[tauri::command]
+pub async fn theme_list(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<Vec<ThemeSummary>>, ()> {
+    let _ = params;
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .temas(nucleo.planificador.base(), &user_id)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-THEME-03 `theme_draft_open` (HE-02-HU10): abre la pantalla Personalización del wallpaper con el tema
+/// aplicado (o el pedido) como tema en edición.
+#[tauri::command]
+pub async fn theme_draft_open(
+    nucleo: State<'_, Nucleo>,
+    params: ThemeDraftOpenParams,
+) -> Result<IpcResult<ThemeDraftView>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .abrir_borrador(
+                    nucleo.planificador.base(),
+                    &user_id,
+                    params.theme_id.as_ref().map(|id| id.0.as_str()),
+                )
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-THEME-04 `theme_draft_select` (HE-02-HU10): cambia el tema en edición sin tocar el escritorio.
+#[tauri::command]
+pub async fn theme_draft_select(
+    nucleo: State<'_, Nucleo>,
+    params: ThemeDraftSelectParams,
+) -> Result<IpcResult<ThemeDraftView>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .seleccionar_borrador(
+                    nucleo.planificador.base(),
+                    &user_id,
+                    &params.theme_id.0,
+                    params.discard_changes.unwrap_or(false),
+                )
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-THEME-05 `theme_draft_update` (HE-02-HU02): cambia la vista previa sin tocar el escritorio.
+#[tauri::command]
+pub async fn theme_draft_update(
+    nucleo: State<'_, Nucleo>,
+    params: ThemeDraftUpdateParams,
+) -> Result<IpcResult<ThemeDraftView>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .actualizar_borrador(nucleo.planificador.base(), &user_id, &params.patch)
+                .await
+        }
         Err(e) => Err(e),
     }))
 }

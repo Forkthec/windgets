@@ -13,6 +13,7 @@ import { escuchar as escucharNucleo, type Escuchar } from '@/ipc/eventos';
 import type { Invoke, ScreenId } from '@/types';
 import { ProveedorDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { MenuPrincipal, SECCIONES_MENU } from '@/ui/MenuPrincipal/MenuPrincipal';
+import { AvisoDelWallpaper } from './AvisoDelWallpaper';
 import { IndicadorSincronizacion } from './IndicadorSincronizacion';
 import { ContextoDeBloqueo } from '@/ui/VentanaEmergente/VentanaEmergente';
 
@@ -190,6 +191,7 @@ export function VentanaPrincipal({
           <IndicadorSincronizacion />
         </div>
         <div className="wg-ventana-principal__pantalla">
+          <AvisoDelWallpaper />
           {Pantalla ? <Pantalla /> : <PantallaSinConstruir nombre={NOMBRE_DE_PANTALLA[pantalla]} />}
         </div>
       </div>

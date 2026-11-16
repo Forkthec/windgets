@@ -1,4 +1,13 @@
-import type { AppError, BoardColumn, Card, Column, CommandMap, CommandName, Result } from '@/types';
+import type {
+  AppError,
+  BoardColumn,
+  Card,
+  Column,
+  CommandMap,
+  CommandName,
+  Result,
+  ThemeDraftView,
+} from '@/types';
 import textos from '@/types/messages.es.json';
 
 // Núcleo simulado para `pnpm --filter desktop dev`: «solo las vistas en el navegador, con IPC simulado»
@@ -44,11 +53,42 @@ function tableroSimulado(): BoardColumn[] {
   });
 }
 
+// Tema inicial «Mi tema» del simulado (HE-02-HU10-ET05): la plantilla por defecto y sus colores.
+const TEMA_SIMULADO: ThemeDraftView = {
+  theme_id: 'mi-tema',
+  name: 'Mi tema',
+  content: {
+    template_id: 'default',
+    background: { source: 'template_default', catalog_image_id: null, uploaded_image_id: null },
+    colors: { primary: '#96B2B2', secondary: '#829890', text: '#14201C' },
+    palette_id: null,
+    font: { id: 'nunito', size: 'medium' },
+  },
+  dirty: false,
+  applied_unsaved: false,
+  legibility: { ok: true, items: [], suggestion: null },
+};
+
 type Respuestas = {
   [K in CommandName]?: (params: CommandMap[K]['params']) => Result<CommandMap[K]['result']>;
 };
 
 const respuestas: Respuestas = {
+  theme_list: () => ({
+    ok: true,
+    value: [
+      {
+        id: TEMA_SIMULADO.theme_id,
+        name: TEMA_SIMULADO.name,
+        last_modified_at: '2026-11-01T00:00:00.000Z',
+        is_applied: true,
+        has_unapplied_changes: false,
+        has_unsaved_changes: false,
+      },
+    ],
+  }),
+  theme_draft_open: () => ({ ok: true, value: TEMA_SIMULADO }),
+  theme_draft_select: () => ({ ok: true, value: TEMA_SIMULADO }),
   connectivity_get: () => ({ ok: true, value: { online: true } }),
   sync_get_status: () => ({ ok: true, value: { status: 'synced', pending_count: 0, last_sync_at: null } }),
   auth_get_session: () => ({ ok: true, value: { state: 'signed_out', token: 'valid' } }),

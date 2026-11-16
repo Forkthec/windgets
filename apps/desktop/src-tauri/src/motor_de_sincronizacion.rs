@@ -13,9 +13,12 @@ use chrono::DateTime;
 
 use crate::cliente_de_supabase::FallaDeAuth;
 use crate::repositorios_y_archivos_locales::BaseLocal;
+pub mod catalogo;
+
 use crate::tipos::{
-    Instant, SyncChange, SyncChangeStatus, SyncPullParams, SyncPullResult, SyncPushParams,
-    SyncPushResult, SyncRow, SyncState, SyncStatus, Uuid,
+    CatalogPullParams, CatalogPullResultVariant2, Instant, SyncChange, SyncChangeStatus,
+    SyncPullParams, SyncPullResult, SyncPushParams, SyncPushResult, SyncRow, SyncState, SyncStatus,
+    Uuid,
 };
 
 /// Los cambios se envían 2 s después de guardar (datos.md, Modelo · 6; D-030).
@@ -47,6 +50,12 @@ pub trait NubeDeSincronizacion: Send + Sync {
     /// RPC-01 `server_time`: la hora del servidor, para medir el desfase del reloj (HE-15-HU03-ET05).
     fn server_time(&self, token: &str)
     -> impl Future<Output = Result<Instant, FallaDeAuth>> + Send;
+    /// RPC-04 `catalog_pull`: los catálogos activos si cambió la versión; `None` si no cambió (HE-02-HU01).
+    fn catalog_pull(
+        &self,
+        token: &str,
+        params: &CatalogPullParams,
+    ) -> impl Future<Output = Result<Option<CatalogPullResultVariant2>, FallaDeAuth>> + Send;
 }
 
 /// Lo que dejó un ciclo de envío o de descarga.
@@ -531,6 +540,8 @@ mod pruebas {
         respuestas: Mutex<Vec<SyncChangeResult>>,
         paginas: Mutex<Vec<SyncPullResult>>,
         hora: Option<i64>,
+        catalogo: Mutex<Option<CatalogPullResultVariant2>>,
+        versiones_pedidas: Mutex<Vec<i64>>,
     }
 
     impl NubeDeSincronizacion for NubeDePrueba {
@@ -592,6 +603,26 @@ mod pruebas {
             self.hora
                 .map(|h| Instant(instante(h)))
                 .ok_or(FallaDeAuth::SinRespuesta)
+        }
+
+        async fn catalog_pull(
+            &self,
+            _token: &str,
+            params: &CatalogPullParams,
+        ) -> Result<Option<CatalogPullResultVariant2>, FallaDeAuth> {
+            self.versiones_pedidas
+                .lock()
+                .unwrap()
+                .push(params.p_known_version);
+            if let Some(falla) = &self.falla {
+                return Err(falla.clone());
+            }
+            Ok(self
+                .catalogo
+                .lock()
+                .unwrap()
+                .clone()
+                .filter(|c| c.version != params.p_known_version))
         }
     }
 
@@ -1077,5 +1108,157 @@ mod pruebas {
             )
         });
         assert_eq!((descripcion.as_deref(), cursor), (Some("Nueva"), 9));
+    }
+
+    // ---------------------------------------------------------------- RPC-04 catalog_pull (HE-02-HU01-CA01)
+
+    fn catalogo(version: i64, con_minimal: bool) -> CatalogPullResultVariant2 {
+        use crate::tipos::{CatalogFontRow, CatalogTemplateRow, Hex};
+        let plantilla =
+            |id: &str, nombre: &str, por_defecto: bool, orden: i64| CatalogTemplateRow {
+                id: id.into(),
+                name: nombre.into(),
+                thumbnail_path: format!("templates/{id}/thumbnail.png"),
+                bundle_path: format!("templates/{id}/"),
+                default_background_path: format!("templates/{id}/background.jpg"),
+                default_color_primary: Hex("#96B2B2".into()),
+                default_color_secondary: Hex("#829890".into()),
+                default_color_text: Hex("#14201C".into()),
+                default_font_id: "nunito".into(),
+                is_default: por_defecto,
+                sort_order: orden,
+                is_active: true,
+                bundle_version: 1,
+            };
+        let mut templates = vec![plantilla("default", "Windgets", true, 1)];
+        if con_minimal {
+            templates.push(plantilla("minimal", "Minimal", false, 2));
+        }
+        CatalogPullResultVariant2 {
+            version,
+            unchanged: serde_json::Value::Bool(false),
+            templates,
+            fonts: vec![CatalogFontRow {
+                id: "nunito".into(),
+                family_name: "Nunito".into(),
+                display_name: "Nunito".into(),
+                file_path: "fonts/nunito.woff2".into(),
+                license: "OFL-1.1".into(),
+                sort_order: 1,
+                is_active: true,
+            }],
+            palettes: Vec::new(),
+            images: Vec::new(),
+            animations: Vec::new(),
+            colors: Vec::new(),
+        }
+    }
+
+    fn bajar_catalogo(base: &BaseLocal, nube: &NubeDePrueba) -> Vec<crate::tipos::CatalogKind> {
+        bloquear(catalogo::descargar_catalogo(
+            base,
+            nube,
+            &Credenciales {
+                user_id: USUARIO,
+                token: "t",
+            },
+            AHORA,
+        ))
+        .unwrap()
+    }
+
+    fn plantillas_activas(base: &BaseLocal) -> Vec<(String, i64)> {
+        bloquear(async {
+            sqlx::query_as(
+                "SELECT id, is_default FROM catalog_template WHERE is_active = 1 ORDER BY sort_order",
+            )
+            .fetch_all(base.pool().await.unwrap())
+            .await
+            .unwrap()
+        })
+    }
+
+    fn version_local(base: &BaseLocal) -> i64 {
+        bloquear(async {
+            sqlx::query_scalar("SELECT catalog_version FROM sync_state WHERE id = 1")
+                .fetch_one(base.pool().await.unwrap())
+                .await
+                .unwrap()
+        })
+    }
+
+    #[test]
+    fn catalog_pull_guarda_los_catalogos_y_su_version() {
+        // HE-02-HU01-CA01, ET02: la plantilla por defecto llega a la caché local con su fuente.
+        let base = BaseLocal::en_memoria();
+        let nube = NubeDePrueba::default();
+        *nube.catalogo.lock().unwrap() = Some(catalogo(3, true));
+        let clases = bajar_catalogo(&base, &nube);
+        assert_eq!(clases.len(), 6);
+        assert_eq!(
+            plantillas_activas(&base),
+            [("default".to_string(), 1), ("minimal".to_string(), 0)]
+        );
+        assert_eq!(version_local(&base), 3);
+        assert_eq!(*nube.versiones_pedidas.lock().unwrap(), [0]);
+    }
+
+    #[test]
+    fn catalog_pull_con_la_misma_version_no_cambia_nada() {
+        let base = BaseLocal::en_memoria();
+        let nube = NubeDePrueba::default();
+        *nube.catalogo.lock().unwrap() = Some(catalogo(3, true));
+        bajar_catalogo(&base, &nube);
+        assert!(bajar_catalogo(&base, &nube).is_empty());
+        assert_eq!(*nube.versiones_pedidas.lock().unwrap(), [0, 3]);
+    }
+
+    #[test]
+    fn catalog_pull_sin_conexion_conserva_la_cache() {
+        let base = BaseLocal::en_memoria();
+        let nube = NubeDePrueba::default();
+        *nube.catalogo.lock().unwrap() = Some(catalogo(3, false));
+        bajar_catalogo(&base, &nube);
+        let sin_red = NubeDePrueba {
+            falla: Some(FallaDeAuth::SinConexion),
+            ..NubeDePrueba::default()
+        };
+        assert!(bajar_catalogo(&base, &sin_red).is_empty());
+        assert_eq!(plantillas_activas(&base).len(), 1);
+        assert_eq!(version_local(&base), 3);
+    }
+
+    #[test]
+    fn catalog_pull_deja_inactiva_la_fila_que_ya_no_llega() {
+        // Los temas pueden referenciar la plantilla retirada: no se borra.
+        let base = BaseLocal::en_memoria();
+        let nube = NubeDePrueba::default();
+        *nube.catalogo.lock().unwrap() = Some(catalogo(3, true));
+        bajar_catalogo(&base, &nube);
+        *nube.catalogo.lock().unwrap() = Some(catalogo(4, false));
+        bajar_catalogo(&base, &nube);
+        assert_eq!(plantillas_activas(&base), [("default".to_string(), 1)]);
+        let total: i64 = bloquear(async {
+            sqlx::query_scalar("SELECT COUNT(*) FROM catalog_template")
+                .fetch_one(base.pool().await.unwrap())
+                .await
+                .unwrap()
+        });
+        assert_eq!(total, 2);
+    }
+
+    #[test]
+    fn catalog_pull_lee_las_dos_formas_de_respuesta() {
+        assert_eq!(
+            catalogo::leer_respuesta(r#"{"version":3,"unchanged":true}"#),
+            Ok(None)
+        );
+        let completa = serde_json::to_string(&catalogo(4, false)).unwrap();
+        let leida = catalogo::leer_respuesta(&completa).unwrap().unwrap();
+        assert_eq!((leida.version, leida.templates.len()), (4, 1));
+        assert_eq!(
+            catalogo::leer_respuesta("no es json"),
+            Err(FallaDeAuth::SinRespuesta)
+        );
     }
 }

@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "capa",
+  "description": "Permisos de la capa del wallpaper: solo lee del Núcleo",
+  "windows": ["capa"],
+  "permissions": ["core:default"]
+}

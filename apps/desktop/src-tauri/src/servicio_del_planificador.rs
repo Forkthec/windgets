@@ -83,7 +83,7 @@ impl Calendario for CalendarioDelSistema {
     }
 }
 
-fn error(code: ErrorCode, message: &str, field: Option<&str>) -> AppError {
+pub(crate) fn error(code: ErrorCode, message: &str, field: Option<&str>) -> AppError {
     AppError {
         code,
         message: message.to_string(),
@@ -92,7 +92,7 @@ fn error(code: ErrorCode, message: &str, field: Option<&str>) -> AppError {
     }
 }
 
-fn inesperado() -> AppError {
+pub(crate) fn inesperado() -> AppError {
     error(ErrorCode::InternalUnexpected, "", None)
 }
 
@@ -100,7 +100,7 @@ pub(crate) fn de_sqlx(_: sqlx::Error) -> AppError {
     inesperado()
 }
 
-fn resultado(code: &str, message: &str) -> ResultMessage {
+pub(crate) fn resultado(code: &str, message: &str) -> ResultMessage {
     ResultMessage {
         code: code.to_string(),
         message: message.to_string(),
@@ -267,7 +267,7 @@ pub fn id_de_card_label(card_id: &str, label_id: &str) -> String {
 }
 
 /// Campos de un cambio pendiente con la misma hora (datos.md, «Grupos atómicos»).
-fn campos(valores: &[(&str, Value)], ahora: &str) -> (Value, Value) {
+pub(crate) fn campos(valores: &[(&str, Value)], ahora: &str) -> (Value, Value) {
     let mut fields = Map::new();
     let mut mods = Map::new();
     for (campo, valor) in valores {

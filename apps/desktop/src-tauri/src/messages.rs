@@ -140,6 +140,67 @@ pub const RANGO_MUY_LARGO: &str = "El rango máximo es de un año.";
 /// `card.not_found` (HE-07-HU04-CA11; DP-04: el mismo texto al consultar, eliminar o mover).
 pub const TARJETA_NO_EXISTE: &str = "Esta tarjeta ya no existe.";
 
+// HE-02-HU10 · Seleccionar el tema en edición (IPC-THEME-04 theme_draft_select).
+
+/// `draft.unsaved_changes` (HE-02-HU10-CA03, M-04). `<nombre del tema en edición>` es el dato variable.
+pub const CAMBIOS_SIN_GUARDAR_AL_CAMBIAR_DE_TEMA: &str = "Tienes cambios sin guardar en el tema “<nombre del tema en edición>”. ¿Deseas cambiar de tema sin guardarlos?";
+
+/// El mensaje de M-04 con el nombre del tema en edición.
+pub fn cambios_sin_guardar_al_cambiar_de_tema(nombre: &str) -> String {
+    CAMBIOS_SIN_GUARDAR_AL_CAMBIAR_DE_TEMA.replace("<nombre del tema en edición>", nombre)
+}
+
+// HE-02-HU03 · Seleccionar la imagen de fondo de la plantilla (IPC-CAT-03 image_import).
+
+/// `image.format_not_allowed` (HE-02-HU03-CA05).
+pub const FORMATO_DE_IMAGEN_NO_PERMITIDO: &str =
+    "Formato no permitido. Selecciona imágenes JPG, JPEG o PNG.";
+/// `image.too_large` (HE-02-HU03-CA06).
+pub const IMAGEN_MUY_GRANDE: &str = "La imagen supera el tamaño máximo de 20 MB.";
+/// `image.unreadable` (HE-02-HU03-CA07).
+pub const IMAGEN_ILEGIBLE: &str =
+    "No pudimos leer la imagen. Verifica que el archivo no esté dañado.";
+
+// HE-02-HU11 · Guardar en el tema en edición los cambios de la vista previa (IPC-THEME-07 theme_draft_save).
+
+/// Resultado de `theme_draft_save` con un tema que no es el aplicado (HE-02-HU11-CA01). `<nombre del tema>` es el
+/// dato variable.
+pub const CAMBIOS_GUARDADOS_EN_EL_TEMA: &str = "Cambios guardados en el tema “<nombre del tema>”.";
+/// Resultado de `theme_draft_save` con el tema aplicado (HE-02-HU11-CA02).
+pub const CAMBIOS_GUARDADOS_EN_EL_TEMA_APLICADO: &str =
+    "Cambios guardados. Selecciona Aplicar para verlos en tu escritorio.";
+/// `draft.no_changes` (HE-02-HU11-CA03): texto de la opción «Guardar» deshabilitada.
+pub const SIN_CAMBIOS_PARA_GUARDAR: &str = "No hay cambios para guardar.";
+
+/// Aviso cuando el wallpaper aplicado no se puede mostrar (HE-02-HU01-CA04, P-WAL-02).
+pub const NO_SE_PUDO_MOSTRAR_EL_WALLPAPER: &str =
+    "No pudimos mostrar tu wallpaper. Se aplicó el wallpaper por defecto.";
+
+/// El mensaje de CA01 con el nombre del tema.
+pub fn cambios_guardados_en_el_tema(nombre: &str) -> String {
+    CAMBIOS_GUARDADOS_EN_EL_TEMA.replace("<nombre del tema>", nombre)
+}
+
+// HE-02-HU12 · Aplicar al escritorio los cambios de la vista previa (IPC-THEME-09 theme_draft_apply).
+
+/// Resultado de `theme_draft_apply` con `mode: 'apply'` (HE-02-HU12-CA01).
+pub const TEMA_APLICADO: &str = "Tema “<nombre del tema>” aplicado.";
+/// Resultado de `theme_draft_apply` con `mode: 'save_and_apply'` (HE-02-HU12-CA03).
+pub const TEMA_GUARDADO_Y_APLICADO: &str = "Tema “<nombre del tema>” guardado y aplicado.";
+/// Resultado de `theme_draft_apply` con `mode: 'apply_without_saving'` (HE-02-HU12-CA04).
+pub const CAMBIOS_APLICADOS_SIN_GUARDAR: &str =
+    "Cambios aplicados. Recuerda guardarlos para no perderlos.";
+/// `draft.unsaved_changes_on_apply` (HE-02-HU12-CA02, M-15).
+pub const CAMBIOS_SIN_GUARDAR_AL_APLICAR: &str =
+    "Tienes cambios sin guardar en el tema “<nombre del tema>”. ¿Qué deseas hacer?";
+/// `theme.already_applied` (HE-02-HU12-CA06): texto de la opción «Aplicar» deshabilitada.
+pub const TEMA_YA_APLICADO: &str = "Este tema ya está aplicado.";
+
+/// Un texto de HE-02-HU12 con el nombre del tema.
+pub fn con_nombre_del_tema(texto: &str, nombre: &str) -> String {
+    texto.replace("<nombre del tema>", nombre)
+}
+
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
     ("SERVICIO_NO_DISPONIBLE", SERVICIO_NO_DISPONIBLE),
@@ -184,7 +245,38 @@ pub const TEXTOS: &[(&str, &str)] = &[
         TARJETA_ACTUALIZADA_SIN_BLOQUE,
     ),
     ("TARJETA_ELIMINADA", TARJETA_ELIMINADA),
+    (
+        "CAMBIOS_SIN_GUARDAR_AL_CAMBIAR_DE_TEMA",
+        CAMBIOS_SIN_GUARDAR_AL_CAMBIAR_DE_TEMA,
+    ),
     ("TARJETA_ASIGNADA_AL_BLOQUE", TARJETA_ASIGNADA_AL_BLOQUE),
+    (
+        "FORMATO_DE_IMAGEN_NO_PERMITIDO",
+        FORMATO_DE_IMAGEN_NO_PERMITIDO,
+    ),
+    ("IMAGEN_MUY_GRANDE", IMAGEN_MUY_GRANDE),
+    ("IMAGEN_ILEGIBLE", IMAGEN_ILEGIBLE),
+    ("CAMBIOS_GUARDADOS_EN_EL_TEMA", CAMBIOS_GUARDADOS_EN_EL_TEMA),
+    (
+        "CAMBIOS_GUARDADOS_EN_EL_TEMA_APLICADO",
+        CAMBIOS_GUARDADOS_EN_EL_TEMA_APLICADO,
+    ),
+    ("SIN_CAMBIOS_PARA_GUARDAR", SIN_CAMBIOS_PARA_GUARDAR),
+    (
+        "NO_SE_PUDO_MOSTRAR_EL_WALLPAPER",
+        NO_SE_PUDO_MOSTRAR_EL_WALLPAPER,
+    ),
+    ("TEMA_APLICADO", TEMA_APLICADO),
+    ("TEMA_GUARDADO_Y_APLICADO", TEMA_GUARDADO_Y_APLICADO),
+    (
+        "CAMBIOS_APLICADOS_SIN_GUARDAR",
+        CAMBIOS_APLICADOS_SIN_GUARDAR,
+    ),
+    (
+        "CAMBIOS_SIN_GUARDAR_AL_APLICAR",
+        CAMBIOS_SIN_GUARDAR_AL_APLICAR,
+    ),
+    ("TEMA_YA_APLICADO", TEMA_YA_APLICADO),
     ("BLOQUE_YA_PASO", BLOQUE_YA_PASO),
     (
         "BLOQUE_DESPUES_DE_FECHA_LIMITE",

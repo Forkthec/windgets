@@ -15,7 +15,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "=2.7.4", features = [] }
 
 [dependencies]
-tauri = { version = "=2.12.5", features = [] }
+tauri = { version = "=2.12.5", features = ["protocol-asset"] }
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = "=1.0.154"
 ts-rs = { version = "=12.0.1", features = ["no-serde-warnings"] }
@@ -28,8 +28,12 @@ sqlx = { version = "=0.8.6", default-features = false, features = ["sqlite", "ru
 uuid = { version = "=1.29.2", features = ["v4", "v5"] }
 # Fecha actual del computador para «no puede ser anterior a hoy» (HE-07-HU01-ET08).
 chrono = { version = "=0.4.45", default-features = false, features = ["clock", "std"] }
+# SHA-256 de las imágenes propias (uploaded_image.sha256, HE-02-HU03-ET04); ya viene con Tauri.
+sha2 = "=0.10.9"
 # Preparar la base local una sola vez en el primer uso (OnceCell asíncrono); la misma versión que trae Tauri.
 tokio = { version = "=1.54.1", default-features = false, features = ["sync"] }
+# Explorador de archivos de Windows para «Subir imagen» (HE-02-HU03-ET06, X-02).
+tauri-plugin-dialog = "=2.8.4"
 
 # API de Windows para el Host del wallpaper (INT-07, contratos.md): la misma versión que ya trae Tauri.
 [target.'cfg(windows)'.dependencies]

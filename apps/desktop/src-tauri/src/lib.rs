@@ -20,6 +20,7 @@ pub mod tipos;
 /// (solo en Windows) arranca además el prototipo del spike P01 (WorkerW y Raw Input, D-131 y D-186).
 pub fn run() {
     let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .manage(puente_ipc::Nucleo::nuevo())
         .invoke_handler(tauri::generate_handler![
             puente_ipc::connectivity_get,
@@ -51,12 +52,31 @@ pub fn run() {
             puente_ipc::card_assign_time_block,
             puente_ipc::planner_get_today,
             puente_ipc::sync_get_status,
+            puente_ipc::theme_list,
+            puente_ipc::theme_draft_open,
+            puente_ipc::theme_draft_select,
+            puente_ipc::theme_draft_update,
+            puente_ipc::image_import,
+            puente_ipc::theme_draft_save,
+            puente_ipc::theme_draft_apply,
+            puente_ipc::theme_get_applied,
+            puente_ipc::asset_resolve,
+            puente_ipc::layer_get_initial_state,
+            puente_ipc::wallpaper_get_status,
         ])
         .setup(|app| {
             puente_ipc::vigilar_conexion(app.handle().clone());
             puente_ipc::sincronizar(app.handle().clone());
             #[cfg(all(windows, feature = "spike"))]
             host_del_wallpaper::spike::iniciar(app.handle())?;
+            // HE-02-HU01: la capa se ancla a WorkerW al abrir la aplicación y se muestra si hay sesión guardada
+            // (CA02); sin sesión se queda el fondo original de Windows (CA05).
+            #[cfg(all(windows, not(feature = "spike")))]
+            host_del_wallpaper::anclaje::iniciar(app.handle());
+            let manejador = app.handle().clone();
+            tauri::async_runtime::spawn(
+                async move { puente_ipc::avisar_wallpaper(&manejador).await },
+            );
             Ok(())
         });
     if let Err(error) = builder.run(tauri::generate_context!()) {
