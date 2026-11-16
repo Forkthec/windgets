@@ -68,8 +68,7 @@ CRCCheck off
 !define ESQUEMAKEY "Software\Classes\windgets"
 !define ESTIMATEDSIZE "{{estimated_size}}"
 
-; Requisitos del sistema (CD-02-HU01-ET04; D-050, D-057).
-!define COMPILACION_WIN10_22H2 19045
+; Requisitos del sistema (CD-02-HU01-ET04; D-050, D-207, D-208).
 !define COMPILACION_WIN11 22000
 !define ESPACIO_REQUERIDO_MB 500
 
@@ -77,7 +76,7 @@ CRCCheck off
 !define MARCA_INTEGRIDAD 0x31494757
 
 ; Textos literales de CD-02 (los CA son la autoridad).
-!define TXT_NO_COMPATIBLE "Este computador no es compatible. Necesitas Windows 10 versión 22H2 o Windows 11, de 64 bits (x64)."
+!define TXT_NO_COMPATIBLE "Este computador no es compatible. Necesitas Windows 11, de 64 bits (x64)."
 !define TXT_SIN_ESPACIO "No hay suficiente espacio en disco. Libera al menos 500 MB e intenta de nuevo."
 !define TXT_YA_INSTALADA "Windgets ya está instalada. ¿Deseas reinstalarla?"
 !define TXT_INCOMPLETA "Encontramos una instalación incompleta. Vamos a repararla."
@@ -238,7 +237,7 @@ Function VerificarIntegridad
   System::Call 'kernel32::CloseHandle(p r1)'
 FunctionEnd
 
-; Windows 10 versión 22H2 (compilación 19045) o Windows 11 (22000 o posterior), con procesador x64. Deja $0 en 1
+; Windows 11 (compilación 22000 o posterior), con procesador x64. Deja $0 en 1
 ; si cumple (CD-02-HU01-CA03, ET04).
 Function VerificarSistema
   StrCpy $0 0
@@ -248,8 +247,7 @@ Function VerificarSistema
   SetRegView 64
   ReadRegStr $1 HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion" "CurrentBuildNumber"
   SetRegView lastused
-  ${If} $1 = ${COMPILACION_WIN10_22H2}
-  ${OrIf} $1 >= ${COMPILACION_WIN11}
+  ${If} $1 >= ${COMPILACION_WIN11}
     StrCpy $0 1
   ${EndIf}
 FunctionEnd

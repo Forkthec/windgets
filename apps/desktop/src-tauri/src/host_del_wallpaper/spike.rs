@@ -55,7 +55,7 @@ const BOTON_DERECHO_ABAJO: u16 = 0x0004;
 const CAPA: &str = "capa";
 const TERCERA_VISTA: &str = "edicion";
 
-/// Cómo quedó la jerarquía del escritorio. Windows 10 y Windows 11 se comportan distinto (HE-02-HU01-ET09).
+/// Cómo quedó la jerarquía del escritorio. Windows 11 puede comportarse distinto según la compilación (HE-02-HU01-ET09).
 #[derive(Clone, Copy, Debug, serde::Serialize)]
 #[serde(rename_all = "snake_case")]
 enum Forma {
