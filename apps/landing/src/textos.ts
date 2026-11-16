@@ -18,8 +18,7 @@ export const BOTON_DESCARGA = 'Descargar para Windows';
 export const REQUISITOS =
   'Requisitos: Windows 11, de 64 bits (x64), con al menos 500 MB libres y conexión a internet para iniciar sesión por primera vez.';
 
-export const AVISO_SIN_WINDOWS =
-  'Windgets está disponible solo para Windows 11, de 64 bits.';
+export const AVISO_SIN_WINDOWS = 'Windgets está disponible solo para Windows 11, de 64 bits.';
 
 export const AVISO_ARQUITECTURA =
   'Es posible que tu equipo no cumpla los requisitos. El instalador lo comprobará antes de instalar.';
