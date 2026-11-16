@@ -1,6 +1,6 @@
 // HE-04 en P07 · Widgets. Una prueba por CA en la vista; las reglas del Núcleo tienen su prueba ca_he_04_* en
 // servicio_de_personalizacion_y_configuracion/pruebas_de_widgets.rs.
-import { render, screen as pantalla, within } from '@testing-library/react';
+import { act, fireEvent, render, screen as pantalla, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { Capa } from '@/capa/Capa';
 import type { Escuchar } from '@/ipc/eventos';
@@ -68,9 +68,15 @@ const AGREGADOS: WidgetItem[] = [
 /** Abre Widgets con la lista que devuelve el Núcleo (ya en orden). */
 async function abrir(lista: WidgetItem[]): Promise<NucleoDelPlanificador & { widgets: WidgetItem[] }> {
   const widgets = lista.map((w) => ({ ...w }));
-  const nucleo = await abrirPantalla('widgets', 'Widgets', Widgets, [], (n) =>
-    n.responder('widget_list', () => ({ ok: true, value: widgets.map((w) => ({ ...w })) })),
-  );
+  const nucleo = await abrirPantalla('widgets', 'Widgets', Widgets, [], (n) => {
+    n.responder('widget_list', () => ({ ok: true, value: widgets.map((w) => ({ ...w })) }));
+    n.responder('widget_set_active', ({ widget_id, active }) => {
+      const w = widgets.find((x) => x.widget_id === widget_id);
+      if (!w) return { ok: false, error: { code: 'widget.not_found', message: '' } };
+      w.is_active = active;
+      return { ok: true, value: { ...w } };
+    });
+  });
   await screen.findByRole('list', { name: 'Lista de widgets' });
   return Object.assign(nucleo, { widgets });
 }
@@ -85,9 +91,10 @@ function fila(i: number): HTMLElement {
   return f;
 }
 
-/** La capa del escritorio con los rectángulos de los widgets activos que da el Núcleo. */
-async function pintarCapa(widgets: WidgetRect[]) {
-  const estado: LayerInitialState = {
+/** La capa del escritorio con los rectángulos de los widgets activos que da el Núcleo en cada lectura. */
+async function pintarCapa(widgets: WidgetRect[] | (() => WidgetRect[])) {
+  const leer = typeof widgets === 'function' ? widgets : () => widgets;
+  const estado = (): LayerInitialState => ({
     applied: {
       template_id: 'default',
       background: { source: 'template_default', catalog_image_id: null, uploaded_image_id: null },
@@ -95,20 +102,26 @@ async function pintarCapa(widgets: WidgetRect[]) {
       palette_id: null,
       font: { id: 'nunito', size: 'medium' },
     },
-    widgets,
+    widgets: leer(),
     monitors: [],
     wallpaper_state: 'ok',
-  };
+  });
   const invocar = ((comando: string) =>
     Promise.resolve(
       comando === 'layer_get_initial_state'
-        ? { ok: true, value: estado }
+        ? { ok: true, value: estado() }
         : { ok: true, value: { url: '', state: 'unavailable' } },
     )) as unknown as Invoke;
-  const escuchar = (() => () => {}) as unknown as Escuchar;
+  const oyentes = new Map<string, Array<() => void>>();
+  const escuchar = ((evento: string, alRecibir: () => void) => {
+    oyentes.set(evento, [...(oyentes.get(evento) ?? []), alRecibir]);
+    return () => {};
+  }) as unknown as Escuchar;
   const { unmount } = render(<Capa invocar={invocar} escuchar={escuchar} />);
   const wallpaper = await pantalla.findByRole('main', { name: 'Wallpaper' });
-  return { wallpaper, unmount };
+  /** EV-12 widgets_changed hacia la capa. */
+  const avisar = () => act(async () => (oyentes.get('widgets_changed') ?? []).forEach((o) => o()));
+  return { wallpaper, unmount, avisar };
 }
 
 describe('HE-04-HU01 · Widgets', () => {
@@ -179,5 +192,66 @@ describe('HE-04-HU01 · Widgets', () => {
     const { wallpaper, unmount } = await pintarCapa([]);
     expect(within(wallpaper).queryAllByRole('region')).toHaveLength(0);
     unmount();
+  });
+});
+
+/** Rectángulos de la capa: los widgets activos de la lista, cada uno con su última posición y tamaño. */
+function rectangulosDe(widgets: WidgetItem[], posiciones: Record<string, [number, number, number, number]>) {
+  return widgets
+    .filter((w) => w.is_active)
+    .map((w) => {
+      const [x, y, width, height] = posiciones[w.widget_id] ?? [0, 0, 100, 100];
+      return { widget_id: w.widget_id, type: w.type, x, y, width, height, is_active: true };
+    });
+}
+
+const POSICIONES: Record<string, [number, number, number, number]> = {
+  reloj: [40, 40, 320, 160],
+  cal: [40, 220, 320, 340],
+  tareas: [380, 40, 360, 520],
+  kanban: [760, 40, 640, 520],
+  clima: [40, 600, 320, 160],
+  texto: [40, 800, 320, 100],
+  noticias: [380, 600, 360, 300],
+};
+
+describe('HE-04-HU02 · Alternar un widget', () => {
+  it('HE-04-HU02-CA01 · Desactivar un widget activo', async () => {
+    const nucleo = await abrir([...POR_DEFECTO, ...AGREGADOS]);
+    const capa = await pintarCapa(() => rectangulosDe(nucleo.widgets, POSICIONES));
+    expect(within(capa.wallpaper).getByRole('region', { name: 'Clima' })).toBeTruthy();
+    fireEvent.click(within(fila(4)).getByRole('switch'));
+    expect(await within(fila(4)).findByText('Inactivo')).toBeTruthy();
+    expect(nucleo.llamadas.filter((l) => l.comando === 'widget_set_active').map((l) => l.params)).toEqual([
+      { widget_id: 'clima', active: false },
+    ]);
+    // ET01, ET02: con EV-12 la capa deja de pintarlo y los demás siguen igual.
+    await capa.avisar();
+    expect(within(capa.wallpaper).queryByRole('region', { name: 'Clima' })).toBeNull();
+    expect(
+      within(capa.wallpaper)
+        .getAllByRole('region')
+        .map((r) => r.getAttribute('aria-label')),
+    ).toEqual(['Reloj', 'Calendario', 'Tareas del día', 'Kanban', 'Texto']);
+    expect(filas()).toHaveLength(7);
+    capa.unmount();
+  });
+
+  it('HE-04-HU02-CA02 · Activar un widget inactivo', async () => {
+    const nucleo = await abrir([...POR_DEFECTO, ...AGREGADOS]);
+    const capa = await pintarCapa(() => rectangulosDe(nucleo.widgets, POSICIONES));
+    expect(within(capa.wallpaper).queryByRole('region', { name: 'Noticias' })).toBeNull();
+    fireEvent.click(within(fila(6)).getByRole('switch'));
+    expect(await within(fila(6)).findByText('Activo')).toBeTruthy();
+    // ET03: vuelve con su última posición y su último tamaño.
+    await capa.avisar();
+    const noticias = within(capa.wallpaper).getByRole('region', { name: 'Noticias' });
+    expect([noticias.style.left, noticias.style.top, noticias.style.width, noticias.style.height]).toEqual([
+      '380px',
+      '600px',
+      '360px',
+      '300px',
+    ]);
+    capa.unmount();
   });
 });

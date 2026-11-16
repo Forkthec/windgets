@@ -64,6 +64,7 @@ pub fn run() {
             puente_ipc::layer_get_initial_state,
             puente_ipc::wallpaper_get_status,
             puente_ipc::widget_list,
+            puente_ipc::widget_set_active,
         ])
         .setup(|app| {
             puente_ipc::vigilar_conexion(app.handle().clone());

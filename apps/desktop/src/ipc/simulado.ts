@@ -111,6 +111,12 @@ const respuestas: Respuestas = {
   }),
   theme_draft_open: () => ({ ok: true, value: TEMA_SIMULADO }),
   widget_list: () => ({ ok: true, value: WIDGETS_SIMULADOS.map((w) => ({ ...w })) }),
+  widget_set_active: ({ widget_id, active }) => {
+    const w = WIDGETS_SIMULADOS.find((x) => x.widget_id === widget_id);
+    if (!w) return error({ code: 'widget.not_found', message: '' });
+    w.is_active = active;
+    return { ok: true, value: { ...w } };
+  },
   theme_draft_select: () => ({ ok: true, value: TEMA_SIMULADO }),
   connectivity_get: () => ({ ok: true, value: { online: true } }),
   sync_get_status: () => ({ ok: true, value: { status: 'synced', pending_count: 0, last_sync_at: null } }),

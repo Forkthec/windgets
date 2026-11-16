@@ -32,8 +32,8 @@ use crate::tipos::{
 use crate::tipos::{
     AppliedThemeView, ApplyMode, AssetResolveParams, AssetResolveResult,
     EventMapAppliedThemeChanged, EventMapCatalogUpdated, EventMapWallpaperStatusChanged,
-    LayerInitialState, ThemeDraftApplyParams, ThemeDraftSaveResult, ThemeIdResult, WallpaperState,
-    WallpaperStatus, WidgetItem,
+    EventMapWidgetsChanged, LayerInitialState, ThemeDraftApplyParams, ThemeDraftSaveResult,
+    ThemeIdResult, WallpaperState, WallpaperStatus, WidgetItem, WidgetSetActiveParams,
 };
 
 /// El Núcleo que ven los comandos.
@@ -770,6 +770,43 @@ pub async fn widget_list(
         }
         Err(e) => Err(e),
     }))
+}
+
+/// IPC-WID-03 `widget_set_active` (HE-04-HU02): activa o desactiva un widget del tema aplicado. Avisa con
+/// EV-12 `widgets_changed` para que la lista y la capa vuelvan a leer (ET01; RNF-01, 5 s o menos).
+#[tauri::command]
+pub async fn widget_set_active(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: WidgetSetActiveParams,
+) -> Result<IpcResult<WidgetItem>, ()> {
+    let ahora = RelojDelSistema.ahora_ms();
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .activar_widget(
+                    nucleo.planificador.base(),
+                    &user_id,
+                    &params.widget_id.0,
+                    params.active,
+                    ahora,
+                )
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if r.is_ok() {
+        let _ = app.emit(
+            "widgets_changed",
+            EventMapWidgetsChanged {
+                widget_ids: vec![params.widget_id.clone()],
+                op: ChangeOp::Upsert,
+                origin: OriginKind::Local,
+            },
+        );
+    }
+    Ok(leido(r))
 }
 
 /// `%APPDATA%\Windgets\files`; sin `APPDATA`, la carpeta temporal.

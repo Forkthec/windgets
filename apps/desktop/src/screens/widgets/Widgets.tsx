@@ -24,6 +24,16 @@ export function Widgets() {
     if (r.ok) setWidgets(r.value);
   }, [invocar]);
 
+  // HE-04-HU02: alterna el widget entre activo e inactivo; el Núcleo lo refleja en el escritorio (EV-12) y la
+  // lista vuelve a leer, también si el widget ya no existe (`widget.not_found`).
+  const alternar = useCallback(
+    async (widget: WidgetItem, activo: boolean) => {
+      await invocar('widget_set_active', { widget_id: widget.widget_id, active: activo });
+      await leer();
+    },
+    [invocar, leer],
+  );
+
   useEffect(() => {
     void leer();
     // EV-12: al activar, desactivar, agregar, configurar o eliminar un widget la lista vuelve a leer.
@@ -48,7 +58,7 @@ export function Widgets() {
               <Interruptor
                 etiqueta={w.is_active ? 'Activo' : 'Inactivo'}
                 activo={w.is_active}
-                alCambiar={() => {}}
+                alCambiar={(activo) => void alternar(w, activo)}
               />
               {w.can_configure && <Boton>Configurar</Boton>}
               {w.can_delete && <Boton>Eliminar</Boton>}

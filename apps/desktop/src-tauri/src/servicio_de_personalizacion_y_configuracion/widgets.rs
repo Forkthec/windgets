@@ -1,7 +1,13 @@
-//! Widgets del tema aplicado (HE-04): IPC-WID-01 `widget_list` y los rectángulos que pinta la capa
-//! (IPC-DESK-01 `layer_get_initial_state`). Todo sale de la base local (`widget`, `theme_widget`).
+//! Widgets del tema aplicado (HE-04): IPC-WID-01 `widget_list`, IPC-WID-03 `widget_set_active` y los
+//! rectángulos que pinta la capa (IPC-DESK-01 `layer_get_initial_state`). Todo sale de la base local
+//! (`widget`, `theme_widget`).
+
+use serde_json::Value;
 
 use super::*;
+use crate::repositorios_y_archivos_locales::encolar_cambio;
+use crate::servicio_de_sesion::instante;
+use crate::servicio_del_planificador::campos;
 use crate::tipos::{
     AnimationConfig, CarouselConfig, EmptyConfig, ImageRef, ImageSource, StaticImageConfig,
     TextConfig, WeatherConfig, WidgetConfig, WidgetItem, WidgetRect, WidgetType,
@@ -235,5 +241,66 @@ impl ServicioDePersonalizacion {
                 })
             })
             .collect()
+    }
+
+    /// IPC-WID-03 `widget_set_active`: activa o desactiva el widget en el tema aplicado sin eliminarlo ni tocar
+    /// los demás (HE-04-HU02-ET02). Solo cambia `is_active`: al activarlo vuelve con su última posición y su
+    /// último tamaño (ET03). El cambio se encola para sincronizarlo (D-189) y el puente avisa a la capa con
+    /// EV-12 (ET01, RNF-01). Un widget que no está en el tema aplicado es `widget.not_found`.
+    pub async fn activar_widget(
+        &self,
+        base: &BaseLocal,
+        user_id: &str,
+        widget_id: &str,
+        activo: bool,
+        ahora_ms: i64,
+    ) -> Result<WidgetItem, AppError> {
+        let no_existe = || error(ErrorCode::WidgetNotFound, "", None);
+        let tema = Self::id_del_tema_aplicado(base, user_id)
+            .await?
+            .ok_or_else(no_existe)?;
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let id_del_widget_del_tema: String = sqlx::query_scalar(
+            "SELECT id FROM theme_widget WHERE user_id = ? AND theme_id = ? AND widget_id = ?",
+        )
+        .bind(user_id)
+        .bind(&tema)
+        .bind(widget_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(de_sqlx)?
+        .ok_or_else(no_existe)?;
+
+        let ahora = instante(ahora_ms).0;
+        let (fields, mods) = campos(&[("is_active", Value::from(activo))], &ahora);
+        let mut tx = pool.begin().await.map_err(de_sqlx)?;
+        sqlx::query(
+            "UPDATE theme_widget SET is_active = ?, field_mods = json_patch(field_mods, ?) \
+             WHERE id = ? AND user_id = ?",
+        )
+        .bind(i64::from(activo))
+        .bind(mods.to_string())
+        .bind(&id_del_widget_del_tema)
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(de_sqlx)?;
+        encolar_cambio(
+            &mut tx,
+            "theme_widget",
+            &id_del_widget_del_tema,
+            "upsert",
+            &fields,
+            &ahora,
+        )
+        .await
+        .map_err(de_sqlx)?;
+        tx.commit().await.map_err(de_sqlx)?;
+
+        self.widgets(base, user_id)
+            .await?
+            .into_iter()
+            .find(|w| w.widget_id.0 == widget_id)
+            .ok_or_else(no_existe)
     }
 }

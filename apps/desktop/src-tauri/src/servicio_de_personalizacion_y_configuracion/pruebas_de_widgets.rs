@@ -209,3 +209,88 @@ fn ca_he_04_hu01_ca03() {
     assert!(widgets.iter().all(|w| !w.is_active));
     assert!(capa(&base, &servicio).is_empty());
 }
+
+const AHORA_MS: i64 = 1_793_600_000_000;
+
+fn activar(
+    base: &BaseLocal,
+    servicio: &ServicioDePersonalizacion,
+    widget_id: &str,
+    activo: bool,
+) -> Result<WidgetItem, AppError> {
+    bloquear(servicio.activar_widget(base, USUARIO, widget_id, activo, AHORA_MS))
+}
+
+/// Lo que viaja a la nube de un widget del tema: `fields` del cambio pendiente.
+fn pendiente(base: &BaseLocal, theme_widget_id: &str) -> Option<String> {
+    bloquear(async {
+        sqlx::query_scalar(
+            "SELECT fields FROM pending_change WHERE entity_kind = 'theme_widget' AND entity_id = ?",
+        )
+        .bind(theme_widget_id)
+        .fetch_optional(base.pool().await.unwrap())
+        .await
+        .unwrap()
+    })
+}
+
+fn rectangulo(rectangulos: &[WidgetRect], id: &str) -> Option<(i64, i64, i64, i64)> {
+    rectangulos
+        .iter()
+        .find(|r| r.widget_id.0 == id)
+        .map(|r| (r.x, r.y, r.width, r.height))
+}
+
+#[test]
+fn ca_he_04_hu02_ca01() {
+    // HE-04-HU02-CA01 · Desactivar un widget activo: la capa deja de pintarlo sin afectar a los demás y la lista
+    // lo conserva en «Inactivo» (ET01, ET02).
+    let (base, servicio) = con_widgets_agregados();
+    let antes = capa(&base, &servicio);
+    let clima = activar(&base, &servicio, CLIMA, false).unwrap();
+    assert!(!clima.is_active);
+    let despues = capa(&base, &servicio);
+    assert_eq!(rectangulo(&despues, CLIMA), None);
+    let sin_clima: Vec<_> = antes
+        .into_iter()
+        .filter(|r| r.widget_id.0 != CLIMA)
+        .collect();
+    assert_eq!(despues, sin_clima);
+    // No se elimina: sigue en la lista, en «Inactivo», y los demás no cambian.
+    let widgets = lista(&base, &servicio);
+    assert_eq!(widgets.len(), 6);
+    assert!(
+        widgets
+            .iter()
+            .any(|w| w.widget_id.0 == CLIMA && !w.is_active)
+    );
+    assert!(widgets[..4].iter().all(|w| w.is_active));
+    // El cambio viaja a la nube (D-189).
+    let fields = pendiente(&base, &CLIMA.replacen("0b", "0c", 1)).unwrap();
+    let fields: serde_json::Value = serde_json::from_str(&fields).unwrap();
+    assert_eq!(fields["is_active"]["value"], serde_json::Value::Bool(false));
+}
+
+#[test]
+fn ca_he_04_hu02_ca02() {
+    // HE-04-HU02-CA02 · Activar un widget inactivo: la capa lo pinta en su última posición y con su último
+    // tamaño (ET03).
+    let (base, servicio) = con_widgets_agregados();
+    assert_eq!(rectangulo(&capa(&base, &servicio), NOTICIAS), None);
+    let noticias = activar(&base, &servicio, NOTICIAS, true).unwrap();
+    assert!(noticias.is_active);
+    assert_eq!(
+        rectangulo(&capa(&base, &servicio), NOTICIAS),
+        Some((380, 600, 360, 300))
+    );
+}
+
+#[test]
+fn widget_set_active_de_un_widget_fuera_del_tema_aplicado_es_widget_not_found() {
+    // Error previsible de IPC-WID-03: Texto solo está en «Verano» y un id desconocido no existe.
+    let (base, servicio) = con_widgets_agregados();
+    for id in [TEXTO, "00000000-0000-4000-8000-0000000000ff"] {
+        let error = activar(&base, &servicio, id, false).unwrap_err();
+        assert_eq!(error.code, ErrorCode::WidgetNotFound);
+    }
+}

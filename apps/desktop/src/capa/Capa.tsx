@@ -71,10 +71,13 @@ export function Capa({ invocar = invocarNucleo, escuchar = escucharNucleo }: Cap
     // aplicar un tema se pinta sin reiniciar la aplicación (HE-02-HU12-CA05, ET05).
     const dejarEstado = escuchar('wallpaper_status_changed', () => void leer());
     const dejarTema = escuchar('applied_theme_changed', () => void leer());
+    // EV-12: al activar o desactivar un widget la capa lo muestra u oculta en 5 s o menos (HE-04-HU02-ET01).
+    const dejarWidgets = escuchar('widgets_changed', () => void leer());
     return () => {
       vigente = false;
       dejarEstado();
       dejarTema();
+      dejarWidgets();
     };
   }, [escuchar, invocar]);
 
