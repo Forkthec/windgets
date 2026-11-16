@@ -118,6 +118,7 @@ impl ServicioDePersonalizacion {
         ahora_ms: i64,
         borrador: &Borrador,
     ) -> Result<String, AppError> {
+        datos_descargados(base, user_id, &borrador.contenido).await?;
         let pool = base.pool().await.map_err(de_sqlx)?;
         let ahora = instante(ahora_ms).0;
         let es_nuevo = borrador.theme_id == TEMA_INICIAL_VIRTUAL;
@@ -207,6 +208,35 @@ impl ServicioDePersonalizacion {
         });
         Ok(id)
     }
+}
+
+/// El tema y la copia aplicada referencian el perfil, la plantilla y la fuente (claves foráneas). Antes de la
+/// primera descarga (`sync_pull`, `catalog_pull`) pueden faltar en la base local: en vez del error genérico se
+/// responde `service.unavailable`. DUDA: HE-02-HU12 ningún CA define el mensaje. Valor usado: «No pudimos
+/// completar la operación. Intenta de nuevo más tarde.» (RT-04-CA13).
+pub(super) async fn datos_descargados(
+    base: &BaseLocal,
+    user_id: &str,
+    contenido: &ThemeContent,
+) -> Result<(), AppError> {
+    let pool = base.pool().await.map_err(de_sqlx)?;
+    let presentes: i64 = sqlx::query_scalar(
+        "SELECT (SELECT COUNT(*) FROM profile WHERE user_id = ?)          + (SELECT COUNT(*) FROM catalog_template WHERE id = ?)          + (SELECT COUNT(*) FROM catalog_font WHERE id = ?)",
+    )
+    .bind(user_id)
+    .bind(&contenido.template_id)
+    .bind(&contenido.font.id)
+    .fetch_one(pool)
+    .await
+    .map_err(de_sqlx)?;
+    if presentes < 3 {
+        return Err(error(
+            ErrorCode::ServiceUnavailable,
+            messages::SERVICIO_NO_DISPONIBLE,
+            None,
+        ));
+    }
+    Ok(())
 }
 
 /// Los tres colores del tema son obligatorios (`color.required`, HE-02-HU05).

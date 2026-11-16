@@ -317,3 +317,23 @@ fn guardar_despues_de_aplicar_sin_guardar_quita_la_marca() {
     let error = aplicar(&servicio, &base, ApplyMode::Apply).unwrap_err();
     assert_eq!(error.code, ErrorCode::ThemeAlreadyApplied);
 }
+
+#[test]
+fn sin_la_primera_descarga_aplicar_y_guardar_avisan_sin_el_error_generico() {
+    // Regla de errores visibles: sin el perfil ni la plantilla locales (antes de sync_pull y catalog_pull), la
+    // clave foránea fallaría; el Núcleo responde `service.unavailable` con su mensaje.
+    let base = BaseLocal::en_memoria();
+    let servicio = ServicioDePersonalizacion::nuevo();
+    bloquear(servicio.abrir_borrador(&base, USUARIO, None)).unwrap();
+    editar_un_color(&servicio);
+    for modo in [ApplyMode::SaveAndApply, ApplyMode::ApplyWithoutSaving] {
+        let error = aplicar(&servicio, &base, modo).unwrap_err();
+        assert_eq!(error.code, ErrorCode::ServiceUnavailable);
+        assert_eq!(
+            error.message,
+            "No pudimos completar la operación. Intenta de nuevo más tarde."
+        );
+    }
+    let error = bloquear(servicio.guardar_borrador(&base, USUARIO, AHORA_MS)).unwrap_err();
+    assert_eq!(error.code, ErrorCode::ServiceUnavailable);
+}

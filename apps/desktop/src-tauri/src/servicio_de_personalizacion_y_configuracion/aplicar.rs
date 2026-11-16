@@ -4,7 +4,7 @@
 
 use serde_json::Value;
 
-use super::guardado::{columnas, validar_colores};
+use super::guardado::{columnas, datos_descargados, validar_colores};
 use super::*;
 use crate::repositorios_y_archivos_locales::encolar_cambio;
 use crate::servicio_de_sesion::{ConMensaje, instante};
@@ -115,6 +115,7 @@ impl ServicioDePersonalizacion {
         ahora_ms: i64,
         borrador: &Borrador,
     ) -> Result<(), AppError> {
+        datos_descargados(base, user_id, &borrador.contenido).await?;
         let pool = base.pool().await.map_err(de_sqlx)?;
         let ahora = instante(ahora_ms).0;
         let mut valores: Vec<(&'static str, Value)> = columnas(&borrador.contenido)
