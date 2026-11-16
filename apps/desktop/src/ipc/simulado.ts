@@ -7,6 +7,7 @@ import type {
   CommandName,
   Result,
   ThemeDraftView,
+  WidgetItem,
 } from '@/types';
 import textos from '@/types/messages.es.json';
 
@@ -69,6 +70,27 @@ const TEMA_SIMULADO: ThemeDraftView = {
   legibility: { ok: true, items: [], suggestion: null },
 };
 
+// Los cuatro widgets por defecto de la semilla de la cuenta, activos (HE-04-HU01-ET04).
+const WIDGETS_SIMULADOS: WidgetItem[] = (
+  [
+    ['reloj', 'clock', 'Reloj'],
+    ['calendario', 'calendar', 'Calendario'],
+    ['tareas', 'daily_tasks', 'Tareas del día'],
+    ['kanban', 'kanban', 'Kanban'],
+  ] as const
+).map(([widget_id, type, display_name]) => ({
+  widget_id,
+  type,
+  display_name,
+  distinguishing_value: null,
+  is_default: true,
+  is_active: true,
+  can_configure: false,
+  can_delete: false,
+  paused_by_load: false,
+  config: {},
+}));
+
 type Respuestas = {
   [K in CommandName]?: (params: CommandMap[K]['params']) => Result<CommandMap[K]['result']>;
 };
@@ -88,6 +110,7 @@ const respuestas: Respuestas = {
     ],
   }),
   theme_draft_open: () => ({ ok: true, value: TEMA_SIMULADO }),
+  widget_list: () => ({ ok: true, value: WIDGETS_SIMULADOS.map((w) => ({ ...w })) }),
   theme_draft_select: () => ({ ok: true, value: TEMA_SIMULADO }),
   connectivity_get: () => ({ ok: true, value: { online: true } }),
   sync_get_status: () => ({ ok: true, value: { status: 'synced', pending_count: 0, last_sync_at: null } }),

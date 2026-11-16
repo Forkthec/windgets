@@ -6,6 +6,7 @@ import { Reports } from '@/screens/reports/Reports';
 import { PlannerDaily } from '@/screens/planner_daily/PlannerDaily';
 import { Register } from '@/screens/register/Register';
 import { SignIn } from '@/screens/sign_in/SignIn';
+import { Widgets } from '@/screens/widgets/Widgets';
 import { VentanaPrincipal } from '@/ventana_principal/VentanaPrincipal';
 
 // Ventana principal (C-01). Las pantallas llegan en los pasos siguientes del plan.
@@ -19,6 +20,7 @@ export default function App() {
         personalization: Personalization,
         planner_daily: PlannerDaily,
         reports: Reports,
+        widgets: Widgets,
       }}
       pantallasDeCuenta={{ register: Register, sign_in: SignIn }}
     />

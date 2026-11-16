@@ -2,11 +2,28 @@ import { useEffect, useState } from 'react';
 import { invocar as invocarNucleo } from '@/ipc/cliente';
 import { escuchar as escucharNucleo, type Escuchar } from '@/ipc/eventos';
 import { urlDeArchivo } from '@/ipc/archivos';
-import type { AssetResolveParams, Invoke, LayerInitialState, ThemeContent } from '@/types';
+import type { AssetResolveParams, Invoke, LayerInitialState, ThemeContent, WidgetType } from '@/types';
 
 // C-02 Capa del wallpaper y los widgets (P-WAL-02, HE-02-HU01). Es la ventana anclada detrás de los íconos del
 // escritorio (D-131): pinta el wallpaper del tema aplicado a partir de lo guardado, sin red (IPC-DESK-01; RNF-08).
-// Los widgets llegan con P07 (docs/DUDAS.md).
+// Encima pinta los widgets activos del tema aplicado en su posición y tamaño (HE-04-HU01-CA01, CA03). El
+// contenido de cada widget llega con su HU (Reloj HE-04-HU03, Tareas del día HE-06-HU02, Kanban HE-06-HU05,
+// Calendario HE-06-HU07; docs/DUDAS.md).
+
+/** Nombre de cada widget (glosario). */
+export const NOMBRE_DEL_WIDGET: Record<WidgetType, string> = {
+  clock: 'Reloj',
+  calendar: 'Calendario',
+  daily_tasks: 'Tareas del día',
+  kanban: 'Kanban',
+  weather: 'Clima',
+  news: 'Noticias',
+  music_player: 'Reproductor de música',
+  animation: 'Animación',
+  image_carousel: 'Carrusel de imágenes',
+  static_image: 'Imagen estática',
+  text: 'Texto',
+};
 
 /** El archivo del fondo del tema: la imagen propia, la del catálogo o la de la plantilla. */
 export function recursoDelFondo(contenido: ThemeContent): AssetResolveParams | null {
@@ -82,6 +99,15 @@ export function Capa({ invocar = invocarNucleo, escuchar = escucharNucleo }: Cap
             }
           : {}),
       }}
-    />
+    >
+      {pintado.estado.widgets.map((w) => (
+        <section
+          key={w.widget_id}
+          aria-label={NOMBRE_DEL_WIDGET[w.type]}
+          data-widget-id={w.widget_id}
+          style={{ position: 'absolute', left: w.x, top: w.y, width: w.width, height: w.height }}
+        />
+      ))}
+    </main>
   );
 }

@@ -33,7 +33,7 @@ use crate::tipos::{
     AppliedThemeView, ApplyMode, AssetResolveParams, AssetResolveResult,
     EventMapAppliedThemeChanged, EventMapCatalogUpdated, EventMapWallpaperStatusChanged,
     LayerInitialState, ThemeDraftApplyParams, ThemeDraftSaveResult, ThemeIdResult, WallpaperState,
-    WallpaperStatus,
+    WallpaperStatus, WidgetItem,
 };
 
 /// El Núcleo que ven los comandos.
@@ -752,6 +752,24 @@ pub async fn wallpaper_get_status(
             state: c.wallpaper_state,
         }
     })))
+}
+
+/// IPC-WID-01 `widget_list` (HE-04-HU01): los widgets del tema aplicado con su estado activo o inactivo.
+#[tauri::command]
+pub async fn widget_list(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<Vec<WidgetItem>>, ()> {
+    let _ = params;
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .widgets(nucleo.planificador.base(), &user_id)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
 }
 
 /// `%APPDATA%\Windgets\files`; sin `APPDATA`, la carpeta temporal.

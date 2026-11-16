@@ -515,6 +515,7 @@ mod aplicar;
 pub mod escritorio;
 mod guardado;
 mod imagenes;
+mod widgets;
 
 #[cfg(test)]
 mod pruebas_de_aplicar;
@@ -526,5 +527,7 @@ mod pruebas_de_guardado;
 mod pruebas_de_imagenes;
 #[cfg(test)]
 mod pruebas_de_plantillas;
+#[cfg(test)]
+mod pruebas_de_widgets;
 #[cfg(test)]
 mod pruebas_del_tema_en_edicion;

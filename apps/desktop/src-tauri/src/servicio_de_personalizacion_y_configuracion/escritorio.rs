@@ -173,8 +173,8 @@ impl ServicioDePersonalizacion {
         };
         Ok(LayerInitialState {
             applied,
-            // DUDA: HE-02-HU01 los widgets de la capa llegan con HE-04 y P07. Valor usado: lista vacía.
-            widgets: Vec::new(),
+            // Los widgets activos del tema aplicado encima del wallpaper (HE-04-HU01-CA01, CA03).
+            widgets: Self::rectangulos_activos(base, user_id).await?,
             monitors: monitores,
             wallpaper_state,
         })
