@@ -1,6 +1,6 @@
 # Política de firma de código (borrador)
 
-> Borrador para la solicitud a SignPath Foundation. Propuesta de roles: dos aprobadores y dos revisores. El equipo confirma las personas antes de enviarla.
+> Borrador para la solicitud a SignPath Foundation. Roles asignados por Paula el 16-nov-2026: dos aprobadores y dos revisores.
 
 Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
 
@@ -13,8 +13,8 @@ Solo `Windgets-Setup.exe`, el instalador de Windgets que compila `release.yml` e
 | Rol | Qué hace | Quién |
 | --- | --- | --- |
 | Autores | Modifican el código | Equipo ForkTech: Juan Diego Gómez Garcés, Juan David Vela Coronado, Ana Sofía Arango Yanza y Paula Andrea Muñoz Delgado |
-| Revisores | Revisan los cambios de quien no tiene permiso de commit (pull requests) | Dos personas del equipo: las que no sean aprobadoras (por confirmar) |
-| Aprobadores | Aprueban cada solicitud de firma | Paula Andrea Muñoz Delgado y una segunda persona del equipo (por confirmar) |
+| Revisores | Revisan los cambios de quien no tiene permiso de commit (pull requests) | Juan Diego Gómez Garcés y Juan David Vela Coronado |
+| Aprobadores | Aprueban cada solicitud de firma | Paula Andrea Muñoz Delgado y Ana Sofía Arango Yanza |
 
 Todos los miembros del equipo usan verificación en dos pasos (2FA) en GitHub y en SignPath.
 
