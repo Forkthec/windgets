@@ -4,7 +4,7 @@ import { informar, WINDOWS_X64 } from './navegador';
 // CD-01-HU01 · Consultar la descripción, las funciones y los requisitos del sistema en la landing page.
 // Textos literales de los CA, carácter por carácter.
 
-const SIN_WINDOWS = 'Windgets está disponible solo para Windows 10 versión 22H2 y Windows 11, de 64 bits.';
+const SIN_WINDOWS = 'Windgets está disponible solo para Windows 11, de 64 bits.';
 const ARQUITECTURA =
   'Es posible que tu equipo no cumpla los requisitos. El instalador lo comprobará antes de instalar.';
 
@@ -29,7 +29,7 @@ test('CD-01-HU01-CA01 · Consultar la landing page', async ({ page }) => {
   await expect(descarga.getByRole('button', { name: 'Descargar para Windows' })).toBeEnabled();
   await expect(
     descarga.getByText(
-      'Requisitos: Windows 10 versión 22H2 o Windows 11, de 64 bits (x64), con al menos 500 MB libres y conexión a internet para iniciar sesión por primera vez.',
+      'Requisitos: Windows 11, de 64 bits (x64), con al menos 500 MB libres y conexión a internet para iniciar sesión por primera vez.',
       { exact: true },
     ),
   ).toBeVisible();

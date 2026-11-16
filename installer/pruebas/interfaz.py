@@ -35,7 +35,7 @@ from win32com.shell import shell, shellcon
 
 # Textos literales de CD-02 (los CA son la autoridad; los mismos de installer.nsi).
 NO_COMPATIBLE = (
-    "Este computador no es compatible. Necesitas Windows 10 versión 22H2 o Windows 11, de 64 bits (x64)."
+    "Este computador no es compatible. Necesitas Windows 11, de 64 bits (x64)."
 )
 SIN_ESPACIO = "No hay suficiente espacio en disco. Libera al menos 500 MB e intenta de nuevo."
 YA_INSTALADA = "Windgets ya está instalada. ¿Deseas reinstalarla?"
