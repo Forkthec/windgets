@@ -254,3 +254,42 @@ unsafe extern "system" fn agregar_monitor(
     });
     BOOL(1)
 }
+
+#[cfg(test)]
+mod pruebas {
+    use super::*;
+
+    /// HE-02-HU01-CA06 · Verificación técnica del wallpaper sin Lively (ET08 a ET10; D-131). Necesita el escritorio
+    /// de Windows 11 abierto con permisos estándar, así que no corre en la CI. Se corre a mano y su resultado se
+    /// registra en `docs/DUDAS.md`:
+    /// `cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml ca_he_02_hu01_ca06 -- --ignored`
+    #[test]
+    #[ignore = "verificación manual en el escritorio de Windows 11 (HE-02-HU01-CA06)"]
+    fn ca_he_02_hu01_ca06() {
+        // SAFETY: FindWindowW solo lee las dos cadenas, que son literales terminados en cero.
+        let progman = unsafe { FindWindowW(w!("Progman"), PCWSTR::null()) };
+        assert!(progman.is_ok(), "No se encontró la ventana Progman.");
+        let Ok(progman) = progman else {
+            return;
+        };
+        // SAFETY: el mensaje no lleva punteros y el tiempo de espera es de 1 s.
+        unsafe {
+            SendMessageTimeoutW(
+                progman,
+                MENSAJE_CREAR_WORKERW,
+                WPARAM(0xD),
+                LPARAM(0x1),
+                SMTO_NORMAL,
+                1000,
+                None,
+            );
+        }
+        assert!(
+            buscar_workerw(progman).is_some(),
+            "No se encontró la ventana WorkerW detrás de los íconos."
+        );
+        let monitores = monitores();
+        assert!(!monitores.is_empty(), "Windows no informó ningún monitor.");
+        assert!(geometria::escritorio_virtual(&monitores).is_some());
+    }
+}
