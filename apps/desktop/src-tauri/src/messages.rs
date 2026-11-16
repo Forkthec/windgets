@@ -205,6 +205,31 @@ pub fn con_nombre_del_tema(texto: &str, nombre: &str) -> String {
 /// RT-04).
 pub const WIDGET_YA_AGREGADO: &str = "Ya agregaste este widget.";
 
+// HE-16-HU03 · Cerrar sesión desde la pantalla Configuración (IPC-AUTH-13, IPC-AUTH-14).
+
+/// Resultado de `auth_sign_out` (HE-16-HU03-CA01, CA04).
+pub const SESION_CERRADA: &str = "Sesión cerrada.";
+/// M-11 Confirmación de cerrar sesión (HE-16-HU03-CA05, ET02).
+pub const DESEAS_CERRAR_SESION: &str = "¿Deseas cerrar sesión?";
+/// M-12 Confirmación de cerrar sesión con cambios sin sincronizar (HE-16-HU03-CA03, ET05).
+pub const CAMBIOS_SIN_SINCRONIZAR_AL_CERRAR_SESION: &str =
+    "Tienes cambios sin sincronizar. Si cierras sesión ahora, se perderán. ¿Deseas cerrar sesión?";
+
+// HE-16-HU02 · Alternar el inicio automático en la pantalla Configuración (IPC-DESK-10, IPC-DESK-11; INT-08).
+
+/// Resultado de `autostart_set` al activar (HE-16-HU02-CA02).
+pub const INICIO_AUTOMATICO_ACTIVADO: &str = "Inicio automático activado.";
+/// Resultado de `autostart_set` al desactivar (HE-16-HU02-CA01).
+pub const INICIO_AUTOMATICO_DESACTIVADO: &str = "Inicio automático desactivado.";
+/// `autostart.failed` (HE-16-HU02-CA05, ET09).
+pub const NO_PUDIMOS_CAMBIAR_EL_INICIO_AUTOMATICO: &str =
+    "No pudimos cambiar el inicio automático. Intenta de nuevo.";
+
+// HE-17-HU03 · Salir de la aplicación desde el ícono del área de notificación (IPC-DESK-07, IPC-DESK-08).
+
+/// Confirmación al salir con cambios sin guardar en la vista previa (HE-17-HU03-CA02, ET06).
+pub const SALIR_SIN_GUARDAR: &str = "Tienes cambios sin guardar. ¿Deseas salir sin guardarlos?";
+
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
     ("SERVICIO_NO_DISPONIBLE", SERVICIO_NO_DISPONIBLE),
@@ -287,6 +312,22 @@ pub const TEXTOS: &[(&str, &str)] = &[
         BLOQUE_DESPUES_DE_FECHA_LIMITE,
     ),
     ("WIDGET_YA_AGREGADO", WIDGET_YA_AGREGADO),
+    ("SESION_CERRADA", SESION_CERRADA),
+    ("DESEAS_CERRAR_SESION", DESEAS_CERRAR_SESION),
+    (
+        "CAMBIOS_SIN_SINCRONIZAR_AL_CERRAR_SESION",
+        CAMBIOS_SIN_SINCRONIZAR_AL_CERRAR_SESION,
+    ),
+    ("INICIO_AUTOMATICO_ACTIVADO", INICIO_AUTOMATICO_ACTIVADO),
+    (
+        "INICIO_AUTOMATICO_DESACTIVADO",
+        INICIO_AUTOMATICO_DESACTIVADO,
+    ),
+    (
+        "NO_PUDIMOS_CAMBIAR_EL_INICIO_AUTOMATICO",
+        NO_PUDIMOS_CAMBIAR_EL_INICIO_AUTOMATICO,
+    ),
+    ("SALIR_SIN_GUARDAR", SALIR_SIN_GUARDAR),
 ];
 
 #[cfg(test)]

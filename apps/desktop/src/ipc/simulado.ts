@@ -44,6 +44,7 @@ const COLUMNAS_SIMULADAS: Column[] = [
   is_default: true,
 }));
 const tarjetasSimuladas: Card[] = [];
+let inicioAutomaticoSimulado = false;
 
 function tableroSimulado(): BoardColumn[] {
   return COLUMNAS_SIMULADAS.map((column) => {
@@ -156,6 +157,30 @@ const respuestas: Respuestas = {
   connectivity_get: () => ({ ok: true, value: { online: true } }),
   sync_get_status: () => ({ ok: true, value: { status: 'synced', pending_count: 0, last_sync_at: null } }),
   auth_get_session: () => ({ ok: true, value: { state: 'signed_out', token: 'valid' } }),
+  // HE-16-HU03: el simulado no guarda cambios pendientes; cerrar sesión responde el mensaje de CA01.
+  auth_get_sign_out_info: () => ({ ok: true, value: { pending_count: 0 } }),
+  // HE-16-HU02: el simulado guarda el inicio automático en memoria (fuera de Tauri no hay registro de Windows).
+  // HE-17-HU02: el simulado no guarda la última pantalla (fuera de Tauri no hay área de notificación).
+  app_set_last_screen: () => ({ ok: true, value: null }),
+  // HE-17-HU03: fuera de Tauri no hay programa que cerrar.
+  app_exit: () => ({ ok: true, value: null }),
+  autostart_get: () => ({ ok: true, value: { enabled: inicioAutomaticoSimulado } }),
+  autostart_set: ({ enabled }) => {
+    inicioAutomaticoSimulado = enabled;
+    return {
+      ok: true,
+      value: { enabled },
+      result_message: {
+        code: 'autostart_set',
+        message: enabled ? textos.INICIO_AUTOMATICO_ACTIVADO : textos.INICIO_AUTOMATICO_DESACTIVADO,
+      },
+    };
+  },
+  auth_sign_out: () => ({
+    ok: true,
+    value: null,
+    result_message: { code: 'auth_sign_out', message: textos.SESION_CERRADA },
+  }),
   auth_register_start: ({ email }) => {
     if (email.trim().toLowerCase() === CUENTA_SIMULADA.email) {
       return error({ code: 'email.already_registered', message: textos.CORREO_YA_REGISTRADO });

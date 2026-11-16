@@ -19,14 +19,14 @@ use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, ServicioDeSe
 use crate::servicio_del_planificador::{CalendarioDelSistema, ServicioDelPlanificador};
 use crate::tipos::{
     AgendaDay, AgendaDayParams, AppError, AuthRegisterStartParams, AuthRegisterStartResult,
-    AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, Card,
-    CardAssignTimeBlockParams, CardCreateParams, CardDetail, CardIdParams, CardListBoardResult,
-    CardMoveParams, CardUpdateParams, CatalogItem, CatalogKind, CatalogListParams, ChangeOp,
-    CodeSent, Column, ColumnCreateParams, ColumnReorderParams, ColumnUpdateParams, Connectivity,
-    EntityChange, ErrorCode, EventMapConnectivityChanged, EventMapSessionChanged,
-    EventMapSessionChangedReason, EventMapSessionChangedState, ImageImportParams,
-    ImageImportResult, IpcErr, IpcOk, IpcResult, Label, LabelCreateParams, NoParams, OriginKind,
-    PlannerToday, SessionInfo, ThemeDraftOpenParams, ThemeDraftSelectParams,
+    AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams,
+    AuthSignOutInfo, Card, CardAssignTimeBlockParams, CardCreateParams, CardDetail, CardIdParams,
+    CardListBoardResult, CardMoveParams, CardUpdateParams, CatalogItem, CatalogKind,
+    CatalogListParams, ChangeOp, CodeSent, Column, ColumnCreateParams, ColumnReorderParams,
+    ColumnUpdateParams, Connectivity, EntityChange, ErrorCode, EventMapConnectivityChanged,
+    EventMapSessionChanged, EventMapSessionChangedReason, EventMapSessionChangedState,
+    ImageImportParams, ImageImportResult, IpcErr, IpcOk, IpcResult, Label, LabelCreateParams,
+    NoParams, OriginKind, PlannerToday, SessionInfo, ThemeDraftOpenParams, ThemeDraftSelectParams,
     ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
 };
 use crate::tipos::{
@@ -43,6 +43,11 @@ pub struct Nucleo {
     pub planificador: ServicioDelPlanificador<CalendarioDelSistema>,
     pub personalizacion: ServicioDePersonalizacion,
     pub host: EstadoDelHost,
+    /// Un ciclo de sincronización a la vez con el cierre de sesión (HE-16-HU03): el cierre espera a que termine
+    /// el ciclo en curso antes de vaciar la base.
+    pub ciclo: tokio::sync::Mutex<()>,
+    /// El registro de Windows para el inicio automático (INT-08).
+    pub arranque: Box<dyn crate::integracion_con_el_sistema::inicio_automatico::RegistroDeArranque>,
 }
 
 impl Nucleo {
@@ -59,6 +64,9 @@ impl Nucleo {
             ),
             personalizacion: ServicioDePersonalizacion::nuevo(),
             host: EstadoDelHost::default(),
+            ciclo: tokio::sync::Mutex::new(()),
+            arranque:
+                crate::integracion_con_el_sistema::inicio_automatico::registro_de_la_aplicacion(),
         }
     }
 }
@@ -144,7 +152,12 @@ pub fn sincronizar(app: AppHandle) {
         loop {
             std::thread::sleep(REVISION_DE_LA_COLA);
             let nucleo = app.state::<Nucleo>();
+            let _ciclo = nucleo.ciclo.blocking_lock();
             let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+                // Tras cerrar sesión (HE-16-HU03), la próxima sesión empieza como al abrir la aplicación: con la
+                // base vacía, la primera consulta va de inmediato.
+                en_linea_antes = None;
+                anterior = None;
                 continue;
             };
             let base = nucleo.planificador.base();
@@ -1242,4 +1255,139 @@ pub async fn theme_draft_update(
         }
         Err(e) => Err(e),
     }))
+}
+
+/// IPC-AUTH-13 `auth_get_sign_out_info` (HE-16-HU03-CA03): cuántos cambios esperan sincronizarse.
+#[tauri::command]
+pub async fn auth_get_sign_out_info(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<AuthSignOutInfo>, ()> {
+    let _ = params;
+    Ok(leido(
+        nucleo
+            .sesion
+            .informacion_de_cierre(nucleo.planificador.base())
+            .await
+            .map_err(crate::servicio_del_planificador::de_sqlx),
+    ))
+}
+
+/// IPC-AUTH-14 `auth_sign_out` (HE-16-HU03-CA01, CA04; D-190; RNF-19). Espera a que termine el ciclo de
+/// sincronización en curso, para que no escriba en la base recién vaciada; borra el token, la base y los archivos;
+/// oculta la capa, con lo que se ve de nuevo el fondo original de Windows (ET03), y emite `session_changed` con
+/// `reason: 'sign_out'` (EV-01): la ventana principal abre Inicio de sesión (ET06).
+#[tauri::command]
+pub async fn auth_sign_out(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<()>, ()> {
+    let _ = params;
+    let r = {
+        let _ciclo = nucleo.ciclo.lock().await;
+        nucleo
+            .sesion
+            .cerrar_sesion(nucleo.planificador.base(), &carpeta_de_archivos())
+            .await
+    };
+    nucleo.personalizacion.olvidar_borrador();
+    avisar_wallpaper(&app).await;
+    let _ = app.emit(
+        "session_changed",
+        EventMapSessionChanged {
+            state: EventMapSessionChangedState::SignedOut,
+            alias: None,
+            reason: EventMapSessionChangedReason::SignOut,
+        },
+    );
+    Ok(con_mensaje(Ok(r)))
+}
+
+/// IPC-DESK-10 `autostart_get` (HE-16-HU02-CA03, ET06): el estado que tiene Windows.
+#[tauri::command]
+pub fn autostart_get(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> IpcResult<crate::tipos::AutostartState> {
+    let _ = params;
+    correcto(crate::integracion_con_el_sistema::inicio_automatico::estado(nucleo.arranque.as_ref()))
+}
+
+/// IPC-DESK-11 `autostart_set` (HE-16-HU02-CA01, CA02, CA04, CA05). Sin la ruta del ejecutable no se puede
+/// escribir el valor de `Run`: responde `autostart.failed`.
+#[tauri::command]
+pub fn autostart_set(
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::AutostartState,
+) -> IpcResult<crate::tipos::AutostartState> {
+    use crate::integracion_con_el_sistema::inicio_automatico::cambiar;
+    let ejecutable = std::env::current_exe().unwrap_or_default();
+    con_mensaje(cambiar(
+        nucleo.arranque.as_ref(),
+        params.enabled,
+        &ejecutable,
+    ))
+}
+
+/// IPC-DESK-06 `app_hide_main_window` (HE-17-HU01-CA01): cierra la ventana y deja la aplicación en segundo plano.
+#[tauri::command]
+pub fn app_hide_main_window(app: AppHandle, params: NoParams) -> IpcResult<()> {
+    let _ = params;
+    crate::integracion_con_el_sistema::area_de_notificacion::ocultar_ventana(&app);
+    correcto(())
+}
+
+/// IPC-DESK-04 `app_get_last_screen` (HE-17-HU02-ET05; D-156): la última pantalla visitada en este computador.
+#[tauri::command]
+pub async fn app_get_last_screen(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<crate::tipos::LastScreen>, ()> {
+    let _ = params;
+    use crate::servicio_de_personalizacion_y_configuracion::ultima_pantalla;
+    Ok(leido(
+        ultima_pantalla::leer(nucleo.planificador.base())
+            .await
+            .map(|screen| crate::tipos::LastScreen { screen })
+            .map_err(crate::servicio_del_planificador::de_sqlx),
+    ))
+}
+
+/// IPC-DESK-05 `app_set_last_screen` (HE-17-HU02-ET05): la vista la guarda cada vez que abre una pantalla.
+#[tauri::command]
+pub async fn app_set_last_screen(
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::AppSetLastScreenParams,
+) -> Result<IpcResult<()>, ()> {
+    use crate::servicio_de_personalizacion_y_configuracion::ultima_pantalla;
+    Ok(leido(
+        ultima_pantalla::guardar(
+            nucleo.planificador.base(),
+            params.screen,
+            chrono::Utc::now().timestamp_millis(),
+        )
+        .await
+        .map_err(crate::servicio_del_planificador::de_sqlx),
+    ))
+}
+
+/// IPC-DESK-07 `app_request_exit` (HE-17-HU03-CA02, CA04): si salir pide confirmar los cambios sin guardar.
+#[tauri::command]
+pub fn app_request_exit(
+    app: AppHandle,
+    params: NoParams,
+) -> IpcResult<crate::tipos::AppRequestExitResult> {
+    let _ = params;
+    correcto(crate::tipos::AppRequestExitResult {
+        requires_confirmation:
+            crate::integracion_con_el_sistema::area_de_notificacion::requiere_confirmacion(&app),
+    })
+}
+
+/// IPC-DESK-08 `app_exit` (HE-17-HU03-CA01, CA03): cierra el programa sin cerrar la sesión.
+#[tauri::command]
+pub fn app_exit(app: AppHandle, params: crate::tipos::AppExitParams) -> IpcResult<()> {
+    crate::integracion_con_el_sistema::area_de_notificacion::salir(&app, params.discard_changes);
+    correcto(())
 }

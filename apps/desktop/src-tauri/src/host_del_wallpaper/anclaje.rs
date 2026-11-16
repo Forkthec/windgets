@@ -34,8 +34,7 @@ use crate::tipos::{EventMapMonitorsChanged, Monitor};
 /// Mensaje no documentado que pide a Progman crear el WorkerW detrás de los íconos (D-131, INT-07).
 const MENSAJE_CREAR_WORKERW: u32 = 0x052C;
 
-/// Etiqueta de la ventana de la capa (`capabilities/capa.json`).
-pub const CAPA: &str = "capa";
+pub use super::CAPA;
 
 /// Escritorio virtual si Windows no informa ningún monitor (no debería pasar).
 const ESCRITORIO_POR_DEFECTO: Rect = Rect {

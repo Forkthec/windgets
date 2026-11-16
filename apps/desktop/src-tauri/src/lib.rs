@@ -30,6 +30,15 @@ pub fn run() {
             puente_ipc::auth_register_cancel,
             puente_ipc::auth_sign_in,
             puente_ipc::auth_get_session,
+            puente_ipc::auth_get_sign_out_info,
+            puente_ipc::auth_sign_out,
+            puente_ipc::autostart_get,
+            puente_ipc::autostart_set,
+            puente_ipc::app_hide_main_window,
+            puente_ipc::app_get_last_screen,
+            puente_ipc::app_set_last_screen,
+            puente_ipc::app_request_exit,
+            puente_ipc::app_exit,
             puente_ipc::card_create,
             puente_ipc::label_list,
             puente_ipc::label_create,
@@ -67,7 +76,10 @@ pub fn run() {
             puente_ipc::widget_set_active,
             puente_ipc::widget_catalog_get,
         ])
+        // HE-17-HU01: «×» oculta la ventana principal; la aplicación sigue en el área de notificación.
+        .on_window_event(integracion_con_el_sistema::area_de_notificacion::atender_ventana)
         .setup(|app| {
+            integracion_con_el_sistema::area_de_notificacion::crear_icono(app.handle())?;
             puente_ipc::vigilar_conexion(app.handle().clone());
             puente_ipc::sincronizar(app.handle().clone());
             #[cfg(all(windows, feature = "spike"))]

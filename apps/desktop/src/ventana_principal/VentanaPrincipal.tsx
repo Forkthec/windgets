@@ -11,6 +11,8 @@ import {
 import { invocar as invocarNucleo } from '@/ipc/cliente';
 import { escuchar as escucharNucleo, type Escuchar } from '@/ipc/eventos';
 import type { Invoke, ScreenId } from '@/types';
+import textos from '@/types/messages.es.json';
+import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { ProveedorDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { MenuPrincipal, SECCIONES_MENU } from '@/ui/MenuPrincipal/MenuPrincipal';
 import { AvisoDelWallpaper } from './AvisoDelWallpaper';
@@ -57,6 +59,11 @@ interface Navegacion {
    * Tauri llega también `session_changed` (EV-01); fuera de Tauri (Núcleo simulado) no llega ningún evento.
    */
   sesionIniciada: () => void;
+  /**
+   * Se cerró la sesión (HE-16-HU03): abre Inicio de sesión. Dentro de Tauri llega también `session_changed`
+   * (EV-01) con `reason: 'sign_out'`; fuera de Tauri (Núcleo simulado) no llega ningún evento.
+   */
+  sesionCerrada: () => void;
   registrarGuardia: (guardia: GuardiaDeSalida | null) => void;
 }
 
@@ -113,6 +120,7 @@ export function VentanaPrincipal({
   const [cuenta, setCuenta] = useState<PantallaDeCuenta>('sign_in');
   const [correoDeCuenta, setCorreoDeCuenta] = useState('');
   const [emergentes, setEmergentes] = useState(0);
+  const [confirmarSalida, setConfirmarSalida] = useState(false);
   const guardia = useRef<GuardiaDeSalida | null>(null);
   const fondo = useRef<HTMLDivElement>(null);
 
@@ -173,13 +181,40 @@ export function VentanaPrincipal({
       },
       correoDeCuenta,
       sesionIniciada: iniciada,
+      sesionCerrada: cerrada,
       registrarGuardia: (nueva) => {
         guardia.current = nueva;
       },
     }),
-    [correoDeCuenta, iniciada, pantalla, sesion],
+    [cerrada, correoDeCuenta, iniciada, pantalla, sesion],
   );
   const nucleo = useMemo(() => ({ invocar, escuchar }), [escuchar, invocar]);
+
+  // HE-17-HU02-ET05 (D-156): cada pantalla que se abre queda como la última visitada en este computador.
+  useEffect(() => {
+    if (sesion === 'con_sesion') void invocar('app_set_last_screen', { screen: pantalla });
+  }, [invocar, pantalla, sesion]);
+
+  // EV-23: al abrir la ventana desde el ícono del área de notificación, el Núcleo pide la última pantalla visitada
+  // (HE-17-HU02-CA01, CA02).
+  const ultimaNavegacion = useRef(navegacion);
+  useEffect(() => {
+    ultimaNavegacion.current = navegacion;
+  }, [navegacion]);
+  useEffect(
+    () => escuchar('navigate_requested', (carga) => void ultimaNavegacion.current.abrir(carga.screen)),
+    [escuchar],
+  );
+
+  // EV-24: «Salir» en el menú del ícono con cambios sin guardar en la vista previa (HE-17-HU03-CA02, ET06, ET07).
+  useEffect(
+    () =>
+      escuchar('exit_requested', (carga) => {
+        if (carga.requires_confirmation) setConfirmarSalida(true);
+        else void invocar('app_exit', { discard_changes: false });
+      }),
+    [escuchar, invocar],
+  );
 
   let contenido = null;
   if (sesion === 'con_sesion') {
@@ -214,7 +249,22 @@ export function VentanaPrincipal({
     <ContextoDelNucleo.Provider value={nucleo}>
       <ContextoDeNavegacion.Provider value={navegacion}>
         <ContextoDeBloqueo.Provider value={bloquear}>
-          <ProveedorDeResultado>{contenido}</ProveedorDeResultado>
+          <ProveedorDeResultado>
+            {contenido}
+            {confirmarSalida && (
+              // DUDA: HE-17-HU03 el título de la confirmación no está definido; se usa «Salir».
+              <Confirmacion
+                titulo="Salir"
+                texto={textos.SALIR_SIN_GUARDAR}
+                opcionPrincipal="Salir sin guardar"
+                opcionSalir="Seguir editando"
+                // CA03: descarta los cambios y cierra la aplicación sin cerrar la sesión.
+                alConfirmar={() => void invocar('app_exit', { discard_changes: true })}
+                // CA04: cierra el mensaje; la vista previa conserva sus cambios.
+                alCancelar={() => setConfirmarSalida(false)}
+              />
+            )}
+          </ProveedorDeResultado>
         </ContextoDeBloqueo.Provider>
       </ContextoDeNavegacion.Provider>
     </ContextoDelNucleo.Provider>
