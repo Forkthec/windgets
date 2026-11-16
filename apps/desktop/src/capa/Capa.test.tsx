@@ -28,7 +28,7 @@ function capa(applied: ThemeContent, wallpaper_state: WallpaperState): LayerInit
 function nucleo(inicial: LayerInitialState, archivos: Record<string, string>) {
   let actual = inicial;
   const pedidos: AssetResolveParams[] = [];
-  const oyentes: Array<() => void> = [];
+  const oyentes = new Map<string, Array<() => void>>();
   const invocar = ((comando: string, params: AssetResolveParams) => {
     if (comando === 'layer_get_initial_state') return Promise.resolve({ ok: true, value: actual });
     if (comando === 'asset_resolve') {
@@ -42,12 +42,12 @@ function nucleo(inicial: LayerInitialState, archivos: Record<string, string>) {
     return Promise.resolve({ ok: false, error: { code: 'internal.unexpected' } });
   }) as unknown as Invoke;
   const escuchar = ((evento: string, alRecibir: () => void) => {
-    if (evento === 'wallpaper_status_changed') oyentes.push(alRecibir);
+    oyentes.set(evento, [...(oyentes.get(evento) ?? []), alRecibir]);
     return () => {};
   }) as unknown as Escuchar;
-  const cambiar = async (nuevo: LayerInitialState) => {
+  const cambiar = async (nuevo: LayerInitialState, evento = 'wallpaper_status_changed') => {
     actual = nuevo;
-    await act(async () => oyentes.forEach((o) => o()));
+    await act(async () => (oyentes.get(evento) ?? []).forEach((o) => o()));
   };
   return { invocar, escuchar, pedidos, cambiar };
 }
@@ -89,6 +89,20 @@ describe('HE-02-HU01 · Capa del wallpaper', () => {
     // Al iniciar sesión llega EV-16 y la capa pinta el wallpaper.
     await n.cambiar(capa(POR_DEFECTO, 'ok'));
     expect(await screen.findByRole('main', { name: 'Wallpaper' })).toBeTruthy();
+  });
+
+  it('HE-02-HU12-CA05 · Cambios de la vista previa en tiempo real', async () => {
+    // Al aplicar llega EV-11 y la capa pinta el tema nuevo sin reiniciar la aplicación (ET05).
+    const n = nucleo(capa(POR_DEFECTO, 'ok'), {
+      'catalog_template:default': 'C:/fondo/default.jpg',
+      'catalog_image:mar': 'C:/fondo/mar.jpg',
+    });
+    render(<Capa invocar={n.invocar} escuchar={n.escuchar} />);
+    await screen.findByRole('main', { name: 'Wallpaper' });
+    await n.cambiar(capa(DEL_CATALOGO, 'ok'), 'applied_theme_changed');
+    const wallpaper = screen.getByRole('main', { name: 'Wallpaper' });
+    expect(wallpaper.style.backgroundImage).toContain('C:/fondo/mar.jpg');
+    expect(wallpaper.style.backgroundColor).toBe('rgb(10, 11, 12)');
   });
 
   it('sin la imagen en el computador pinta solo el color primario', async () => {

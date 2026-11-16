@@ -30,8 +30,9 @@ use crate::tipos::{
     ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
 };
 use crate::tipos::{
-    AppliedThemeView, AssetResolveParams, AssetResolveResult, EventMapWallpaperStatusChanged,
-    LayerInitialState, ThemeDraftSaveResult, WallpaperState, WallpaperStatus,
+    AppliedThemeView, ApplyMode, AssetResolveParams, AssetResolveResult,
+    EventMapAppliedThemeChanged, EventMapWallpaperStatusChanged, LayerInitialState,
+    ThemeDraftApplyParams, ThemeDraftSaveResult, ThemeIdResult, WallpaperState, WallpaperStatus,
 };
 
 /// El Núcleo que ven los comandos.
@@ -531,6 +532,47 @@ pub async fn theme_draft_save(
                 origin: OriginKind::Local,
             },
         );
+    }
+    Ok(con_mensaje(r))
+}
+
+/// IPC-THEME-09 `theme_draft_apply` (HE-02-HU12): lleva la vista previa al escritorio y a la aplicación. Avisa
+/// con EV-11 `applied_theme_changed` y EV-12 `themes_changed`, y con EV-16 para que la capa vuelva a pintar el
+/// wallpaper sin reiniciar la aplicación (CA05, ET05; RNF-01).
+#[tauri::command]
+pub async fn theme_draft_apply(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: ThemeDraftApplyParams,
+) -> Result<IpcResult<ThemeIdResult>, ()> {
+    let ahora = RelojDelSistema.ahora_ms();
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .aplicar_borrador(nucleo.planificador.base(), &user_id, &params.mode, ahora)
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if let Ok(aplicado) = &r {
+        let _ = app.emit(
+            "applied_theme_changed",
+            EventMapAppliedThemeChanged {
+                theme_id: aplicado.valor.theme_id.clone(),
+                origin: OriginKind::Local,
+                has_unsaved_draft: matches!(params.mode, ApplyMode::ApplyWithoutSaving),
+            },
+        );
+        let _ = app.emit(
+            "themes_changed",
+            EntityChange {
+                ids: vec![aplicado.valor.theme_id.clone()],
+                op: ChangeOp::Upsert,
+                origin: OriginKind::Local,
+            },
+        );
+        avisar_wallpaper(&app).await;
     }
     Ok(con_mensaje(r))
 }

@@ -45,7 +45,9 @@ impl ServicioDePersonalizacion {
         let guardado = Self::guardado(base, user_id, &theme_id).await?;
         let borrador = self.con_borrador(|b| b.clone());
         Ok(AppliedThemeView {
-            has_unapplied_changes: guardado.as_ref().is_some_and(|(_, g)| *g != copia),
+            has_unapplied_changes: guardado
+                .as_ref()
+                .is_some_and(|(_, g)| !es_la_misma_copia(&copia, g)),
             has_unsaved_changes: borrador.is_some_and(|b| b.theme_id == theme_id && b.dirty()),
             name: guardado.map_or_else(|| NOMBRE_DEL_TEMA_INICIAL.to_string(), |(n, _)| n),
             theme_id: Uuid(theme_id),

@@ -26,7 +26,7 @@ fn tamano_a_texto(tamano: &FontSize) -> &'static str {
 }
 
 /// Las columnas del tema que guarda un `ThemeContent`, con el nombre de su columna (D-189, `datos.md`).
-fn columnas(contenido: &ThemeContent) -> Vec<(&'static str, Value)> {
+pub(super) fn columnas(contenido: &ThemeContent) -> Vec<(&'static str, Value)> {
     vec![
         ("template_id", Value::from(contenido.template_id.as_str())),
         (
@@ -86,20 +86,38 @@ impl ServicioDePersonalizacion {
                 None,
             ));
         }
-        for (campo, color) in [
-            ("colors.primary", &borrador.contenido.colors.primary),
-            ("colors.secondary", &borrador.contenido.colors.secondary),
-            ("colors.text", &borrador.contenido.colors.text),
-        ] {
-            if color.0.trim().is_empty() {
-                return Err(error(
-                    ErrorCode::ColorRequired,
-                    messages::CAMPO_OBLIGATORIO,
-                    Some(campo),
-                ));
-            }
-        }
+        validar_colores(&borrador.contenido)?;
+        let id = self
+            .escribir_en_el_tema(base, user_id, ahora_ms, &borrador)
+            .await?;
 
+        let es_aplicado = Self::aplicado(base, user_id)
+            .await?
+            .is_some_and(|(aplicado, _)| aplicado == id);
+        let mensaje = if es_aplicado {
+            messages::CAMBIOS_GUARDADOS_EN_EL_TEMA_APLICADO.to_string()
+        } else {
+            messages::cambios_guardados_en_el_tema(&borrador.name)
+        };
+        Ok(ConMensaje {
+            valor: ThemeDraftSaveResult {
+                theme_id: Uuid(id),
+                is_applied: es_aplicado,
+            },
+            mensaje: resultado("theme_draft_save", &mensaje),
+        })
+    }
+
+    /// Escribe el borrador en su tema y lo encola en `pending_change`; el tema inicial virtual se crea con un
+    /// `id` nuevo. El borrador queda sin cambios sin guardar. Devuelve el `id` del tema. Lo usan «Guardar»
+    /// (HE-02-HU11) y «Guardar y aplicar» (HE-02-HU12-CA03).
+    pub(super) async fn escribir_en_el_tema(
+        &self,
+        base: &BaseLocal,
+        user_id: &str,
+        ahora_ms: i64,
+        borrador: &Borrador,
+    ) -> Result<String, AppError> {
         let pool = base.pool().await.map_err(de_sqlx)?;
         let ahora = instante(ahora_ms).0;
         let es_nuevo = borrador.theme_id == TEMA_INICIAL_VIRTUAL;
@@ -179,26 +197,32 @@ impl ServicioDePersonalizacion {
             .map_err(de_sqlx)?;
         tx.commit().await.map_err(de_sqlx)?;
 
-        let es_aplicado = Self::aplicado(base, user_id)
-            .await?
-            .is_some_and(|(aplicado, _)| aplicado == id);
         self.con_borrador(|b| {
             if let Some(actual) = b {
                 actual.theme_id.clone_from(&id);
                 actual.guardado = actual.contenido.clone();
+                // Lo que se había aplicado sin guardar ya está en el tema (HE-02-HU12-ET04).
+                actual.aplicado_sin_guardar = false;
             }
         });
-        let mensaje = if es_aplicado {
-            messages::CAMBIOS_GUARDADOS_EN_EL_TEMA_APLICADO.to_string()
-        } else {
-            messages::cambios_guardados_en_el_tema(&borrador.name)
-        };
-        Ok(ConMensaje {
-            valor: ThemeDraftSaveResult {
-                theme_id: Uuid(id),
-                is_applied: es_aplicado,
-            },
-            mensaje: resultado("theme_draft_save", &mensaje),
-        })
+        Ok(id)
     }
+}
+
+/// Los tres colores del tema son obligatorios (`color.required`, HE-02-HU05).
+pub(super) fn validar_colores(contenido: &ThemeContent) -> Result<(), AppError> {
+    for (campo, color) in [
+        ("colors.primary", &contenido.colors.primary),
+        ("colors.secondary", &contenido.colors.secondary),
+        ("colors.text", &contenido.colors.text),
+    ] {
+        if color.0.trim().is_empty() {
+            return Err(error(
+                ErrorCode::ColorRequired,
+                messages::CAMPO_OBLIGATORIO,
+                Some(campo),
+            ));
+        }
+    }
+    Ok(())
 }

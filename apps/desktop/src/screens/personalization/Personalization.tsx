@@ -2,7 +2,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useEffect, useState } from 'react';
 import { urlDeArchivo } from '@/ipc/archivos';
 import textos from '@/types/messages.es.json';
-import type { CatalogItem, ThemeDraftPatch, ThemeDraftView, ThemeSummary } from '@/types';
+import type { ApplyMode, CatalogItem, ThemeDraftPatch, ThemeDraftView, ThemeSummary } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
@@ -30,6 +30,8 @@ export function Personalization() {
   const [vistasPropias, setVistasPropias] = useState<Record<string, string>>({});
   const [rechazo, setRechazo] = useState('');
   const [pendiente, setPendiente] = useState<{ id: string; mensaje: string } | null>(null);
+  // M-15: el mensaje del Núcleo al aplicar con cambios sin guardar (HE-02-HU12-CA02).
+  const [alAplicar, setAlAplicar] = useState('');
 
   const leerTemas = useCallback(async () => {
     const r = await invocar('theme_list', {});
@@ -114,6 +116,31 @@ export function Personalization() {
     if (abierto.ok) setBorrador(abierto.value);
     void leerTemas();
   };
+
+  // HE-02-HU12: «Aplicar» lleva la vista previa al escritorio y a la aplicación (ET01). Con cambios sin guardar
+  // el Núcleo responde `draft.unsaved_changes_on_apply` y se abre M-15 (CA02, ET02, ET03).
+  const aplicar = async (mode: ApplyMode) => {
+    setAlAplicar('');
+    const r = await invocar('theme_draft_apply', { mode });
+    if (!r.ok) {
+      if (r.error.code === 'draft.unsaved_changes_on_apply') setAlAplicar(r.error.message);
+      else if (r.error.message) mostrarResultado(r.error.message);
+      return;
+    }
+    mostrarResultado(r.result_message?.message ?? '');
+    const abierto = await invocar('theme_draft_open', {});
+    if (abierto.ok) setBorrador(abierto.value);
+    void leerTemas();
+  };
+
+  // ET06: el tema en edición es el aplicado y no tiene cambios sin guardar ni cambios sin aplicar.
+  const enEdicion = temas.find((t) => t.id === borrador?.theme_id);
+  const yaAplicado =
+    !!borrador &&
+    !!enEdicion?.is_applied &&
+    !enEdicion.has_unapplied_changes &&
+    !borrador.dirty &&
+    !borrador.applied_unsaved;
 
   const fondo = borrador?.content.background;
   const imagenDeFondo =
@@ -228,10 +255,30 @@ export function Personalization() {
               Guardar
             </Boton>
             <Boton>Guardar como tema</Boton>
-            <Boton principal>Aplicar</Boton>
+            {/* HE-02-HU12-CA06, ET06: «Aplicar» deshabilitada con su motivo. */}
+            <Boton
+              principal
+              disabled={yaAplicado}
+              motivo={textos.TEMA_YA_APLICADO}
+              onClick={() => void aplicar('apply')}
+            >
+              Aplicar
+            </Boton>
             <Boton>Cancelar</Boton>
           </div>
         </>
+      )}
+      {alAplicar && (
+        // M-15 (HE-02-HU12-CA02 a CA04). DUDA: HE-02-HU12 M-15 no define el título. Valor usado: «Aplicar».
+        <Confirmacion
+          titulo="Aplicar"
+          texto={alAplicar}
+          opcionPrincipal="Guardar y aplicar"
+          opcionSecundaria="Aplicar sin guardar"
+          alConfirmar={() => void aplicar('save_and_apply')}
+          alElegirSecundaria={() => void aplicar('apply_without_saving')}
+          alCancelar={() => setAlAplicar('')}
+        />
       )}
       {pendiente && (
         <Confirmacion

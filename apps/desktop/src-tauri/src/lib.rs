@@ -58,6 +58,7 @@ pub fn run() {
             puente_ipc::theme_draft_update,
             puente_ipc::image_import,
             puente_ipc::theme_draft_save,
+            puente_ipc::theme_draft_apply,
             puente_ipc::theme_get_applied,
             puente_ipc::asset_resolve,
             puente_ipc::layer_get_initial_state,

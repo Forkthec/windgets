@@ -50,11 +50,14 @@ export function Capa({ invocar = invocarNucleo, escuchar = escucharNucleo }: Cap
       if (vigente) setPintado({ estado: r.value, imagen });
     };
     void leer();
-    // EV-16: al iniciar o cerrar sesión, o si el wallpaper no se pudo mostrar, la capa vuelve a leer.
-    const dejar = escuchar('wallpaper_status_changed', () => void leer());
+    // EV-16: al iniciar o cerrar sesión, o si el wallpaper no se pudo mostrar, la capa vuelve a leer. EV-11: al
+    // aplicar un tema se pinta sin reiniciar la aplicación (HE-02-HU12-CA05, ET05).
+    const dejarEstado = escuchar('wallpaper_status_changed', () => void leer());
+    const dejarTema = escuchar('applied_theme_changed', () => void leer());
     return () => {
       vigente = false;
-      dejar();
+      dejarEstado();
+      dejarTema();
     };
   }, [escuchar, invocar]);
 

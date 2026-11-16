@@ -402,3 +402,157 @@ describe('HE-02-HU11 · Guardar los cambios de la vista previa', () => {
     expect(llamadasA(nucleo, 'theme_apply')).toEqual([]);
   });
 });
+
+describe('HE-02-HU12 · Aplicar al escritorio los cambios de la vista previa', () => {
+  const aplicar = () => screen.getByRole('button', { name: 'Aplicar' }) as HTMLButtonElement;
+  const M15 = 'Tienes cambios sin guardar en el tema “Mi tema”. ¿Qué deseas hacer?';
+
+  /** El Núcleo de HE-02-HU12: con `apply` y cambios sin guardar, pide M-15; si no, aplica con su mensaje. */
+  function aplicarEnElNucleo(nucleo: NucleoDelPlanificador, conCambios: boolean) {
+    const mensajes = {
+      apply: 'Tema “Mi tema” aplicado.',
+      save_and_apply: 'Tema “Mi tema” guardado y aplicado.',
+      apply_without_saving: 'Cambios aplicados. Recuerda guardarlos para no perderlos.',
+    } as const;
+    nucleo.responder('theme_draft_apply', ({ mode }) =>
+      conCambios && mode === 'apply'
+        ? { ok: false, error: { code: 'draft.unsaved_changes_on_apply', message: M15 } }
+        : {
+            ok: true,
+            value: { theme_id: 't1' },
+            result_message: { code: 'theme_draft_apply', message: mensajes[mode] },
+          },
+    );
+  }
+
+  /** Con cambios sin guardar: «Aplicar» abre M-15 con sus tres opciones (CA02). */
+  async function abrirM15(nucleo: NucleoDelPlanificador) {
+    aplicarEnElNucleo(nucleo, true);
+    await waitFor(() => expect(aplicar().disabled).toBe(false));
+    fireEvent.click(aplicar());
+    return screen.findByRole('dialog');
+  }
+
+  /**
+   * ET07: la plantilla, la imagen, los colores, la tipografía y la paleta se aplican con el mismo flujo de CA02 a
+   * CA04. `cambiar` hace el cambio en la vista previa; sin `cambiar`, el borrador ya llega con el cambio.
+   */
+  async function aplicarSinGuardarTrasCambiar(cambiar?: () => Promise<void>) {
+    const nucleo = await abrir(!cambiar);
+    nucleo.responder('theme_draft_update', () => ({ ok: true, value: vista('t1', 'Mi tema', true) }));
+    if (cambiar) await cambiar();
+    const dialogo = await abrirM15(nucleo);
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Aplicar sin guardar' }));
+    await waitFor(() =>
+      expect(llamadasA(nucleo, 'theme_draft_apply')).toEqual([
+        { mode: 'apply' },
+        { mode: 'apply_without_saving' },
+      ]),
+    );
+    expect(llamadasA(nucleo, 'theme_draft_save')).toEqual([]);
+  }
+
+  it('HE-02-HU12-CA01 · Aplicar un tema sin cambios sin guardar', async () => {
+    const nucleo = await abrir();
+    await waitFor(() => expect(lista().value).toBe('t1'));
+    fireEvent.change(lista(), { target: { value: 't2' } });
+    await waitFor(() => expect(lista().value).toBe('t2'));
+    nucleo.responder('theme_draft_apply', () => ({
+      ok: true,
+      value: { theme_id: 't2' },
+      result_message: { code: 'theme_draft_apply', message: 'Tema “Verano” aplicado.' },
+    }));
+    await waitFor(() => expect(aplicar().disabled).toBe(false));
+    fireEvent.click(aplicar());
+    expect((await screen.findByRole('status')).textContent).toContain('Tema “Verano” aplicado.');
+    expect(llamadasA(nucleo, 'theme_draft_apply')).toEqual([{ mode: 'apply' }]);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('HE-02-HU12-CA02 · Aplicar con cambios sin guardar', async () => {
+    const nucleo = await abrir(true);
+    const dialogo = await abrirM15(nucleo);
+    // ET03: confirmación en ventana emergente con las tres opciones.
+    expect(within(dialogo).getByText(M15)).toBeTruthy();
+    for (const opcion of ['Guardar y aplicar', 'Aplicar sin guardar', 'Cancelar']) {
+      expect(within(dialogo).getByRole('button', { name: opcion })).toBeTruthy();
+    }
+    // «Cancelar» vuelve a la pantalla sin aplicar nada.
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(llamadasA(nucleo, 'theme_draft_apply')).toEqual([{ mode: 'apply' }]);
+  });
+
+  it('HE-02-HU12-CA03 · Guardar y aplicar', async () => {
+    const nucleo = await abrir(true);
+    const dialogo = await abrirM15(nucleo);
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Guardar y aplicar' }));
+    expect((await screen.findByRole('status')).textContent).toContain('Tema “Mi tema” guardado y aplicado.');
+    expect(llamadasA(nucleo, 'theme_draft_apply')).toEqual([{ mode: 'apply' }, { mode: 'save_and_apply' }]);
+  });
+
+  it('HE-02-HU12-CA04 · Aplicar sin guardar', async () => {
+    const nucleo = await abrir(true);
+    const dialogo = await abrirM15(nucleo);
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Aplicar sin guardar' }));
+    expect((await screen.findByRole('status')).textContent).toContain(
+      'Cambios aplicados. Recuerda guardarlos para no perderlos.',
+    );
+    expect(llamadasA(nucleo, 'theme_draft_apply')).toEqual([
+      { mode: 'apply' },
+      { mode: 'apply_without_saving' },
+    ]);
+    // ET04: no se guarda nada en el tema.
+    expect(llamadasA(nucleo, 'theme_draft_save')).toEqual([]);
+  });
+
+  it('HE-02-HU12-CA05 · Cambios de la vista previa en tiempo real', async () => {
+    // La vista no reinicia nada: al aplicar vuelve a leer el borrador y los temas. La capa vuelve a pintar con
+    // EV-11 (prueba HE-02-HU12-CA05 de la capa).
+    const nucleo = await abrir(true);
+    const dialogo = await abrirM15(nucleo);
+    const temasAntes = llamadasA(nucleo, 'theme_list').length;
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Guardar y aplicar' }));
+    await waitFor(() => expect(llamadasA(nucleo, 'theme_list').length).toBe(temasAntes + 1));
+  });
+
+  it('HE-02-HU12-CA06 · Aplicar un tema que ya está aplicado', async () => {
+    const nucleo = await abrir();
+    await waitFor(() => expect(lista().value).toBe('t1'));
+    // ET06: «Aplicar» deshabilitada con el texto «Este tema ya está aplicado.».
+    await waitFor(() => expect(aplicar().disabled).toBe(true));
+    expect(screen.getByText('Este tema ya está aplicado.')).toBeTruthy();
+    fireEvent.click(aplicar());
+    expect(llamadasA(nucleo, 'theme_draft_apply')).toEqual([]);
+  });
+
+  it('HE-02-HU12-CA07 · Aplicar la plantilla', async () => {
+    await aplicarSinGuardarTrasCambiar(async () => {
+      const catalogo = await screen.findByRole('list', { name: 'Catálogo de plantillas' });
+      fireEvent.click(within(catalogo).getByRole('button', { name: /Minimal/ }));
+    });
+  });
+
+  it('HE-02-HU12-CA08 · Aplicar la imagen de fondo', async () => {
+    await aplicarSinGuardarTrasCambiar(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: 'Catálogo de imágenes' }));
+      const catalogo = await screen.findByRole('list', { name: 'Catálogo de imágenes' });
+      fireEvent.click(within(catalogo).getByRole('button', { name: /Mar/ }));
+    });
+  });
+
+  it('HE-02-HU12-CA09 · Aplicar los colores del tema', async () => {
+    // La edición de colores llega con HE-02-HU05 (P13): el borrador ya trae los colores cambiados.
+    await aplicarSinGuardarTrasCambiar();
+  });
+
+  it('HE-02-HU12-CA10 · Aplicar la tipografía', async () => {
+    // La edición de la tipografía llega con HE-02-HU06 (P13): el borrador ya trae la fuente o el tamaño cambiados.
+    await aplicarSinGuardarTrasCambiar();
+  });
+
+  it('HE-02-HU12-CA11 · Aplicar la paleta', async () => {
+    // La selección de paletas llega con HE-02-HU07 (P13): el borrador ya trae la paleta cambiada.
+    await aplicarSinGuardarTrasCambiar();
+  });
+});

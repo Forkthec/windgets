@@ -111,6 +111,16 @@ fn contenido_de_fila(fila: &SqliteRow) -> Result<ThemeContent, sqlx::Error> {
     })
 }
 
+/// ¿La copia aplicada es este contenido? `applied_theme` no guarda la paleta (datos.md), así que se compara sin
+/// ella (HE-02-HU11-CA02, HE-02-HU12-CA06).
+fn es_la_misma_copia(copia: &ThemeContent, contenido: &ThemeContent) -> bool {
+    let sin_paleta = |c: &ThemeContent| ThemeContent {
+        palette_id: None,
+        ..c.clone()
+    };
+    sin_paleta(copia) == sin_paleta(contenido)
+}
+
 const COLUMNAS_DEL_TEMA: &str = "template_id, background_source, background_catalog_image_id, \
      background_uploaded_image_id, color_primary, color_secondary, color_text, font_id, font_size";
 
@@ -319,9 +329,9 @@ impl ServicioDePersonalizacion {
                 let contenido = contenido_de_fila(f)?;
                 let es_aplicado = aplicado.as_ref().is_some_and(|(a, _)| *a == id);
                 Ok(ThemeSummary {
-                    has_unapplied_changes: aplicado
-                        .as_ref()
-                        .is_some_and(|(a, copia)| *a == id && *copia != contenido),
+                    has_unapplied_changes: aplicado.as_ref().is_some_and(|(a, copia)| {
+                        *a == id && !es_la_misma_copia(copia, &contenido)
+                    }),
                     has_unsaved_changes: borrador
                         .as_ref()
                         .is_some_and(|b| b.theme_id == id && b.dirty()),
@@ -501,10 +511,13 @@ impl ServicioDePersonalizacion {
     }
 }
 
+mod aplicar;
 pub mod escritorio;
 mod guardado;
 mod imagenes;
 
+#[cfg(test)]
+mod pruebas_de_aplicar;
 #[cfg(test)]
 mod pruebas_de_escritorio;
 #[cfg(test)]

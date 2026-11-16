@@ -181,6 +181,26 @@ pub fn cambios_guardados_en_el_tema(nombre: &str) -> String {
     CAMBIOS_GUARDADOS_EN_EL_TEMA.replace("<nombre del tema>", nombre)
 }
 
+// HE-02-HU12 · Aplicar al escritorio los cambios de la vista previa (IPC-THEME-09 theme_draft_apply).
+
+/// Resultado de `theme_draft_apply` con `mode: 'apply'` (HE-02-HU12-CA01).
+pub const TEMA_APLICADO: &str = "Tema “<nombre del tema>” aplicado.";
+/// Resultado de `theme_draft_apply` con `mode: 'save_and_apply'` (HE-02-HU12-CA03).
+pub const TEMA_GUARDADO_Y_APLICADO: &str = "Tema “<nombre del tema>” guardado y aplicado.";
+/// Resultado de `theme_draft_apply` con `mode: 'apply_without_saving'` (HE-02-HU12-CA04).
+pub const CAMBIOS_APLICADOS_SIN_GUARDAR: &str =
+    "Cambios aplicados. Recuerda guardarlos para no perderlos.";
+/// `draft.unsaved_changes_on_apply` (HE-02-HU12-CA02, M-15).
+pub const CAMBIOS_SIN_GUARDAR_AL_APLICAR: &str =
+    "Tienes cambios sin guardar en el tema “<nombre del tema>”. ¿Qué deseas hacer?";
+/// `theme.already_applied` (HE-02-HU12-CA06): texto de la opción «Aplicar» deshabilitada.
+pub const TEMA_YA_APLICADO: &str = "Este tema ya está aplicado.";
+
+/// Un texto de HE-02-HU12 con el nombre del tema.
+pub fn con_nombre_del_tema(texto: &str, nombre: &str) -> String {
+    texto.replace("<nombre del tema>", nombre)
+}
+
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
     ("SERVICIO_NO_DISPONIBLE", SERVICIO_NO_DISPONIBLE),
@@ -246,6 +266,17 @@ pub const TEXTOS: &[(&str, &str)] = &[
         "NO_SE_PUDO_MOSTRAR_EL_WALLPAPER",
         NO_SE_PUDO_MOSTRAR_EL_WALLPAPER,
     ),
+    ("TEMA_APLICADO", TEMA_APLICADO),
+    ("TEMA_GUARDADO_Y_APLICADO", TEMA_GUARDADO_Y_APLICADO),
+    (
+        "CAMBIOS_APLICADOS_SIN_GUARDAR",
+        CAMBIOS_APLICADOS_SIN_GUARDAR,
+    ),
+    (
+        "CAMBIOS_SIN_GUARDAR_AL_APLICAR",
+        CAMBIOS_SIN_GUARDAR_AL_APLICAR,
+    ),
+    ("TEMA_YA_APLICADO", TEMA_YA_APLICADO),
     ("BLOQUE_YA_PASO", BLOQUE_YA_PASO),
     (
         "BLOQUE_DESPUES_DE_FECHA_LIMITE",
