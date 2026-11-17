@@ -150,6 +150,27 @@ async function abrir(conCambios = false, primerInicio = false) {
               : { ok: false, error: { code: 'image.unreadable', message: textos.IMAGEN_ILEGIBLE } },
       );
       n.responder('theme_draft_open', () => ({ ok: true, value: vista('t1', 'Mi tema', conCambios) }));
+      // HE-02-HU09-ET03: los widgets activos del escritorio y su monitor principal (1920 × 1080).
+      n.responder('layer_get_initial_state', () => ({
+        ok: true,
+        value: {
+          applied: CONTENIDO,
+          widgets: [
+            { widget_id: 'w1', type: 'clock', x: 96, y: 54, width: 384, height: 216, is_active: true },
+            {
+              widget_id: 'w2',
+              type: 'daily_tasks',
+              x: 960,
+              y: 540,
+              width: 480,
+              height: 270,
+              is_active: true,
+            },
+          ],
+          monitors: [{ id: '0', x: 0, y: 0, width: 1920, height: 1080, scale_factor: 1 }],
+          wallpaper_state: 'ok',
+        },
+      }));
       n.responder('theme_draft_select', ({ theme_id, discard_changes }) =>
         conCambios && !discard_changes
           ? { ok: false, error: { code: 'draft.unsaved_changes', message: MENSAJE_M04 } }
@@ -654,6 +675,49 @@ describe('HE-02-HU08 · Restablecer los colores y la tipografía', () => {
       'true',
     );
     expect(llamadasA(nucleo, 'theme_draft_reset')).toEqual([{ part: 'typography' }]);
+  });
+});
+
+describe('HE-02-HU09 · Vista previa en tiempo real', () => {
+  const vistaPrevia = () => screen.getByRole('region', { name: 'Vista previa del escritorio' });
+
+  it('HE-02-HU09-CA01 · Vista previa en tiempo real', async () => {
+    const nucleo = await abrir();
+    await screen.findByRole('list', { name: 'Catálogo de plantillas' });
+    // ET03: los widgets activos, en su lugar y a escala.
+    const reloj = await within(vistaPrevia()).findByRole('img', { name: 'Reloj' });
+    expect([reloj.style.left, reloj.style.top, reloj.style.width, reloj.style.height]).toEqual([
+      '5%',
+      '5%',
+      '20%',
+      '20%',
+    ]);
+    expect(within(vistaPrevia()).getByRole('img', { name: 'Tareas del día' })).toBeTruthy();
+    // ET01, ET02: un cambio de color se ve en el wallpaper y en los widgets en cuanto responde el Núcleo.
+    const fondoDelWidget = reloj.style.background;
+    const principal = within(screen.getByRole('region', { name: 'Colores' })).getByRole('textbox', {
+      name: 'Color secundario',
+    });
+    fireEvent.change(principal, { target: { value: '#204060' } });
+    fireEvent.blur(principal);
+    await waitFor(() => expect(reloj.style.background).not.toBe(fondoDelWidget));
+    // El escritorio no cambia: no se aplicó nada.
+    expect(llamadasA(nucleo, 'theme_draft_apply')).toEqual([]);
+  });
+
+  it('HE-02-HU09-CA02 · Escritorio sin cambios hasta aplicar', async () => {
+    const nucleo = await abrir(true);
+    nucleo.responder('theme_draft_save', () => ({
+      ok: true,
+      value: { theme_id: 't1', is_applied: true },
+      result_message: { code: 'theme_draft_save', message: 'Cambios guardados en el tema “Mi tema”.' },
+    }));
+    const guardar = screen.getByRole('button', { name: 'Guardar' }) as HTMLButtonElement;
+    await waitFor(() => expect(guardar.disabled).toBe(false));
+    fireEvent.click(guardar);
+    await screen.findByRole('status');
+    // ET04: guardar no lleva nada al escritorio; solo «Aplicar» lo hace.
+    expect(llamadasA(nucleo, 'theme_draft_apply')).toEqual([]);
   });
 });
 

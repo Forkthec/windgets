@@ -6,9 +6,11 @@ import type {
   ApplyMode,
   CatalogItem,
   Legibility,
+  Monitor,
   ThemeDraftPatch,
   ThemeDraftView,
   ThemeSummary,
+  WidgetRect,
 } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
@@ -17,12 +19,13 @@ import { Selector } from '@/ui/Selector/Selector';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { Colores, type CampoDeColor } from './Colores';
 import { Paletas } from './Paletas';
+import { VistaPrevia } from './VistaPrevia';
 import { familia, PIXELES_DEL_TAMANO, Tipografia } from './Tipografia';
 
 // P-WAL-01 Personalización del wallpaper (Menú principal > Personalización > Personalización del wallpaper;
-// HE-02-HU10). Esta HU construye la lista «Tema en edición», la vista previa, las secciones y las opciones; el
-// contenido de cada sección llega con HE-02-HU02, HU03, HU05 a HU08, y «Guardar», «Aplicar» y «Cancelar» actúan
-// con HE-02-HU11, HU12 y HU13.
+// HE-02-HU10). La lista «Tema en edición», la vista previa (HE-02-HU09), las secciones (HE-02-HU02 a HU08) y
+// las opciones «Guardar», «Guardar como tema», «Aplicar» y «Cancelar» (HE-02-HU11, HE-03-HU02, HE-02-HU12,
+// HE-02-HU13).
 
 /**
  * HE-02-HU05-CA05 (ET08, ET16): «El contraste de estos colores es bajo (<contraste>:1). Prueba con <color
@@ -50,6 +53,10 @@ export function Personalization() {
   // HE-02-HU06 y HU07: el catálogo de tipografías y el de paletas.
   const [fuentes, setFuentes] = useState<CatalogItem[]>([]);
   const [paletas, setPaletas] = useState<CatalogItem[]>([]);
+  // HE-02-HU09-ET03: los widgets activos y el monitor principal para la vista previa.
+  const [escritorio, setEscritorio] = useState<{ widgets: WidgetRect[]; monitor: Monitor | null } | null>(
+    null,
+  );
   // M-04: el tema que se quería abrir cuando el Núcleo avisó de cambios sin guardar.
   // HE-02-HU03: el catálogo de imágenes (abierto con «Catálogo de imágenes»), la imagen propia que se muestra
   // y el rechazo del último archivo elegido.
@@ -83,6 +90,12 @@ export function Personalization() {
     });
     void invocar('catalog_list', { kind: 'palette' }).then((r) => {
       if (vigente && r.ok) setPaletas(r.value);
+    });
+    void invocar('layer_get_initial_state', {}).then((r) => {
+      if (!vigente || !r.ok) return;
+      const { monitors, widgets } = r.value;
+      const principal = monitors.find((m) => m.x === 0 && m.y === 0) ?? monitors[0] ?? null;
+      setEscritorio({ widgets, monitor: principal });
     });
     return () => {
       vigente = false;
@@ -209,7 +222,6 @@ export function Personalization() {
       : fondo?.source === 'catalog'
         ? imagenes?.find((i) => i.id === fondo.catalog_image_id)?.thumbnail_url
         : undefined;
-  const colores = borrador?.content.colors;
   // HE-02-HU06: la fuente y el tamaño de los textos de la vista previa.
   const nombreDeLaFuente = fuentes.find((f) => f.id === borrador?.content.font.id)?.name;
   return (
@@ -224,24 +236,14 @@ export function Personalization() {
             )}
             alCambiar={(id) => void seleccionar(id)}
           />
-          {/* ET01: vista previa del escritorio. Los widgets activos quedan para P14 (docs/DUDAS.md, HE-04-HU01). */}
-          <section
-            aria-label="Vista previa del escritorio"
-            className="wg-vista-previa"
-            style={{
-              background: colores?.primary,
-              color: colores?.text,
-              fontFamily: nombreDeLaFuente ? familia(nombreDeLaFuente) : undefined,
-              fontSize: borrador ? PIXELES_DEL_TAMANO[borrador.content.font.size] : undefined,
-              // HE-02-HU03-ET05: la imagen se ajusta al escritorio sin deformarse.
-              ...(imagenDeFondo
-                ? {
-                    backgroundImage: `url("${imagenDeFondo}")`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                  }
-                : {}),
-            }}
+          {/* HE-02-HU09-ET01, ET03: el wallpaper y los widgets activos con los cambios, antes de aplicarlos. */}
+          <VistaPrevia
+            contenido={borrador.content}
+            imagen={imagenDeFondo}
+            fuente={nombreDeLaFuente ? familia(nombreDeLaFuente) : undefined}
+            tamano={PIXELES_DEL_TAMANO[borrador.content.font.size]}
+            widgets={escritorio?.widgets ?? []}
+            monitor={escritorio?.monitor ?? null}
           />
           {/* HE-02-HU05-ET17: el aviso de contraste va debajo de la vista previa. */}
           {aviso && (

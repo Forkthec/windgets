@@ -600,3 +600,21 @@ button.wg-tarjeta__titulo:focus-visible {
     animation: none;
   }
 }
+
+/* Vista previa del escritorio (P-WAL-01, HE-02-HU09): el monitor principal a escala, con los widgets activos. */
+.wg-vista-previa {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-radius: var(--wg-radio);
+}
+.wg-vista-previa__widget {
+  position: absolute;
+  box-sizing: border-box;
+  padding: var(--wg-unidad);
+  overflow: hidden;
+  border: var(--wg-borde-ancho) solid;
+  border-radius: var(--wg-radio);
+}

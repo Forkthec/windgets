@@ -809,6 +809,8 @@ mod pruebas_de_salir;
 #[cfg(test)]
 mod pruebas_de_tipografia_y_paletas;
 #[cfg(test)]
+mod pruebas_de_vista_previa;
+#[cfg(test)]
 mod pruebas_de_widgets;
 #[cfg(test)]
 mod pruebas_del_tema_en_edicion;
