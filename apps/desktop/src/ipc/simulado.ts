@@ -369,6 +369,24 @@ const respuestas: Respuestas = {
     t.is_overdue = !t.is_completed && t.due_date < hoy;
     return { ok: true, value: t };
   },
+  // HE-12-HU02, HE-06-HU03: marcar mueve al final de Hecho; desmarcar la devuelve a la columna anterior o, si
+  // ya no existe, a Por hacer. Solo al marcar hay mensaje.
+  card_set_completed: ({ card_id, completed }) => {
+    const t = tarjetasSimuladas.find((c) => c.id === card_id);
+    if (!t) return error({ code: 'card.not_found', message: textos.TARJETA_NO_EXISTE });
+    if (t.is_completed === completed) return { ok: true, value: t };
+    const anterior = COLUMNAS_SIMULADAS.find((c) => c.id === t.previous_column_id);
+    const destino = completed ? 'hecho' : (anterior?.id ?? 'por-hacer');
+    const movida = respuestas.card_move?.({ card_id, column_id: destino, placement: { kind: 'end' } });
+    if (!movida?.ok) return error({ code: 'card.not_found', message: textos.TARJETA_NO_EXISTE });
+    return completed
+      ? {
+          ok: true,
+          value: t,
+          result_message: { code: 'card_set_completed', message: textos.TARJETA_COMPLETADA },
+        }
+      : { ok: true, value: t };
+  },
   // HE-07-HU05: elimina la tarjeta creada.
   card_delete: ({ id }) => {
     const i = tarjetasSimuladas.findIndex((c) => c.id === id);
