@@ -57,6 +57,7 @@ pub fn run() {
             puente_ipc::card_update,
             puente_ipc::card_delete,
             puente_ipc::card_move,
+            puente_ipc::card_set_completed,
             puente_ipc::agenda_get_day,
             puente_ipc::card_assign_time_block,
             puente_ipc::planner_get_today,
@@ -81,6 +82,7 @@ pub fn run() {
         .setup(|app| {
             integracion_con_el_sistema::area_de_notificacion::crear_icono(app.handle())?;
             puente_ipc::vigilar_conexion(app.handle().clone());
+            puente_ipc::vigilar_dia(app.handle().clone());
             puente_ipc::sincronizar(app.handle().clone());
             #[cfg(all(windows, feature = "spike"))]
             host_del_wallpaper::spike::iniciar(app.handle())?;
