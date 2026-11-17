@@ -66,25 +66,42 @@ async function abrir(conCambios = false, primerInicio = false) {
       n.responder('catalog_list', ({ kind }) => ({
         ok: true,
         value:
-          kind === 'image'
+          kind === 'font'
             ? [
-                { id: 'mar', name: 'Mar', thumbnail_url: 'images/mar-t.jpg', is_cached: true },
-                { id: 'monte', name: 'Monte', thumbnail_url: 'images/monte-t.jpg', is_cached: true },
+                { id: 'nunito', name: 'Nunito', thumbnail_url: 'fonts/nunito.woff2', is_cached: true },
+                { id: 'inter', name: 'Inter', thumbnail_url: 'fonts/inter.woff2', is_cached: true },
               ]
-            : [
-                {
-                  id: 'default',
-                  name: 'Windgets',
-                  thumbnail_url: 'templates/default/thumbnail.png',
-                  is_cached: true,
-                },
-                {
-                  id: 'minimal',
-                  name: 'Minimal',
-                  thumbnail_url: 'templates/minimal/thumbnail.png',
-                  is_cached: true,
-                },
-              ],
+            : kind === 'palette'
+              ? [
+                  {
+                    id: 'oceano',
+                    name: 'Océano',
+                    thumbnail_url: '',
+                    is_cached: true,
+                    color_primary: '#0B3954',
+                    color_secondary: '#087E8B',
+                    color_text: '#F5F5F5',
+                  },
+                ]
+              : kind === 'image'
+                ? [
+                    { id: 'mar', name: 'Mar', thumbnail_url: 'images/mar-t.jpg', is_cached: true },
+                    { id: 'monte', name: 'Monte', thumbnail_url: 'images/monte-t.jpg', is_cached: true },
+                  ]
+                : [
+                    {
+                      id: 'default',
+                      name: 'Windgets',
+                      thumbnail_url: 'templates/default/thumbnail.png',
+                      is_cached: true,
+                    },
+                    {
+                      id: 'minimal',
+                      name: 'Minimal',
+                      thumbnail_url: 'templates/minimal/thumbnail.png',
+                      is_cached: true,
+                    },
+                  ],
       }));
       n.responder('theme_draft_update', ({ patch }) => {
         // HE-02-HU05: el Núcleo valida cada color (ET04 a ET06).
@@ -107,6 +124,7 @@ async function abrir(conCambios = false, primerInicio = false) {
             content: {
               ...CONTENIDO,
               colors: { ...CONTENIDO.colors, ...patch.colors },
+              font: { id: patch.font_id ?? CONTENIDO.font.id, size: patch.font_size ?? CONTENIDO.font.size },
               template_id: patch.template_id ?? CONTENIDO.template_id,
               background: patch.background
                 ? {
@@ -414,7 +432,10 @@ describe('HE-02-HU05 · Colores del tema', () => {
     // El selector de colores del color principal, con el teclado sobre el tono.
     const selector = within(seccion()).getByRole('group', { name: 'Color principal' });
     const deslizadores = within(selector).getAllByRole('slider');
-    fireEvent.keyDown(deslizadores[deslizadores.length - 1] as HTMLElement, { key: 'ArrowRight', keyCode: 39 });
+    fireEvent.keyDown(deslizadores[deslizadores.length - 1] as HTMLElement, {
+      key: 'ArrowRight',
+      keyCode: 39,
+    });
     await waitFor(() => expect(llamadasA(nucleo, 'theme_draft_update')).toHaveLength(1));
     const [llamada] = llamadasA(nucleo, 'theme_draft_update') as Array<{
       patch: { colors: { primary: string } };
@@ -495,6 +516,41 @@ describe('HE-02-HU05 · Colores del tema', () => {
     nucleo.responder('theme_draft_update', () => ({ ok: true, value: vista('t1', 'Mi tema', true) }));
     diligenciar('Color del texto', '#E6E6E6');
     await waitFor(() => expect(screen.queryByText(/El contraste de estos colores es bajo/)).toBeNull());
+  });
+});
+
+describe('HE-02-HU06 · Tipografía del tema', () => {
+  const seccion = () => screen.getByRole('region', { name: 'Tipografía' });
+  const vistaPrevia = () => screen.getByRole('region', { name: 'Vista previa del escritorio' });
+
+  it('HE-02-HU06-CA01 · Cambiar la fuente', async () => {
+    const nucleo = await abrir();
+    const catalogo = await screen.findByRole('list', { name: 'Catálogo de tipografías' });
+    // ET01: cada fuente con su nombre escrito en esa fuente; los tres tamaños y «Restablecer tipografía».
+    const inter = within(catalogo).getByRole('button', { name: 'Inter' });
+    expect(inter.style.fontFamily).toContain('Inter');
+    const tamanos = within(within(seccion()).getByRole('group', { name: 'Tamaño' })).getAllByRole('button');
+    expect(tamanos.map((b) => b.textContent)).toEqual(['Pequeño', 'Mediano', 'Grande']);
+    expect(within(seccion()).getByRole('button', { name: 'Restablecer tipografía' })).toBeTruthy();
+    await waitFor(() => expect(vistaPrevia().style.fontFamily).toContain('Nunito'));
+    fireEvent.click(inter);
+    // ET03: la fuente del catálogo pasa a la vista previa.
+    await waitFor(() => expect(vistaPrevia().style.fontFamily).toContain('Inter'));
+    expect(llamadasA(nucleo, 'theme_draft_update')).toEqual([{ patch: { font_id: 'inter' } }]);
+    expect(inter.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('HE-02-HU06-CA02 · Cambiar el tamaño del texto', async () => {
+    const nucleo = await abrir();
+    await screen.findByRole('list', { name: 'Catálogo de tipografías' });
+    const tamano = (nombre: string) =>
+      within(within(seccion()).getByRole('group', { name: 'Tamaño' })).getByRole('button', { name: nombre });
+    // ET04: «Mediano» por defecto. ET05: 16 px.
+    expect(tamano('Mediano').getAttribute('aria-pressed')).toBe('true');
+    expect(vistaPrevia().style.fontSize).toBe('16px');
+    fireEvent.click(tamano('Grande'));
+    await waitFor(() => expect(vistaPrevia().style.fontSize).toBe('20px'));
+    expect(llamadasA(nucleo, 'theme_draft_update')).toEqual([{ patch: { font_size: 'large' } }]);
   });
 });
 

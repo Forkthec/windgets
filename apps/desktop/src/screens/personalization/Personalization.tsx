@@ -16,6 +16,7 @@ import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { Selector } from '@/ui/Selector/Selector';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { Colores, type CampoDeColor } from './Colores';
+import { familia, PIXELES_DEL_TAMANO, Tipografia } from './Tipografia';
 
 // P-WAL-01 Personalización del wallpaper (Menú principal > Personalización > Personalización del wallpaper;
 // HE-02-HU10). Esta HU construye la lista «Tema en edición», la vista previa, las secciones y las opciones; el
@@ -45,6 +46,8 @@ export function Personalization() {
   const [temas, setTemas] = useState<ThemeSummary[]>([]);
   const [borrador, setBorrador] = useState<ThemeDraftView | null>(null);
   const [plantillas, setPlantillas] = useState<CatalogItem[]>([]);
+  // HE-02-HU06: el catálogo de tipografías.
+  const [fuentes, setFuentes] = useState<CatalogItem[]>([]);
   // M-04: el tema que se quería abrir cuando el Núcleo avisó de cambios sin guardar.
   // HE-02-HU03: el catálogo de imágenes (abierto con «Catálogo de imágenes»), la imagen propia que se muestra
   // y el rechazo del último archivo elegido.
@@ -72,6 +75,9 @@ export function Personalization() {
     void leerTemas();
     void invocar('catalog_list', { kind: 'template' }).then((r) => {
       if (vigente && r.ok) setPlantillas(r.value);
+    });
+    void invocar('catalog_list', { kind: 'font' }).then((r) => {
+      if (vigente && r.ok) setFuentes(r.value);
     });
     return () => {
       vigente = false;
@@ -191,6 +197,8 @@ export function Personalization() {
         ? imagenes?.find((i) => i.id === fondo.catalog_image_id)?.thumbnail_url
         : undefined;
   const colores = borrador?.content.colors;
+  // HE-02-HU06: la fuente y el tamaño de los textos de la vista previa.
+  const nombreDeLaFuente = fuentes.find((f) => f.id === borrador?.content.font.id)?.name;
   return (
     <main aria-label="Personalización del wallpaper" aria-busy={borrador === null}>
       {borrador && (
@@ -210,6 +218,8 @@ export function Personalization() {
             style={{
               background: colores?.primary,
               color: colores?.text,
+              fontFamily: nombreDeLaFuente ? familia(nombreDeLaFuente) : undefined,
+              fontSize: borrador ? PIXELES_DEL_TAMANO[borrador.content.font.size] : undefined,
               // HE-02-HU03-ET05: la imagen se ajusta al escritorio sin deformarse.
               ...(imagenDeFondo
                 ? {
@@ -307,6 +317,15 @@ export function Personalization() {
                   }}
                   alCambiar={(campo, valor) => void cambiarColor(campo, valor)}
                   restablecer={<Boton>Restablecer colores</Boton>}
+                />
+              )}
+              {nombre === 'Tipografía' && (
+                <Tipografia
+                  fuentes={fuentes}
+                  tipografia={borrador.content.font}
+                  alElegirFuente={(id) => void cambiar({ font_id: id })}
+                  alElegirTamano={(tamano) => void cambiar({ font_size: tamano })}
+                  restablecer={<Boton>Restablecer tipografía</Boton>}
                 />
               )}
             </section>

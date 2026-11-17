@@ -471,6 +471,9 @@ impl ServicioDePersonalizacion {
             Some(pedidos) => Some(colores_pedidos(pedidos)?),
             None => None,
         };
+        if let Some(fuente) = &cambio.font_id {
+            Self::fuente_existe(base, fuente).await?;
+        }
         self.con_borrador(|b| {
             b.as_mut().map(|borrador| {
                 if let Some(plantilla) = &cambio.template_id {
@@ -478,6 +481,13 @@ impl ServicioDePersonalizacion {
                 }
                 if let Some(fondo) = fondo {
                     borrador.contenido.background = fondo;
+                }
+                // HE-02-HU06-ET02, ET03: la fuente del catálogo y el tamaño del texto.
+                if let Some(fuente) = &cambio.font_id {
+                    borrador.contenido.font.id.clone_from(fuente);
+                }
+                if let Some(tamano) = &cambio.font_size {
+                    borrador.contenido.font.size = tamano.clone();
                 }
                 if let Some([primario, secundario, texto]) = colores {
                     let actuales = &mut borrador.contenido.colors;
@@ -550,6 +560,51 @@ impl ServicioDePersonalizacion {
         }
     }
 
+    /// La fuente debe estar en el catálogo de tipografías (`font.not_found`, sin texto; HE-02-HU06-ET03).
+    async fn fuente_existe(base: &BaseLocal, id: &str) -> Result<(), AppError> {
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let existe: Option<String> =
+            sqlx::query_scalar("SELECT id FROM catalog_font WHERE id = ? AND is_active = 1")
+                .bind(id)
+                .fetch_optional(pool)
+                .await
+                .map_err(de_sqlx)?;
+        existe
+            .map(|_| ())
+            .ok_or_else(|| error(ErrorCode::FontNotFound, "", None))
+    }
+
+    /// IPC-CAT-01 `catalog_list` con `kind: 'font'`: el catálogo de tipografías, por `sort_order`
+    /// (HE-02-HU06-ET01, ET03).
+    /// DUDA: HE-02-HU06 `thumbnail_url` con la ruta del archivo de la fuente (como las demás miniaturas); la vista
+    /// escribe cada nombre con la familia de esa fuente, que viaja en el instalador.
+    pub async fn fuentes(&self, base: &BaseLocal) -> Result<Vec<CatalogItem>, AppError> {
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let filas = sqlx::query(
+            "SELECT id, display_name, file_path FROM catalog_font WHERE is_active = 1 ORDER BY sort_order, display_name",
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        filas
+            .iter()
+            .map(|f| {
+                Ok(CatalogItem {
+                    id: f.try_get("id")?,
+                    name: f.try_get("display_name")?,
+                    thumbnail_url: f.try_get("file_path")?,
+                    is_cached: true,
+                    hex: None,
+                    color_primary: None,
+                    color_secondary: None,
+                    color_text: None,
+                    format: None,
+                })
+            })
+            .collect::<Result<Vec<_>, sqlx::Error>>()
+            .map_err(de_sqlx)
+    }
+
     /// IPC-CAT-01 `catalog_list` con `kind: 'image'`: las imágenes activas del catálogo, por `sort_order`
     /// (HE-02-HU03-CA02, ET07). Solo lectura: no hay forma de agregar imágenes al catálogo (ET08).
     /// DUDA: HE-02-HU03 `thumbnail_url` con la ruta de la miniatura hasta que exista `asset_resolve` (HE-02-HU01).
@@ -613,6 +668,8 @@ mod pruebas_de_imagenes;
 mod pruebas_de_plantillas;
 #[cfg(test)]
 mod pruebas_de_salir;
+#[cfg(test)]
+mod pruebas_de_tipografia_y_paletas;
 #[cfg(test)]
 mod pruebas_de_widgets;
 #[cfg(test)]

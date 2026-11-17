@@ -535,6 +535,12 @@ pub async fn catalog_list(
                 .imagenes(nucleo.planificador.base())
                 .await
         }
+        CatalogKind::Font => {
+            nucleo
+                .personalizacion
+                .fuentes(nucleo.planificador.base())
+                .await
+        }
         _ => Ok(Vec::new()),
     }))
 }
