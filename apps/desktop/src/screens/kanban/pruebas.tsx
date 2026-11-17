@@ -11,6 +11,7 @@ import type {
   CardCreateParams,
   CardDetail,
   CardMoveParams,
+  CardSetCompletedParams,
   CardUpdateParams,
   Column,
   CommandMap,
@@ -349,6 +350,30 @@ export function crearNucleo(tarjetas: Card[] = []): {
         t.is_completed = destino.role === 'done';
         t.is_overdue = !t.is_completed && t.due_date < '2026-11-14';
         return { ok: true, value: t };
+      },
+    ],
+    [
+      // HE-12-HU02, HE-06-HU03: marcar mueve al final de Hecho; desmarcar la devuelve a la columna anterior o,
+      // si ya no existe, a Por hacer. Solo al marcar hay mensaje.
+      'card_set_completed',
+      (params) => {
+        const { card_id, completed } = params as CardSetCompletedParams;
+        const t = nucleo.tarjetas.find((c) => c.id === card_id);
+        if (!t)
+          return { ok: false, error: { code: 'card.not_found', message: 'Esta tarjeta ya no existe.' } };
+        if (t.is_completed === completed) return { ok: true, value: t };
+        const hecho = nucleo.columnas.find((c) => c.role === 'done') ?? HECHO;
+        const anterior = nucleo.columnas.find((c) => c.id === t.previous_column_id);
+        const destino = completed ? hecho : (anterior ?? POR_HACER);
+        const mover = respuestas.get('card_move') as Respuesta;
+        mover({ card_id, column_id: destino.id, placement: { kind: 'end' } });
+        return completed
+          ? {
+              ok: true,
+              value: t,
+              result_message: { code: 'card_set_completed', message: '¡Bien hecho! Tarjeta completada.' },
+            }
+          : { ok: true, value: t };
       },
     ],
     [

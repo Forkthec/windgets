@@ -79,6 +79,8 @@ function nucleo(
         return ok(capa(widgets));
       case 'asset_resolve':
         return ok({ url: '', state: 'unavailable' });
+      case 'catalog_list':
+        return ok([]);
       case 'layout_edit_move': {
         const r = responder.mover?.(params) ?? {
           rect: widgets.find((w) => w.widget_id === (params as { widget_id: string }).widget_id) ?? RELOJ,

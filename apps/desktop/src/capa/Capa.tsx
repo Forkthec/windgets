@@ -3,6 +3,9 @@ import { invocar as invocarNucleo } from '@/ipc/cliente';
 import { escuchar as escucharNucleo, type Escuchar } from '@/ipc/eventos';
 import { urlDeArchivo } from '@/ipc/archivos';
 import { Reloj } from './Reloj';
+import { TareasDelDia } from './TareasDelDia';
+import { tokensDelTema } from '@/ui/tema/temaAplicado';
+import { aplicarTokens } from '@/ui/tema/tokens';
 import type {
   AssetResolveParams,
   EventMapPointerForwarded,
@@ -15,7 +18,7 @@ import type {
 // C-02 Capa del wallpaper y los widgets (P-WAL-02, HE-02-HU01). Es la ventana anclada detrás de los íconos del
 // escritorio (D-131): pinta el wallpaper del tema aplicado a partir de lo guardado, sin red (IPC-DESK-01; RNF-08).
 // Encima pinta los widgets activos del tema aplicado en su posición y tamaño (HE-04-HU01-CA01, CA03). El
-// contenido de cada widget llega con su HU: el Reloj ya lo tiene (HE-04-HU03); faltan Tareas del día HE-06-HU02,
+// contenido de cada widget llega con su HU: el Reloj (HE-04-HU03) y Tareas del día (HE-06-HU02) ya lo tienen; faltan
 // Kanban HE-06-HU05 y Calendario HE-06-HU07 (docs/DUDAS.md).
 
 /** Nombre de cada widget (glosario). */
@@ -92,7 +95,11 @@ export function Capa({ invocar = invocarNucleo, escuchar = escucharNucleo }: Cap
         const archivo = await invocar('asset_resolve', recurso);
         if (archivo.ok && archivo.value.state === 'ready') imagen = urlDeArchivo(archivo.value.url);
       }
-      if (vigente) setPintado({ estado: r.value, imagen });
+      // HE-03-HU06-ET04: los widgets también toman los colores y la tipografía del tema aplicado.
+      const tokens = await tokensDelTema(invocar, r.value.applied);
+      if (!vigente) return;
+      aplicarTokens(tokens);
+      setPintado({ estado: r.value, imagen });
     };
     void leer();
     // EV-16: al iniciar o cerrar sesión, o si el wallpaper no se pudo mostrar, la capa vuelve a leer. EV-11: al
@@ -145,6 +152,7 @@ export function Capa({ invocar = invocarNucleo, escuchar = escucharNucleo }: Cap
           style={{ position: 'absolute', left: w.x, top: w.y, width: w.width, height: w.height }}
         >
           {w.type === 'clock' && <Reloj />}
+          {w.type === 'daily_tasks' && <TareasDelDia invocar={invocar} escuchar={escuchar} />}
         </section>
       ))}
     </main>

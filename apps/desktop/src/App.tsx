@@ -7,6 +7,7 @@ import { Settings } from '@/screens/settings/Settings';
 import { PlannerDaily } from '@/screens/planner_daily/PlannerDaily';
 import { Register } from '@/screens/register/Register';
 import { SignIn } from '@/screens/sign_in/SignIn';
+import { Themes } from '@/screens/themes/Themes';
 import { Widgets } from '@/screens/widgets/Widgets';
 import { VentanaPrincipal } from '@/ventana_principal/VentanaPrincipal';
 
@@ -22,6 +23,7 @@ export default function App() {
         planner_daily: PlannerDaily,
         reports: Reports,
         settings: Settings,
+        themes: Themes,
         widgets: Widgets,
       }}
       pantallasDeCuenta={{ register: Register, sign_in: SignIn }}

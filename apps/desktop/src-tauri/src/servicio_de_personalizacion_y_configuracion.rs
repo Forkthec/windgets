@@ -14,11 +14,14 @@ use sqlx::sqlite::SqliteRow;
 
 use crate::messages;
 use crate::repositorios_y_archivos_locales::BaseLocal;
-use crate::servicio_del_planificador::{de_sqlx, error, inesperado};
+use crate::servicio_de_sesion::ConMensaje;
+use crate::servicio_del_planificador::{de_sqlx, error, inesperado, resultado};
 use crate::tipos::{
-    AppError, BackgroundSource, CatalogItem, ErrorCode, FontSize, Hex, Legibility, ThemeBackground,
+    AppError, BackgroundSource, CatalogItem, ErrorCode, FontSize, Hex, ThemeBackground,
     ThemeColors, ThemeContent, ThemeContentFont, ThemeDraftPatch, ThemeDraftPatchBackground,
-    ThemeDraftView, ThemeSummary, Uuid,
+    ThemeDraftPatchColors, ThemeDraftPatchColorsPrimary, ThemeDraftPatchColorsSecondary,
+    ThemeDraftPatchColorsText, ThemeDraftResetParamsPart, ThemeDraftStatus, ThemeDraftView,
+    ThemeSummary, Uuid,
 };
 
 /// Identificador del tema inicial cuando la base local aún no lo trae (primer inicio sin la primera descarga).
@@ -54,13 +57,8 @@ impl Borrador {
             content: self.contenido.clone(),
             dirty: self.dirty(),
             applied_unsaved: self.aplicado_sin_guardar,
-            // DUDA: HE-02-HU05 la legibilidad se calcula con la edición de colores (P13). Valor neutro: sin
-            // avisos.
-            legibility: Legibility {
-                ok: true,
-                items: Vec::new(),
-                suggestion: None,
-            },
+            // HE-02-HU05-ET07, ET08: la legibilidad de los colores de la vista previa.
+            legibility: legibilidad::legibilidad(&self.contenido.colors),
         }
     }
 }
@@ -111,6 +109,46 @@ fn contenido_de_fila(fila: &SqliteRow) -> Result<ThemeContent, sqlx::Error> {
             size: texto_de_fuente(&tamano),
         },
     })
+}
+
+/// HE-02-HU05-ET04 a ET06: los colores que pide el parche, en `#RRGGBB` y en mayúsculas (ET13). Un color vacío
+/// responde `color.required` y uno con otra forma `color.invalid`, en su campo; ninguno cambia la vista previa.
+fn colores_pedidos(pedidos: &ThemeDraftPatchColors) -> Result<[Option<Hex>; 3], AppError> {
+    let revisar = |campo: &str, valor: Option<Option<&Hex>>| -> Result<Option<Hex>, AppError> {
+        match valor {
+            None => Ok(None),
+            Some(None) => Err(error(
+                ErrorCode::ColorRequired,
+                messages::CAMPO_OBLIGATORIO,
+                Some(campo),
+            )),
+            Some(Some(hex)) => match legibilidad::de_hex(hex.0.trim()) {
+                Some(rgb) => Ok(Some(Hex(legibilidad::a_hex(rgb)))),
+                None => Err(error(
+                    ErrorCode::ColorInvalid,
+                    messages::COLOR_INVALIDO,
+                    Some(campo),
+                )),
+            },
+        }
+    };
+    let primario = pedidos.primary.as_ref().map(|c| match c {
+        ThemeDraftPatchColorsPrimary::Hex(h) => Some(h),
+        ThemeDraftPatchColorsPrimary::Lit(_) => None,
+    });
+    let secundario = pedidos.secondary.as_ref().map(|c| match c {
+        ThemeDraftPatchColorsSecondary::Hex(h) => Some(h),
+        ThemeDraftPatchColorsSecondary::Lit(_) => None,
+    });
+    let texto = pedidos.text.as_ref().map(|c| match c {
+        ThemeDraftPatchColorsText::Hex(h) => Some(h),
+        ThemeDraftPatchColorsText::Lit(_) => None,
+    });
+    Ok([
+        revisar("primary", primario)?,
+        revisar("secondary", secundario)?,
+        revisar("text", texto)?,
+    ])
 }
 
 /// ¿La copia aplicada es este contenido? `applied_theme` no guarda la paleta (datos.md), así que se compara sin
@@ -345,9 +383,10 @@ impl ServicioDePersonalizacion {
                     has_unapplied_changes: aplicado.as_ref().is_some_and(|(a, copia)| {
                         *a == id && !es_la_misma_copia(copia, &contenido)
                     }),
+                    // HE-03-HU01-ET07: cambios de la vista previa que se aplicaron sin guardarlos en el tema.
                     has_unsaved_changes: borrador
                         .as_ref()
-                        .is_some_and(|b| b.theme_id == id && b.dirty()),
+                        .is_some_and(|b| b.theme_id == id && b.aplicado_sin_guardar),
                     is_applied: es_aplicado,
                     id: Uuid(id),
                     name: f.try_get("name")?,
@@ -415,7 +454,34 @@ impl ServicioDePersonalizacion {
             }
         }
         let fondo = match &cambio.background {
-            Some(pedido) => Some(Self::fondo_pedido(base, user_id, pedido).await?),
+            Some(pedido) => {
+                // HE-02-HU04-ET02: quitar la imagen cuando la plantilla ya muestra la suya no hace nada.
+                let ya_por_defecto = self.con_borrador(|b| {
+                    b.as_ref().is_some_and(|borrador| {
+                        borrador.contenido.background.source == BackgroundSource::TemplateDefault
+                    })
+                });
+                if pedido.source == BackgroundSource::TemplateDefault && ya_por_defecto {
+                    return Err(error(
+                        ErrorCode::BackgroundAlreadyDefault,
+                        messages::FONDO_YA_POR_DEFECTO,
+                        None,
+                    ));
+                }
+                Some(Self::fondo_pedido(base, user_id, pedido).await?)
+            }
+            None => None,
+        };
+        let colores = match &cambio.colors {
+            Some(pedidos) => Some(colores_pedidos(pedidos)?),
+            None => None,
+        };
+        if let Some(fuente) = &cambio.font_id {
+            Self::fuente_existe(base, fuente).await?;
+        }
+        let paleta = match &cambio.palette_id {
+            Some(Some(id)) => Some(Some(Self::paleta(base, id).await?)),
+            Some(None) => Some(None),
             None => None,
         };
         self.con_borrador(|b| {
@@ -425,6 +491,36 @@ impl ServicioDePersonalizacion {
                 }
                 if let Some(fondo) = fondo {
                     borrador.contenido.background = fondo;
+                }
+                // HE-02-HU06-ET02, ET03: la fuente del catálogo y el tamaño del texto.
+                if let Some(fuente) = &cambio.font_id {
+                    borrador.contenido.font.id.clone_from(fuente);
+                }
+                if let Some(tamano) = &cambio.font_size {
+                    borrador.contenido.font.size = tamano.clone();
+                }
+                // HE-02-HU07-ET02, ET04: la paleta pone los tres colores en un solo paso; nada más cambia.
+                match paleta {
+                    Some(Some((id, colores_de_la_paleta))) => {
+                        borrador.contenido.colors = colores_de_la_paleta;
+                        borrador.contenido.palette_id = Some(id);
+                    }
+                    Some(None) => borrador.contenido.palette_id = None,
+                    None => {}
+                }
+                if let Some([primario, secundario, texto]) = colores {
+                    let actuales = &mut borrador.contenido.colors;
+                    for (actual, nuevo) in [
+                        (&mut actuales.primary, primario),
+                        (&mut actuales.secondary, secundario),
+                        (&mut actuales.text, texto),
+                    ] {
+                        if let Some(nuevo) = nuevo {
+                            *actual = nuevo;
+                        }
+                    }
+                    // HE-02-HU07: un color cambiado a mano deja la paleta en «Personalizada».
+                    borrador.contenido.palette_id = None;
                 }
                 borrador.vista()
             })
@@ -483,6 +579,207 @@ impl ServicioDePersonalizacion {
         }
     }
 
+    /// IPC-THEME-10 `theme_draft_get_status` (HE-02-HU13-CA02, CA05): si la vista previa tiene cambios sin
+    /// guardar y si se aplicaron sin guardarlos, con el nombre del tema en edición.
+    pub fn estado_del_borrador(&self) -> ThemeDraftStatus {
+        self.con_borrador(|b| match b {
+            Some(borrador) => ThemeDraftStatus {
+                dirty: borrador.dirty(),
+                applied_unsaved: borrador.aplicado_sin_guardar,
+                theme_name: borrador.name.clone(),
+            },
+            None => ThemeDraftStatus {
+                dirty: false,
+                applied_unsaved: false,
+                theme_name: String::new(),
+            },
+        })
+    }
+
+    /// IPC-THEME-11 `theme_draft_discard` (HE-02-HU13-CA01, ET01, ET02): la vista previa vuelve a lo último
+    /// guardado del tema en edición, sin guardar nada. Lo aplicado al escritorio no cambia (ET05).
+    pub async fn descartar_borrador(
+        &self,
+        base: &BaseLocal,
+        user_id: &str,
+    ) -> Result<ConMensaje<ThemeDraftView>, AppError> {
+        let actual = self.abrir_borrador(base, user_id, None).await?;
+        let nuevo = self.cargar(base, user_id, Some(&actual.theme_id.0)).await?;
+        let vista = nuevo.vista();
+        self.con_borrador(|b| *b = Some(nuevo));
+        Ok(ConMensaje {
+            valor: vista,
+            mensaje: resultado("theme_draft_discard", messages::NO_SE_GUARDARON_CAMBIOS),
+        })
+    }
+
+    /// IPC-THEME-06 `theme_draft_reset` (HE-02-HU08): devuelve en la vista previa los colores o la tipografía a
+    /// los de la plantilla del tema en edición; la tipografía vuelve además al tamaño mediano (ET01, ET02). Los
+    /// colores de la plantilla no son una paleta del catálogo: quedan en «Personalizada».
+    pub async fn restablecer_borrador(
+        &self,
+        base: &BaseLocal,
+        user_id: &str,
+        parte: &ThemeDraftResetParamsPart,
+    ) -> Result<ThemeDraftView, AppError> {
+        let actual = self.abrir_borrador(base, user_id, None).await?;
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let fila = sqlx::query(
+            "SELECT default_color_primary, default_color_secondary, default_color_text, default_font_id \
+             FROM catalog_template WHERE id = ?",
+        )
+        .bind(&actual.content.template_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(de_sqlx)?;
+        // Sin la plantilla en el catálogo local, los valores de la plantilla por defecto (como el tema inicial).
+        let por_defecto = Self::contenido_inicial(base).await?;
+        let (colores, fuente) = match fila {
+            Some(f) => {
+                let color = |c: &str| -> Result<Hex, AppError> {
+                    Ok(Hex(f
+                        .try_get::<String, _>(c)
+                        .map_err(de_sqlx)?
+                        .to_uppercase()))
+                };
+                (
+                    ThemeColors {
+                        primary: color("default_color_primary")?,
+                        secondary: color("default_color_secondary")?,
+                        text: color("default_color_text")?,
+                    },
+                    f.try_get::<String, _>("default_font_id").map_err(de_sqlx)?,
+                )
+            }
+            None => (por_defecto.colors, por_defecto.font.id),
+        };
+        self.con_borrador(|b| {
+            b.as_mut().map(|borrador| {
+                match parte {
+                    ThemeDraftResetParamsPart::Colors => {
+                        borrador.contenido.colors = colores;
+                        borrador.contenido.palette_id = None;
+                    }
+                    ThemeDraftResetParamsPart::Typography => {
+                        borrador.contenido.font = ThemeContentFont {
+                            id: fuente,
+                            size: FontSize::Medium,
+                        };
+                    }
+                }
+                borrador.vista()
+            })
+        })
+        .ok_or_else(inesperado)
+    }
+
+    /// La fuente debe estar en el catálogo de tipografías (`font.not_found`, sin texto; HE-02-HU06-ET03).
+    async fn fuente_existe(base: &BaseLocal, id: &str) -> Result<(), AppError> {
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let existe: Option<String> =
+            sqlx::query_scalar("SELECT id FROM catalog_font WHERE id = ? AND is_active = 1")
+                .bind(id)
+                .fetch_optional(pool)
+                .await
+                .map_err(de_sqlx)?;
+        existe
+            .map(|_| ())
+            .ok_or_else(|| error(ErrorCode::FontNotFound, "", None))
+    }
+
+    /// Los tres colores de una paleta del catálogo (HE-02-HU07-ET02).
+    /// DUDA: HE-02-HU07 IPC-THEME-05 no define un error para una paleta que no está en el catálogo (la vista solo
+    /// ofrece las del catálogo). Valor usado: `internal.unexpected`, como un color fuera del catálogo (HE-09-HU03).
+    async fn paleta(base: &BaseLocal, id: &str) -> Result<(String, ThemeColors), AppError> {
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let fila = sqlx::query(
+            "SELECT color_primary, color_secondary, color_text FROM catalog_palette WHERE id = ? AND is_active = 1",
+        )
+        .bind(id)
+        .fetch_optional(pool)
+        .await
+        .map_err(de_sqlx)?
+        .ok_or_else(inesperado)?;
+        let color = |columna: &str| -> Result<Hex, AppError> {
+            Ok(Hex(fila
+                .try_get::<String, _>(columna)
+                .map_err(de_sqlx)?
+                .to_uppercase()))
+        };
+        Ok((
+            id.to_string(),
+            ThemeColors {
+                primary: color("color_primary")?,
+                secondary: color("color_secondary")?,
+                text: color("color_text")?,
+            },
+        ))
+    }
+
+    /// IPC-CAT-01 `catalog_list` con `kind: 'font'`: el catálogo de tipografías, por `sort_order`
+    /// (HE-02-HU06-ET01, ET03).
+    /// DUDA: HE-02-HU06 `thumbnail_url` con la ruta del archivo de la fuente (como las demás miniaturas); la vista
+    /// escribe cada nombre con la familia de esa fuente, que viaja en el instalador.
+    pub async fn fuentes(&self, base: &BaseLocal) -> Result<Vec<CatalogItem>, AppError> {
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let filas = sqlx::query(
+            "SELECT id, display_name, file_path FROM catalog_font WHERE is_active = 1 ORDER BY sort_order, display_name",
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        filas
+            .iter()
+            .map(|f| {
+                Ok(CatalogItem {
+                    id: f.try_get("id")?,
+                    name: f.try_get("display_name")?,
+                    thumbnail_url: f.try_get("file_path")?,
+                    is_cached: true,
+                    hex: None,
+                    color_primary: None,
+                    color_secondary: None,
+                    color_text: None,
+                    format: None,
+                })
+            })
+            .collect::<Result<Vec<_>, sqlx::Error>>()
+            .map_err(de_sqlx)
+    }
+
+    /// IPC-CAT-01 `catalog_list` con `kind: 'palette'`: el catálogo de paletas con sus tres colores, por
+    /// `sort_order` (HE-02-HU07-ET01).
+    pub async fn paletas(&self, base: &BaseLocal) -> Result<Vec<CatalogItem>, AppError> {
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let filas = sqlx::query(
+            "SELECT id, name, color_primary, color_secondary, color_text FROM catalog_palette \
+             WHERE is_active = 1 ORDER BY sort_order, name",
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        filas
+            .iter()
+            .map(|f| {
+                let color = |c: &str| -> Result<Hex, sqlx::Error> {
+                    Ok(Hex(f.try_get::<String, _>(c)?.to_uppercase()))
+                };
+                Ok(CatalogItem {
+                    id: f.try_get("id")?,
+                    name: f.try_get("name")?,
+                    thumbnail_url: String::new(),
+                    is_cached: true,
+                    hex: None,
+                    color_primary: Some(color("color_primary")?),
+                    color_secondary: Some(color("color_secondary")?),
+                    color_text: Some(color("color_text")?),
+                    format: None,
+                })
+            })
+            .collect::<Result<Vec<_>, sqlx::Error>>()
+            .map_err(de_sqlx)
+    }
+
     /// IPC-CAT-01 `catalog_list` con `kind: 'image'`: las imágenes activas del catálogo, por `sort_order`
     /// (HE-02-HU03-CA02, ET07). Solo lectura: no hay forma de agregar imágenes al catálogo (ET08).
     /// DUDA: HE-02-HU03 `thumbnail_url` con la ruta de la miniatura hasta que exista `asset_resolve` (HE-02-HU01).
@@ -528,12 +825,20 @@ mod aplicar;
 pub mod distribucion;
 pub mod escritorio;
 mod guardado;
+pub mod guardar_como;
 mod imagenes;
+pub(crate) mod legibilidad;
 pub mod ultima_pantalla;
 mod widgets;
 
 #[cfg(test)]
 mod pruebas_de_aplicar;
+#[cfg(test)]
+mod pruebas_de_aplicar_un_tema;
+#[cfg(test)]
+mod pruebas_de_cancelar;
+#[cfg(test)]
+mod pruebas_de_colores;
 #[cfg(test)]
 mod pruebas_de_distribucion;
 #[cfg(test)]
@@ -543,11 +848,21 @@ mod pruebas_de_escritorio;
 #[cfg(test)]
 mod pruebas_de_guardado;
 #[cfg(test)]
+mod pruebas_de_guardar_como;
+#[cfg(test)]
 mod pruebas_de_imagenes;
 #[cfg(test)]
 mod pruebas_de_plantillas;
 #[cfg(test)]
+mod pruebas_de_restablecer;
+#[cfg(test)]
 mod pruebas_de_salir;
+#[cfg(test)]
+mod pruebas_de_temas;
+#[cfg(test)]
+mod pruebas_de_tipografia_y_paletas;
+#[cfg(test)]
+mod pruebas_de_vista_previa;
 #[cfg(test)]
 mod pruebas_de_widgets;
 #[cfg(test)]

@@ -57,6 +57,7 @@ pub fn run() {
             puente_ipc::card_update,
             puente_ipc::card_delete,
             puente_ipc::card_move,
+            puente_ipc::card_set_completed,
             puente_ipc::agenda_get_day,
             puente_ipc::card_assign_time_block,
             puente_ipc::planner_get_today,
@@ -65,6 +66,11 @@ pub fn run() {
             puente_ipc::theme_draft_open,
             puente_ipc::theme_draft_select,
             puente_ipc::theme_draft_update,
+            puente_ipc::theme_draft_reset,
+            puente_ipc::theme_draft_get_status,
+            puente_ipc::theme_draft_discard,
+            puente_ipc::theme_draft_save_as,
+            puente_ipc::theme_apply,
             puente_ipc::image_import,
             puente_ipc::theme_draft_save,
             puente_ipc::theme_draft_apply,
@@ -88,6 +94,7 @@ pub fn run() {
         .setup(|app| {
             integracion_con_el_sistema::area_de_notificacion::crear_icono(app.handle())?;
             puente_ipc::vigilar_conexion(app.handle().clone());
+            puente_ipc::vigilar_dia(app.handle().clone());
             puente_ipc::sincronizar(app.handle().clone());
             #[cfg(all(windows, feature = "spike"))]
             host_del_wallpaper::spike::iniciar(app.handle())?;

@@ -15,6 +15,7 @@ import textos from '@/types/messages.es.json';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { ProveedorDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { MenuPrincipal, SECCIONES_MENU } from '@/ui/MenuPrincipal/MenuPrincipal';
+import { useTemaAplicado } from '@/ui/tema/temaAplicado';
 import { AvisoDelWallpaper } from './AvisoDelWallpaper';
 import { IndicadorSincronizacion } from './IndicadorSincronizacion';
 import { ContextoDeBloqueo } from '@/ui/VentanaEmergente/VentanaEmergente';
@@ -189,6 +190,9 @@ export function VentanaPrincipal({
     [cerrada, correoDeCuenta, iniciada, pantalla, sesion],
   );
   const nucleo = useMemo(() => ({ invocar, escuchar }), [escuchar, invocar]);
+
+  // HE-03-HU06: los colores y la tipografía del tema aplicado en toda la aplicación (ET01, ET02, ET05).
+  useTemaAplicado(invocar, escuchar, sesion === 'con_sesion');
 
   // HE-17-HU02-ET05 (D-156): cada pantalla que se abre queda como la última visitada en este computador.
   useEffect(() => {

@@ -2,9 +2,8 @@ import type { Tokens } from './tokens';
 
 // Tokens del tema por defecto (interfaz.md, «Tema a tokens»): principal #96B2B2, secundario #829890, texto
 // #14201C, tipografía Nunito, tamaño mediano. Son el resultado de las fórmulas de la tabla, calculado una vez.
-// Provisional: el Núcleo los entregará con `theme_get_applied` (IPC-THEME-02, HE-03-HU06, P13); mientras el
-// comando no exista, la ventana arranca con estos para que las pantallas de cuenta no queden sin estilo.
-// Ver docs/DUDAS.md («P05b»).
+// La ventana arranca con estos (y los usa sin sesión, en las pantallas de cuenta); con la sesión iniciada toma
+// los del tema aplicado (HE-03-HU06, `temaAplicado.ts`). `derivar.ts` da estos mismos valores.
 export const TOKENS_POR_DEFECTO: Tokens = {
   marco: '#96B2B2',
   sobre_marco: '#121216',

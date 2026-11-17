@@ -317,3 +317,66 @@ fn imagen_propia_de_otra_cuenta_no_es_un_fondo_valido() {
     .unwrap_err();
     assert_eq!(error.code, ErrorCode::ImageNotFound);
 }
+
+/// El parche de «Quitar imagen» (HE-02-HU04): la imagen de fondo por defecto de la plantilla.
+fn quitar_imagen() -> ThemeDraftPatch {
+    ThemeDraftPatch {
+        background: Some(ThemeDraftPatchBackground {
+            source: BackgroundSource::TemplateDefault,
+            catalog_image_id: None,
+            uploaded_image_id: None,
+        }),
+        ..fondo_propio(&Uuid(String::new()))
+    }
+}
+
+#[test]
+fn ca_he_02_hu04_ca01() {
+    // HE-02-HU04-CA01 · Quitar la imagen propia o del catálogo deja la de la plantilla (ET01).
+    let (base, servicio) = con_imagenes();
+    bloquear(servicio.actualizar_borrador(&base, USUARIO, &fondo_del_catalogo("mar"))).unwrap();
+    let vista = bloquear(servicio.actualizar_borrador(&base, USUARIO, &quitar_imagen())).unwrap();
+    assert_eq!(
+        vista.content.background,
+        ThemeBackground {
+            source: BackgroundSource::TemplateDefault,
+            catalog_image_id: None,
+            uploaded_image_id: None,
+        }
+    );
+    // También con una imagen propia.
+    let dir = carpeta();
+    let propia = importar(
+        &servicio,
+        &base,
+        &archivo(&dir, "foto.png", &png(3, 2)),
+        &dir.join("files"),
+    )
+    .unwrap();
+    bloquear(servicio.actualizar_borrador(
+        &base,
+        USUARIO,
+        &fondo_propio(&propia.uploaded_image_id),
+    ))
+    .unwrap();
+    let vista = bloquear(servicio.actualizar_borrador(&base, USUARIO, &quitar_imagen())).unwrap();
+    assert_eq!(
+        vista.content.background.source,
+        BackgroundSource::TemplateDefault
+    );
+}
+
+#[test]
+fn ca_he_02_hu04_ca02() {
+    // HE-02-HU04-CA02 · Con la imagen de la plantilla, «Quitar imagen» responde su texto y no cambia nada (ET02).
+    let (base, servicio) = con_imagenes();
+    let error =
+        bloquear(servicio.actualizar_borrador(&base, USUARIO, &quitar_imagen())).unwrap_err();
+    assert_eq!(error.code, ErrorCode::BackgroundAlreadyDefault);
+    assert_eq!(
+        error.message,
+        "Esta plantilla ya muestra su imagen de fondo por defecto."
+    );
+    let vista = bloquear(servicio.abrir_borrador(&base, USUARIO, None)).unwrap();
+    assert!(!vista.dirty);
+}

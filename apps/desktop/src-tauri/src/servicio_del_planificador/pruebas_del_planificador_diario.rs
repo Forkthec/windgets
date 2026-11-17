@@ -110,3 +110,14 @@ fn ca_he_12_hu01_ca05() {
         [("Estudiar redes".to_string(), Some(10))]
     );
 }
+
+#[test]
+fn ca_he_06_hu02_ca06() {
+    // HE-06-HU02-CA06 · Al pasar a las 00:00 el Núcleo avisa una sola vez con EV-22 `day_changed` y el día nuevo;
+    // el widget Tareas del día vuelve a leer `planner_get_today` (ET04).
+    let dia = |d: u32| NaiveDate::from_ymd_opt(2026, 11, d).unwrap();
+    let mut vigia = VigiaDelDia::nuevo(dia(14));
+    assert_eq!(vigia.revisar(dia(14)), None);
+    assert_eq!(vigia.revisar(dia(15)), Some(DateIso("2026-11-15".into())));
+    assert_eq!(vigia.revisar(dia(15)), None);
+}

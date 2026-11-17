@@ -17,24 +17,29 @@ use crate::repositorios_y_archivos_locales::{BaseLocal, almacen_de_la_aplicacion
 use crate::servicio_de_personalizacion_y_configuracion::ServicioDePersonalizacion;
 use crate::servicio_de_personalizacion_y_configuracion::escritorio::Carpetas;
 use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, ServicioDeSesion};
-use crate::servicio_del_planificador::{CalendarioDelSistema, ServicioDelPlanificador};
+use crate::servicio_del_planificador::{
+    Calendario, CalendarioDelSistema, ServicioDelPlanificador, VigiaDelDia,
+};
+use crate::tipos::ThemeApplyParams;
 use crate::tipos::{
     AgendaDay, AgendaDayParams, AppError, AuthRegisterStartParams, AuthRegisterStartResult,
     AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams,
     AuthSignOutInfo, Card, CardAssignTimeBlockParams, CardCreateParams, CardDetail, CardIdParams,
-    CardListBoardResult, CardMoveParams, CardUpdateParams, CatalogItem, CatalogKind,
-    CatalogListParams, ChangeOp, CodeSent, Column, ColumnCreateParams, ColumnReorderParams,
-    ColumnUpdateParams, Connectivity, EntityChange, ErrorCode, EventMapConnectivityChanged,
-    EventMapSessionChanged, EventMapSessionChangedReason, EventMapSessionChangedState,
-    ImageImportParams, ImageImportResult, IpcErr, IpcOk, IpcResult, Label, LabelCreateParams,
-    NoParams, OriginKind, PlannerToday, SessionInfo, ThemeDraftOpenParams, ThemeDraftSelectParams,
+    CardListBoardResult, CardMoveParams, CardSetCompletedParams, CardUpdateParams, CatalogItem,
+    CatalogKind, CatalogListParams, ChangeOp, CodeSent, Column, ColumnCreateParams,
+    ColumnReorderParams, ColumnUpdateParams, Connectivity, EntityChange, ErrorCode,
+    EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
+    EventMapSessionChangedState, ImageImportParams, ImageImportResult, IpcErr, IpcOk, IpcResult,
+    Label, LabelCreateParams, NoParams, OriginKind, PlannerToday, SessionInfo,
+    ThemeDraftOpenParams, ThemeDraftResetParams, ThemeDraftSelectParams, ThemeDraftStatus,
     ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
 };
 use crate::tipos::{
     AppliedThemeView, ApplyMode, AssetResolveParams, AssetResolveResult,
-    EventMapAppliedThemeChanged, EventMapCatalogUpdated, EventMapWallpaperStatusChanged,
-    EventMapWidgetsChanged, LayerInitialState, ThemeDraftApplyParams, ThemeDraftSaveResult,
-    ThemeIdResult, WallpaperState, WallpaperStatus, WidgetCatalog, WidgetDeleteParams, WidgetItem,
+    EventMapAppliedThemeChanged, EventMapCatalogUpdated, EventMapDayChanged,
+    EventMapWallpaperStatusChanged, EventMapWidgetsChanged, LayerInitialState,
+    ThemeDraftApplyParams, ThemeDraftSaveAsParams, ThemeDraftSaveResult, ThemeIdResult,
+    WallpaperState, WallpaperStatus, WidgetCatalog, WidgetDeleteParams, WidgetItem,
     WidgetSetActiveParams,
 };
 use crate::tipos::{
@@ -540,6 +545,18 @@ pub async fn catalog_list(
                 .imagenes(nucleo.planificador.base())
                 .await
         }
+        CatalogKind::Font => {
+            nucleo
+                .personalizacion
+                .fuentes(nucleo.planificador.base())
+                .await
+        }
+        CatalogKind::Palette => {
+            nucleo
+                .personalizacion
+                .paletas(nucleo.planificador.base())
+                .await
+        }
         _ => Ok(Vec::new()),
     }))
 }
@@ -571,6 +588,83 @@ pub async fn theme_draft_save(
                 origin: OriginKind::Local,
             },
         );
+    }
+    Ok(con_mensaje(r))
+}
+
+/// IPC-THEME-08 `theme_draft_save_as` (HE-03-HU02): crea un tema nuevo con la vista previa y lo deja en edición,
+/// sin tocar el escritorio. Avisa con EV-10 `themes_changed`.
+#[tauri::command]
+pub async fn theme_draft_save_as(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: ThemeDraftSaveAsParams,
+) -> Result<IpcResult<ThemeIdResult>, ()> {
+    let ahora = RelojDelSistema.ahora_ms();
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .guardar_como_tema(nucleo.planificador.base(), &user_id, &params.name, ahora)
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if let Ok(creado) = &r {
+        let _ = app.emit(
+            "themes_changed",
+            EntityChange {
+                ids: vec![creado.valor.theme_id.clone()],
+                op: ChangeOp::Upsert,
+                origin: OriginKind::Local,
+            },
+        );
+    }
+    Ok(con_mensaje(r))
+}
+
+/// IPC-THEME-12 `theme_apply` (HE-03-HU03): aplica un tema guardado. Avisa con EV-11 `applied_theme_changed`,
+/// EV-10 `themes_changed` y EV-16 para que la capa y la aplicación lo muestren en 5 s o menos (ET03; RNF-01).
+#[tauri::command]
+pub async fn theme_apply(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: ThemeApplyParams,
+) -> Result<IpcResult<ThemeIdResult>, ()> {
+    let ahora = RelojDelSistema.ahora_ms();
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .aplicar_tema(
+                    nucleo.planificador.base(),
+                    &user_id,
+                    &params.theme_id.0,
+                    params.discard_draft.unwrap_or(false),
+                    ahora,
+                )
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if let Ok(aplicado) = &r {
+        let _ = app.emit(
+            "applied_theme_changed",
+            EventMapAppliedThemeChanged {
+                theme_id: aplicado.valor.theme_id.clone(),
+                origin: OriginKind::Local,
+                has_unsaved_draft: false,
+            },
+        );
+        let _ = app.emit(
+            "themes_changed",
+            EntityChange {
+                ids: vec![aplicado.valor.theme_id.clone()],
+                op: ChangeOp::Upsert,
+                origin: OriginKind::Local,
+            },
+        );
+        avisar_wallpaper(&app).await;
     }
     Ok(con_mensaje(r))
 }
@@ -1176,6 +1270,58 @@ pub async fn card_move(
     Ok(leido(r))
 }
 
+/// IPC-CARD-07 `card_set_completed` (HE-12-HU02; HE-06-HU03): la casilla de completada del planificador diario
+/// y del widget Tareas del día. Emite `cards_changed` (EV-07) para que el tablero, el planificador, el widget
+/// Tareas del día y el widget Kanban se actualicen (HE-12-HU02-ET06; HE-06-HU03-ET03). Solo al marcar trae
+/// «¡Bien hecho! Tarjeta completada.» (HE-12-HU02-ET07).
+#[tauri::command]
+pub async fn card_set_completed(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: CardSetCompletedParams,
+) -> Result<IpcResult<Card>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .marcar_completada(&user_id, params)
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    Ok(match r {
+        Ok((tarjeta, mensaje)) => {
+            avisar_tarjetas(&app, vec![tarjeta.id.clone()], ChangeOp::Upsert);
+            IpcResult::Ok(IpcOk {
+                ok: true.into(),
+                value: tarjeta,
+                result_message: mensaje,
+            })
+        }
+        Err(error) => IpcResult::Err(IpcErr {
+            ok: false.into(),
+            error,
+        }),
+    })
+}
+
+/// Cada cuánto se revisa si cambió el día local (EV-22): el widget muestra el día nuevo a más tardar 1 s después
+/// de las 00:00.
+const REVISION_DEL_DIA: Duration = Duration::from_secs(1);
+
+/// EV-22 `day_changed` (HE-06-HU02-ET04): avisa a las vistas cuando la hora local pasa a las 00:00.
+pub fn vigilar_dia(app: AppHandle) {
+    std::thread::spawn(move || {
+        let mut vigia = VigiaDelDia::nuevo(CalendarioDelSistema.hoy());
+        loop {
+            std::thread::sleep(REVISION_DEL_DIA);
+            if let Some(date) = vigia.revisar(CalendarioDelSistema.hoy()) {
+                let _ = app.emit("day_changed", EventMapDayChanged { date });
+            }
+        }
+    });
+}
+
 /// IPC-CARD-09 `agenda_get_day` (HE-11-HU01): la agenda diaria de un día.
 #[tauri::command]
 pub async fn agenda_get_day(
@@ -1292,6 +1438,55 @@ pub async fn theme_draft_update(
             nucleo
                 .personalizacion
                 .actualizar_borrador(nucleo.planificador.base(), &user_id, &params.patch)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-THEME-06 `theme_draft_reset` (HE-02-HU08): restablece los colores o la tipografía de la vista previa a
+/// los de la plantilla, sin tocar el escritorio.
+#[tauri::command]
+pub async fn theme_draft_reset(
+    nucleo: State<'_, Nucleo>,
+    params: ThemeDraftResetParams,
+) -> Result<IpcResult<ThemeDraftView>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .restablecer_borrador(nucleo.planificador.base(), &user_id, &params.part)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-THEME-10 `theme_draft_get_status` (HE-02-HU13-CA02, CA05): qué mensaje mostrar al salir de la pantalla.
+#[tauri::command]
+pub async fn theme_draft_get_status(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<ThemeDraftStatus>, ()> {
+    let _ = params;
+    Ok(leido(match usuario(&nucleo) {
+        Ok(_) => Ok(nucleo.personalizacion.estado_del_borrador()),
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-THEME-11 `theme_draft_discard` (HE-02-HU13-CA01): «Cancelar» devuelve la vista previa a lo guardado.
+#[tauri::command]
+pub async fn theme_draft_discard(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<ThemeDraftView>, ()> {
+    let _ = params;
+    Ok(con_mensaje(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .descartar_borrador(nucleo.planificador.base(), &user_id)
                 .await
         }
         Err(e) => Err(e),
