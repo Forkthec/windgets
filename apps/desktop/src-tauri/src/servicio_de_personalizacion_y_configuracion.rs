@@ -19,7 +19,7 @@ use crate::tipos::{
     AppError, BackgroundSource, CatalogItem, ErrorCode, FontSize, Hex, ThemeBackground,
     ThemeColors, ThemeContent, ThemeContentFont, ThemeDraftPatch, ThemeDraftPatchBackground,
     ThemeDraftPatchColors, ThemeDraftPatchColorsPrimary, ThemeDraftPatchColorsSecondary,
-    ThemeDraftPatchColorsText, ThemeDraftView, ThemeSummary, Uuid,
+    ThemeDraftPatchColorsText, ThemeDraftResetParamsPart, ThemeDraftView, ThemeSummary, Uuid,
 };
 
 /// Identificador del tema inicial cuando la base local aún no lo trae (primer inicio sin la primera descarga).
@@ -574,6 +574,66 @@ impl ServicioDePersonalizacion {
         }
     }
 
+    /// IPC-THEME-06 `theme_draft_reset` (HE-02-HU08): devuelve en la vista previa los colores o la tipografía a
+    /// los de la plantilla del tema en edición; la tipografía vuelve además al tamaño mediano (ET01, ET02). Los
+    /// colores de la plantilla no son una paleta del catálogo: quedan en «Personalizada».
+    pub async fn restablecer_borrador(
+        &self,
+        base: &BaseLocal,
+        user_id: &str,
+        parte: &ThemeDraftResetParamsPart,
+    ) -> Result<ThemeDraftView, AppError> {
+        let actual = self.abrir_borrador(base, user_id, None).await?;
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let fila = sqlx::query(
+            "SELECT default_color_primary, default_color_secondary, default_color_text, default_font_id \
+             FROM catalog_template WHERE id = ?",
+        )
+        .bind(&actual.content.template_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(de_sqlx)?;
+        // Sin la plantilla en el catálogo local, los valores de la plantilla por defecto (como el tema inicial).
+        let por_defecto = Self::contenido_inicial(base).await?;
+        let (colores, fuente) = match fila {
+            Some(f) => {
+                let color = |c: &str| -> Result<Hex, AppError> {
+                    Ok(Hex(f
+                        .try_get::<String, _>(c)
+                        .map_err(de_sqlx)?
+                        .to_uppercase()))
+                };
+                (
+                    ThemeColors {
+                        primary: color("default_color_primary")?,
+                        secondary: color("default_color_secondary")?,
+                        text: color("default_color_text")?,
+                    },
+                    f.try_get::<String, _>("default_font_id").map_err(de_sqlx)?,
+                )
+            }
+            None => (por_defecto.colors, por_defecto.font.id),
+        };
+        self.con_borrador(|b| {
+            b.as_mut().map(|borrador| {
+                match parte {
+                    ThemeDraftResetParamsPart::Colors => {
+                        borrador.contenido.colors = colores;
+                        borrador.contenido.palette_id = None;
+                    }
+                    ThemeDraftResetParamsPart::Typography => {
+                        borrador.contenido.font = ThemeContentFont {
+                            id: fuente,
+                            size: FontSize::Medium,
+                        };
+                    }
+                }
+                borrador.vista()
+            })
+        })
+        .ok_or_else(inesperado)
+    }
+
     /// La fuente debe estar en el catálogo de tipografías (`font.not_found`, sin texto; HE-02-HU06-ET03).
     async fn fuente_existe(base: &BaseLocal, id: &str) -> Result<(), AppError> {
         let pool = base.pool().await.map_err(de_sqlx)?;
@@ -742,6 +802,8 @@ mod pruebas_de_guardado;
 mod pruebas_de_imagenes;
 #[cfg(test)]
 mod pruebas_de_plantillas;
+#[cfg(test)]
+mod pruebas_de_restablecer;
 #[cfg(test)]
 mod pruebas_de_salir;
 #[cfg(test)]

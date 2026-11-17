@@ -612,6 +612,51 @@ describe('HE-02-HU07 · Paletas', () => {
   });
 });
 
+describe('HE-02-HU08 · Restablecer los colores y la tipografía', () => {
+  const vistaPrevia = () => screen.getByRole('region', { name: 'Vista previa del escritorio' });
+  const colores = () => screen.getByRole('region', { name: 'Colores' });
+  const tipografia = () => screen.getByRole('region', { name: 'Tipografía' });
+
+  /** El Núcleo devuelve el borrador con los valores de la plantilla. */
+  function restablecerEnElNucleo(nucleo: NucleoDelPlanificador) {
+    nucleo.responder('theme_draft_reset', () => ({ ok: true, value: vista('t1', 'Mi tema', true) }));
+  }
+
+  it('HE-02-HU08-CA01 · Restablecer los colores del tema', async () => {
+    const nucleo = await abrir();
+    await screen.findByRole('list', { name: 'Catálogo de plantillas' });
+    const principal = within(colores()).getByRole('textbox', { name: 'Color principal' }) as HTMLInputElement;
+    fireEvent.change(principal, { target: { value: '#123456' } });
+    fireEvent.blur(principal);
+    await waitFor(() => expect(principal.value).toBe('#123456'));
+    restablecerEnElNucleo(nucleo);
+    // ET03: la opción está en la sección «Colores».
+    fireEvent.click(within(colores()).getByRole('button', { name: 'Restablecer colores' }));
+    // ET01: la vista previa vuelve a los colores de la plantilla.
+    await waitFor(() => expect(principal.value).toBe('#96B2B2'));
+    expect(llamadasA(nucleo, 'theme_draft_reset')).toEqual([{ part: 'colors' }]);
+    expect(vistaPrevia().style.background).toContain('rgb(150, 178, 178)');
+  });
+
+  it('HE-02-HU08-CA02 · Restablecer la tipografía', async () => {
+    const nucleo = await abrir();
+    const catalogo = await screen.findByRole('list', { name: 'Catálogo de tipografías' });
+    fireEvent.click(within(catalogo).getByRole('button', { name: 'Inter' }));
+    fireEvent.click(within(tipografia()).getByRole('button', { name: 'Grande' }));
+    await waitFor(() => expect(vistaPrevia().style.fontSize).toBe('20px'));
+    restablecerEnElNucleo(nucleo);
+    // ET03: la opción está en la sección «Tipografía».
+    fireEvent.click(within(tipografia()).getByRole('button', { name: 'Restablecer tipografía' }));
+    // ET02: la fuente de la plantilla y el tamaño «Mediano».
+    await waitFor(() => expect(vistaPrevia().style.fontSize).toBe('16px'));
+    expect(vistaPrevia().style.fontFamily).toContain('Nunito');
+    expect(within(tipografia()).getByRole('button', { name: 'Mediano' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(llamadasA(nucleo, 'theme_draft_reset')).toEqual([{ part: 'typography' }]);
+  });
+});
+
 describe('HE-02-HU11 · Guardar los cambios de la vista previa', () => {
   const guardar = () => screen.getByRole('button', { name: 'Guardar' }) as HTMLButtonElement;
 

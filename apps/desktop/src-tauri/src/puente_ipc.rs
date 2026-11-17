@@ -26,8 +26,8 @@ use crate::tipos::{
     ColumnUpdateParams, Connectivity, EntityChange, ErrorCode, EventMapConnectivityChanged,
     EventMapSessionChanged, EventMapSessionChangedReason, EventMapSessionChangedState,
     ImageImportParams, ImageImportResult, IpcErr, IpcOk, IpcResult, Label, LabelCreateParams,
-    NoParams, OriginKind, PlannerToday, SessionInfo, ThemeDraftOpenParams, ThemeDraftSelectParams,
-    ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
+    NoParams, OriginKind, PlannerToday, SessionInfo, ThemeDraftOpenParams, ThemeDraftResetParams,
+    ThemeDraftSelectParams, ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
 };
 use crate::tipos::{
     AppliedThemeView, ApplyMode, AssetResolveParams, AssetResolveResult,
@@ -1263,6 +1263,24 @@ pub async fn theme_draft_update(
             nucleo
                 .personalizacion
                 .actualizar_borrador(nucleo.planificador.base(), &user_id, &params.patch)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-THEME-06 `theme_draft_reset` (HE-02-HU08): restablece los colores o la tipografía de la vista previa a
+/// los de la plantilla, sin tocar el escritorio.
+#[tauri::command]
+pub async fn theme_draft_reset(
+    nucleo: State<'_, Nucleo>,
+    params: ThemeDraftResetParams,
+) -> Result<IpcResult<ThemeDraftView>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .restablecer_borrador(nucleo.planificador.base(), &user_id, &params.part)
                 .await
         }
         Err(e) => Err(e),

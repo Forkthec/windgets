@@ -65,6 +65,7 @@ pub fn run() {
             puente_ipc::theme_draft_open,
             puente_ipc::theme_draft_select,
             puente_ipc::theme_draft_update,
+            puente_ipc::theme_draft_reset,
             puente_ipc::image_import,
             puente_ipc::theme_draft_save,
             puente_ipc::theme_draft_apply,

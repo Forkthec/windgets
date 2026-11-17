@@ -123,6 +123,14 @@ export function Personalization() {
     }
   };
 
+  // HE-02-HU08: vuelve a los colores o a la tipografía de la plantilla (ET01, ET02).
+  const restablecer = async (part: 'colors' | 'typography') => {
+    const r = await invocar('theme_draft_reset', { part });
+    if (!r.ok) return;
+    setBorrador(r.value);
+    if (part === 'colors') setMensajesDeColor({});
+  };
+
   // HE-02-HU03-ET06: «Subir imagen» abre el explorador de archivos; «Cancelar» lo cierra sin cambios (CA08).
   const subirImagen = async () => {
     let ruta: string | null = null;
@@ -321,7 +329,7 @@ export function Personalization() {
                     text: mensajesDeColor.text?.message,
                   }}
                   alCambiar={(campo, valor) => void cambiarColor(campo, valor)}
-                  restablecer={<Boton>Restablecer colores</Boton>}
+                  restablecer={<Boton onClick={() => void restablecer('colors')}>Restablecer colores</Boton>}
                 />
               )}
               {nombre === 'Tipografía' && (
@@ -330,7 +338,9 @@ export function Personalization() {
                   tipografia={borrador.content.font}
                   alElegirFuente={(id) => void cambiar({ font_id: id })}
                   alElegirTamano={(tamano) => void cambiar({ font_size: tamano })}
-                  restablecer={<Boton>Restablecer tipografía</Boton>}
+                  restablecer={
+                    <Boton onClick={() => void restablecer('typography')}>Restablecer tipografía</Boton>
+                  }
                 />
               )}
               {nombre === 'Paletas' && (
