@@ -17,15 +17,27 @@ function horaVisible(hora: number): string {
 
 interface ElementoProps {
   item: PlannerItem;
+  invocar: Invoke;
+  /** Vuelve a leer el día tras una acción, además de EV-07 (RNF-01). */
+  alCambiar: () => void;
 }
 
 /** Una tarjeta del widget: casilla, título, hora y prioridad. */
-function Elemento({ item }: ElementoProps) {
+function Elemento({ item, invocar, alCambiar }: ElementoProps) {
   const { card, hour } = item;
   return (
-    // HE-06-HU02-ET03: una tarjeta completada va tachada y con la casilla marcada.
+    // HE-06-HU02-ET03, HE-06-HU03-ET04: una tarjeta completada va tachada y con la casilla marcada.
     <li className={`wg-tarjeta wg-fila${card.is_completed ? ' wg-tachada' : ''}`}>
-      <input type="checkbox" checked={card.is_completed} aria-label={card.title} readOnly />
+      <input
+        type="checkbox"
+        checked={card.is_completed}
+        aria-label={card.title}
+        // HE-06-HU03: marcar mueve a Hecho; desmarcar la devuelve (IPC-CARD-07). En el widget no hay mensaje.
+        onChange={(e) => {
+          const completed = e.target.checked;
+          void invocar('card_set_completed', { card_id: card.id, completed }).then(alCambiar);
+        }}
+      />
       <span className="wg-tarjeta__titulo">{card.title}</span>
       {hour !== null && <span>{horaVisible(hour)}</span>}
       {card.priority && <span>{NOMBRE_DE_PRIORIDAD[card.priority]}</span>}
@@ -67,7 +79,7 @@ export function TareasDelDia({ invocar, escuchar }: TareasDelDiaProps) {
       ) : (
         <ul className="wg-columna__tarjetas wg-planificador" aria-label="Tarjetas de hoy">
           {dia.items.map((item) => (
-            <Elemento key={item.card.id} item={item} />
+            <Elemento key={item.card.id} item={item} invocar={invocar} alCambiar={() => void leer()} />
           ))}
         </ul>
       )}

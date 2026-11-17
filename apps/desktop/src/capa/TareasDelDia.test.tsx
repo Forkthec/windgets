@@ -5,7 +5,16 @@
 import { act, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Card, LayerInitialState, PlannerToday } from '@/types';
-import { crearNucleo, HECHO, HOY, tarjeta, type NucleoDelPlanificador } from '../screens/kanban/pruebas';
+import {
+  crearNucleo,
+  EN_PROGRESO,
+  HECHO,
+  HOY,
+  llamadasA,
+  POR_HACER,
+  tarjeta,
+  type NucleoDelPlanificador,
+} from '../screens/kanban/pruebas';
 import { Capa } from './Capa';
 
 const ESTADO: LayerInitialState = {
@@ -46,6 +55,13 @@ async function avisarTarjetas(
 ) {
   nucleo.emitir('cards_changed', { ids, op, origin: 'local' });
   await act(async () => {});
+}
+
+/** Selecciona un elemento del widget como lo entrega la capa. */
+async function seleccionar(elemento: HTMLElement) {
+  await act(async () => {
+    elemento.click();
+  });
 }
 
 /** Cada tarjeta del widget como «título · hora · prioridad». */
@@ -133,5 +149,62 @@ describe('HE-06-HU02 · Tarjetas del día en el widget', () => {
     nucleo.emitir('day_changed', { date: '2026-11-15' });
     await act(async () => {});
     expect(lista(widget)).toEqual(['Ir al banco']);
+  });
+});
+
+describe('HE-06-HU03 · Casilla de completada en el widget', () => {
+  it('HE-06-HU03-CA01 · Completar una tarjeta desde el widget', async () => {
+    const pagar = tarjeta({ title: 'Pagar la luz', due_date: HOY, column_id: EN_PROGRESO.id });
+    const { nucleo, widget } = await pintar([pagar]);
+    // La selección llega reenviada por el Núcleo (EV-18) y la capa la entrega a la casilla (HE-06-HU01).
+    document.elementFromPoint = () => casilla(widget, 'Pagar la luz');
+    nucleo.emitir('pointer_forwarded', { x: 400, y: 60, monitor_id: '0', button: 'primary' });
+    await act(async () => {});
+    expect(llamadasA(nucleo, 'card_set_completed')).toEqual([{ card_id: pagar.id, completed: true }]);
+    // ET01: en Hecho. ET04: tachada y con la casilla seleccionada. En el widget no hay mensaje.
+    expect(pagar.column_id).toBe(HECHO.id);
+    expect(tachada(widget, 'Pagar la luz')).toBe(true);
+    expect(casilla(widget, 'Pagar la luz').checked).toBe(true);
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('HE-06-HU03-CA02 · Devolver una tarjeta completada a su columna', async () => {
+    const pagar = tarjeta({
+      title: 'Pagar la luz',
+      due_date: HOY,
+      column_id: HECHO.id,
+      previous_column_id: EN_PROGRESO.id,
+      completed_on: HOY,
+      is_completed: true,
+    });
+    const { nucleo, widget } = await pintar([pagar]);
+    await seleccionar(casilla(widget, 'Pagar la luz'));
+    expect(llamadasA(nucleo, 'card_set_completed')).toEqual([{ card_id: pagar.id, completed: false }]);
+    expect(pagar.column_id).toBe(EN_PROGRESO.id);
+    expect(tachada(widget, 'Pagar la luz')).toBe(false);
+  });
+
+  it('HE-06-HU03-CA03 · Devolver una tarjeta cuando su columna anterior ya no existe', async () => {
+    const pagar = tarjeta({
+      title: 'Pagar la luz',
+      due_date: HOY,
+      column_id: HECHO.id,
+      previous_column_id: 'col-revision',
+      completed_on: HOY,
+      is_completed: true,
+    });
+    const { widget } = await pintar([pagar]);
+    await seleccionar(casilla(widget, 'Pagar la luz'));
+    expect(pagar.column_id).toBe(POR_HACER.id);
+    expect(tachada(widget, 'Pagar la luz')).toBe(false);
+  });
+
+  it('HE-06-HU03-CA04 · Alternar la casilla sin conexión', async () => {
+    // ET05: el Núcleo guarda en SQLite y encola el cambio sin red; el widget no depende de la conexión.
+    const pagar = tarjeta({ title: 'Pagar la luz', due_date: HOY });
+    const { nucleo, widget } = await pintar([pagar]);
+    await seleccionar(casilla(widget, 'Pagar la luz'));
+    expect(llamadasA(nucleo, 'card_set_completed')).toEqual([{ card_id: pagar.id, completed: true }]);
+    expect(tachada(widget, 'Pagar la luz')).toBe(true);
   });
 });
