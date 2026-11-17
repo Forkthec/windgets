@@ -32,7 +32,9 @@ async function pintar() {
     Promise.resolve(
       comando === 'layer_get_initial_state'
         ? { ok: true, value: ESTADO }
-        : { ok: true, value: { url: '', state: 'unavailable' } },
+        : comando === 'asset_resolve'
+          ? { ok: true, value: { url: '', state: 'unavailable' } }
+          : { ok: false, error: { code: 'internal.unexpected', message: '' } },
     )) as unknown as Invoke;
   const oyentes: Array<(carga: EventMapPointerForwarded) => void> = [];
   const escuchar = ((evento: string, alRecibir: (carga: EventMapPointerForwarded) => void) => {
