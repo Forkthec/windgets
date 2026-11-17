@@ -45,7 +45,12 @@ jobs:
 
       - name: Pruebas del sello de integridad
         run: node --test installer/sellar.test.mjs
+      # Con la URL y la clave pública (anon) de Supabase, como en release.yml, para que el instalador de un PR
+      # permita iniciar sesión en las pruebas manuales (D-192: los valores viven en los secretos del repositorio).
       - name: Generar el instalador
+        env:
+          WINDGETS_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          WINDGETS_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: pnpm --filter desktop tauri build --bundles nsis
       - name: Sellar el instalador
         shell: bash
