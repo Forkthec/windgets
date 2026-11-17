@@ -413,7 +413,22 @@ impl ServicioDePersonalizacion {
             }
         }
         let fondo = match &cambio.background {
-            Some(pedido) => Some(Self::fondo_pedido(base, user_id, pedido).await?),
+            Some(pedido) => {
+                // HE-02-HU04-ET02: quitar la imagen cuando la plantilla ya muestra la suya no hace nada.
+                let ya_por_defecto = self.con_borrador(|b| {
+                    b.as_ref().is_some_and(|borrador| {
+                        borrador.contenido.background.source == BackgroundSource::TemplateDefault
+                    })
+                });
+                if pedido.source == BackgroundSource::TemplateDefault && ya_por_defecto {
+                    return Err(error(
+                        ErrorCode::BackgroundAlreadyDefault,
+                        messages::FONDO_YA_POR_DEFECTO,
+                        None,
+                    ));
+                }
+                Some(Self::fondo_pedido(base, user_id, pedido).await?)
+            }
             None => None,
         };
         self.con_borrador(|b| {

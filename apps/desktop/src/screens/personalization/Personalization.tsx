@@ -217,7 +217,14 @@ export function Personalization() {
                   <div className="wg-fila">
                     <Boton onClick={() => void subirImagen()}>Subir imagen</Boton>
                     <Boton onClick={() => void abrirCatalogoDeImagenes()}>Catálogo de imágenes</Boton>
-                    <Boton>Quitar imagen</Boton>
+                    {/* HE-02-HU04: vuelve a la imagen de la plantilla (ET01); con ella, deshabilitada (ET02). */}
+                    <Boton
+                      disabled={fondo?.source === 'template_default'}
+                      motivo={textos.FONDO_YA_POR_DEFECTO}
+                      onClick={() => void cambiar({ background: { source: 'template_default' } })}
+                    >
+                      Quitar imagen
+                    </Boton>
                   </div>
                   <p>JPG, JPEG o PNG. Máximo 20 MB.</p>
                   {rechazo && <p role="alert">{rechazo}</p>}

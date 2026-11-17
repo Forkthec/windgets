@@ -195,6 +195,8 @@ pub const CAMBIOS_SIN_GUARDAR_AL_APLICAR: &str =
     "Tienes cambios sin guardar en el tema “<nombre del tema>”. ¿Qué deseas hacer?";
 /// `theme.already_applied` (HE-02-HU12-CA06): texto de la opción «Aplicar» deshabilitada.
 pub const TEMA_YA_APLICADO: &str = "Este tema ya está aplicado.";
+/// `background.already_default` (HE-02-HU04-CA02): texto de la opción «Quitar imagen» deshabilitada.
+pub const FONDO_YA_POR_DEFECTO: &str = "Esta plantilla ya muestra su imagen de fondo por defecto.";
 
 /// Un texto de HE-02-HU12 con el nombre del tema.
 pub fn con_nombre_del_tema(texto: &str, nombre: &str) -> String {
@@ -306,6 +308,7 @@ pub const TEXTOS: &[(&str, &str)] = &[
         CAMBIOS_SIN_GUARDAR_AL_APLICAR,
     ),
     ("TEMA_YA_APLICADO", TEMA_YA_APLICADO),
+    ("FONDO_YA_POR_DEFECTO", FONDO_YA_POR_DEFECTO),
     ("BLOQUE_YA_PASO", BLOQUE_YA_PASO),
     (
         "BLOQUE_DESPUES_DE_FECHA_LIMITE",

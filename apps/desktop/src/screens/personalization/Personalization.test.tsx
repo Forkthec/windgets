@@ -337,6 +337,40 @@ describe('HE-02-HU03 · Imagen de fondo', () => {
   });
 });
 
+describe('HE-02-HU04 · Quitar la imagen de fondo', () => {
+  const seccion = () => screen.getByRole('region', { name: 'Imagen de fondo' });
+  const vistaPrevia = () => screen.getByRole('region', { name: 'Vista previa del escritorio' });
+  const quitar = () => within(seccion()).getByRole('button', { name: 'Quitar imagen' }) as HTMLButtonElement;
+
+  it('HE-02-HU04-CA01 · Quitar la imagen de fondo', async () => {
+    const nucleo = await abrir();
+    await screen.findByRole('list', { name: 'Catálogo de plantillas' });
+    fireEvent.click(within(seccion()).getByRole('button', { name: 'Catálogo de imágenes' }));
+    const catalogo = await screen.findByRole('list', { name: 'Catálogo de imágenes' });
+    fireEvent.click(within(catalogo).getByRole('button', { name: 'Mar' }));
+    await waitFor(() => expect(vistaPrevia().style.backgroundImage).toContain('images/mar-t.jpg'));
+    fireEvent.click(quitar());
+    // ET01: la vista previa vuelve a la imagen de fondo de la plantilla.
+    await waitFor(() => expect(vistaPrevia().style.backgroundImage).toBe(''));
+    expect(llamadasA(nucleo, 'theme_draft_update').at(-1)).toEqual({
+      patch: { background: { source: 'template_default' } },
+    });
+    expect(within(seccion()).getByText('Imagen de fondo de la plantilla')).toBeTruthy();
+  });
+
+  it('HE-02-HU04-CA02 · Quitar imagen sin imagen elegida', async () => {
+    const nucleo = await abrir();
+    await screen.findByRole('list', { name: 'Catálogo de plantillas' });
+    // ET02: deshabilitada con su texto (RT-04).
+    expect(quitar().disabled).toBe(true);
+    expect(
+      within(seccion()).getByText('Esta plantilla ya muestra su imagen de fondo por defecto.'),
+    ).toBeTruthy();
+    fireEvent.click(quitar());
+    expect(llamadasA(nucleo, 'theme_draft_update')).toEqual([]);
+  });
+});
+
 describe('HE-02-HU11 · Guardar los cambios de la vista previa', () => {
   const guardar = () => screen.getByRole('button', { name: 'Guardar' }) as HTMLButtonElement;
 
