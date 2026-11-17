@@ -133,7 +133,7 @@ const COLUMNAS_DEL_WIDGET: &str = "w.id, w.type, w.is_default, w.weather_city, w
 
 impl ServicioDePersonalizacion {
     /// El tema aplicado de la cuenta, si la base local ya lo trae.
-    async fn id_del_tema_aplicado(
+    pub(super) async fn id_del_tema_aplicado(
         base: &BaseLocal,
         user_id: &str,
     ) -> Result<Option<String>, AppError> {

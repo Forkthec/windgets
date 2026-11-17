@@ -101,12 +101,15 @@ export function Capa({ invocar = invocarNucleo, escuchar = escucharNucleo }: Cap
     const dejarTema = escuchar('applied_theme_changed', () => void leer());
     // EV-12: al activar o desactivar un widget la capa lo muestra u oculta en 5 s o menos (HE-04-HU02-ET01).
     const dejarWidgets = escuchar('widgets_changed', () => void leer());
+    // EV-13: al guardar la distribución, los widgets se pintan en su nueva posición y tamaño (HE-05-HU04-CA01).
+    const dejarDistribucion = escuchar('layout_changed', () => void leer());
     const dejarSeleccion = escuchar('pointer_forwarded', (carga) => entregarSeleccion(carga));
     return () => {
       vigente = false;
       dejarEstado();
       dejarTema();
       dejarWidgets();
+      dejarDistribucion();
       dejarSeleccion();
     };
   }, [escuchar, invocar]);

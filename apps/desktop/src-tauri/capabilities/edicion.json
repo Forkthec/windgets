@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "edicion",
+  "description": "Permisos de la ventana de edición de la distribución de widgets (C-03)",
+  "windows": ["edicion"],
+  "permissions": ["core:default"]
+}

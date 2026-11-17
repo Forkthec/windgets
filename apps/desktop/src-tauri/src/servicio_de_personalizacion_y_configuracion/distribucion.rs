@@ -1,0 +1,286 @@
+//! La distribución de widgets en edición (HE-05, C-03 «pantalla de edición»): IPC-LAY-01 a IPC-LAY-06. Mientras la
+//! pantalla está abierta, la posición y el tamaño de cada widget viven en memoria; solo «Guardar» los escribe en
+//! el tema aplicado (HE-05-HU02-CA01, HE-05-HU04-ET02).
+//!
+//! DUDA: HE-05-HU01 el contrato devuelve un solo monitor y la pantalla de edición cubre «todo el escritorio».
+//! Valor usado: el monitor principal (el que contiene el origen), en las mismas coordenadas de la capa; sin
+//! monitores leídos, 1920 × 1080 (docs/DUDAS.md).
+
+use serde_json::Value;
+
+use super::*;
+use crate::repositorios_y_archivos_locales::encolar_cambio;
+use crate::servicio_de_sesion::instante;
+use crate::servicio_del_planificador::{campos, resultado};
+use crate::tipos::{
+    LayoutEditOpenResult, LayoutEditRectResult, Monitor, ResultMessage, WidgetRect,
+};
+
+/// HE-05-HU03-ET02: tamaño mínimo de un widget.
+pub const LADO_MINIMO: i64 = 100;
+
+/// La distribución en edición.
+#[derive(Debug, Clone)]
+pub(super) struct Edicion {
+    tema: String,
+    monitor: Monitor,
+    original: Vec<WidgetRect>,
+    actual: Vec<WidgetRect>,
+}
+
+impl Edicion {
+    fn dirty(&self) -> bool {
+        self.actual != self.original
+    }
+}
+
+/// ¿Se superponen? Tocarse en un borde no es superponerse.
+fn se_superponen(a: &WidgetRect, b: &WidgetRect) -> bool {
+    a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
+}
+
+/// El monitor principal: el que contiene el origen, o el primero; sin monitores, 1920 × 1080.
+pub fn monitor_principal(monitores: &[Monitor]) -> Monitor {
+    monitores
+        .iter()
+        .find(|m| m.x <= 0 && 0 < m.x + m.width && m.y <= 0 && 0 < m.y + m.height)
+        .or_else(|| monitores.first())
+        .cloned()
+        .unwrap_or(Monitor {
+            id: "0".into(),
+            x: 0,
+            y: 0,
+            width: 1920,
+            height: 1080,
+            scale_factor: 1.0,
+        })
+}
+
+impl ServicioDePersonalizacion {
+    fn con_edicion<T>(&self, f: impl FnOnce(&mut Option<Edicion>) -> T) -> T {
+        match self.edicion.lock() {
+            Ok(mut guardia) => f(&mut guardia),
+            Err(envenenado) => f(&mut envenenado.into_inner()),
+        }
+    }
+
+    /// IPC-LAY-01 `layout_edit_open` (HE-05-HU01): los widgets activos del tema aplicado en su posición y tamaño
+    /// reales (ET02); sin widgets activos, ninguno (ET06; D-159).
+    pub async fn abrir_edicion(
+        &self,
+        base: &BaseLocal,
+        user_id: &str,
+        monitores: &[Monitor],
+    ) -> Result<LayoutEditOpenResult, AppError> {
+        let tema = Self::id_del_tema_aplicado(base, user_id)
+            .await?
+            .unwrap_or_default();
+        let widgets = Self::rectangulos_activos(base, user_id).await?;
+        let monitor = monitor_principal(monitores);
+        self.con_edicion(|e| {
+            *e = Some(Edicion {
+                tema,
+                monitor: monitor.clone(),
+                original: widgets.clone(),
+                actual: widgets.clone(),
+            });
+        });
+        Ok(LayoutEditOpenResult { monitor, widgets })
+    }
+
+    /// El widget en edición y los demás; un widget que no está en la distribución es `widget.not_found`.
+    fn en_edicion(&self, widget_id: &str) -> Result<(Edicion, usize), AppError> {
+        self.con_edicion(|e| {
+            let edicion = e.clone().ok_or_else(inesperado)?;
+            let i = edicion
+                .actual
+                .iter()
+                .position(|w| w.widget_id.0 == widget_id)
+                .ok_or_else(|| error(ErrorCode::WidgetNotFound, "", None))?;
+            Ok((edicion, i))
+        })
+    }
+
+    fn fijar(&self, i: usize, rect: &WidgetRect) {
+        self.con_edicion(|e| {
+            if let Some(edicion) = e
+                && let Some(w) = edicion.actual.get_mut(i)
+            {
+                *w = rect.clone();
+            }
+        });
+    }
+
+    /// IPC-LAY-02 `layout_edit_move` (HE-05-HU02): el widget queda dentro del área visible (ET02); si queda sobre
+    /// otro, `collided` y el widget sigue en su última posición libre (ET03; D-042).
+    pub fn mover_en_edicion(
+        &self,
+        widget_id: &str,
+        x: i64,
+        y: i64,
+    ) -> Result<LayoutEditRectResult, AppError> {
+        let (edicion, i) = self.en_edicion(widget_id)?;
+        let actual = edicion.actual[i].clone();
+        let m = &edicion.monitor;
+        let pedido = WidgetRect {
+            x: x.clamp(m.x, (m.x + m.width - actual.width).max(m.x)),
+            y: y.clamp(m.y, (m.y + m.height - actual.height).max(m.y)),
+            ..actual.clone()
+        };
+        let choca = edicion
+            .actual
+            .iter()
+            .enumerate()
+            .any(|(j, otro)| j != i && se_superponen(&pedido, otro));
+        if choca {
+            return Ok(LayoutEditRectResult {
+                rect: actual,
+                collided: true,
+            });
+        }
+        self.fijar(i, &pedido);
+        Ok(LayoutEditRectResult {
+            rect: pedido,
+            collided: false,
+        })
+    }
+
+    /// IPC-LAY-03 `layout_edit_resize` (HE-05-HU03): mínimo 100 × 100 (ET02), máximo hasta el borde del área
+    /// visible (ET03) y se detiene en el borde de otro widget, con `collided` (ET04; D-042).
+    pub fn redimensionar_en_edicion(
+        &self,
+        widget_id: &str,
+        x: i64,
+        y: i64,
+        ancho: i64,
+        alto: i64,
+    ) -> Result<LayoutEditRectResult, AppError> {
+        let (edicion, i) = self.en_edicion(widget_id)?;
+        let actual = edicion.actual[i].clone();
+        let m = &edicion.monitor;
+        let x = x.clamp(m.x, m.x + m.width - LADO_MINIMO);
+        let y = y.clamp(m.y, m.y + m.height - LADO_MINIMO);
+        let mut ancho = ancho.clamp(LADO_MINIMO, m.x + m.width - x);
+        let mut alto = alto.clamp(LADO_MINIMO, m.y + m.height - y);
+        let mut choca = false;
+        for (j, otro) in edicion.actual.iter().enumerate() {
+            let pedido = WidgetRect {
+                x,
+                y,
+                width: ancho,
+                height: alto,
+                ..actual.clone()
+            };
+            if j == i || !se_superponen(&pedido, otro) {
+                continue;
+            }
+            choca = true;
+            // El otro está a la derecha o debajo del widget antes de crecer: el borde de ese lado se detiene ahí.
+            if otro.x >= actual.x + actual.width {
+                ancho = ancho.min(otro.x - x);
+            } else if otro.y >= actual.y + actual.height {
+                alto = alto.min(otro.y - y);
+            } else {
+                ancho = actual.width;
+                alto = actual.height;
+            }
+        }
+        if ancho < LADO_MINIMO || alto < LADO_MINIMO {
+            return Ok(LayoutEditRectResult {
+                rect: actual,
+                collided: true,
+            });
+        }
+        let rect = WidgetRect {
+            x,
+            y,
+            width: ancho,
+            height: alto,
+            ..actual
+        };
+        self.fijar(i, &rect);
+        Ok(LayoutEditRectResult {
+            rect,
+            collided: choca,
+        })
+    }
+
+    /// IPC-LAY-04 `layout_edit_get_status` (HE-05-HU05-CA02; D-204): si hay cambios sin guardar.
+    pub fn edicion_con_cambios(&self) -> bool {
+        self.con_edicion(|e| e.as_ref().is_some_and(Edicion::dirty))
+    }
+
+    /// IPC-LAY-05 `layout_edit_save` (HE-05-HU04): escribe en el tema aplicado la posición y el tamaño de los
+    /// widgets que cambiaron y los encola una sola vez (ET01, ET04). Sin cambios no escribe ni da mensaje (CA03,
+    /// ET03). Cierra la edición. Devuelve el tema y el mensaje, si lo hay.
+    pub async fn guardar_edicion(
+        &self,
+        base: &BaseLocal,
+        user_id: &str,
+        ahora_ms: i64,
+    ) -> Result<Option<(String, ResultMessage)>, AppError> {
+        let Some(edicion) = self.con_edicion(Option::take) else {
+            return Ok(None);
+        };
+        if !edicion.dirty() {
+            return Ok(None);
+        }
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let ahora = instante(ahora_ms).0;
+        let mut tx = pool.begin().await.map_err(de_sqlx)?;
+        for (nuevo, viejo) in edicion.actual.iter().zip(&edicion.original) {
+            if nuevo == viejo {
+                continue;
+            }
+            let id: String = sqlx::query_scalar(
+                "SELECT id FROM theme_widget WHERE user_id = ? AND theme_id = ? AND widget_id = ?",
+            )
+            .bind(user_id)
+            .bind(&edicion.tema)
+            .bind(&nuevo.widget_id.0)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(de_sqlx)?
+            .ok_or_else(inesperado)?;
+            let (fields, mods) = campos(
+                &[
+                    ("x", Value::from(nuevo.x)),
+                    ("y", Value::from(nuevo.y)),
+                    ("width", Value::from(nuevo.width)),
+                    ("height", Value::from(nuevo.height)),
+                ],
+                &ahora,
+            );
+            sqlx::query(
+                "UPDATE theme_widget SET x = ?, y = ?, width = ?, height = ?, \
+                 field_mods = json_patch(field_mods, ?) WHERE id = ?",
+            )
+            .bind(nuevo.x)
+            .bind(nuevo.y)
+            .bind(nuevo.width)
+            .bind(nuevo.height)
+            .bind(mods.to_string())
+            .bind(&id)
+            .execute(&mut *tx)
+            .await
+            .map_err(de_sqlx)?;
+            encolar_cambio(&mut tx, "theme_widget", &id, "upsert", &fields, &ahora)
+                .await
+                .map_err(de_sqlx)?;
+        }
+        tx.commit().await.map_err(de_sqlx)?;
+        Ok(Some((
+            edicion.tema,
+            resultado("layout_edit_save", messages::CAMBIOS_GUARDADOS),
+        )))
+    }
+
+    /// IPC-LAY-06 `layout_edit_cancel` (HE-05-HU05): cada widget vuelve a su posición y tamaño anteriores (nada se
+    /// escribió); con cambios, «No se guardaron cambios.» (CA03, ET03); sin cambios, sin mensaje (CA05, ET06).
+    pub fn cancelar_edicion(&self) -> Option<ResultMessage> {
+        let edicion = self.con_edicion(Option::take)?;
+        edicion
+            .dirty()
+            .then(|| resultado("layout_edit_cancel", messages::DISTRIBUCION_NO_GUARDADA))
+    }
+}

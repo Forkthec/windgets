@@ -11,6 +11,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::cliente_de_supabase::ClienteDeSupabase;
 use crate::host_del_wallpaper::estado::EstadoDelHost;
+use crate::integracion_con_el_sistema::ventana_de_edicion;
 use crate::motor_de_sincronizacion;
 use crate::repositorios_y_archivos_locales::{BaseLocal, almacen_de_la_aplicacion};
 use crate::servicio_de_personalizacion_y_configuracion::ServicioDePersonalizacion;
@@ -35,6 +36,10 @@ use crate::tipos::{
     EventMapWidgetsChanged, LayerInitialState, ThemeDraftApplyParams, ThemeDraftSaveResult,
     ThemeIdResult, WallpaperState, WallpaperStatus, WidgetCatalog, WidgetDeleteParams, WidgetItem,
     WidgetSetActiveParams,
+};
+use crate::tipos::{
+    EventMapLayoutChanged, LayoutEditMoveParams, LayoutEditOpenResult, LayoutEditRectResult,
+    LayoutEditResizeParams, LayoutEditStatus,
 };
 
 /// El Núcleo que ven los comandos.
@@ -1426,4 +1431,143 @@ pub fn app_request_exit(
 pub fn app_exit(app: AppHandle, params: crate::tipos::AppExitParams) -> IpcResult<()> {
     crate::integracion_con_el_sistema::area_de_notificacion::salir(&app, params.discard_changes);
     correcto(())
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// HE-05 · Distribución de widgets en la pantalla de edición (C-03).
+
+/// IPC-LAY-01 `layout_edit_open` (HE-05-HU01): oculta la ventana principal y abre la de edición con los widgets
+/// activos del tema aplicado en su posición y tamaño reales sobre el monitor principal.
+#[tauri::command]
+pub async fn layout_edit_open(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<LayoutEditOpenResult>, ()> {
+    let _ = params;
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .abrir_edicion(
+                    nucleo.planificador.base(),
+                    &user_id,
+                    &nucleo.host.monitores(),
+                )
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if r.is_ok() {
+        ventana_de_edicion::abrir(&app);
+    }
+    Ok(leido(r))
+}
+
+/// IPC-LAY-02 `layout_edit_move` (HE-05-HU02): mueve un widget en la distribución en edición. Avisa con EV-15.
+#[tauri::command]
+pub async fn layout_edit_move(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: LayoutEditMoveParams,
+) -> Result<IpcResult<LayoutEditRectResult>, ()> {
+    let r = nucleo
+        .personalizacion
+        .mover_en_edicion(&params.widget_id.0, params.x, params.y);
+    ventana_de_edicion::avisar_estado(&app, true, nucleo.personalizacion.edicion_con_cambios());
+    Ok(leido(r))
+}
+
+/// IPC-LAY-03 `layout_edit_resize` (HE-05-HU03): redimensiona un widget en la distribución en edición. Avisa con
+/// EV-15.
+#[tauri::command]
+pub async fn layout_edit_resize(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: LayoutEditResizeParams,
+) -> Result<IpcResult<LayoutEditRectResult>, ()> {
+    let r = nucleo.personalizacion.redimensionar_en_edicion(
+        &params.widget_id.0,
+        params.x,
+        params.y,
+        params.width,
+        params.height,
+    );
+    ventana_de_edicion::avisar_estado(&app, true, nucleo.personalizacion.edicion_con_cambios());
+    Ok(leido(r))
+}
+
+/// IPC-LAY-04 `layout_edit_get_status` (HE-05-HU05-CA02; D-204): si hay cambios sin guardar.
+#[tauri::command]
+pub async fn layout_edit_get_status(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<LayoutEditStatus>, ()> {
+    let _ = params;
+    Ok(correcto(LayoutEditStatus {
+        dirty: nucleo.personalizacion.edicion_con_cambios(),
+    }))
+}
+
+/// IPC-LAY-05 `layout_edit_save` (HE-05-HU04): guarda la distribución en el tema aplicado, avisa a la capa con
+/// EV-13 `layout_changed`, cierra la ventana de edición y vuelve a la pantalla Widgets.
+#[tauri::command]
+pub async fn layout_edit_save(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<()>, ()> {
+    let _ = params;
+    let ahora = RelojDelSistema.ahora_ms();
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .guardar_edicion(nucleo.planificador.base(), &user_id, ahora)
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    Ok(match r {
+        Ok(guardado) => {
+            let mensaje = guardado.map(|(tema, mensaje)| {
+                let _ = app.emit(
+                    "layout_changed",
+                    EventMapLayoutChanged {
+                        theme_id: crate::tipos::Uuid(tema),
+                        origin: OriginKind::Local,
+                    },
+                );
+                mensaje
+            });
+            ventana_de_edicion::cerrar(&app, mensaje.clone());
+            IpcResult::Ok(IpcOk {
+                ok: true.into(),
+                value: (),
+                result_message: mensaje,
+            })
+        }
+        Err(error) => IpcResult::Err(IpcErr {
+            ok: false.into(),
+            error,
+        }),
+    })
+}
+
+/// IPC-LAY-06 `layout_edit_cancel` (HE-05-HU05): descarta la distribución en edición, cierra la ventana de edición
+/// y vuelve a la pantalla Widgets.
+#[tauri::command]
+pub async fn layout_edit_cancel(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<()>, ()> {
+    let _ = params;
+    let mensaje = nucleo.personalizacion.cancelar_edicion();
+    ventana_de_edicion::cerrar(&app, mensaje.clone());
+    Ok(IpcResult::Ok(IpcOk {
+        ok: true.into(),
+        value: (),
+        result_message: mensaje,
+    }))
 }

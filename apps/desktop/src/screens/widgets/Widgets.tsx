@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { escucharResultadoDeLaEdicion } from '@/ipc/resultadoDeLaEdicion';
 import { useRuta } from '@/reglas/ruta';
 import type { WidgetItem } from '@/types';
 import textos from '@/types/messages.es.json';
@@ -58,6 +59,17 @@ export function Widgets() {
     return escuchar('widgets_changed', () => void leer());
   }, [escuchar, leer]);
 
+  // HE-05-HU04, HU05: al cerrar la pantalla de edición, el Núcleo vuelve a esta pantalla con «Cambios guardados.»
+  // o «No se guardaron cambios.» (sin cambios, sin mensaje).
+  useEffect(
+    () =>
+      escucharResultadoDeLaEdicion((mensaje) => {
+        mostrarResultado(mensaje.message);
+        void leer();
+      }),
+    [leer, mostrarResultado],
+  );
+
   if (ruta.actual === 'agregar') return <AgregarWidget alRegresar={ruta.regresar} />;
 
   return (
@@ -67,7 +79,8 @@ export function Widgets() {
         <Boton principal onClick={() => ruta.avanzar('agregar')}>
           Agregar widget
         </Boton>
-        <Boton>Editar escritorio</Boton>
+        {/* HE-05-HU01-ET05: oculta esta ventana y abre la pantalla de edición (IPC-LAY-01). */}
+        <Boton onClick={() => void invocar('layout_edit_open', {})}>Editar escritorio</Boton>
       </div>
       {widgets && (
         <ul className="wg-lista" aria-label="Lista de widgets">

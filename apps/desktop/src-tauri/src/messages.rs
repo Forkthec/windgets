@@ -209,6 +209,13 @@ pub const WIDGET_POR_DEFECTO_NO_ELIMINABLE: &str =
 /// M-07 (HE-04-HU13-CA06): confirmación de eliminar un widget.
 pub const CONFIRMAR_ELIMINAR_WIDGET: &str =
     "¿Deseas eliminar el widget “<nombre del widget>”? Se quitará de todos tus temas.";
+/// Barra superior de la pantalla de edición (HE-05-HU01-ET04).
+pub const INSTRUCCION_DE_EDICION: &str =
+    "Arrastra los widgets para moverlos o desde su esquina para cambiar su tamaño";
+/// IPC-LAY-05 `layout_edit_save` (HE-05-HU04-CA01, CA02, CA04): mensaje de resultado.
+pub const CAMBIOS_GUARDADOS: &str = "Cambios guardados.";
+/// IPC-LAY-06 `layout_edit_cancel` (HE-05-HU05-CA03): mensaje de resultado.
+pub const DISTRIBUCION_NO_GUARDADA: &str = "No se guardaron cambios.";
 /// Opción deshabilitada del catálogo de widgets: Noticias o Reproductor de música ya agregados (HE-04-HU04-CA02,
 /// RT-04).
 pub const WIDGET_YA_AGREGADO: &str = "Ya agregaste este widget.";
@@ -315,6 +322,9 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ),
     ("TEMA_YA_APLICADO", TEMA_YA_APLICADO),
     ("WIDGET_ELIMINADO", WIDGET_ELIMINADO),
+    ("INSTRUCCION_DE_EDICION", INSTRUCCION_DE_EDICION),
+    ("CAMBIOS_GUARDADOS", CAMBIOS_GUARDADOS),
+    ("DISTRIBUCION_NO_GUARDADA", DISTRIBUCION_NO_GUARDADA),
     (
         "WIDGET_POR_DEFECTO_NO_ELIMINABLE",
         WIDGET_POR_DEFECTO_NO_ELIMINABLE,

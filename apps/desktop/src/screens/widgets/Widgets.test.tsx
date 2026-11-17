@@ -1,7 +1,7 @@
 // HE-04 en P07 · Widgets. Una prueba por CA en la vista; las reglas del Núcleo tienen su prueba ca_he_04_* en
 // servicio_de_personalizacion_y_configuracion/pruebas_de_widgets.rs.
 import { act, fireEvent, render, screen as pantalla, waitFor, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Capa } from '@/capa/Capa';
 import type { Escuchar } from '@/ipc/eventos';
 import type {
@@ -14,6 +14,15 @@ import type {
 } from '@/types';
 import { abrirPantalla, llamadasA, screen, type NucleoDelPlanificador } from '../kanban/pruebas';
 import { Widgets } from './Widgets';
+
+// El Núcleo manda el resultado de la pantalla de edición a esta ventana (`resultadoDeLaEdicion.ts`).
+const resultados: Array<(mensaje: { code: string; message: string }) => void> = [];
+vi.mock('@/ipc/resultadoDeLaEdicion', () => ({
+  escucharResultadoDeLaEdicion: (alRecibir: (mensaje: { code: string; message: string }) => void) => {
+    resultados.push(alRecibir);
+    return () => resultados.splice(resultados.indexOf(alRecibir), 1);
+  },
+}));
 
 function widget(datos: Partial<WidgetItem> & Pick<WidgetItem, 'widget_id' | 'type' | 'display_name'>) {
   return {
@@ -442,5 +451,40 @@ describe('HE-04-HU04 · Catálogo de widgets', () => {
         false,
       );
     }
+  });
+});
+
+describe('HE-05 · Pantalla de edición desde Widgets', () => {
+  /** El Núcleo cierra la ventana de edición y manda el resultado a esta ventana (o nada, sin cambios). */
+  const volverDeLaEdicion = (mensaje: string) =>
+    act(() => {
+      for (const alRecibir of resultados) alRecibir({ code: 'layout_edit_save', message: mensaje });
+    });
+
+  it('HE-05-HU01-CA01 · «Editar escritorio» abre la pantalla de edición', async () => {
+    const nucleo = await abrir(POR_DEFECTO);
+    // ET05: la opción está en la pantalla Widgets; el Núcleo oculta esta ventana y abre la de edición.
+    fireEvent.click(screen.getByRole('button', { name: 'Editar escritorio' }));
+    await waitFor(() => expect(llamadasA(nucleo, 'layout_edit_open')).toEqual([{}]));
+  });
+
+  it.each([
+    ['HE-05-HU04-CA01 · Guardar la distribución después de mover un widget', 'Cambios guardados.'],
+    ['HE-05-HU04-CA02 · Guardar la distribución después de redimensionar un widget', 'Cambios guardados.'],
+    ['HE-05-HU04-CA04 · Guardar la distribución sin conexión', 'Cambios guardados.'],
+    ['HE-05-HU05-CA03 · Salir sin guardar: el mensaje en la pantalla Widgets', 'No se guardaron cambios.'],
+  ])('%s', async (_nombre, mensaje) => {
+    const nucleo = await abrir(POR_DEFECTO);
+    const lecturas = llamadasA(nucleo, 'widget_list').length;
+    await volverDeLaEdicion(mensaje);
+    // Se abre la pantalla Widgets con el mensaje de resultado (RT-04) y la lista vuelve a leer.
+    expect((await screen.findByRole('status')).textContent).toContain(mensaje);
+    expect(llamadasA(nucleo, 'widget_list').length).toBeGreaterThan(lecturas);
+  });
+
+  it('HE-05-HU04-CA03 · Guardar la distribución sin haber hecho cambios', async () => {
+    await abrir(POR_DEFECTO);
+    // ET03: sin cambios el Núcleo no manda mensaje; la pantalla Widgets no muestra ninguno.
+    expect(screen.queryByRole('status')).toBeNull();
   });
 });

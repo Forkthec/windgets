@@ -575,3 +575,44 @@ button.wg-tarjeta__titulo:focus-visible {
     animation: none;
   }
 }
+
+/* Pantalla de edición de la distribución (C-03, HE-05): la barra superior y el borde de cada widget, que indica
+   que se puede mover y redimensionar (HE-05-HU01-ET03); en rojo mientras se superpone a otro (HE-05-HU02-ET04). */
+.wg-edicion {
+  overflow: hidden;
+  user-select: none;
+}
+.wg-edicion__barra {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  justify-content: center;
+  padding: calc(var(--wg-unidad) * 2);
+  background: var(--wg-superficie);
+  color: var(--wg-tinta);
+}
+.wg-edicion__widget {
+  box-sizing: border-box;
+  padding: var(--wg-unidad);
+  background: var(--wg-superficie);
+  color: var(--wg-tinta);
+  border: calc(var(--wg-borde-ancho) * 2) dashed var(--wg-accion);
+  border-radius: var(--wg-radio);
+  cursor: move;
+  touch-action: none;
+}
+.wg-edicion__widget--choque {
+  border-color: var(--wg-estado-vencida);
+  border-style: solid;
+}
+.wg-edicion__esquina {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: calc(var(--wg-unidad) * 4);
+  height: calc(var(--wg-unidad) * 4);
+  background: var(--wg-accion);
+  cursor: nwse-resize;
+}
