@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { invocar as invocarNucleo } from '@/ipc/cliente';
 import { escuchar as escucharNucleo, type Escuchar } from '@/ipc/eventos';
 import { urlDeArchivo } from '@/ipc/archivos';
+import { Reloj } from './Reloj';
 import type {
   AssetResolveParams,
   EventMapPointerForwarded,
@@ -14,8 +15,8 @@ import type {
 // C-02 Capa del wallpaper y los widgets (P-WAL-02, HE-02-HU01). Es la ventana anclada detrás de los íconos del
 // escritorio (D-131): pinta el wallpaper del tema aplicado a partir de lo guardado, sin red (IPC-DESK-01; RNF-08).
 // Encima pinta los widgets activos del tema aplicado en su posición y tamaño (HE-04-HU01-CA01, CA03). El
-// contenido de cada widget llega con su HU (Reloj HE-04-HU03, Tareas del día HE-06-HU02, Kanban HE-06-HU05,
-// Calendario HE-06-HU07; docs/DUDAS.md).
+// contenido de cada widget llega con su HU: el Reloj ya lo tiene (HE-04-HU03); faltan Tareas del día HE-06-HU02,
+// Kanban HE-06-HU05 y Calendario HE-06-HU07 (docs/DUDAS.md).
 
 /** Nombre de cada widget (glosario). */
 export const NOMBRE_DEL_WIDGET: Record<WidgetType, string> = {
@@ -139,7 +140,9 @@ export function Capa({ invocar = invocarNucleo, escuchar = escucharNucleo }: Cap
           data-widget-id={w.widget_id}
           data-interactivo={INTERACTIVOS.includes(w.type)}
           style={{ position: 'absolute', left: w.x, top: w.y, width: w.width, height: w.height }}
-        />
+        >
+          {w.type === 'clock' && <Reloj />}
+        </section>
       ))}
     </main>
   );
