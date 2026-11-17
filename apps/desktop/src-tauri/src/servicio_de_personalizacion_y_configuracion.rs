@@ -474,6 +474,11 @@ impl ServicioDePersonalizacion {
         if let Some(fuente) = &cambio.font_id {
             Self::fuente_existe(base, fuente).await?;
         }
+        let paleta = match &cambio.palette_id {
+            Some(Some(id)) => Some(Some(Self::paleta(base, id).await?)),
+            Some(None) => Some(None),
+            None => None,
+        };
         self.con_borrador(|b| {
             b.as_mut().map(|borrador| {
                 if let Some(plantilla) = &cambio.template_id {
@@ -488,6 +493,15 @@ impl ServicioDePersonalizacion {
                 }
                 if let Some(tamano) = &cambio.font_size {
                     borrador.contenido.font.size = tamano.clone();
+                }
+                // HE-02-HU07-ET02, ET04: la paleta pone los tres colores en un solo paso; nada más cambia.
+                match paleta {
+                    Some(Some((id, colores_de_la_paleta))) => {
+                        borrador.contenido.colors = colores_de_la_paleta;
+                        borrador.contenido.palette_id = Some(id);
+                    }
+                    Some(None) => borrador.contenido.palette_id = None,
+                    None => {}
                 }
                 if let Some([primario, secundario, texto]) = colores {
                     let actuales = &mut borrador.contenido.colors;
@@ -574,6 +588,35 @@ impl ServicioDePersonalizacion {
             .ok_or_else(|| error(ErrorCode::FontNotFound, "", None))
     }
 
+    /// Los tres colores de una paleta del catálogo (HE-02-HU07-ET02).
+    /// DUDA: HE-02-HU07 IPC-THEME-05 no define un error para una paleta que no está en el catálogo (la vista solo
+    /// ofrece las del catálogo). Valor usado: `internal.unexpected`, como un color fuera del catálogo (HE-09-HU03).
+    async fn paleta(base: &BaseLocal, id: &str) -> Result<(String, ThemeColors), AppError> {
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let fila = sqlx::query(
+            "SELECT color_primary, color_secondary, color_text FROM catalog_palette WHERE id = ? AND is_active = 1",
+        )
+        .bind(id)
+        .fetch_optional(pool)
+        .await
+        .map_err(de_sqlx)?
+        .ok_or_else(inesperado)?;
+        let color = |columna: &str| -> Result<Hex, AppError> {
+            Ok(Hex(fila
+                .try_get::<String, _>(columna)
+                .map_err(de_sqlx)?
+                .to_uppercase()))
+        };
+        Ok((
+            id.to_string(),
+            ThemeColors {
+                primary: color("color_primary")?,
+                secondary: color("color_secondary")?,
+                text: color("color_text")?,
+            },
+        ))
+    }
+
     /// IPC-CAT-01 `catalog_list` con `kind: 'font'`: el catálogo de tipografías, por `sort_order`
     /// (HE-02-HU06-ET01, ET03).
     /// DUDA: HE-02-HU06 `thumbnail_url` con la ruta del archivo de la fuente (como las demás miniaturas); la vista
@@ -598,6 +641,39 @@ impl ServicioDePersonalizacion {
                     color_primary: None,
                     color_secondary: None,
                     color_text: None,
+                    format: None,
+                })
+            })
+            .collect::<Result<Vec<_>, sqlx::Error>>()
+            .map_err(de_sqlx)
+    }
+
+    /// IPC-CAT-01 `catalog_list` con `kind: 'palette'`: el catálogo de paletas con sus tres colores, por
+    /// `sort_order` (HE-02-HU07-ET01).
+    pub async fn paletas(&self, base: &BaseLocal) -> Result<Vec<CatalogItem>, AppError> {
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let filas = sqlx::query(
+            "SELECT id, name, color_primary, color_secondary, color_text FROM catalog_palette \
+             WHERE is_active = 1 ORDER BY sort_order, name",
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        filas
+            .iter()
+            .map(|f| {
+                let color = |c: &str| -> Result<Hex, sqlx::Error> {
+                    Ok(Hex(f.try_get::<String, _>(c)?.to_uppercase()))
+                };
+                Ok(CatalogItem {
+                    id: f.try_get("id")?,
+                    name: f.try_get("name")?,
+                    thumbnail_url: String::new(),
+                    is_cached: true,
+                    hex: None,
+                    color_primary: Some(color("color_primary")?),
+                    color_secondary: Some(color("color_secondary")?),
+                    color_text: Some(color("color_text")?),
                     format: None,
                 })
             })

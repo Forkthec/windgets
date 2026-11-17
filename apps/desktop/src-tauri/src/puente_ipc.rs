@@ -541,6 +541,12 @@ pub async fn catalog_list(
                 .fuentes(nucleo.planificador.base())
                 .await
         }
+        CatalogKind::Palette => {
+            nucleo
+                .personalizacion
+                .paletas(nucleo.planificador.base())
+                .await
+        }
         _ => Ok(Vec::new()),
     }))
 }

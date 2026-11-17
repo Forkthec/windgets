@@ -554,6 +554,64 @@ describe('HE-02-HU06 · Tipografía del tema', () => {
   });
 });
 
+describe('HE-02-HU07 · Paletas', () => {
+  const seccion = () => screen.getByRole('region', { name: 'Paletas' });
+
+  it('HE-02-HU07-CA01 · Seleccionar una paleta', async () => {
+    const nucleo = await abrir();
+    const catalogo = await screen.findByRole('list', { name: 'Catálogo de paletas' });
+    // ET01: el nombre y los tres colores de cada paleta; sin paleta, «Personalizada».
+    const oceano = within(catalogo).getByRole('button', { name: 'Océano' });
+    expect(oceano.querySelectorAll('.wg-muestra-color')).toHaveLength(3);
+    expect(within(seccion()).getByText('Personalizada')).toBeTruthy();
+    nucleo.responder('theme_draft_update', () => ({
+      ok: true,
+      value: {
+        ...vista('t1', 'Mi tema', true),
+        content: {
+          ...CONTENIDO,
+          colors: { primary: '#0B3954', secondary: '#087E8B', text: '#F5F5F5' },
+          palette_id: 'oceano',
+        },
+      },
+    }));
+    fireEvent.click(oceano);
+    // ET02, ET04: los tres colores en un solo paso; la plantilla y la imagen de fondo no cambian.
+    await waitFor(() => expect(oceano.getAttribute('aria-pressed')).toBe('true'));
+    expect(llamadasA(nucleo, 'theme_draft_update')).toEqual([{ patch: { palette_id: 'oceano' } }]);
+    expect(within(seccion()).queryByText('Personalizada')).toBeNull();
+    const colores = screen.getByRole('region', { name: 'Colores' });
+    expect(
+      (within(colores).getByRole('textbox', { name: 'Color principal' }) as HTMLInputElement).value,
+    ).toBe('#0B3954');
+  });
+
+  it('HE-02-HU07-CA02 · Cambiar un color después de elegir una paleta', async () => {
+    const nucleo = await abrir();
+    const catalogo = await screen.findByRole('list', { name: 'Catálogo de paletas' });
+    nucleo.responder('theme_draft_update', () => ({
+      ok: true,
+      value: { ...vista('t1', 'Mi tema', true), content: { ...CONTENIDO, palette_id: 'oceano' } },
+    }));
+    fireEvent.click(within(catalogo).getByRole('button', { name: 'Océano' }));
+    await waitFor(() => expect(within(seccion()).queryByText('Personalizada')).toBeNull());
+    // ET03: el Núcleo deja la paleta en `null` al cambiar un color y la sección muestra «Personalizada».
+    nucleo.responder('theme_draft_update', () => ({
+      ok: true,
+      value: {
+        ...vista('t1', 'Mi tema', true),
+        content: { ...CONTENIDO, colors: { ...CONTENIDO.colors, primary: '#334455' }, palette_id: null },
+      },
+    }));
+    const principal = within(screen.getByRole('region', { name: 'Colores' })).getByRole('textbox', {
+      name: 'Color principal',
+    });
+    fireEvent.change(principal, { target: { value: '#334455' } });
+    fireEvent.blur(principal);
+    expect(await within(seccion()).findByText('Personalizada')).toBeTruthy();
+  });
+});
+
 describe('HE-02-HU11 · Guardar los cambios de la vista previa', () => {
   const guardar = () => screen.getByRole('button', { name: 'Guardar' }) as HTMLButtonElement;
 

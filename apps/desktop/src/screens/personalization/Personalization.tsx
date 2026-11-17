@@ -16,6 +16,7 @@ import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { Selector } from '@/ui/Selector/Selector';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { Colores, type CampoDeColor } from './Colores';
+import { Paletas } from './Paletas';
 import { familia, PIXELES_DEL_TAMANO, Tipografia } from './Tipografia';
 
 // P-WAL-01 Personalización del wallpaper (Menú principal > Personalización > Personalización del wallpaper;
@@ -46,8 +47,9 @@ export function Personalization() {
   const [temas, setTemas] = useState<ThemeSummary[]>([]);
   const [borrador, setBorrador] = useState<ThemeDraftView | null>(null);
   const [plantillas, setPlantillas] = useState<CatalogItem[]>([]);
-  // HE-02-HU06: el catálogo de tipografías.
+  // HE-02-HU06 y HU07: el catálogo de tipografías y el de paletas.
   const [fuentes, setFuentes] = useState<CatalogItem[]>([]);
+  const [paletas, setPaletas] = useState<CatalogItem[]>([]);
   // M-04: el tema que se quería abrir cuando el Núcleo avisó de cambios sin guardar.
   // HE-02-HU03: el catálogo de imágenes (abierto con «Catálogo de imágenes»), la imagen propia que se muestra
   // y el rechazo del último archivo elegido.
@@ -78,6 +80,9 @@ export function Personalization() {
     });
     void invocar('catalog_list', { kind: 'font' }).then((r) => {
       if (vigente && r.ok) setFuentes(r.value);
+    });
+    void invocar('catalog_list', { kind: 'palette' }).then((r) => {
+      if (vigente && r.ok) setPaletas(r.value);
     });
     return () => {
       vigente = false;
@@ -326,6 +331,13 @@ export function Personalization() {
                   alElegirFuente={(id) => void cambiar({ font_id: id })}
                   alElegirTamano={(tamano) => void cambiar({ font_size: tamano })}
                   restablecer={<Boton>Restablecer tipografía</Boton>}
+                />
+              )}
+              {nombre === 'Paletas' && (
+                <Paletas
+                  paletas={paletas}
+                  actual={borrador.content.palette_id}
+                  alElegir={(id) => void cambiar({ palette_id: id })}
                 />
               )}
             </section>
