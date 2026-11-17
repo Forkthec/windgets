@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { PlannerItem, PlannerToday } from '@/types';
+import type { PlannerItem, PlannerSummary, PlannerToday } from '@/types';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
@@ -45,6 +45,23 @@ function Elemento({ item, alAbrir, alCompletar }: ElementoProps) {
   );
 }
 
+/**
+ * HE-12-HU03: «Completadas: <c> de <t>», «Te quedan <n>» (no con 0, ET07; D-169) y «<p> %» (ET01 a ET03). Con
+ * todas completadas agrega «¡Completaste todas tus tarjetas de hoy!» (ET05).
+ */
+function Resumen({ summary }: { summary: PlannerSummary }) {
+  const { total, completed, remaining, percent } = summary;
+  return (
+    <section aria-label="Resumen de avance" className="wg-fila">
+      <span>{`Completadas: ${completed} de ${total}`}</span>
+      {remaining > 0 && <span>{`Te quedan ${remaining}`}</span>}
+      <span>{`${percent} %`}</span>
+      {/* DUDA: HE-12-HU03 es de tipo resultado, pero CA04 pide verlo al consultar: va en el resumen. */}
+      {remaining === 0 && <span>¡Completaste todas tus tarjetas de hoy!</span>}
+    </section>
+  );
+}
+
 export function PlannerDaily() {
   const { invocar, escuchar } = useNucleo();
   const mostrarResultado = useMensajeDeResultado();
@@ -86,6 +103,8 @@ export function PlannerDaily() {
             <EstadoVacio texto="No tienes tarjetas para hoy." />
           ) : (
             <>
+              {/* HE-12-HU03-ET06: sin tarjetas no hay resumen. */}
+              <Resumen summary={dia.summary} />
               {/* ET02, ET03: por hora y después las sin hora, como las ordena el Núcleo. */}
               <ul className="wg-columna__tarjetas wg-planificador" aria-label="Tarjetas de hoy">
                 {dia.items.map((item) => (
