@@ -19,6 +19,7 @@
   "COLUMNA_ACTUALIZADA": "Columna actualizada.",
   "COLUMNA_CREADA": "Columna creada.",
   "COLUMNA_DUPLICADA": "Ya existe una columna con ese nombre.",
+  "CONFIRMAR_APLICAR_TEMA": "Se reemplazará la personalización actual por la del tema “<nombre del tema>”. ¿Deseas aplicarlo?",
   "CONTRASENAS_NO_COINCIDEN": "Las contraseñas no coinciden.",
   "CONTRASENA_INVALIDA": "La contraseña debe tener entre 8 y 64 caracteres e incluir una mayúscula, una minúscula y un número.",
   "CONTRASTE_BAJO": "El contraste de estos colores es bajo (<contraste>:1). Prueba con <color sugerido>.",

@@ -106,6 +106,74 @@ impl ServicioDePersonalizacion {
         })
     }
 
+    /// IPC-THEME-12 `theme_apply` (HE-03-HU03): aplica un tema guardado, su última versión guardada, al
+    /// escritorio y a la aplicación (ET02, ET06).
+    /// - El tema aplicado sin cambios sin aplicar responde `theme.already_applied` (CA03, ET05).
+    /// - Con cambios sin guardar en la vista previa responde `draft.unsaved_changes` con el nombre del tema en
+    ///   edición, para que la vista abra M-15 (CA05, ET08); con `discard_draft`, esos cambios se descartan.
+    pub async fn aplicar_tema(
+        &self,
+        base: &BaseLocal,
+        user_id: &str,
+        theme_id: &str,
+        descartar_borrador: bool,
+        ahora_ms: i64,
+    ) -> Result<ConMensaje<ThemeIdResult>, AppError> {
+        // DUDA: HE-03-HU03 IPC-THEME-12 no define un error para un tema que ya no existe. Valor usado:
+        // `internal.unexpected` (la lista solo ofrece temas guardados).
+        let (nombre, contenido) = Self::guardado(base, user_id, theme_id)
+            .await?
+            .ok_or_else(inesperado)?;
+        let ya_aplicado = Self::aplicado(base, user_id)
+            .await?
+            .is_some_and(|(id, copia)| id == theme_id && es_la_misma_copia(&copia, &contenido));
+        if ya_aplicado {
+            return Err(error(
+                ErrorCode::ThemeAlreadyApplied,
+                messages::TEMA_YA_APLICADO,
+                None,
+            ));
+        }
+        let borrador = self.con_borrador(|b| b.clone());
+        if let Some(b) = &borrador
+            && b.dirty()
+            && !descartar_borrador
+        {
+            return Err(error(
+                ErrorCode::DraftUnsavedChanges,
+                &messages::con_nombre_del_tema(messages::CAMBIOS_SIN_GUARDAR_AL_APLICAR, &b.name),
+                None,
+            ));
+        }
+        let tema = Borrador {
+            theme_id: theme_id.to_string(),
+            name: nombre.clone(),
+            guardado: contenido.clone(),
+            contenido,
+            aplicado_sin_guardar: false,
+        };
+        self.escribir_la_copia_aplicada(base, user_id, ahora_ms, &tema)
+            .await?;
+        // Lo aplicado ya es lo guardado de un tema; los cambios descartados no se conservan (M-15, «Aplicar sin
+        // guardar»).
+        self.con_borrador(|b| {
+            if descartar_borrador {
+                *b = None;
+            } else if let Some(actual) = b {
+                actual.aplicado_sin_guardar = false;
+            }
+        });
+        Ok(ConMensaje {
+            valor: ThemeIdResult {
+                theme_id: Uuid(theme_id.to_string()),
+            },
+            mensaje: resultado(
+                "theme_apply",
+                &messages::con_nombre_del_tema(messages::TEMA_APLICADO, &nombre),
+            ),
+        })
+    }
+
     /// Escribe la vista previa del borrador como copia aplicada de la cuenta (una fila por cuenta, `id =
     /// user_id`) y la encola para sincronizarla (D-189). `applied_theme` no guarda la paleta.
     async fn escribir_la_copia_aplicada(

@@ -831,6 +831,8 @@ mod widgets;
 #[cfg(test)]
 mod pruebas_de_aplicar;
 #[cfg(test)]
+mod pruebas_de_aplicar_un_tema;
+#[cfg(test)]
 mod pruebas_de_cancelar;
 #[cfg(test)]
 mod pruebas_de_colores;

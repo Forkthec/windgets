@@ -17,6 +17,7 @@ use crate::servicio_de_personalizacion_y_configuracion::ServicioDePersonalizacio
 use crate::servicio_de_personalizacion_y_configuracion::escritorio::Carpetas;
 use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, ServicioDeSesion};
 use crate::servicio_del_planificador::{CalendarioDelSistema, ServicioDelPlanificador};
+use crate::tipos::ThemeApplyParams;
 use crate::tipos::{
     AgendaDay, AgendaDayParams, AppError, AuthRegisterStartParams, AuthRegisterStartResult,
     AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams,
@@ -609,6 +610,52 @@ pub async fn theme_draft_save_as(
                 origin: OriginKind::Local,
             },
         );
+    }
+    Ok(con_mensaje(r))
+}
+
+/// IPC-THEME-12 `theme_apply` (HE-03-HU03): aplica un tema guardado. Avisa con EV-11 `applied_theme_changed`,
+/// EV-10 `themes_changed` y EV-16 para que la capa y la aplicación lo muestren en 5 s o menos (ET03; RNF-01).
+#[tauri::command]
+pub async fn theme_apply(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: ThemeApplyParams,
+) -> Result<IpcResult<ThemeIdResult>, ()> {
+    let ahora = RelojDelSistema.ahora_ms();
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .aplicar_tema(
+                    nucleo.planificador.base(),
+                    &user_id,
+                    &params.theme_id.0,
+                    params.discard_draft.unwrap_or(false),
+                    ahora,
+                )
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if let Ok(aplicado) = &r {
+        let _ = app.emit(
+            "applied_theme_changed",
+            EventMapAppliedThemeChanged {
+                theme_id: aplicado.valor.theme_id.clone(),
+                origin: OriginKind::Local,
+                has_unsaved_draft: false,
+            },
+        );
+        let _ = app.emit(
+            "themes_changed",
+            EntityChange {
+                ids: vec![aplicado.valor.theme_id.clone()],
+                op: ChangeOp::Upsert,
+                origin: OriginKind::Local,
+            },
+        );
+        avisar_wallpaper(&app).await;
     }
     Ok(con_mensaje(r))
 }

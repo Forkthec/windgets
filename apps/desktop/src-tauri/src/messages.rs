@@ -216,6 +216,8 @@ pub const TEMA_DUPLICADO: &str = "Ya existe un tema con ese nombre. Elige otro."
 /// `theme.limit_reached` (HE-03-HU02-CA05): texto de la opción «Guardar como tema» deshabilitada.
 pub const MAXIMO_DE_TEMAS: &str =
     "Alcanzaste el máximo de 10 temas. Elimina uno para guardar otro.";
+/// M-05 (HE-03-HU03-CA06): confirmación de aplicar un tema guardado.
+pub const CONFIRMAR_APLICAR_TEMA: &str = "Se reemplazará la personalización actual por la del tema “<nombre del tema>”. ¿Deseas aplicarlo?";
 /// `background.already_default` (HE-02-HU04-CA02): texto de la opción «Quitar imagen» deshabilitada.
 pub const FONDO_YA_POR_DEFECTO: &str = "Esta plantilla ya muestra su imagen de fondo por defecto.";
 
@@ -332,6 +334,7 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("FONDO_YA_POR_DEFECTO", FONDO_YA_POR_DEFECTO),
     ("NO_SE_GUARDARON_CAMBIOS", NO_SE_GUARDARON_CAMBIOS),
     ("TEMA_GUARDADO", TEMA_GUARDADO),
+    ("CONFIRMAR_APLICAR_TEMA", CONFIRMAR_APLICAR_TEMA),
     ("NOMBRE_DE_TEMA_MUY_LARGO", NOMBRE_DE_TEMA_MUY_LARGO),
     ("TEMA_DUPLICADO", TEMA_DUPLICADO),
     ("MAXIMO_DE_TEMAS", MAXIMO_DE_TEMAS),
