@@ -1,4 +1,5 @@
-//! Pruebas del Núcleo de HE-03-HU01 (temas guardados con el tema aplicado marcado).
+//! Pruebas del Núcleo de HE-03-HU01 (temas guardados con el tema aplicado marcado) y HE-03-HU06 (la aplicación
+//! con el tema aplicado).
 
 use super::pruebas_de_colores::primario;
 use super::pruebas_del_tema_en_edicion::{MI_TEMA, OTRO_TEMA, con_temas};
@@ -73,4 +74,45 @@ fn ca_he_03_hu01_ca04() {
     let temas = bloquear(servicio.temas(&base, USUARIO)).unwrap();
     let mi_tema = temas.iter().find(|t| t.id.0 == MI_TEMA).unwrap();
     assert!(mi_tema.is_applied && mi_tema.has_unsaved_changes);
+}
+
+#[test]
+fn ca_he_03_hu06_ca04() {
+    // HE-03-HU06-CA04 · Los cambios de la vista previa, guardados o sin guardar, no cambian lo que pinta la
+    // aplicación hasta aplicarlos (ET06).
+    let (base, servicio) = con_temas();
+    let antes = bloquear(servicio.tema_aplicado(&base, USUARIO)).unwrap();
+    bloquear(servicio.actualizar_borrador(&base, USUARIO, &primario("#112233"))).unwrap();
+    assert_eq!(
+        bloquear(servicio.tema_aplicado(&base, USUARIO))
+            .unwrap()
+            .content,
+        antes.content
+    );
+    bloquear(servicio.guardar_borrador(&base, USUARIO, AHORA_MS)).unwrap();
+    assert_eq!(
+        bloquear(servicio.tema_aplicado(&base, USUARIO))
+            .unwrap()
+            .content,
+        antes.content
+    );
+}
+
+#[test]
+fn ca_he_03_hu06_ca08() {
+    // HE-03-HU06-CA08 · En el primer inicio de sesión, sin copia aplicada, la aplicación toma los colores y la
+    // tipografía de la plantilla por defecto (ET07).
+    let (base, servicio) = con_temas();
+    bloquear(async {
+        sqlx::query("DELETE FROM applied_theme")
+            .execute(base.pool().await.unwrap())
+            .await
+            .unwrap();
+    });
+    let tema = bloquear(servicio.tema_aplicado(&base, USUARIO)).unwrap();
+    assert_eq!(tema.content.colors.primary.0, "#96B2B2");
+    assert_eq!(tema.content.colors.secondary.0, "#829890");
+    assert_eq!(tema.content.colors.text.0, "#14201C");
+    assert_eq!(tema.content.font.id, "nunito");
+    assert_eq!(tema.content.font.size, crate::tipos::FontSize::Medium);
 }

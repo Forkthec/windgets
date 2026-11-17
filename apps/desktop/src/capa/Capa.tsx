@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { invocar as invocarNucleo } from '@/ipc/cliente';
 import { escuchar as escucharNucleo, type Escuchar } from '@/ipc/eventos';
 import { urlDeArchivo } from '@/ipc/archivos';
+import { tokensDelTema } from '@/ui/tema/temaAplicado';
+import { aplicarTokens } from '@/ui/tema/tokens';
 import type {
   AssetResolveParams,
   EventMapPointerForwarded,
@@ -91,7 +93,11 @@ export function Capa({ invocar = invocarNucleo, escuchar = escucharNucleo }: Cap
         const archivo = await invocar('asset_resolve', recurso);
         if (archivo.ok && archivo.value.state === 'ready') imagen = urlDeArchivo(archivo.value.url);
       }
-      if (vigente) setPintado({ estado: r.value, imagen });
+      // HE-03-HU06-ET04: los widgets también toman los colores y la tipografía del tema aplicado.
+      const tokens = await tokensDelTema(invocar, r.value.applied);
+      if (!vigente) return;
+      aplicarTokens(tokens);
+      setPintado({ estado: r.value, imagen });
     };
     void leer();
     // EV-16: al iniciar o cerrar sesión, o si el wallpaper no se pudo mostrar, la capa vuelve a leer. EV-11: al

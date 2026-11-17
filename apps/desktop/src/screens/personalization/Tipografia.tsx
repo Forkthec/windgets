@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { CatalogItem, FontSize, ThemeContentFont } from '@/types';
+import { familia } from '@/ui/tema/temaAplicado';
 
 // Sección «Tipografía» de Personalización del wallpaper (HE-02-HU06-ET01): el catálogo de tipografías, con el
 // nombre de cada fuente escrito en esa fuente, los tamaños «Pequeño», «Mediano» y «Grande», y «Restablecer
@@ -11,12 +12,6 @@ const TAMANOS: ReadonlyArray<readonly [FontSize, string]> = [
   ['medium', 'Mediano'],
   ['large', 'Grande'],
 ];
-
-/** ET05: 14 px en «Pequeño», 16 px en «Mediano» y 20 px en «Grande». */
-export const PIXELES_DEL_TAMANO: Record<FontSize, string> = { small: '14px', medium: '16px', large: '20px' };
-
-/** La familia CSS de una fuente del catálogo (declarada en `ui/tema/tokens.css`). */
-export const familia = (nombre: string): string => `'${nombre}', 'Segoe UI', sans-serif`;
 
 export interface TipografiaProps {
   fuentes: CatalogItem[];

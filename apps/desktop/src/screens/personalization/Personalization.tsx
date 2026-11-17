@@ -21,7 +21,8 @@ import { Colores, type CampoDeColor } from './Colores';
 import { GuardarComoTema } from './GuardarComoTema';
 import { Paletas } from './Paletas';
 import { VistaPrevia } from './VistaPrevia';
-import { familia, PIXELES_DEL_TAMANO, Tipografia } from './Tipografia';
+import { familia, PIXELES_DEL_TAMANO } from '@/ui/tema/temaAplicado';
+import { Tipografia } from './Tipografia';
 
 // P-WAL-01 Personalización del wallpaper (Menú principal > Personalización > Personalización del wallpaper;
 // HE-02-HU10). La lista «Tema en edición», la vista previa (HE-02-HU09), las secciones (HE-02-HU02 a HU08) y
