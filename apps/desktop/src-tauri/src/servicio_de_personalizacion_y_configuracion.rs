@@ -14,12 +14,14 @@ use sqlx::sqlite::SqliteRow;
 
 use crate::messages;
 use crate::repositorios_y_archivos_locales::BaseLocal;
-use crate::servicio_del_planificador::{de_sqlx, error, inesperado};
+use crate::servicio_de_sesion::ConMensaje;
+use crate::servicio_del_planificador::{de_sqlx, error, inesperado, resultado};
 use crate::tipos::{
     AppError, BackgroundSource, CatalogItem, ErrorCode, FontSize, Hex, ThemeBackground,
     ThemeColors, ThemeContent, ThemeContentFont, ThemeDraftPatch, ThemeDraftPatchBackground,
     ThemeDraftPatchColors, ThemeDraftPatchColorsPrimary, ThemeDraftPatchColorsSecondary,
-    ThemeDraftPatchColorsText, ThemeDraftResetParamsPart, ThemeDraftView, ThemeSummary, Uuid,
+    ThemeDraftPatchColorsText, ThemeDraftResetParamsPart, ThemeDraftStatus, ThemeDraftView,
+    ThemeSummary, Uuid,
 };
 
 /// Identificador del tema inicial cuando la base local aún no lo trae (primer inicio sin la primera descarga).
@@ -574,6 +576,40 @@ impl ServicioDePersonalizacion {
         }
     }
 
+    /// IPC-THEME-10 `theme_draft_get_status` (HE-02-HU13-CA02, CA05): si la vista previa tiene cambios sin
+    /// guardar y si se aplicaron sin guardarlos, con el nombre del tema en edición.
+    pub fn estado_del_borrador(&self) -> ThemeDraftStatus {
+        self.con_borrador(|b| match b {
+            Some(borrador) => ThemeDraftStatus {
+                dirty: borrador.dirty(),
+                applied_unsaved: borrador.aplicado_sin_guardar,
+                theme_name: borrador.name.clone(),
+            },
+            None => ThemeDraftStatus {
+                dirty: false,
+                applied_unsaved: false,
+                theme_name: String::new(),
+            },
+        })
+    }
+
+    /// IPC-THEME-11 `theme_draft_discard` (HE-02-HU13-CA01, ET01, ET02): la vista previa vuelve a lo último
+    /// guardado del tema en edición, sin guardar nada. Lo aplicado al escritorio no cambia (ET05).
+    pub async fn descartar_borrador(
+        &self,
+        base: &BaseLocal,
+        user_id: &str,
+    ) -> Result<ConMensaje<ThemeDraftView>, AppError> {
+        let actual = self.abrir_borrador(base, user_id, None).await?;
+        let nuevo = self.cargar(base, user_id, Some(&actual.theme_id.0)).await?;
+        let vista = nuevo.vista();
+        self.con_borrador(|b| *b = Some(nuevo));
+        Ok(ConMensaje {
+            valor: vista,
+            mensaje: resultado("theme_draft_discard", messages::NO_SE_GUARDARON_CAMBIOS),
+        })
+    }
+
     /// IPC-THEME-06 `theme_draft_reset` (HE-02-HU08): devuelve en la vista previa los colores o la tipografía a
     /// los de la plantilla del tema en edición; la tipografía vuelve además al tamaño mediano (ET01, ET02). Los
     /// colores de la plantilla no son una paleta del catálogo: quedan en «Personalizada».
@@ -792,6 +828,8 @@ mod widgets;
 
 #[cfg(test)]
 mod pruebas_de_aplicar;
+#[cfg(test)]
+mod pruebas_de_cancelar;
 #[cfg(test)]
 mod pruebas_de_colores;
 #[cfg(test)]

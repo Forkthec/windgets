@@ -16,7 +16,7 @@ import { Boton } from '@/ui/Boton/Boton';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { Selector } from '@/ui/Selector/Selector';
-import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { useGuardiaDeSalida, useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { Colores, type CampoDeColor } from './Colores';
 import { Paletas } from './Paletas';
 import { VistaPrevia } from './VistaPrevia';
@@ -66,6 +66,11 @@ export function Personalization() {
   const [pendiente, setPendiente] = useState<{ id: string; mensaje: string } | null>(null);
   // M-15: el mensaje del Núcleo al aplicar con cambios sin guardar (HE-02-HU12-CA02).
   const [alAplicar, setAlAplicar] = useState('');
+  // HE-02-HU13: el mensaje al salir por el Menú principal con cambios sin guardar (M-02) o con cambios aplicados
+  // que no se guardaron (M-03), y cómo responder a la navegación.
+  const [salida, setSalida] = useState<{ aplicados: boolean; responder: (salir: boolean) => void } | null>(
+    null,
+  );
   // HE-02-HU05-CA03, CA04: el mensaje de campo de cada color y si un color está vacío.
   const [mensajesDeColor, setMensajesDeColor] = useState<
     Partial<Record<CampoDeColor, { code: string; message: string }>>
@@ -134,6 +139,30 @@ export function Personalization() {
     } else if (r.error.field === campo) {
       setMensajesDeColor((m) => ({ ...m, [campo]: { code: r.error.code, message: r.error.message } }));
     }
+  };
+
+  // HE-02-HU13-CA01: «Cancelar» vuelve a lo último guardado del tema en edición, sin guardar nada (ET01, ET02).
+  const cancelar = async () => {
+    const r = await invocar('theme_draft_discard', {});
+    if (!r.ok) return;
+    setBorrador(r.value);
+    setMensajesDeColor({});
+    mostrarResultado(r.result_message?.message ?? '');
+  };
+
+  // HE-02-HU13-CA02, CA05 (RT-01-ET05): al elegir otra pantalla en el Menú principal, el Núcleo dice si hay
+  // cambios sin guardar y si se aplicaron; la navegación espera la respuesta del mensaje.
+  const guardia = useCallback(async () => {
+    const r = await invocar('theme_draft_get_status', {});
+    if (!r.ok || !r.value.dirty) return true;
+    return new Promise<boolean>((responder) => setSalida({ aplicados: r.value.applied_unsaved, responder }));
+  }, [invocar]);
+  useGuardiaDeSalida(guardia);
+
+  /** Responde al Menú principal: `true` sale de la pantalla y `false` la mantiene con sus cambios. */
+  const responderSalida = (salir: boolean) => {
+    salida?.responder(salir);
+    setSalida(null);
   };
 
   // HE-02-HU08: vuelve a los colores o a la tipografía de la plantilla (ET01, ET02).
@@ -373,7 +402,7 @@ export function Personalization() {
             >
               Aplicar
             </Boton>
-            <Boton>Cancelar</Boton>
+            <Boton onClick={() => void cancelar()}>Cancelar</Boton>
           </div>
         </>
       )}
@@ -387,6 +416,40 @@ export function Personalization() {
           alConfirmar={() => void aplicar('save_and_apply')}
           alElegirSecundaria={() => void aplicar('apply_without_saving')}
           alCancelar={() => setAlAplicar('')}
+        />
+      )}
+      {salida && !salida.aplicados && (
+        // M-02 (HE-02-HU13-CA02 a CA04). DUDA: HE-02-HU13 M-02 no define el título. Valor usado: «Salir».
+        <Confirmacion
+          titulo="Salir"
+          texto={textos.SALIR_SIN_GUARDAR}
+          opcionPrincipal="Salir sin guardar"
+          opcionSalir="Seguir editando"
+          // CA03: se descartan los cambios y se abre la pantalla elegida; el escritorio no cambia.
+          alConfirmar={() => void invocar('theme_draft_discard', {}).then(() => responderSalida(true))}
+          // CA04: se cierra el mensaje y la vista previa conserva sus cambios.
+          alCancelar={() => responderSalida(false)}
+        />
+      )}
+      {salida?.aplicados && (
+        // M-03 (HE-02-HU13-CA05, CA06, CA08, CA09). DUDA: HE-02-HU13 M-03 no define el título. Valor usado: «Salir».
+        <Confirmacion
+          titulo="Salir"
+          texto={textos.CAMBIOS_APLICADOS_SIN_GUARDAR_AL_SALIR}
+          opcionPrincipal="Guardar"
+          opcionSecundaria="Salir sin guardar"
+          opcionSalir="Seguir editando"
+          // CA08: guarda en el tema en edición y sale.
+          alConfirmar={() =>
+            void invocar('theme_draft_save', {}).then((r) => {
+              if (r.ok) mostrarResultado(r.result_message?.message ?? '');
+              responderSalida(r.ok);
+            })
+          }
+          // CA06: sale; lo aplicado sigue en el escritorio y el tema guardado no cambia (ET05).
+          alElegirSecundaria={() => void invocar('theme_draft_discard', {}).then(() => responderSalida(true))}
+          // CA09: se cierra el mensaje y los cambios siguen intactos.
+          alCancelar={() => responderSalida(false)}
         />
       )}
       {pendiente && (

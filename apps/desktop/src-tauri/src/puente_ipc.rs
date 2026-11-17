@@ -27,7 +27,7 @@ use crate::tipos::{
     EventMapSessionChanged, EventMapSessionChangedReason, EventMapSessionChangedState,
     ImageImportParams, ImageImportResult, IpcErr, IpcOk, IpcResult, Label, LabelCreateParams,
     NoParams, OriginKind, PlannerToday, SessionInfo, ThemeDraftOpenParams, ThemeDraftResetParams,
-    ThemeDraftSelectParams, ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
+    ThemeDraftSelectParams, ThemeDraftStatus, ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
 };
 use crate::tipos::{
     AppliedThemeView, ApplyMode, AssetResolveParams, AssetResolveResult,
@@ -1281,6 +1281,37 @@ pub async fn theme_draft_reset(
             nucleo
                 .personalizacion
                 .restablecer_borrador(nucleo.planificador.base(), &user_id, &params.part)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-THEME-10 `theme_draft_get_status` (HE-02-HU13-CA02, CA05): qué mensaje mostrar al salir de la pantalla.
+#[tauri::command]
+pub async fn theme_draft_get_status(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<ThemeDraftStatus>, ()> {
+    let _ = params;
+    Ok(leido(match usuario(&nucleo) {
+        Ok(_) => Ok(nucleo.personalizacion.estado_del_borrador()),
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-THEME-11 `theme_draft_discard` (HE-02-HU13-CA01): «Cancelar» devuelve la vista previa a lo guardado.
+#[tauri::command]
+pub async fn theme_draft_discard(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<ThemeDraftView>, ()> {
+    let _ = params;
+    Ok(con_mensaje(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .descartar_borrador(nucleo.planificador.base(), &user_id)
                 .await
         }
         Err(e) => Err(e),

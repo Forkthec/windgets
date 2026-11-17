@@ -721,6 +721,142 @@ describe('HE-02-HU09 · Vista previa en tiempo real', () => {
   });
 });
 
+describe('HE-02-HU13 · Cancelar los cambios sin guardar', () => {
+  const M02 = 'Tienes cambios sin guardar. ¿Deseas salir sin guardarlos?';
+  const M03 = 'Aplicaste cambios que no guardaste en el tema. ¿Deseas guardarlos antes de salir?';
+  const menu = () => screen.getByRole('navigation', { name: 'Menú principal' });
+
+  /** Con cambios en la vista previa (aplicados o no) y el Núcleo listo para descartarlos o guardarlos. */
+  async function conCambios(aplicados: boolean) {
+    const nucleo = await abrir(true);
+    nucleo.responder('theme_draft_get_status', () => ({
+      ok: true,
+      value: { dirty: true, applied_unsaved: aplicados, theme_name: 'Mi tema' },
+    }));
+    nucleo.responder('theme_draft_discard', () => ({
+      ok: true,
+      value: vista('t1', 'Mi tema'),
+      result_message: { code: 'theme_draft_discard', message: 'No se guardaron cambios.' },
+    }));
+    nucleo.responder('theme_draft_save', () => ({
+      ok: true,
+      value: { theme_id: 't1', is_applied: true },
+      result_message: { code: 'theme_draft_save', message: 'Cambios guardados en el tema “Mi tema”.' },
+    }));
+    await waitFor(() =>
+      expect((screen.getByRole('button', { name: 'Guardar' }) as HTMLButtonElement).disabled).toBe(false),
+    );
+    return nucleo;
+  }
+
+  /** Elige otra pantalla en el Menú principal y devuelve el mensaje que aparece. */
+  async function salir() {
+    fireEvent.click(within(menu()).getByRole('button', { name: 'Planificador diario' }));
+    return screen.findByRole('dialog');
+  }
+
+  it('HE-02-HU13-CA01 · Cancelar los cambios sin guardar', async () => {
+    const nucleo = await conCambios(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    // ET01, ET02: la vista previa vuelve a lo guardado, sin guardar nada, con el mensaje de resultado.
+    expect((await screen.findByRole('status')).textContent).toContain('No se guardaron cambios.');
+    expect(llamadasA(nucleo, 'theme_draft_discard')).toEqual([{}]);
+    expect(llamadasA(nucleo, 'theme_draft_save')).toEqual([]);
+    expect((screen.getByRole('button', { name: 'Guardar' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('HE-02-HU13-CA02 · Salir con cambios sin guardar', async () => {
+    await conCambios(false);
+    const dialogo = await salir();
+    // ET03: confirmación en ventana emergente con sus dos opciones. ET04: aún no sale.
+    expect(within(dialogo).getByText(M02)).toBeTruthy();
+    const opciones = within(dialogo)
+      .getAllByRole('button')
+      .map((b) => b.textContent);
+    expect(opciones).toEqual(expect.arrayContaining(['Salir sin guardar', 'Seguir editando']));
+    expect(screen.getByRole('main', { name: 'Personalización del wallpaper' })).toBeTruthy();
+  });
+
+  it('HE-02-HU13-CA03 · Salir sin guardar', async () => {
+    const nucleo = await conCambios(false);
+    const dialogo = await salir();
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Salir sin guardar' }));
+    // Se abre la pantalla elegida (RT-01) y no se aplica nada al escritorio.
+    expect(await screen.findByRole('main', { name: 'Planificador diario' })).toBeTruthy();
+    expect(llamadasA(nucleo, 'theme_draft_discard')).toEqual([{}]);
+    expect(llamadasA(nucleo, 'theme_draft_apply')).toEqual([]);
+  });
+
+  it('HE-02-HU13-CA04 · Seguir editando', async () => {
+    const nucleo = await conCambios(false);
+    const dialogo = await salir();
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Seguir editando' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.getByRole('main', { name: 'Personalización del wallpaper' })).toBeTruthy();
+    expect(llamadasA(nucleo, 'theme_draft_discard')).toEqual([]);
+    expect((screen.getByRole('button', { name: 'Guardar' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('HE-02-HU13-CA05 · Salir con cambios aplicados sin guardar', async () => {
+    await conCambios(true);
+    const dialogo = await salir();
+    // ET06: el mensaje de RT-01-CA05, con «Guardar», «Salir sin guardar» y «Seguir editando».
+    expect(within(dialogo).getByText(M03)).toBeTruthy();
+    for (const opcion of ['Guardar', 'Salir sin guardar', 'Seguir editando']) {
+      expect(within(dialogo).getByRole('button', { name: opcion })).toBeTruthy();
+    }
+  });
+
+  it('HE-02-HU13-CA06 · Salir sin guardar lo aplicado', async () => {
+    const nucleo = await conCambios(true);
+    const dialogo = await salir();
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Salir sin guardar' }));
+    expect(await screen.findByRole('main', { name: 'Planificador diario' })).toBeTruthy();
+    // ET05: no se guarda en el tema; lo aplicado sigue en el escritorio (no se vuelve a aplicar nada).
+    expect(llamadasA(nucleo, 'theme_draft_save')).toEqual([]);
+    expect(llamadasA(nucleo, 'theme_draft_apply')).toEqual([]);
+  });
+
+  it('HE-02-HU13-CA07 · Cancelar desde el mensaje de aplicar', async () => {
+    const nucleo = await conCambios(false);
+    nucleo.responder('theme_draft_apply', () => ({
+      ok: false,
+      error: {
+        code: 'draft.unsaved_changes_on_apply',
+        message: 'Tienes cambios sin guardar en el tema “Mi tema”. ¿Qué deseas hacer?',
+      },
+    }));
+    fireEvent.click(screen.getByRole('button', { name: 'Aplicar' }));
+    const dialogo = await screen.findByRole('dialog');
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Cancelar' }));
+    // ET07: se cierra el mensaje, el escritorio no cambia y la vista previa conserva sus cambios.
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(llamadasA(nucleo, 'theme_draft_apply')).toEqual([{ mode: 'apply' }]);
+    expect(llamadasA(nucleo, 'theme_draft_discard')).toEqual([]);
+    expect((screen.getByRole('button', { name: 'Guardar' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('HE-02-HU13-CA08 · Guardar los cambios aplicados al salir', async () => {
+    const nucleo = await conCambios(true);
+    const dialogo = await salir();
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Guardar' }));
+    // ET08: guarda en el tema en edición, cierra el mensaje y abre la pantalla elegida.
+    expect(await screen.findByRole('main', { name: 'Planificador diario' })).toBeTruthy();
+    expect(llamadasA(nucleo, 'theme_draft_save')).toEqual([{}]);
+    expect(llamadasA(nucleo, 'theme_draft_discard')).toEqual([]);
+  });
+
+  it('HE-02-HU13-CA09 · Seguir editando con cambios aplicados', async () => {
+    const nucleo = await conCambios(true);
+    const dialogo = await salir();
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Seguir editando' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.getByRole('main', { name: 'Personalización del wallpaper' })).toBeTruthy();
+    expect(llamadasA(nucleo, 'theme_draft_save')).toEqual([]);
+    expect(llamadasA(nucleo, 'theme_draft_discard')).toEqual([]);
+  });
+});
+
 describe('HE-02-HU11 · Guardar los cambios de la vista previa', () => {
   const guardar = () => screen.getByRole('button', { name: 'Guardar' }) as HTMLButtonElement;
 

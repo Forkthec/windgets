@@ -202,6 +202,11 @@ pub const COLOR_INVALIDO: &str =
 /// `legibility`.
 pub const CONTRASTE_BAJO: &str =
     "El contraste de estos colores es bajo (<contraste>:1). Prueba con <color sugerido>.";
+/// IPC-THEME-11 `theme_draft_discard` (HE-02-HU13-CA01): mensaje de resultado.
+pub const NO_SE_GUARDARON_CAMBIOS: &str = "No se guardaron cambios.";
+/// M-03 (HE-02-HU13-CA05): confirmación al salir con cambios aplicados que no se guardaron en el tema.
+pub const CAMBIOS_APLICADOS_SIN_GUARDAR_AL_SALIR: &str =
+    "Aplicaste cambios que no guardaste en el tema. ¿Deseas guardarlos antes de salir?";
 /// `background.already_default` (HE-02-HU04-CA02): texto de la opción «Quitar imagen» deshabilitada.
 pub const FONDO_YA_POR_DEFECTO: &str = "Esta plantilla ya muestra su imagen de fondo por defecto.";
 
@@ -316,6 +321,11 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ),
     ("TEMA_YA_APLICADO", TEMA_YA_APLICADO),
     ("FONDO_YA_POR_DEFECTO", FONDO_YA_POR_DEFECTO),
+    ("NO_SE_GUARDARON_CAMBIOS", NO_SE_GUARDARON_CAMBIOS),
+    (
+        "CAMBIOS_APLICADOS_SIN_GUARDAR_AL_SALIR",
+        CAMBIOS_APLICADOS_SIN_GUARDAR_AL_SALIR,
+    ),
     ("COLOR_INVALIDO", COLOR_INVALIDO),
     ("CONTRASTE_BAJO", CONTRASTE_BAJO),
     ("BLOQUE_YA_PASO", BLOQUE_YA_PASO),
