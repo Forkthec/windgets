@@ -16,26 +16,29 @@ use crate::repositorios_y_archivos_locales::{BaseLocal, almacen_de_la_aplicacion
 use crate::servicio_de_personalizacion_y_configuracion::ServicioDePersonalizacion;
 use crate::servicio_de_personalizacion_y_configuracion::escritorio::Carpetas;
 use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, ServicioDeSesion};
-use crate::servicio_del_planificador::{CalendarioDelSistema, ServicioDelPlanificador};
+use crate::servicio_del_planificador::{
+    Calendario, CalendarioDelSistema, ServicioDelPlanificador, VigiaDelDia,
+};
 use crate::tipos::ThemeApplyParams;
 use crate::tipos::{
     AgendaDay, AgendaDayParams, AppError, AuthRegisterStartParams, AuthRegisterStartResult,
     AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams,
     AuthSignOutInfo, Card, CardAssignTimeBlockParams, CardCreateParams, CardDetail, CardIdParams,
-    CardListBoardResult, CardMoveParams, CardUpdateParams, CatalogItem, CatalogKind,
-    CatalogListParams, ChangeOp, CodeSent, Column, ColumnCreateParams, ColumnReorderParams,
-    ColumnUpdateParams, Connectivity, EntityChange, ErrorCode, EventMapConnectivityChanged,
-    EventMapSessionChanged, EventMapSessionChangedReason, EventMapSessionChangedState,
-    ImageImportParams, ImageImportResult, IpcErr, IpcOk, IpcResult, Label, LabelCreateParams,
-    NoParams, OriginKind, PlannerToday, SessionInfo, ThemeDraftOpenParams, ThemeDraftResetParams,
-    ThemeDraftSelectParams, ThemeDraftStatus, ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
+    CardListBoardResult, CardMoveParams, CardSetCompletedParams, CardUpdateParams, CatalogItem,
+    CatalogKind, CatalogListParams, ChangeOp, CodeSent, Column, ColumnCreateParams,
+    ColumnReorderParams, ColumnUpdateParams, Connectivity, EntityChange, ErrorCode,
+    EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
+    EventMapSessionChangedState, ImageImportParams, ImageImportResult, IpcErr, IpcOk, IpcResult,
+    Label, LabelCreateParams, NoParams, OriginKind, PlannerToday, SessionInfo,
+    ThemeDraftOpenParams, ThemeDraftResetParams, ThemeDraftSelectParams, ThemeDraftStatus,
+    ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
 };
 use crate::tipos::{
     AppliedThemeView, ApplyMode, AssetResolveParams, AssetResolveResult,
-    EventMapAppliedThemeChanged, EventMapCatalogUpdated, EventMapWallpaperStatusChanged,
-    EventMapWidgetsChanged, LayerInitialState, ThemeDraftApplyParams, ThemeDraftSaveAsParams,
-    ThemeDraftSaveResult, ThemeIdResult, WallpaperState, WallpaperStatus, WidgetCatalog,
-    WidgetItem, WidgetSetActiveParams,
+    EventMapAppliedThemeChanged, EventMapCatalogUpdated, EventMapDayChanged,
+    EventMapWallpaperStatusChanged, EventMapWidgetsChanged, LayerInitialState,
+    ThemeDraftApplyParams, ThemeDraftSaveAsParams, ThemeDraftSaveResult, ThemeIdResult,
+    WallpaperState, WallpaperStatus, WidgetCatalog, WidgetItem, WidgetSetActiveParams,
 };
 
 /// El Núcleo que ven los comandos.
@@ -1223,6 +1226,58 @@ pub async fn card_move(
         avisar_tarjetas(&app, vec![movida.id.clone()], ChangeOp::Upsert);
     }
     Ok(leido(r))
+}
+
+/// IPC-CARD-07 `card_set_completed` (HE-12-HU02; HE-06-HU03): la casilla de completada del planificador diario
+/// y del widget Tareas del día. Emite `cards_changed` (EV-07) para que el tablero, el planificador, el widget
+/// Tareas del día y el widget Kanban se actualicen (HE-12-HU02-ET06; HE-06-HU03-ET03). Solo al marcar trae
+/// «¡Bien hecho! Tarjeta completada.» (HE-12-HU02-ET07).
+#[tauri::command]
+pub async fn card_set_completed(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: CardSetCompletedParams,
+) -> Result<IpcResult<Card>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .marcar_completada(&user_id, params)
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    Ok(match r {
+        Ok((tarjeta, mensaje)) => {
+            avisar_tarjetas(&app, vec![tarjeta.id.clone()], ChangeOp::Upsert);
+            IpcResult::Ok(IpcOk {
+                ok: true.into(),
+                value: tarjeta,
+                result_message: mensaje,
+            })
+        }
+        Err(error) => IpcResult::Err(IpcErr {
+            ok: false.into(),
+            error,
+        }),
+    })
+}
+
+/// Cada cuánto se revisa si cambió el día local (EV-22): el widget muestra el día nuevo a más tardar 1 s después
+/// de las 00:00.
+const REVISION_DEL_DIA: Duration = Duration::from_secs(1);
+
+/// EV-22 `day_changed` (HE-06-HU02-ET04): avisa a las vistas cuando la hora local pasa a las 00:00.
+pub fn vigilar_dia(app: AppHandle) {
+    std::thread::spawn(move || {
+        let mut vigia = VigiaDelDia::nuevo(CalendarioDelSistema.hoy());
+        loop {
+            std::thread::sleep(REVISION_DEL_DIA);
+            if let Some(date) = vigia.revisar(CalendarioDelSistema.hoy()) {
+                let _ = app.emit("day_changed", EventMapDayChanged { date });
+            }
+        }
+    });
 }
 
 /// IPC-CARD-09 `agenda_get_day` (HE-11-HU01): la agenda diaria de un día.
