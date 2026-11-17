@@ -857,6 +857,114 @@ describe('HE-02-HU13 · Cancelar los cambios sin guardar', () => {
   });
 });
 
+describe('HE-03-HU02 · Guardar como tema', () => {
+  const guardarComo = () => screen.getByRole('button', { name: 'Guardar como tema' }) as HTMLButtonElement;
+
+  /** Con cambios en la vista previa, abre la ventana emergente Guardar como tema. */
+  async function abrirVentana() {
+    const nucleo = await abrir(true);
+    await waitFor(() => expect(guardarComo().disabled).toBe(false));
+    fireEvent.click(guardarComo());
+    const ventana = await screen.findByRole('dialog', { name: 'Guardar como tema' });
+    return { nucleo, ventana };
+  }
+
+  function diligenciarNombre(ventana: HTMLElement, nombre: string) {
+    fireEvent.change(within(ventana).getByRole('textbox', { name: 'Nombre' }), { target: { value: nombre } });
+  }
+
+  const guardar = (ventana: HTMLElement) =>
+    within(ventana).getByRole('button', { name: 'Guardar' }) as HTMLButtonElement;
+
+  it('HE-03-HU02-CA01 · Guardar como tema nuevo', async () => {
+    const { nucleo, ventana } = await abrirVentana();
+    nucleo.responder('theme_draft_save_as', ({ name }) => ({
+      ok: true,
+      value: { theme_id: 't3' },
+      result_message: { code: 'theme_draft_save_as', message: `Tema “${name}” guardado.` },
+    }));
+    nucleo.responder('theme_draft_open', () => ({ ok: true, value: vista('t3', 'Otoño') }));
+    nucleo.responder('theme_list', () => ({
+      ok: true,
+      value: [resumen('t3', 'Otoño', false), resumen('t2', 'Verano', false), resumen('t1', 'Mi tema', true)],
+    }));
+    diligenciarNombre(ventana, '  Otoño ');
+    fireEvent.click(guardar(ventana));
+    // ET07: el tema nuevo queda en edición; ET08: no se aplica nada al escritorio.
+    expect((await screen.findByRole('status')).textContent).toContain('Tema “Otoño” guardado.');
+    expect(llamadasA(nucleo, 'theme_draft_save_as')).toEqual([{ name: 'Otoño' }]);
+    await waitFor(() => expect(lista().value).toBe('t3'));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(llamadasA(nucleo, 'theme_draft_apply')).toEqual([]);
+  });
+
+  it('HE-03-HU02-CA02 · Nombre vacío', async () => {
+    const { nucleo, ventana } = await abrirVentana();
+    diligenciarNombre(ventana, '   ');
+    // ET10: «Guardar» deshabilitada y sin el mensaje «Este campo es obligatorio.».
+    expect(guardar(ventana).disabled).toBe(true);
+    expect(within(ventana).queryByText('Este campo es obligatorio.')).toBeNull();
+    fireEvent.click(guardar(ventana));
+    expect(llamadasA(nucleo, 'theme_draft_save_as')).toEqual([]);
+  });
+
+  it('HE-03-HU02-CA03 · Nombre de más de 40 caracteres', async () => {
+    const { nucleo, ventana } = await abrirVentana();
+    diligenciarNombre(ventana, 'a'.repeat(41));
+    fireEvent.click(guardar(ventana));
+    // ET09: el mensaje en el campo Nombre; no se guarda.
+    expect(await within(ventana).findByText('El nombre no puede superar los 40 caracteres.')).toBeTruthy();
+    expect(llamadasA(nucleo, 'theme_draft_save_as')).toEqual([]);
+  });
+
+  it('HE-03-HU02-CA04 · Nombre duplicado', async () => {
+    const { nucleo, ventana } = await abrirVentana();
+    nucleo.responder('theme_draft_save_as', () => ({
+      ok: false,
+      error: {
+        code: 'name.duplicate',
+        message: 'Ya existe un tema con ese nombre. Elige otro.',
+        field: 'name',
+      },
+    }));
+    diligenciarNombre(ventana, ' VERANO ');
+    fireEvent.click(guardar(ventana));
+    expect(await within(ventana).findByText('Ya existe un tema con ese nombre. Elige otro.')).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Guardar como tema' })).toBeTruthy();
+  });
+
+  it('HE-03-HU02-CA05 · Máximo de temas', async () => {
+    const nucleo = await abrir(true);
+    nucleo.responder('theme_list', () => ({
+      ok: true,
+      value: Array.from({ length: 10 }, (_, i) => resumen(`t${i + 1}`, `Tema ${i + 1}`, i === 0)),
+    }));
+    nucleo.emitir('themes_changed', { ids: [], op: 'upsert', origin: 'local' });
+    // ET11: deshabilitada con su texto (RT-04).
+    await waitFor(() => expect(guardarComo().disabled).toBe(true));
+    expect(screen.getByText('Alcanzaste el máximo de 10 temas. Elimina uno para guardar otro.')).toBeTruthy();
+  });
+
+  it('HE-03-HU02-CA06 · Cancelar el guardado', async () => {
+    const { nucleo, ventana } = await abrirVentana();
+    diligenciarNombre(ventana, 'Otoño');
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(llamadasA(nucleo, 'theme_draft_save_as')).toEqual([]);
+    // La vista previa conserva sus cambios.
+    expect((screen.getByRole('button', { name: 'Guardar' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('HE-03-HU02-CA07 · Abrir la ventana Guardar como tema', async () => {
+    const { ventana } = await abrirVentana();
+    // ET01: el campo Nombre vacío y las opciones «Guardar» (deshabilitada) y «Cancelar».
+    expect((within(ventana).getByRole('textbox', { name: 'Nombre' }) as HTMLInputElement).value).toBe('');
+    expect(guardar(ventana).disabled).toBe(true);
+    expect(within(ventana).getByRole('button', { name: 'Cancelar' })).toBeTruthy();
+    expect(screen.getByRole('main', { name: 'Personalización del wallpaper' })).toBeTruthy();
+  });
+});
+
 describe('HE-02-HU11 · Guardar los cambios de la vista previa', () => {
   const guardar = () => screen.getByRole('button', { name: 'Guardar' }) as HTMLButtonElement;
 

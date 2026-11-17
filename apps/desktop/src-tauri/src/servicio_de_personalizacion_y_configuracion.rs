@@ -822,6 +822,7 @@ impl ServicioDePersonalizacion {
 mod aplicar;
 pub mod escritorio;
 mod guardado;
+pub mod guardar_como;
 mod imagenes;
 pub(crate) mod legibilidad;
 pub mod ultima_pantalla;
@@ -837,6 +838,8 @@ mod pruebas_de_colores;
 mod pruebas_de_escritorio;
 #[cfg(test)]
 mod pruebas_de_guardado;
+#[cfg(test)]
+mod pruebas_de_guardar_como;
 #[cfg(test)]
 mod pruebas_de_imagenes;
 #[cfg(test)]

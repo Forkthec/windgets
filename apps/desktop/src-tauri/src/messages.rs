@@ -207,6 +207,15 @@ pub const NO_SE_GUARDARON_CAMBIOS: &str = "No se guardaron cambios.";
 /// M-03 (HE-02-HU13-CA05): confirmación al salir con cambios aplicados que no se guardaron en el tema.
 pub const CAMBIOS_APLICADOS_SIN_GUARDAR_AL_SALIR: &str =
     "Aplicaste cambios que no guardaste en el tema. ¿Deseas guardarlos antes de salir?";
+/// IPC-THEME-08 `theme_draft_save_as` (HE-03-HU02-CA01): mensaje de resultado.
+pub const TEMA_GUARDADO: &str = "Tema “<nombre del tema>” guardado.";
+/// `name.too_long` (HE-03-HU02-CA03): mensaje de campo.
+pub const NOMBRE_DE_TEMA_MUY_LARGO: &str = "El nombre no puede superar los 40 caracteres.";
+/// `name.duplicate` (HE-03-HU02-CA04): mensaje en el campo Nombre.
+pub const TEMA_DUPLICADO: &str = "Ya existe un tema con ese nombre. Elige otro.";
+/// `theme.limit_reached` (HE-03-HU02-CA05): texto de la opción «Guardar como tema» deshabilitada.
+pub const MAXIMO_DE_TEMAS: &str =
+    "Alcanzaste el máximo de 10 temas. Elimina uno para guardar otro.";
 /// `background.already_default` (HE-02-HU04-CA02): texto de la opción «Quitar imagen» deshabilitada.
 pub const FONDO_YA_POR_DEFECTO: &str = "Esta plantilla ya muestra su imagen de fondo por defecto.";
 
@@ -322,6 +331,10 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("TEMA_YA_APLICADO", TEMA_YA_APLICADO),
     ("FONDO_YA_POR_DEFECTO", FONDO_YA_POR_DEFECTO),
     ("NO_SE_GUARDARON_CAMBIOS", NO_SE_GUARDARON_CAMBIOS),
+    ("TEMA_GUARDADO", TEMA_GUARDADO),
+    ("NOMBRE_DE_TEMA_MUY_LARGO", NOMBRE_DE_TEMA_MUY_LARGO),
+    ("TEMA_DUPLICADO", TEMA_DUPLICADO),
+    ("MAXIMO_DE_TEMAS", MAXIMO_DE_TEMAS),
     (
         "CAMBIOS_APLICADOS_SIN_GUARDAR_AL_SALIR",
         CAMBIOS_APLICADOS_SIN_GUARDAR_AL_SALIR,

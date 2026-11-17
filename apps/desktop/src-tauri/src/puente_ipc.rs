@@ -32,9 +32,9 @@ use crate::tipos::{
 use crate::tipos::{
     AppliedThemeView, ApplyMode, AssetResolveParams, AssetResolveResult,
     EventMapAppliedThemeChanged, EventMapCatalogUpdated, EventMapWallpaperStatusChanged,
-    EventMapWidgetsChanged, LayerInitialState, ThemeDraftApplyParams, ThemeDraftSaveResult,
-    ThemeIdResult, WallpaperState, WallpaperStatus, WidgetCatalog, WidgetItem,
-    WidgetSetActiveParams,
+    EventMapWidgetsChanged, LayerInitialState, ThemeDraftApplyParams, ThemeDraftSaveAsParams,
+    ThemeDraftSaveResult, ThemeIdResult, WallpaperState, WallpaperStatus, WidgetCatalog,
+    WidgetItem, WidgetSetActiveParams,
 };
 
 /// El Núcleo que ven los comandos.
@@ -574,6 +574,37 @@ pub async fn theme_draft_save(
             "themes_changed",
             EntityChange {
                 ids: vec![guardado.valor.theme_id.clone()],
+                op: ChangeOp::Upsert,
+                origin: OriginKind::Local,
+            },
+        );
+    }
+    Ok(con_mensaje(r))
+}
+
+/// IPC-THEME-08 `theme_draft_save_as` (HE-03-HU02): crea un tema nuevo con la vista previa y lo deja en edición,
+/// sin tocar el escritorio. Avisa con EV-10 `themes_changed`.
+#[tauri::command]
+pub async fn theme_draft_save_as(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: ThemeDraftSaveAsParams,
+) -> Result<IpcResult<ThemeIdResult>, ()> {
+    let ahora = RelojDelSistema.ahora_ms();
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .guardar_como_tema(nucleo.planificador.base(), &user_id, &params.name, ahora)
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if let Ok(creado) = &r {
+        let _ = app.emit(
+            "themes_changed",
+            EntityChange {
+                ids: vec![creado.valor.theme_id.clone()],
                 op: ChangeOp::Upsert,
                 origin: OriginKind::Local,
             },

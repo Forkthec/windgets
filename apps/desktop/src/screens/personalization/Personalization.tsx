@@ -18,6 +18,7 @@ import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { Selector } from '@/ui/Selector/Selector';
 import { useGuardiaDeSalida, useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { Colores, type CampoDeColor } from './Colores';
+import { GuardarComoTema } from './GuardarComoTema';
 import { Paletas } from './Paletas';
 import { VistaPrevia } from './VistaPrevia';
 import { familia, PIXELES_DEL_TAMANO, Tipografia } from './Tipografia';
@@ -66,6 +67,8 @@ export function Personalization() {
   const [pendiente, setPendiente] = useState<{ id: string; mensaje: string } | null>(null);
   // M-15: el mensaje del Núcleo al aplicar con cambios sin guardar (HE-02-HU12-CA02).
   const [alAplicar, setAlAplicar] = useState('');
+  // HE-03-HU02: la ventana emergente Guardar como tema.
+  const [guardandoComo, setGuardandoComo] = useState(false);
   // HE-02-HU13: el mensaje al salir por el Menú principal con cambios sin guardar (M-02) o con cambios aplicados
   // que no se guardaron (M-03), y cómo responder a la navegación.
   const [salida, setSalida] = useState<{ aplicados: boolean; responder: (salir: boolean) => void } | null>(
@@ -139,6 +142,15 @@ export function Personalization() {
     } else if (r.error.field === campo) {
       setMensajesDeColor((m) => ({ ...m, [campo]: { code: r.error.code, message: r.error.message } }));
     }
+  };
+
+  // HE-03-HU02-CA01: el tema nuevo queda en edición con la vista previa; el escritorio no cambia (ET07, ET08).
+  const guardadoComo = async (mensaje: string) => {
+    setGuardandoComo(false);
+    mostrarResultado(mensaje);
+    const abierto = await invocar('theme_draft_open', {});
+    if (abierto.ok) setBorrador(abierto.value);
+    void leerTemas();
   };
 
   // HE-02-HU13-CA01: «Cancelar» vuelve a lo último guardado del tema en edición, sin guardar nada (ET01, ET02).
@@ -242,6 +254,8 @@ export function Personalization() {
 
   // HE-02-HU05-ET06: con un color vacío, «Guardar», «Guardar como tema» y «Aplicar» quedan deshabilitadas.
   const colorVacio = Object.values(mensajesDeColor).some((m) => m?.code === 'color.required');
+  // HE-03-HU02-ET05, ET11: como máximo 10 temas (D-035).
+  const enElMaximo = temas.length >= 10;
   const aviso = borrador ? avisoDeContraste(borrador.legibility) : null;
 
   const fondo = borrador?.content.background;
@@ -392,7 +406,13 @@ export function Personalization() {
             >
               Guardar
             </Boton>
-            <Boton disabled={colorVacio}>Guardar como tema</Boton>
+            <Boton
+              disabled={colorVacio || enElMaximo}
+              motivo={enElMaximo ? textos.MAXIMO_DE_TEMAS : undefined}
+              onClick={() => setGuardandoComo(true)}
+            >
+              Guardar como tema
+            </Boton>
             {/* HE-02-HU12-CA06, ET06: «Aplicar» deshabilitada con su motivo. */}
             <Boton
               principal
@@ -450,6 +470,12 @@ export function Personalization() {
           alElegirSecundaria={() => void invocar('theme_draft_discard', {}).then(() => responderSalida(true))}
           // CA09: se cierra el mensaje y los cambios siguen intactos.
           alCancelar={() => responderSalida(false)}
+        />
+      )}
+      {guardandoComo && (
+        <GuardarComoTema
+          alGuardar={(mensaje) => void guardadoComo(mensaje)}
+          alCancelar={() => setGuardandoComo(false)}
         />
       )}
       {pendiente && (
