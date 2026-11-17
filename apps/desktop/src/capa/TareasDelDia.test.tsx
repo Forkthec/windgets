@@ -85,6 +85,14 @@ function tachada(widget: HTMLElement, titulo: string) {
   return casilla(widget, titulo).closest('li')?.classList.contains('wg-tachada') ?? false;
 }
 
+/** Abre «⋮» y después «Mover a» de una tarjeta. */
+async function abrirMoverA(widget: HTMLElement, titulo: string) {
+  const fila = casilla(widget, titulo).closest('li') as HTMLElement;
+  await seleccionar(within(fila).getByRole('button', { name: '⋮' }));
+  await seleccionar(within(fila).getByRole('button', { name: 'Mover a' }));
+  return within(fila).getByRole('menu', { name: 'Mover a' });
+}
+
 describe('HE-06-HU02 · Tarjetas del día en el widget', () => {
   it('HE-06-HU02-CA01 · Tarjetas del día en el widget', async () => {
     const { widget } = await pintar([
@@ -206,5 +214,63 @@ describe('HE-06-HU03 · Casilla de completada en el widget', () => {
     await seleccionar(casilla(widget, 'Pagar la luz'));
     expect(llamadasA(nucleo, 'card_set_completed')).toEqual([{ card_id: pagar.id, completed: true }]);
     expect(tachada(widget, 'Pagar la luz')).toBe(true);
+  });
+});
+
+describe('HE-06-HU04 · «Mover a» en el widget', () => {
+  it('HE-06-HU04-CA01 · Mover una tarjeta a otra columna', async () => {
+    const pagar = tarjeta({ title: 'Pagar la luz', due_date: HOY });
+    const { nucleo, widget } = await pintar([pagar]);
+    // ET01: «⋮» abre «Mover a».
+    const menu = await abrirMoverA(widget, 'Pagar la luz');
+    await seleccionar(within(menu).getByRole('menuitemradio', { name: 'En progreso' }));
+    expect(llamadasA(nucleo, 'card_move')).toEqual([
+      { card_id: pagar.id, column_id: EN_PROGRESO.id, placement: { kind: 'end' } },
+    ]);
+    expect(pagar.column_id).toBe(EN_PROGRESO.id);
+    expect(within(widget).queryByRole('menu')).toBeNull();
+  });
+
+  it('HE-06-HU04-CA02 · Opciones de «Mover a»', async () => {
+    const { widget } = await pintar([tarjeta({ title: 'Pagar la luz', due_date: HOY })]);
+    const menu = await abrirMoverA(widget, 'Pagar la luz');
+    // ET02: todas las columnas en su orden, con la actual marcada y deshabilitada.
+    const opciones = within(menu).getAllByRole('menuitemradio') as HTMLButtonElement[];
+    expect(opciones.map((o) => o.textContent)).toEqual(['Por hacer', 'En progreso', 'Hecho']);
+    expect(opciones.map((o) => o.getAttribute('aria-checked'))).toEqual(['true', 'false', 'false']);
+    expect(opciones.map((o) => o.disabled)).toEqual([true, false, false]);
+  });
+
+  it('HE-06-HU04-CA03 · Mover una tarjeta a Hecho con el menú', async () => {
+    const pagar = tarjeta({ title: 'Pagar la luz', due_date: HOY });
+    const { widget } = await pintar([pagar]);
+    const menu = await abrirMoverA(widget, 'Pagar la luz');
+    await seleccionar(within(menu).getByRole('menuitemradio', { name: 'Hecho' }));
+    // ET04: queda completada; el widget la muestra tachada y con la casilla seleccionada.
+    expect(pagar.is_completed).toBe(true);
+    expect(tachada(widget, 'Pagar la luz')).toBe(true);
+    expect(casilla(widget, 'Pagar la luz').checked).toBe(true);
+  });
+
+  it('HE-06-HU04-CA04 · Cerrar el menú sin elegir', async () => {
+    const pagar = tarjeta({ title: 'Pagar la luz', due_date: HOY });
+    const { nucleo, widget } = await pintar([pagar, tarjeta({ title: 'Comprar pan', due_date: HOY })]);
+    await abrirMoverA(widget, 'Pagar la luz');
+    // ET05: una selección dentro del widget, fuera del menú, lo cierra sin mover la tarjeta.
+    await seleccionar(within(widget).getByText('Comprar pan'));
+    expect(within(widget).queryByRole('menu')).toBeNull();
+    expect(llamadasA(nucleo, 'card_move')).toEqual([]);
+    expect(pagar.column_id).toBe(POR_HACER.id);
+  });
+
+  it('HE-06-HU04-CA05 · Mover una tarjeta sin conexión', async () => {
+    // ET06: el Núcleo aplica el cambio en SQLite y lo encola; el widget no depende de la conexión.
+    const pagar = tarjeta({ title: 'Pagar la luz', due_date: HOY });
+    const { nucleo, widget } = await pintar([pagar]);
+    const menu = await abrirMoverA(widget, 'Pagar la luz');
+    await seleccionar(within(menu).getByRole('menuitemradio', { name: 'En progreso' }));
+    expect(llamadasA(nucleo, 'card_move')).toEqual([
+      { card_id: pagar.id, column_id: EN_PROGRESO.id, placement: { kind: 'end' } },
+    ]);
   });
 });

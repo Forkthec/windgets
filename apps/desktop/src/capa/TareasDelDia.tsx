@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Escuchar } from '@/ipc/eventos';
-import type { Invoke, PlannerItem, PlannerToday } from '@/types';
+import type { Column, Invoke, PlannerItem, PlannerToday } from '@/types';
+import { MoverA } from '@/screens/tarjeta/MoverA';
 import { NOMBRE_DE_PRIORIDAD } from '@/screens/tarjeta/nombres';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
 
@@ -22,9 +23,36 @@ interface ElementoProps {
   alCambiar: () => void;
 }
 
-/** Una tarjeta del widget: casilla, título, hora y prioridad. */
+/** Una tarjeta del widget: casilla, título, hora, prioridad y «⋮» con «Mover a». */
 function Elemento({ item, invocar, alCambiar }: ElementoProps) {
   const { card, hour } = item;
+  const [opciones, setOpciones] = useState(false);
+  const [columnas, setColumnas] = useState<Column[]>([]);
+  const caja = useRef<HTMLDivElement>(null);
+
+  // HE-06-HU04-ET05: seleccionar un área del widget fuera del menú lo cierra sin mover la tarjeta.
+  // DUDA: HE-06-HU04 una selección fuera del widget no llega a la capa (D-186); solo cierra la de dentro.
+  useEffect(() => {
+    if (!opciones) return;
+    const alSeleccionar = (e: MouseEvent) => {
+      if (!caja.current?.contains(e.target as Node)) setOpciones(false);
+    };
+    document.addEventListener('click', alSeleccionar);
+    return () => document.removeEventListener('click', alSeleccionar);
+  }, [opciones]);
+
+  const abrir = async () => {
+    if (opciones) {
+      setOpciones(false);
+      return;
+    }
+    // HE-06-HU04-ET02: todas las columnas del tablero en su orden (IPC-COL-01).
+    const r = await invocar('column_list', {});
+    if (!r.ok) return;
+    setColumnas(r.value);
+    setOpciones(true);
+  };
+
   return (
     // HE-06-HU02-ET03, HE-06-HU03-ET04: una tarjeta completada va tachada y con la casilla marcada.
     <li className={`wg-tarjeta wg-fila${card.is_completed ? ' wg-tachada' : ''}`}>
@@ -41,6 +69,27 @@ function Elemento({ item, invocar, alCambiar }: ElementoProps) {
       <span className="wg-tarjeta__titulo">{card.title}</span>
       {hour !== null && <span>{horaVisible(hour)}</span>}
       {card.priority && <span>{NOMBRE_DE_PRIORIDAD[card.priority]}</span>}
+      <div ref={caja} className="wg-fila">
+        {/* HE-06-HU04-ET01: «⋮» abre «Mover a». DUDA: HE-06-HU04 «⋮» muestra el botón «Mover a». */}
+        <button type="button" className="wg-boton" aria-expanded={opciones} onClick={() => void abrir()}>
+          ⋮
+        </button>
+        {opciones && (
+          <MoverA
+            columnas={columnas}
+            actual={card.column_id}
+            alElegir={(columna) => {
+              setOpciones(false);
+              // HE-06-HU04-CA01, CA03: al final de la columna elegida (IPC-CARD-06).
+              void invocar('card_move', {
+                card_id: card.id,
+                column_id: columna,
+                placement: { kind: 'end' },
+              }).then(alCambiar);
+            }}
+          />
+        )}
+      </div>
     </li>
   );
 }
