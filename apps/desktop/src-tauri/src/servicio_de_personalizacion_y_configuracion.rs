@@ -381,9 +381,10 @@ impl ServicioDePersonalizacion {
                     has_unapplied_changes: aplicado.as_ref().is_some_and(|(a, copia)| {
                         *a == id && !es_la_misma_copia(copia, &contenido)
                     }),
+                    // HE-03-HU01-ET07: cambios de la vista previa que se aplicaron sin guardarlos en el tema.
                     has_unsaved_changes: borrador
                         .as_ref()
-                        .is_some_and(|b| b.theme_id == id && b.dirty()),
+                        .is_some_and(|b| b.theme_id == id && b.aplicado_sin_guardar),
                     is_applied: es_aplicado,
                     id: Uuid(id),
                     name: f.try_get("name")?,
@@ -844,6 +845,8 @@ mod pruebas_de_plantillas;
 mod pruebas_de_restablecer;
 #[cfg(test)]
 mod pruebas_de_salir;
+#[cfg(test)]
+mod pruebas_de_temas;
 #[cfg(test)]
 mod pruebas_de_tipografia_y_paletas;
 #[cfg(test)]
