@@ -12,11 +12,12 @@ import { VentanaEmergente } from '@/ui/VentanaEmergente/VentanaEmergente';
 import { VentanaPrincipal } from '@/ventana_principal/VentanaPrincipal';
 import { useVentanasEmergentes } from './emergentes';
 
-const invocar = (() =>
-  Promise.resolve({
-    ok: true,
-    value: { state: 'signed_in', user_id: 'u-1', alias: 'Paula', token: 'valid' },
-  })) as unknown as Invoke;
+const invocar = ((comando: string) =>
+  Promise.resolve(
+    comando === 'auth_get_session'
+      ? { ok: true, value: { state: 'signed_in', user_id: 'u-1', alias: 'Paula', token: 'valid' } }
+      : { ok: false, error: { code: 'internal.unexpected', message: '' } },
+  )) as unknown as Invoke;
 const escuchar: Escuchar = () => () => {};
 
 type Ventana = 'detalle' | 'nueva' | 'edicion';

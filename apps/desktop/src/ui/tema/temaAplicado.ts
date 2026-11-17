@@ -1,0 +1,52 @@
+import { useEffect } from 'react';
+import type { Escuchar } from '@/ipc/eventos';
+import type { FontSize, Invoke, ThemeContent } from '@/types';
+import { derivarTokens } from './derivar';
+import { aplicarTokens, type Tokens } from './tokens';
+import { TOKENS_POR_DEFECTO } from './tokens_por_defecto';
+
+// HE-03-HU06: la apariencia de la aplicación sale solo del tema aplicado (ET01). No hay modo claro ni oscuro.
+
+/** HE-02-HU06-ET05: 14 px en «Pequeño», 16 px en «Mediano» y 20 px en «Grande». */
+export const PIXELES_DEL_TAMANO: Record<FontSize, string> = { small: '14px', medium: '16px', large: '20px' };
+
+/** La familia CSS de una fuente del catálogo (declarada en `ui/tema/tokens.css`). */
+export const familia = (nombre: string): string => `'${nombre}', 'Segoe UI', sans-serif`;
+
+/** Los tokens de un tema: sus colores, su fuente del catálogo de tipografías y su tamaño. */
+export async function tokensDelTema(invocar: Invoke, contenido: ThemeContent): Promise<Tokens> {
+  const fuentes = await invocar('catalog_list', { kind: 'font' });
+  const nombre = fuentes.ok ? fuentes.value.find((f) => f.id === contenido.font.id)?.name : undefined;
+  return derivarTokens({
+    ...contenido.colors,
+    fuente: nombre ? familia(nombre) : TOKENS_POR_DEFECTO.fuente,
+    tamano: PIXELES_DEL_TAMANO[contenido.font.size],
+  });
+}
+
+/**
+ * Escribe en la ventana los tokens del tema aplicado (IPC-THEME-02) y los vuelve a escribir con EV-11
+ * `applied_theme_changed`, en 5 s o menos (ET04; RNF-01). Los cambios de la vista previa, guardados o no, no
+ * cambian la aplicación hasta aplicarlos (ET06). Sin sesión, los tokens del tema por defecto.
+ */
+export function useTemaAplicado(invocar: Invoke, escuchar: Escuchar, conSesion: boolean) {
+  useEffect(() => {
+    if (!conSesion) {
+      aplicarTokens(TOKENS_POR_DEFECTO);
+      return;
+    }
+    let vigente = true;
+    const leer = async () => {
+      const r = await invocar('theme_get_applied', {});
+      if (!r.ok) return;
+      const tokens = await tokensDelTema(invocar, r.value.content);
+      if (vigente) aplicarTokens(tokens);
+    };
+    void leer();
+    const dejar = escuchar('applied_theme_changed', () => void leer());
+    return () => {
+      vigente = false;
+      dejar();
+    };
+  }, [conSesion, escuchar, invocar]);
+}
