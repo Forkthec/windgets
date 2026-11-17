@@ -17,10 +17,11 @@ use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, instante};
 use crate::tipos::{
     AgendaBlock, AgendaDay, AppError, BoardColumn, Card, CardAssignTimeBlockParams,
     CardCreateParams, CardDetail, CardDetailColumn, CardDetailLabelsItem, CardDetailTimeBlock,
-    CardListBoardResult, CardMoveParams, CardType, CardUpdateParams, CatalogItem, Column,
-    ColumnCreateParams, ColumnReorderParams, ColumnRole, ColumnUpdateParams, DateIso, ErrorCode,
-    Hex, Hour, Instant, Label, LabelCreateParams, Placement, PlannerItem, PlannerSummary,
-    PlannerToday, Priority, ResultMessage, Uuid,
+    CardListBoardResult, CardMoveParams, CardSetCompletedParams, CardType, CardUpdateParams,
+    CatalogItem, Column, ColumnCreateParams, ColumnReorderParams, ColumnRole, ColumnUpdateParams,
+    DateIso, ErrorCode, Hex, Hour, Instant, Label, LabelCreateParams, Placement, PlacementVariant1,
+    PlacementVariant1Kind, PlannerItem, PlannerSummary, PlannerToday, Priority, ResultMessage,
+    Uuid,
 };
 
 /// Clave para ordenar nombres de la A a la Z sin distinguir mayúsculas ni tildes (D-165): «Árbol» va con la A.
@@ -80,6 +81,29 @@ impl Calendario for CalendarioDelSistema {
 
     fn hora(&self) -> u8 {
         u8::try_from(chrono::Timelike::hour(&chrono::Local::now())).unwrap_or(0)
+    }
+}
+
+/// EV-22 `day_changed` (HE-06-HU02-ET04; HE-10-HU05-ET09): recuerda el día local y avisa una vez cuando la hora
+/// del computador pasa a las 00:00, para que el widget Tareas del día muestre las tarjetas del nuevo día.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VigiaDelDia {
+    ultimo: NaiveDate,
+}
+
+impl VigiaDelDia {
+    pub fn nuevo(hoy: NaiveDate) -> Self {
+        Self { ultimo: hoy }
+    }
+
+    /// El día nuevo si cambió desde la última revisión; `None` si sigue siendo el mismo. También avisa si el reloj
+    /// del computador retrocede a otro día.
+    pub fn revisar(&mut self, hoy: NaiveDate) -> Option<DateIso> {
+        if hoy == self.ultimo {
+            return None;
+        }
+        self.ultimo = hoy;
+        Some(DateIso(hoy.format("%Y-%m-%d").to_string()))
     }
 }
 
@@ -777,6 +801,82 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         self.tarjeta(user_id, &id)
             .await?
             .ok_or_else(tarjeta_no_existe)
+    }
+
+    /// IPC-CARD-07 `card_set_completed` (HE-12-HU02; HE-06-HU03). Marcar la casilla mueve la tarjeta al final
+    /// de la columna Hecho (ET02); desmarcarla la devuelve a la columna en la que estaba antes de Hecho (ET03) o,
+    /// si esa columna ya no existe, a Por hacer (ET04; HE-06-HU03-ET02). Usa las mismas reglas de `card_move`:
+    /// `completed_on`, `previous_column_id` y la cola de sincronización. Solo al marcar hay mensaje (ET07). Si la
+    /// casilla ya estaba así, no cambia nada.
+    pub async fn marcar_completada(
+        &self,
+        user_id: &str,
+        params: CardSetCompletedParams,
+    ) -> Result<(Card, Option<ResultMessage>), AppError> {
+        let id = params.card_id.0.to_lowercase();
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let (rol, anterior): (String, Option<String>) = sqlx::query_as(
+            "SELECT k.role, c.previous_column_id FROM card c JOIN kanban_column k ON k.id = c.column_id \
+             WHERE c.id = ? AND c.user_id = ?",
+        )
+        .bind(&id)
+        .bind(user_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(de_sqlx)?
+        .ok_or_else(tarjeta_no_existe)?;
+        if params.completed == (rol == "done") {
+            let tarjeta = self
+                .tarjeta(user_id, &id)
+                .await?
+                .ok_or_else(tarjeta_no_existe)?;
+            return Ok((tarjeta, None));
+        }
+        let por_rol = |rol: &'static str| {
+            sqlx::query_scalar::<_, String>(
+                "SELECT id FROM kanban_column WHERE user_id = ? AND role = ?",
+            )
+            .bind(user_id)
+            .bind(rol)
+            .fetch_optional(pool)
+        };
+        let destino = if params.completed {
+            por_rol("done").await.map_err(de_sqlx)?
+        } else {
+            let vigente = match anterior {
+                Some(anterior) => sqlx::query_scalar::<_, String>(
+                    "SELECT id FROM kanban_column WHERE id = ? AND user_id = ? AND role <> 'done'",
+                )
+                .bind(anterior.to_lowercase())
+                .bind(user_id)
+                .fetch_optional(pool)
+                .await
+                .map_err(de_sqlx)?,
+                None => None,
+            };
+            match vigente {
+                Some(columna) => Some(columna),
+                None => por_rol("todo").await.map_err(de_sqlx)?,
+            }
+        }
+        // La semilla de la cuenta siempre trae Por hacer y Hecho (datos.md, Modelo · 9).
+        .ok_or_else(inesperado)?;
+        let tarjeta = self
+            .mover_tarjeta(
+                user_id,
+                CardMoveParams {
+                    card_id: Uuid(id),
+                    column_id: Uuid(destino),
+                    placement: Placement::Variant1(PlacementVariant1 {
+                        kind: PlacementVariant1Kind::End,
+                    }),
+                },
+            )
+            .await?;
+        let mensaje = params
+            .completed
+            .then(|| resultado("card_set_completed", messages::TARJETA_COMPLETADA));
+        Ok((tarjeta, mensaje))
     }
 
     /// IPC-LABEL-01 `label_list`: las etiquetas del usuario en orden alfabético por nombre, de la A a la Z
@@ -1644,6 +1744,8 @@ fn tarjeta_de_fila(
 mod reportes;
 pub use reportes::{agrupacion, resolver_rango};
 
+#[cfg(test)]
+mod pruebas_de_completar;
 #[cfg(test)]
 mod pruebas_de_edicion;
 #[cfg(test)]

@@ -117,7 +117,9 @@ async function pintarCapa(widgets: WidgetRect[] | (() => WidgetRect[])) {
     Promise.resolve(
       comando === 'layer_get_initial_state'
         ? { ok: true, value: estado() }
-        : { ok: true, value: { url: '', state: 'unavailable' } },
+        : comando === 'asset_resolve'
+          ? { ok: true, value: { url: '', state: 'unavailable' } }
+          : { ok: false, error: { code: 'internal.unexpected', message: '' } },
     )) as unknown as Invoke;
   const oyentes = new Map<string, Array<() => void>>();
   const escuchar = ((evento: string, alRecibir: () => void) => {

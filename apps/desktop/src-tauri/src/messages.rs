@@ -85,6 +85,16 @@ pub const TARJETA_ACTUALIZADA_SIN_BLOQUE: &str = "Tarjeta actualizada. Se quitó
 /// Resultado de `card_delete` (HE-07-HU05-CA02; ET06).
 pub const TARJETA_ELIMINADA: &str = "Tarjeta eliminada.";
 
+// HE-12-HU02 · Alternar la casilla de completada desde el planificador diario (IPC-CARD-07 card_set_completed).
+
+/// Resultado de `card_set_completed` al marcar la casilla (HE-12-HU02-CA01; ET07).
+pub const TARJETA_COMPLETADA: &str = "¡Bien hecho! Tarjeta completada.";
+
+// HE-12-HU03 · Consultar el resumen de avance del día (IPC-CARD-08 planner_get_today).
+
+/// Con todas las tarjetas de hoy completadas (HE-12-HU03-CA04; ET05).
+pub const COMPLETASTE_TODAS: &str = "¡Completaste todas tus tarjetas de hoy!";
+
 // HE-11-HU02 · Asignar una tarjeta a un bloque horario (IPC-CARD-10 card_assign_time_block).
 
 /// Resultado de `card_assign_time_block` (HE-11-HU02-CA01, CA03; ET09, D-169).
@@ -274,6 +284,8 @@ pub const TEXTOS: &[(&str, &str)] = &[
         TARJETA_ACTUALIZADA_SIN_BLOQUE,
     ),
     ("TARJETA_ELIMINADA", TARJETA_ELIMINADA),
+    ("TARJETA_COMPLETADA", TARJETA_COMPLETADA),
+    ("COMPLETASTE_TODAS", COMPLETASTE_TODAS),
     (
         "CAMBIOS_SIN_GUARDAR_AL_CAMBIAR_DE_TEMA",
         CAMBIOS_SIN_GUARDAR_AL_CAMBIAR_DE_TEMA,
