@@ -1,7 +1,7 @@
 // HE-04 en P07 · Widgets. Una prueba por CA en la vista; las reglas del Núcleo tienen su prueba ca_he_04_* en
 // servicio_de_personalizacion_y_configuracion/pruebas_de_widgets.rs.
-import { act, fireEvent, render, screen as pantalla, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { act, fireEvent, render, screen as pantalla, waitFor, within } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { Capa } from '@/capa/Capa';
 import type { Escuchar } from '@/ipc/eventos';
 import type {
@@ -12,8 +12,17 @@ import type {
   WidgetItem,
   WidgetRect,
 } from '@/types';
-import { abrirPantalla, screen, type NucleoDelPlanificador } from '../kanban/pruebas';
+import { abrirPantalla, llamadasA, screen, type NucleoDelPlanificador } from '../kanban/pruebas';
 import { Widgets } from './Widgets';
+
+// El Núcleo manda el resultado de la pantalla de edición a esta ventana (`resultadoDeLaEdicion.ts`).
+const resultados: Array<(mensaje: { code: string; message: string }) => void> = [];
+vi.mock('@/ipc/resultadoDeLaEdicion', () => ({
+  escucharResultadoDeLaEdicion: (alRecibir: (mensaje: { code: string; message: string }) => void) => {
+    resultados.push(alRecibir);
+    return () => resultados.splice(resultados.indexOf(alRecibir), 1);
+  },
+}));
 
 function widget(datos: Partial<WidgetItem> & Pick<WidgetItem, 'widget_id' | 'type' | 'display_name'>) {
   return {
@@ -82,6 +91,16 @@ async function abrir(lista: WidgetItem[]): Promise<NucleoDelPlanificador & { wid
       if (!w) return { ok: false, error: { code: 'widget.not_found', message: '' } };
       w.is_active = active;
       return { ok: true, value: { ...w } };
+    });
+    n.responder('widget_delete', ({ widget_id }) => {
+      const i = widgets.findIndex((x) => x.widget_id === widget_id);
+      if (i < 0) return { ok: false, error: { code: 'widget.not_found', message: '' } };
+      widgets.splice(i, 1);
+      return {
+        ok: true,
+        value: null,
+        result_message: { code: 'widget_delete', message: 'Widget eliminado.' },
+      };
     });
   });
   await screen.findByRole('list', { name: 'Lista de widgets' });
@@ -178,7 +197,10 @@ describe('HE-04-HU01 · Widgets', () => {
     expect(within(reloj).getByText('Reloj')).toBeTruthy();
     expect(within(reloj).getByText('Por defecto')).toBeTruthy();
     expect(within(reloj).queryByRole('button', { name: 'Configurar' })).toBeNull();
-    expect(within(reloj).queryByRole('button', { name: 'Eliminar' })).toBeNull();
+    // HE-04-HU13-CA02 (ET04): en los widgets por defecto, «Eliminar» se muestra deshabilitada con su motivo.
+    expect((within(reloj).getByRole('button', { name: 'Eliminar' }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
     expect(within(clima).getByText('Clima')).toBeTruthy();
     expect(within(clima).getByText('Bogotá')).toBeTruthy();
     expect(within(clima).getByText('Externo')).toBeTruthy();
@@ -302,6 +324,91 @@ function nombresDe(grupo: HTMLElement) {
   return Array.from(grupo.querySelectorAll('.wg-lista__nombre')).map((n) => n.textContent);
 }
 
+describe('HE-04-HU13 · Eliminar un widget', () => {
+  const M07 = (nombre: string) => `¿Deseas eliminar el widget “${nombre}”? Se quitará de todos tus temas.`;
+  const eliminarDe = (f: HTMLElement) =>
+    within(f).getByRole('button', { name: 'Eliminar' }) as HTMLButtonElement;
+  const nombres = () => filas().map((f) => f.querySelector('.wg-lista__nombre')?.textContent);
+
+  /** Elige «Eliminar» en la fila y confirma en M-07. */
+  async function eliminarYConfirmar(i: number) {
+    fireEvent.click(eliminarDe(fila(i)));
+    const dialogo = await screen.findByRole('dialog');
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Eliminar' }));
+  }
+
+  it('HE-04-HU13-CA01 · Eliminar un widget agregado', async () => {
+    const nucleo = await abrir([...POR_DEFECTO, ...AGREGADOS]);
+    await eliminarYConfirmar(5);
+    // ET02: sale de la lista (y el Núcleo lo quita del escritorio y de todos los temas).
+    expect((await screen.findByRole('status')).textContent).toContain('Widget eliminado.');
+    expect(llamadasA(nucleo, 'widget_delete')).toEqual([{ widget_id: 'texto' }]);
+    await waitFor(() => expect(nombres()).not.toContain('Texto'));
+  });
+
+  it('HE-04-HU13-CA02 · Widget por defecto no eliminable', async () => {
+    const nucleo = await abrir([...POR_DEFECTO, ...AGREGADOS]);
+    // ET04: deshabilitada con su motivo (RT-04) en los cuatro widgets por defecto.
+    for (const i of [0, 1, 2, 3]) expect(eliminarDe(fila(i)).disabled).toBe(true);
+    expect(
+      within(fila(0)).getByText('Los widgets por defecto no se pueden eliminar. Puedes desactivarlos.'),
+    ).toBeTruthy();
+    fireEvent.click(eliminarDe(fila(0)));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(llamadasA(nucleo, 'widget_delete')).toEqual([]);
+  });
+
+  it('HE-04-HU13-CA03 · Cancelar la eliminación', async () => {
+    const nucleo = await abrir([...POR_DEFECTO, ...AGREGADOS]);
+    fireEvent.click(eliminarDe(fila(4)));
+    const dialogo = await screen.findByRole('dialog');
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Cancelar' }));
+    // ET07: se conserva sin cambios.
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(llamadasA(nucleo, 'widget_delete')).toEqual([]);
+    expect(nombres()).toContain('Clima');
+  });
+
+  it('HE-04-HU13-CA04 · Eliminar un widget Clima', async () => {
+    const cali = widget({
+      widget_id: 'clima-cali',
+      type: 'weather',
+      display_name: 'Clima',
+      distinguishing_value: 'Cali',
+      can_configure: true,
+      config: { city: 'Cali' },
+    });
+    const nucleo = await abrir([...POR_DEFECTO, ...AGREGADOS, cali]);
+    expect(within(fila(7)).getByText('Cali')).toBeTruthy();
+    await eliminarYConfirmar(7);
+    expect((await screen.findByRole('status')).textContent).toContain('Widget eliminado.');
+    expect(llamadasA(nucleo, 'widget_delete')).toEqual([{ widget_id: 'clima-cali' }]);
+    // ET05: el Clima de otra ciudad se conserva.
+    await waitFor(() => expect(filas()).toHaveLength(7));
+    expect(within(fila(4)).getByText('Bogotá')).toBeTruthy();
+  });
+
+  it('HE-04-HU13-CA05 · Eliminar el widget Noticias', async () => {
+    const nucleo = await abrir([...POR_DEFECTO, ...AGREGADOS]);
+    await eliminarYConfirmar(6);
+    expect((await screen.findByRole('status')).textContent).toContain('Widget eliminado.');
+    expect(llamadasA(nucleo, 'widget_delete')).toEqual([{ widget_id: 'noticias' }]);
+    // ET06: el Núcleo vuelve a habilitar Noticias en el catálogo (prueba ca_he_04_hu13_ca05).
+    await waitFor(() => expect(nombres()).not.toContain('Noticias'));
+  });
+
+  it('HE-04-HU13-CA06 · Abrir el mensaje de confirmación para eliminar un widget', async () => {
+    const nucleo = await abrir([...POR_DEFECTO, ...AGREGADOS]);
+    fireEvent.click(eliminarDe(fila(4)));
+    // ET01: ventana emergente con «Eliminar» y «Cancelar»; todavía no se elimina.
+    const dialogo = await screen.findByRole('dialog');
+    expect(within(dialogo).getByText(M07('Clima'))).toBeTruthy();
+    expect(within(dialogo).getByRole('button', { name: 'Eliminar' })).toBeTruthy();
+    expect(within(dialogo).getByRole('button', { name: 'Cancelar' })).toBeTruthy();
+    expect(llamadasA(nucleo, 'widget_delete')).toEqual([]);
+  });
+});
+
 describe('HE-04-HU04 · Catálogo de widgets', () => {
   it('HE-04-HU04-CA01 · Consultar el catálogo de widgets', async () => {
     const subpantalla = await abrirCatalogo(catalogo());
@@ -346,5 +453,40 @@ describe('HE-04-HU04 · Catálogo de widgets', () => {
         false,
       );
     }
+  });
+});
+
+describe('HE-05 · Pantalla de edición desde Widgets', () => {
+  /** El Núcleo cierra la ventana de edición y manda el resultado a esta ventana (o nada, sin cambios). */
+  const volverDeLaEdicion = (mensaje: string) =>
+    act(() => {
+      for (const alRecibir of resultados) alRecibir({ code: 'layout_edit_save', message: mensaje });
+    });
+
+  it('HE-05-HU01-CA01 · «Editar escritorio» abre la pantalla de edición', async () => {
+    const nucleo = await abrir(POR_DEFECTO);
+    // ET05: la opción está en la pantalla Widgets; el Núcleo oculta esta ventana y abre la de edición.
+    fireEvent.click(screen.getByRole('button', { name: 'Editar escritorio' }));
+    await waitFor(() => expect(llamadasA(nucleo, 'layout_edit_open')).toEqual([{}]));
+  });
+
+  it.each([
+    ['HE-05-HU04-CA01 · Guardar la distribución después de mover un widget', 'Cambios guardados.'],
+    ['HE-05-HU04-CA02 · Guardar la distribución después de redimensionar un widget', 'Cambios guardados.'],
+    ['HE-05-HU04-CA04 · Guardar la distribución sin conexión', 'Cambios guardados.'],
+    ['HE-05-HU05-CA03 · Salir sin guardar: el mensaje en la pantalla Widgets', 'No se guardaron cambios.'],
+  ])('%s', async (_nombre, mensaje) => {
+    const nucleo = await abrir(POR_DEFECTO);
+    const lecturas = llamadasA(nucleo, 'widget_list').length;
+    await volverDeLaEdicion(mensaje);
+    // Se abre la pantalla Widgets con el mensaje de resultado (RT-04) y la lista vuelve a leer.
+    expect((await screen.findByRole('status')).textContent).toContain(mensaje);
+    expect(llamadasA(nucleo, 'widget_list').length).toBeGreaterThan(lecturas);
+  });
+
+  it('HE-05-HU04-CA03 · Guardar la distribución sin haber hecho cambios', async () => {
+    await abrir(POR_DEFECTO);
+    // ET03: sin cambios el Núcleo no manda mensaje; la pantalla Widgets no muestra ninguno.
+    expect(screen.queryByRole('status')).toBeNull();
   });
 });

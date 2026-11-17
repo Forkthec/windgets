@@ -67,6 +67,8 @@ impl Borrador {
 #[derive(Default)]
 pub struct ServicioDePersonalizacion {
     borrador: Mutex<Option<Borrador>>,
+    /// La distribución de widgets en edición (HE-05, C-03).
+    edicion: Mutex<Option<distribucion::Edicion>>,
 }
 
 fn texto_de_fuente(valor: &str) -> FontSize {
@@ -820,6 +822,7 @@ impl ServicioDePersonalizacion {
 }
 
 mod aplicar;
+pub mod distribucion;
 pub mod escritorio;
 mod guardado;
 pub mod guardar_como;
@@ -836,6 +839,10 @@ mod pruebas_de_aplicar_un_tema;
 mod pruebas_de_cancelar;
 #[cfg(test)]
 mod pruebas_de_colores;
+#[cfg(test)]
+mod pruebas_de_distribucion;
+#[cfg(test)]
+mod pruebas_de_eliminar_widget;
 #[cfg(test)]
 mod pruebas_de_escritorio;
 #[cfg(test)]

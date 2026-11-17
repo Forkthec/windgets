@@ -6,3 +6,4 @@ pub mod area_de_notificacion;
 pub mod inicio_automatico;
 #[cfg(windows)]
 mod registro;
+pub mod ventana_de_edicion;

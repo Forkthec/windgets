@@ -23,7 +23,7 @@ pub(super) const POR_DEFECTO: [(&str, &str, i64, i64, i64, i64); 4] = [
     (KANBAN, "kanban", 760, 40, 640, 520),
 ];
 
-async fn insertar_widget(
+pub(super) async fn insertar_widget(
     base: &BaseLocal,
     id: &str,
     sql_de_campos: &str,

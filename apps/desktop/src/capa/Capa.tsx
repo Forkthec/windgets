@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { invocar as invocarNucleo } from '@/ipc/cliente';
 import { escuchar as escucharNucleo, type Escuchar } from '@/ipc/eventos';
 import { urlDeArchivo } from '@/ipc/archivos';
+import { Reloj } from './Reloj';
 import { TareasDelDia } from './TareasDelDia';
 import { tokensDelTema } from '@/ui/tema/temaAplicado';
 import { aplicarTokens } from '@/ui/tema/tokens';
@@ -17,7 +18,7 @@ import type {
 // C-02 Capa del wallpaper y los widgets (P-WAL-02, HE-02-HU01). Es la ventana anclada detrás de los íconos del
 // escritorio (D-131): pinta el wallpaper del tema aplicado a partir de lo guardado, sin red (IPC-DESK-01; RNF-08).
 // Encima pinta los widgets activos del tema aplicado en su posición y tamaño (HE-04-HU01-CA01, CA03). El
-// contenido de cada widget llega con su HU: Tareas del día ya lo tiene (HE-06-HU02); faltan Reloj HE-04-HU03,
+// contenido de cada widget llega con su HU: el Reloj (HE-04-HU03) y Tareas del día (HE-06-HU02) ya lo tienen; faltan
 // Kanban HE-06-HU05 y Calendario HE-06-HU07 (docs/DUDAS.md).
 
 /** Nombre de cada widget (glosario). */
@@ -107,12 +108,15 @@ export function Capa({ invocar = invocarNucleo, escuchar = escucharNucleo }: Cap
     const dejarTema = escuchar('applied_theme_changed', () => void leer());
     // EV-12: al activar o desactivar un widget la capa lo muestra u oculta en 5 s o menos (HE-04-HU02-ET01).
     const dejarWidgets = escuchar('widgets_changed', () => void leer());
+    // EV-13: al guardar la distribución, los widgets se pintan en su nueva posición y tamaño (HE-05-HU04-CA01).
+    const dejarDistribucion = escuchar('layout_changed', () => void leer());
     const dejarSeleccion = escuchar('pointer_forwarded', (carga) => entregarSeleccion(carga));
     return () => {
       vigente = false;
       dejarEstado();
       dejarTema();
       dejarWidgets();
+      dejarDistribucion();
       dejarSeleccion();
     };
   }, [escuchar, invocar]);
@@ -147,6 +151,7 @@ export function Capa({ invocar = invocarNucleo, escuchar = escucharNucleo }: Cap
           data-interactivo={INTERACTIVOS.includes(w.type)}
           style={{ position: 'absolute', left: w.x, top: w.y, width: w.width, height: w.height }}
         >
+          {w.type === 'clock' && <Reloj />}
           {w.type === 'daily_tasks' && <TareasDelDia invocar={invocar} escuchar={escuchar} />}
         </section>
       ))}
