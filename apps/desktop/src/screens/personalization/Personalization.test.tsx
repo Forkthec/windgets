@@ -86,23 +86,39 @@ async function abrir(conCambios = false, primerInicio = false) {
                 },
               ],
       }));
-      n.responder('theme_draft_update', ({ patch }) => ({
-        ok: true,
-        value: {
-          ...vista('t1', 'Mi tema', true),
-          content: {
-            ...CONTENIDO,
-            template_id: patch.template_id ?? CONTENIDO.template_id,
-            background: patch.background
-              ? {
-                  source: patch.background.source,
-                  catalog_image_id: patch.background.catalog_image_id ?? null,
-                  uploaded_image_id: patch.background.uploaded_image_id ?? null,
-                }
-              : CONTENIDO.background,
+      n.responder('theme_draft_update', ({ patch }) => {
+        // HE-02-HU05: el Núcleo valida cada color (ET04 a ET06).
+        for (const [campo, valor] of Object.entries(patch.colors ?? {})) {
+          if (valor === '')
+            return {
+              ok: false,
+              error: { code: 'color.required', message: textos.CAMPO_OBLIGATORIO, field: campo },
+            };
+          if (!/^#[0-9A-Fa-f]{6}$/.test(valor))
+            return {
+              ok: false,
+              error: { code: 'color.invalid', message: textos.COLOR_INVALIDO, field: campo },
+            };
+        }
+        return {
+          ok: true,
+          value: {
+            ...vista('t1', 'Mi tema', true),
+            content: {
+              ...CONTENIDO,
+              colors: { ...CONTENIDO.colors, ...patch.colors },
+              template_id: patch.template_id ?? CONTENIDO.template_id,
+              background: patch.background
+                ? {
+                    source: patch.background.source,
+                    catalog_image_id: patch.background.catalog_image_id ?? null,
+                    uploaded_image_id: patch.background.uploaded_image_id ?? null,
+                  }
+                : CONTENIDO.background,
+            },
           },
-        },
-      }));
+        };
+      });
       n.responder('image_import', ({ path }) =>
         path.endsWith('.png') || path.endsWith('.jpg')
           ? { ok: true, value: { uploaded_image_id: 'img-1', preview_url: `C:/Windgets/files/${path}` } }
@@ -368,6 +384,117 @@ describe('HE-02-HU04 · Quitar la imagen de fondo', () => {
     ).toBeTruthy();
     fireEvent.click(quitar());
     expect(llamadasA(nucleo, 'theme_draft_update')).toEqual([]);
+  });
+});
+
+describe('HE-02-HU05 · Colores del tema', () => {
+  const seccion = () => screen.getByRole('region', { name: 'Colores' });
+  const vistaPrevia = () => screen.getByRole('region', { name: 'Vista previa del escritorio' });
+  const campo = (nombre: string) =>
+    within(seccion()).getByRole('textbox', { name: nombre }) as HTMLInputElement;
+  const boton = (nombre: string) => screen.getByRole('button', { name: nombre }) as HTMLButtonElement;
+
+  /** Diligencia un valor hexadecimal y sale del campo. */
+  function diligenciar(nombre: string, valor: string) {
+    fireEvent.change(campo(nombre), { target: { value: valor } });
+    fireEvent.blur(campo(nombre));
+  }
+
+  it('HE-02-HU05-CA01 · Cambiar un color con el selector de colores', async () => {
+    const nucleo = await abrir();
+    await screen.findByRole('list', { name: 'Catálogo de plantillas' });
+    // ET01, ET13: los tres colores con su muestra, su selector y su valor «#RRGGBB»; y «Restablecer colores».
+    expect(['Color principal', 'Color secundario', 'Color del texto'].map((n) => campo(n).value)).toEqual([
+      '#96B2B2',
+      '#829890',
+      '#14201C',
+    ]);
+    expect(seccion().querySelectorAll('.wg-muestra-color')).toHaveLength(3);
+    expect(within(seccion()).getByRole('button', { name: 'Restablecer colores' })).toBeTruthy();
+    // El selector de colores del color principal, con el teclado sobre el tono.
+    const selector = within(seccion()).getByRole('group', { name: 'Color principal' });
+    const deslizadores = within(selector).getAllByRole('slider');
+    fireEvent.keyDown(deslizadores[deslizadores.length - 1] as HTMLElement, { key: 'ArrowRight', keyCode: 39 });
+    await waitFor(() => expect(llamadasA(nucleo, 'theme_draft_update')).toHaveLength(1));
+    const [llamada] = llamadasA(nucleo, 'theme_draft_update') as Array<{
+      patch: { colors: { primary: string } };
+    }>;
+    const nuevo = llamada?.patch.colors.primary ?? '';
+    expect(nuevo).toMatch(/^#[0-9A-F]{6}$/);
+    expect(nuevo).not.toBe('#96B2B2');
+    // La vista previa (el wallpaper) toma el color nuevo. ET10: el parche no toca etiquetas ni columnas.
+    await waitFor(() => expect(campo('Color principal').value).toBe(nuevo));
+    expect(vistaPrevia().style.background).not.toBe('rgb(150, 178, 178)');
+  });
+
+  it('HE-02-HU05-CA02 · Cambiar un color en formato hexadecimal', async () => {
+    const nucleo = await abrir();
+    await screen.findByRole('list', { name: 'Catálogo de plantillas' });
+    diligenciar('Color secundario', '#A1B2C3');
+    await waitFor(() =>
+      expect(llamadasA(nucleo, 'theme_draft_update')).toEqual([
+        { patch: { colors: { secondary: '#A1B2C3' } } },
+      ]),
+    );
+    expect(campo('Color secundario').value).toBe('#A1B2C3');
+  });
+
+  it('HE-02-HU05-CA03 · Color hexadecimal inválido', async () => {
+    await abrir();
+    await screen.findByRole('list', { name: 'Catálogo de plantillas' });
+    const antes = vistaPrevia().style.background;
+    diligenciar('Color principal', '#12AB');
+    // ET05: mensaje de campo y la vista previa sigue igual.
+    expect(
+      await within(seccion()).findByText('Diligencia un color válido en formato hexadecimal (ej.: #1A2B3C).'),
+    ).toBeTruthy();
+    expect(campo('Color principal').getAttribute('aria-invalid')).toBe('true');
+    expect(vistaPrevia().style.background).toBe(antes);
+  });
+
+  it('HE-02-HU05-CA04 · Color vacío', async () => {
+    await abrir(true);
+    await waitFor(() => expect(boton('Guardar').disabled).toBe(false));
+    diligenciar('Color del texto', '');
+    expect(await within(seccion()).findByText('Este campo es obligatorio.')).toBeTruthy();
+    // ET06: «Guardar», «Guardar como tema» y «Aplicar» deshabilitadas hasta que haya un color válido.
+    for (const nombre of ['Guardar', 'Guardar como tema', 'Aplicar'])
+      expect(boton(nombre).disabled).toBe(true);
+    diligenciar('Color del texto', '#14201C');
+    await waitFor(() => expect(within(seccion()).queryByText('Este campo es obligatorio.')).toBeNull());
+    for (const nombre of ['Guardar', 'Aplicar']) expect(boton(nombre).disabled).toBe(false);
+  });
+
+  it('HE-02-HU05-CA05 · Colores con poco contraste', async () => {
+    const nucleo = await abrir();
+    await screen.findByRole('list', { name: 'Catálogo de plantillas' });
+    nucleo.responder('theme_draft_update', () => ({
+      ok: true,
+      value: {
+        ...vista('t1', 'Mi tema', true),
+        content: { ...CONTENIDO, colors: { ...CONTENIDO.colors, text: '#777777' } },
+        legibility: {
+          ok: false,
+          items: [
+            { pair: 'ink_surface', ratio: 2.98, min: 7 },
+            { pair: 'text_surface', ratio: 2.71, min: 4.5 },
+            { pair: 'control_surface', ratio: 3.2, min: 3 },
+          ],
+          suggestion: { pair: 'text_surface', color: '#E6E6E6', ratio: 7.4 },
+        },
+      },
+    }));
+    diligenciar('Color del texto', '#777777');
+    // ET08, ET16: el menor contraste que no cumple, truncado y con coma, y el color sugerido; sin bloquear.
+    expect(
+      await screen.findByText('El contraste de estos colores es bajo (2,7:1). Prueba con #E6E6E6.'),
+    ).toBeTruthy();
+    for (const nombre of ['Guardar', 'Guardar como tema', 'Aplicar'])
+      expect(boton(nombre).disabled).toBe(false);
+    // ET17: desaparece cuando todos los pares cumplen.
+    nucleo.responder('theme_draft_update', () => ({ ok: true, value: vista('t1', 'Mi tema', true) }));
+    diligenciar('Color del texto', '#E6E6E6');
+    await waitFor(() => expect(screen.queryByText(/El contraste de estos colores es bajo/)).toBeNull());
   });
 });
 

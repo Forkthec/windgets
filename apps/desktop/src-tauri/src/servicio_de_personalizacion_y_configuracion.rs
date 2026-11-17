@@ -16,9 +16,10 @@ use crate::messages;
 use crate::repositorios_y_archivos_locales::BaseLocal;
 use crate::servicio_del_planificador::{de_sqlx, error, inesperado};
 use crate::tipos::{
-    AppError, BackgroundSource, CatalogItem, ErrorCode, FontSize, Hex, Legibility, ThemeBackground,
+    AppError, BackgroundSource, CatalogItem, ErrorCode, FontSize, Hex, ThemeBackground,
     ThemeColors, ThemeContent, ThemeContentFont, ThemeDraftPatch, ThemeDraftPatchBackground,
-    ThemeDraftView, ThemeSummary, Uuid,
+    ThemeDraftPatchColors, ThemeDraftPatchColorsPrimary, ThemeDraftPatchColorsSecondary,
+    ThemeDraftPatchColorsText, ThemeDraftView, ThemeSummary, Uuid,
 };
 
 /// Identificador del tema inicial cuando la base local aún no lo trae (primer inicio sin la primera descarga).
@@ -54,13 +55,8 @@ impl Borrador {
             content: self.contenido.clone(),
             dirty: self.dirty(),
             applied_unsaved: self.aplicado_sin_guardar,
-            // DUDA: HE-02-HU05 la legibilidad se calcula con la edición de colores (P13). Valor neutro: sin
-            // avisos.
-            legibility: Legibility {
-                ok: true,
-                items: Vec::new(),
-                suggestion: None,
-            },
+            // HE-02-HU05-ET07, ET08: la legibilidad de los colores de la vista previa.
+            legibility: legibilidad::legibilidad(&self.contenido.colors),
         }
     }
 }
@@ -109,6 +105,46 @@ fn contenido_de_fila(fila: &SqliteRow) -> Result<ThemeContent, sqlx::Error> {
             size: texto_de_fuente(&tamano),
         },
     })
+}
+
+/// HE-02-HU05-ET04 a ET06: los colores que pide el parche, en `#RRGGBB` y en mayúsculas (ET13). Un color vacío
+/// responde `color.required` y uno con otra forma `color.invalid`, en su campo; ninguno cambia la vista previa.
+fn colores_pedidos(pedidos: &ThemeDraftPatchColors) -> Result<[Option<Hex>; 3], AppError> {
+    let revisar = |campo: &str, valor: Option<Option<&Hex>>| -> Result<Option<Hex>, AppError> {
+        match valor {
+            None => Ok(None),
+            Some(None) => Err(error(
+                ErrorCode::ColorRequired,
+                messages::CAMPO_OBLIGATORIO,
+                Some(campo),
+            )),
+            Some(Some(hex)) => match legibilidad::de_hex(hex.0.trim()) {
+                Some(rgb) => Ok(Some(Hex(legibilidad::a_hex(rgb)))),
+                None => Err(error(
+                    ErrorCode::ColorInvalid,
+                    messages::COLOR_INVALIDO,
+                    Some(campo),
+                )),
+            },
+        }
+    };
+    let primario = pedidos.primary.as_ref().map(|c| match c {
+        ThemeDraftPatchColorsPrimary::Hex(h) => Some(h),
+        ThemeDraftPatchColorsPrimary::Lit(_) => None,
+    });
+    let secundario = pedidos.secondary.as_ref().map(|c| match c {
+        ThemeDraftPatchColorsSecondary::Hex(h) => Some(h),
+        ThemeDraftPatchColorsSecondary::Lit(_) => None,
+    });
+    let texto = pedidos.text.as_ref().map(|c| match c {
+        ThemeDraftPatchColorsText::Hex(h) => Some(h),
+        ThemeDraftPatchColorsText::Lit(_) => None,
+    });
+    Ok([
+        revisar("primary", primario)?,
+        revisar("secondary", secundario)?,
+        revisar("text", texto)?,
+    ])
 }
 
 /// ¿La copia aplicada es este contenido? `applied_theme` no guarda la paleta (datos.md), así que se compara sin
@@ -431,6 +467,10 @@ impl ServicioDePersonalizacion {
             }
             None => None,
         };
+        let colores = match &cambio.colors {
+            Some(pedidos) => Some(colores_pedidos(pedidos)?),
+            None => None,
+        };
         self.con_borrador(|b| {
             b.as_mut().map(|borrador| {
                 if let Some(plantilla) = &cambio.template_id {
@@ -438,6 +478,20 @@ impl ServicioDePersonalizacion {
                 }
                 if let Some(fondo) = fondo {
                     borrador.contenido.background = fondo;
+                }
+                if let Some([primario, secundario, texto]) = colores {
+                    let actuales = &mut borrador.contenido.colors;
+                    for (actual, nuevo) in [
+                        (&mut actuales.primary, primario),
+                        (&mut actuales.secondary, secundario),
+                        (&mut actuales.text, texto),
+                    ] {
+                        if let Some(nuevo) = nuevo {
+                            *actual = nuevo;
+                        }
+                    }
+                    // HE-02-HU07: un color cambiado a mano deja la paleta en «Personalizada».
+                    borrador.contenido.palette_id = None;
                 }
                 borrador.vista()
             })
@@ -541,11 +595,14 @@ mod aplicar;
 pub mod escritorio;
 mod guardado;
 mod imagenes;
+pub(crate) mod legibilidad;
 pub mod ultima_pantalla;
 mod widgets;
 
 #[cfg(test)]
 mod pruebas_de_aplicar;
+#[cfg(test)]
+mod pruebas_de_colores;
 #[cfg(test)]
 mod pruebas_de_escritorio;
 #[cfg(test)]

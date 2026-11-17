@@ -195,6 +195,13 @@ pub const CAMBIOS_SIN_GUARDAR_AL_APLICAR: &str =
     "Tienes cambios sin guardar en el tema “<nombre del tema>”. ¿Qué deseas hacer?";
 /// `theme.already_applied` (HE-02-HU12-CA06): texto de la opción «Aplicar» deshabilitada.
 pub const TEMA_YA_APLICADO: &str = "Este tema ya está aplicado.";
+/// `color.invalid` (HE-02-HU05-CA03): mensaje de campo.
+pub const COLOR_INVALIDO: &str =
+    "Diligencia un color válido en formato hexadecimal (ej.: #1A2B3C).";
+/// Aviso de legibilidad (HE-02-HU05-CA05): lo arma la vista con el contraste y el color sugerido de
+/// `legibility`.
+pub const CONTRASTE_BAJO: &str =
+    "El contraste de estos colores es bajo (<contraste>:1). Prueba con <color sugerido>.";
 /// `background.already_default` (HE-02-HU04-CA02): texto de la opción «Quitar imagen» deshabilitada.
 pub const FONDO_YA_POR_DEFECTO: &str = "Esta plantilla ya muestra su imagen de fondo por defecto.";
 
@@ -309,6 +316,8 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ),
     ("TEMA_YA_APLICADO", TEMA_YA_APLICADO),
     ("FONDO_YA_POR_DEFECTO", FONDO_YA_POR_DEFECTO),
+    ("COLOR_INVALIDO", COLOR_INVALIDO),
+    ("CONTRASTE_BAJO", CONTRASTE_BAJO),
     ("BLOQUE_YA_PASO", BLOQUE_YA_PASO),
     (
         "BLOQUE_DESPUES_DE_FECHA_LIMITE",

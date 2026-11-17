@@ -2,17 +2,39 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useEffect, useState } from 'react';
 import { urlDeArchivo } from '@/ipc/archivos';
 import textos from '@/types/messages.es.json';
-import type { ApplyMode, CatalogItem, ThemeDraftPatch, ThemeDraftView, ThemeSummary } from '@/types';
+import type {
+  ApplyMode,
+  CatalogItem,
+  Legibility,
+  ThemeDraftPatch,
+  ThemeDraftView,
+  ThemeSummary,
+} from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { Selector } from '@/ui/Selector/Selector';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { Colores, type CampoDeColor } from './Colores';
 
 // P-WAL-01 Personalización del wallpaper (Menú principal > Personalización > Personalización del wallpaper;
 // HE-02-HU10). Esta HU construye la lista «Tema en edición», la vista previa, las secciones y las opciones; el
 // contenido de cada sección llega con HE-02-HU02, HU03, HU05 a HU08, y «Guardar», «Aplicar» y «Cancelar» actúan
 // con HE-02-HU11, HU12 y HU13.
+
+/**
+ * HE-02-HU05-CA05 (ET08, ET16): «El contraste de estos colores es bajo (<contraste>:1). Prueba con <color
+ * sugerido>.», con el menor contraste de los pares que no cumplen, truncado a un decimal y con coma.
+ */
+export function avisoDeContraste(legibilidad: Legibility): string | null {
+  if (legibilidad.ok || !legibilidad.suggestion) return null;
+  const menor = Math.min(...legibilidad.items.filter((i) => i.ratio < i.min).map((i) => i.ratio));
+  const contraste = (Math.floor(menor * 10) / 10).toFixed(1).replace('.', ',');
+  return textos.CONTRASTE_BAJO.replace('<contraste>', contraste).replace(
+    '<color sugerido>',
+    legibilidad.suggestion.color,
+  );
+}
 
 /** Las secciones de la pantalla (HE-02-HU10-ET01), en este orden. */
 const SECCIONES = ['Plantillas', 'Imagen de fondo', 'Colores', 'Tipografía', 'Paletas'] as const;
@@ -32,6 +54,10 @@ export function Personalization() {
   const [pendiente, setPendiente] = useState<{ id: string; mensaje: string } | null>(null);
   // M-15: el mensaje del Núcleo al aplicar con cambios sin guardar (HE-02-HU12-CA02).
   const [alAplicar, setAlAplicar] = useState('');
+  // HE-02-HU05-CA03, CA04: el mensaje de campo de cada color y si un color está vacío.
+  const [mensajesDeColor, setMensajesDeColor] = useState<
+    Partial<Record<CampoDeColor, { code: string; message: string }>>
+  >({});
 
   const leerTemas = useCallback(async () => {
     const r = await invocar('theme_list', {});
@@ -73,6 +99,17 @@ export function Personalization() {
   const cambiar = async (patch: ThemeDraftPatch) => {
     const r = await invocar('theme_draft_update', { patch });
     if (r.ok) setBorrador(r.value);
+  };
+
+  // HE-02-HU05: el color se valida en el Núcleo; si no es válido, la vista previa no cambia (ET05).
+  const cambiarColor = async (campo: CampoDeColor, valor: string) => {
+    const r = await invocar('theme_draft_update', { patch: { colors: { [campo]: valor.trim() } } });
+    if (r.ok) {
+      setBorrador(r.value);
+      setMensajesDeColor((m) => ({ ...m, [campo]: undefined }));
+    } else if (r.error.field === campo) {
+      setMensajesDeColor((m) => ({ ...m, [campo]: { code: r.error.code, message: r.error.message } }));
+    }
   };
 
   // HE-02-HU03-ET06: «Subir imagen» abre el explorador de archivos; «Cancelar» lo cierra sin cambios (CA08).
@@ -142,6 +179,10 @@ export function Personalization() {
     !borrador.dirty &&
     !borrador.applied_unsaved;
 
+  // HE-02-HU05-ET06: con un color vacío, «Guardar», «Guardar como tema» y «Aplicar» quedan deshabilitadas.
+  const colorVacio = Object.values(mensajesDeColor).some((m) => m?.code === 'color.required');
+  const aviso = borrador ? avisoDeContraste(borrador.legibility) : null;
+
   const fondo = borrador?.content.background;
   const imagenDeFondo =
     fondo?.source === 'own' && fondo.uploaded_image_id
@@ -179,6 +220,12 @@ export function Personalization() {
                 : {}),
             }}
           />
+          {/* HE-02-HU05-ET17: el aviso de contraste va debajo de la vista previa. */}
+          {aviso && (
+            <p className="wg-aviso" aria-live="polite">
+              {aviso}
+            </p>
+          )}
           {SECCIONES.map((nombre) => (
             <section key={nombre} aria-label={nombre}>
               <h2>{nombre}</h2>
@@ -250,23 +297,35 @@ export function Personalization() {
                   )}
                 </>
               )}
+              {nombre === 'Colores' && (
+                <Colores
+                  colores={borrador.content.colors}
+                  mensajes={{
+                    primary: mensajesDeColor.primary?.message,
+                    secondary: mensajesDeColor.secondary?.message,
+                    text: mensajesDeColor.text?.message,
+                  }}
+                  alCambiar={(campo, valor) => void cambiarColor(campo, valor)}
+                  restablecer={<Boton>Restablecer colores</Boton>}
+                />
+              )}
             </section>
           ))}
           <div className="wg-fila">
             {/* ET04: sin cambios sin guardar, «Guardar» queda deshabilitada con su motivo. */}
             <Boton
-              disabled={!borrador.dirty}
-              motivo={textos.SIN_CAMBIOS_PARA_GUARDAR}
+              disabled={!borrador.dirty || colorVacio}
+              motivo={colorVacio ? undefined : textos.SIN_CAMBIOS_PARA_GUARDAR}
               onClick={() => void guardar()}
             >
               Guardar
             </Boton>
-            <Boton>Guardar como tema</Boton>
+            <Boton disabled={colorVacio}>Guardar como tema</Boton>
             {/* HE-02-HU12-CA06, ET06: «Aplicar» deshabilitada con su motivo. */}
             <Boton
               principal
-              disabled={yaAplicado}
-              motivo={textos.TEMA_YA_APLICADO}
+              disabled={yaAplicado || colorVacio}
+              motivo={yaAplicado ? textos.TEMA_YA_APLICADO : undefined}
               onClick={() => void aplicar('apply')}
             >
               Aplicar
