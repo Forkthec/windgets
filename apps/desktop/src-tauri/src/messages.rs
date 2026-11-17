@@ -201,6 +201,14 @@ pub fn con_nombre_del_tema(texto: &str, nombre: &str) -> String {
     texto.replace("<nombre del tema>", nombre)
 }
 
+/// IPC-WID-06 `widget_delete` (HE-04-HU13-CA01): mensaje de resultado.
+pub const WIDGET_ELIMINADO: &str = "Widget eliminado.";
+/// `widget.default_not_deletable` (HE-04-HU13-CA02): texto de la opción «Eliminar» deshabilitada.
+pub const WIDGET_POR_DEFECTO_NO_ELIMINABLE: &str =
+    "Los widgets por defecto no se pueden eliminar. Puedes desactivarlos.";
+/// M-07 (HE-04-HU13-CA06): confirmación de eliminar un widget.
+pub const CONFIRMAR_ELIMINAR_WIDGET: &str =
+    "¿Deseas eliminar el widget “<nombre del widget>”? Se quitará de todos tus temas.";
 /// Opción deshabilitada del catálogo de widgets: Noticias o Reproductor de música ya agregados (HE-04-HU04-CA02,
 /// RT-04).
 pub const WIDGET_YA_AGREGADO: &str = "Ya agregaste este widget.";
@@ -306,6 +314,12 @@ pub const TEXTOS: &[(&str, &str)] = &[
         CAMBIOS_SIN_GUARDAR_AL_APLICAR,
     ),
     ("TEMA_YA_APLICADO", TEMA_YA_APLICADO),
+    ("WIDGET_ELIMINADO", WIDGET_ELIMINADO),
+    (
+        "WIDGET_POR_DEFECTO_NO_ELIMINABLE",
+        WIDGET_POR_DEFECTO_NO_ELIMINABLE,
+    ),
+    ("CONFIRMAR_ELIMINAR_WIDGET", CONFIRMAR_ELIMINAR_WIDGET),
     ("BLOQUE_YA_PASO", BLOQUE_YA_PASO),
     (
         "BLOQUE_DESPUES_DE_FECHA_LIMITE",

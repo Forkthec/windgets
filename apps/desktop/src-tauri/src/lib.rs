@@ -74,6 +74,7 @@ pub fn run() {
             puente_ipc::wallpaper_get_status,
             puente_ipc::widget_list,
             puente_ipc::widget_set_active,
+            puente_ipc::widget_delete,
             puente_ipc::widget_catalog_get,
         ])
         // HE-17-HU01: «×» oculta la ventana principal; la aplicación sigue en el área de notificación.

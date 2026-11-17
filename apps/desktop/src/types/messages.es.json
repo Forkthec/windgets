@@ -17,6 +17,7 @@
   "COLUMNA_ACTUALIZADA": "Columna actualizada.",
   "COLUMNA_CREADA": "Columna creada.",
   "COLUMNA_DUPLICADA": "Ya existe una columna con ese nombre.",
+  "CONFIRMAR_ELIMINAR_WIDGET": "¿Deseas eliminar el widget “<nombre del widget>”? Se quitará de todos tus temas.",
   "CONTRASENAS_NO_COINCIDEN": "Las contraseñas no coinciden.",
   "CONTRASENA_INVALIDA": "La contraseña debe tener entre 8 y 64 caracteres e incluir una mayúscula, una minúscula y un número.",
   "CORREO_INVALIDO": "Diligencia un correo electrónico válido.",
@@ -61,5 +62,7 @@
   "TEMA_GUARDADO_Y_APLICADO": "Tema “<nombre del tema>” guardado y aplicado.",
   "TEMA_YA_APLICADO": "Este tema ya está aplicado.",
   "TITULO_MUY_LARGO": "El título no puede superar los 100 caracteres.",
+  "WIDGET_ELIMINADO": "Widget eliminado.",
+  "WIDGET_POR_DEFECTO_NO_ELIMINABLE": "Los widgets por defecto no se pueden eliminar. Puedes desactivarlos.",
   "WIDGET_YA_AGREGADO": "Ya agregaste este widget."
 }

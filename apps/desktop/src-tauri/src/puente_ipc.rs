@@ -33,7 +33,7 @@ use crate::tipos::{
     AppliedThemeView, ApplyMode, AssetResolveParams, AssetResolveResult,
     EventMapAppliedThemeChanged, EventMapCatalogUpdated, EventMapWallpaperStatusChanged,
     EventMapWidgetsChanged, LayerInitialState, ThemeDraftApplyParams, ThemeDraftSaveResult,
-    ThemeIdResult, WallpaperState, WallpaperStatus, WidgetCatalog, WidgetItem,
+    ThemeIdResult, WallpaperState, WallpaperStatus, WidgetCatalog, WidgetDeleteParams, WidgetItem,
     WidgetSetActiveParams,
 };
 
@@ -814,6 +814,42 @@ pub async fn widget_catalog_get(
         }
         Err(e) => Err(e),
     }))
+}
+
+/// IPC-WID-06 `widget_delete` (HE-04-HU13): elimina un widget externo o local de la cuenta y de todos los temas.
+/// Avisa con EV-12 `widgets_changed` para que la lista, el catálogo y la capa vuelvan a leer (ET02).
+#[tauri::command]
+pub async fn widget_delete(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: WidgetDeleteParams,
+) -> Result<IpcResult<()>, ()> {
+    let ahora = RelojDelSistema.ahora_ms();
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .eliminar_widget(
+                    nucleo.planificador.base(),
+                    &user_id,
+                    &params.widget_id.0,
+                    ahora,
+                )
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if r.is_ok() {
+        let _ = app.emit(
+            "widgets_changed",
+            EventMapWidgetsChanged {
+                widget_ids: vec![params.widget_id.clone()],
+                op: ChangeOp::Delete,
+                origin: OriginKind::Local,
+            },
+        );
+    }
+    Ok(con_mensaje(r))
 }
 
 /// IPC-WID-03 `widget_set_active` (HE-04-HU02): activa o desactiva un widget del tema aplicado. Avisa con

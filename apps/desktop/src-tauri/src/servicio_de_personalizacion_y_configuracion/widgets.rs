@@ -1,13 +1,13 @@
-//! Widgets (HE-04): IPC-WID-01 `widget_list`, IPC-WID-02 `widget_catalog_get`, IPC-WID-03 `widget_set_active`
-//! y los rectángulos que pinta la capa (IPC-DESK-01 `layer_get_initial_state`). Todo sale de la base local
+//! Widgets (HE-04): IPC-WID-01 `widget_list`, IPC-WID-02 `widget_catalog_get`, IPC-WID-03 `widget_set_active`,
+//! IPC-WID-06 `widget_delete` y los rectángulos que pinta la capa (IPC-DESK-01 `layer_get_initial_state`). Todo sale de la base local
 //! (`widget`, `theme_widget`).
 
 use serde_json::Value;
 
 use super::*;
 use crate::repositorios_y_archivos_locales::encolar_cambio;
-use crate::servicio_de_sesion::instante;
-use crate::servicio_del_planificador::campos;
+use crate::servicio_de_sesion::{ConMensaje, instante};
+use crate::servicio_del_planificador::{campos, resultado};
 use crate::tipos::{
     AddableWidgetType, AnimationConfig, CarouselConfig, EmptyConfig, ImageRef, ImageSource,
     StaticImageConfig, TextConfig, WeatherConfig, WidgetCatalog, WidgetCatalogEntry, WidgetConfig,
@@ -367,6 +367,72 @@ impl ServicioDePersonalizacion {
             .into_iter()
             .find(|w| w.widget_id.0 == widget_id)
             .ok_or_else(no_existe)
+    }
+
+    /// IPC-WID-06 `widget_delete` (HE-04-HU13): elimina un widget externo o local de la cuenta y de todos los
+    /// temas que lo incluyen, con las imágenes de su carrusel, y encola cada eliminación (D-189; ET02). Al no
+    /// quedar el widget, ningún servicio de internet lo vuelve a consultar (ET03) y Noticias vuelve a estar
+    /// habilitado en el catálogo (ET06). Los demás widgets, también otros Clima, no cambian (ET05). Los widgets
+    /// por defecto no se eliminan (`widget.default_not_deletable`, ET04).
+    pub async fn eliminar_widget(
+        &self,
+        base: &BaseLocal,
+        user_id: &str,
+        widget_id: &str,
+        ahora_ms: i64,
+    ) -> Result<ConMensaje<()>, AppError> {
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let por_defecto: i64 =
+            sqlx::query_scalar("SELECT is_default FROM widget WHERE id = ? AND user_id = ?")
+                .bind(widget_id)
+                .bind(user_id)
+                .fetch_optional(pool)
+                .await
+                .map_err(de_sqlx)?
+                .ok_or_else(|| error(ErrorCode::WidgetNotFound, "", None))?;
+        if por_defecto == 1 {
+            return Err(error(
+                ErrorCode::WidgetDefaultNotDeletable,
+                messages::WIDGET_POR_DEFECTO_NO_ELIMINABLE,
+                None,
+            ));
+        }
+        let ahora = instante(ahora_ms).0;
+        let mut tx = pool.begin().await.map_err(de_sqlx)?;
+        for tabla in ["theme_widget", "widget_carousel_item"] {
+            let ids: Vec<String> = sqlx::query_scalar(&format!(
+                "SELECT id FROM {tabla} WHERE widget_id = ? AND user_id = ?"
+            ))
+            .bind(widget_id)
+            .bind(user_id)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(de_sqlx)?;
+            for id in ids {
+                sqlx::query(&format!("DELETE FROM {tabla} WHERE id = ?"))
+                    .bind(&id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(de_sqlx)?;
+                encolar_cambio(&mut tx, tabla, &id, "delete", &Value::Null, &ahora)
+                    .await
+                    .map_err(de_sqlx)?;
+            }
+        }
+        sqlx::query("DELETE FROM widget WHERE id = ? AND user_id = ?")
+            .bind(widget_id)
+            .bind(user_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(de_sqlx)?;
+        encolar_cambio(&mut tx, "widget", widget_id, "delete", &Value::Null, &ahora)
+            .await
+            .map_err(de_sqlx)?;
+        tx.commit().await.map_err(de_sqlx)?;
+        Ok(ConMensaje {
+            valor: (),
+            mensaje: resultado("widget_delete", messages::WIDGET_ELIMINADO),
+        })
     }
 
     /// IPC-WID-02 `widget_catalog_get`: los widgets que se pueden agregar, en «Widgets externos» y «Widgets

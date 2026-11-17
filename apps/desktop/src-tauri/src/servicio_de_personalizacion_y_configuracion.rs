@@ -532,6 +532,8 @@ mod widgets;
 #[cfg(test)]
 mod pruebas_de_aplicar;
 #[cfg(test)]
+mod pruebas_de_eliminar_widget;
+#[cfg(test)]
 mod pruebas_de_escritorio;
 #[cfg(test)]
 mod pruebas_de_guardado;

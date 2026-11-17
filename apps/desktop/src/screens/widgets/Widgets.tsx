@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRuta } from '@/reglas/ruta';
 import type { WidgetItem } from '@/types';
+import textos from '@/types/messages.es.json';
 import { Boton } from '@/ui/Boton/Boton';
+import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { Interruptor } from '@/ui/Interruptor/Interruptor';
+import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { AgregarWidget } from './AgregarWidget';
 
 // P-WID-01 Widgets (Menú principal > Personalización > Widgets; HE-04-HU01). La lista sale del Núcleo ya en
 // orden: primero los widgets por defecto y luego los agregados (IPC-WID-01 widget_list). «Editar escritorio»
-// abre la pantalla de edición con HE-05-HU01 (P14); «Configurar» y «Eliminar» actúan con HE-04-HU12 y HU13
+// abre la pantalla de edición con HE-05-HU01; «Eliminar» actúa con HE-04-HU13 y «Configurar» con HE-04-HU12
 // (P21) (docs/DUDAS.md).
 
 /** El tipo que muestra la lista (HE-04-HU01-ET03): «Por defecto», «Externo» (Clima y Noticias) o «Local». */
@@ -19,7 +22,10 @@ export function tipoDeWidget(widget: WidgetItem): string {
 
 export function Widgets() {
   const { invocar, escuchar } = useNucleo();
+  const mostrarResultado = useMensajeDeResultado();
   const [widgets, setWidgets] = useState<WidgetItem[] | null>(null);
+  // HE-04-HU13: el widget del mensaje de confirmación M-07.
+  const [porEliminar, setPorEliminar] = useState<WidgetItem | null>(null);
   // T-064: «Agregar widget» abre la subpantalla Agregar widget (HE-04-HU04-CA01).
   const ruta = useRuta<'widgets' | 'agregar'>('widgets');
 
@@ -37,6 +43,14 @@ export function Widgets() {
     },
     [invocar, leer],
   );
+
+  // HE-04-HU13-CA01, CA04, CA05: lo quita de la cuenta y de todos los temas, con «Widget eliminado.».
+  const eliminar = async (widget: WidgetItem) => {
+    setPorEliminar(null);
+    const r = await invocar('widget_delete', { widget_id: widget.widget_id });
+    mostrarResultado(r.ok ? (r.result_message?.message ?? '') : r.error.message);
+    await leer();
+  };
 
   useEffect(() => {
     void leer();
@@ -69,10 +83,28 @@ export function Widgets() {
                 alCambiar={(activo) => void alternar(w, activo)}
               />
               {w.can_configure && <Boton>Configurar</Boton>}
-              {w.can_delete && <Boton>Eliminar</Boton>}
+              {/* HE-04-HU13-ET04: en los widgets por defecto, deshabilitada con su motivo (RT-04). */}
+              <Boton
+                disabled={!w.can_delete}
+                motivo={textos.WIDGET_POR_DEFECTO_NO_ELIMINABLE}
+                onClick={() => setPorEliminar(w)}
+              >
+                Eliminar
+              </Boton>
             </li>
           ))}
         </ul>
+      )}
+      {porEliminar && (
+        // M-07 (HE-04-HU13-CA06, ET01). DUDA: HE-04-HU13 M-07 no define el título. Valor usado: «Eliminar», como M-08.
+        <Confirmacion
+          titulo="Eliminar"
+          texto={textos.CONFIRMAR_ELIMINAR_WIDGET.replace('<nombre del widget>', porEliminar.display_name)}
+          opcionPrincipal="Eliminar"
+          alConfirmar={() => void eliminar(porEliminar)}
+          // CA03, ET07: se cierra sin cambios.
+          alCancelar={() => setPorEliminar(null)}
+        />
       )}
     </main>
   );
