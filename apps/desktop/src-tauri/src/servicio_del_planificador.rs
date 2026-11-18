@@ -15,14 +15,14 @@ use crate::messages;
 use crate::repositorios_y_archivos_locales::{BaseLocal, encolar_cambio};
 use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, instante};
 use crate::tipos::{
-    AgendaBlock, AgendaDay, AppError, BoardColumn, Card, CardAssignTimeBlockParams,
-    CardCreateParams, CardDetail, CardDetailColumn, CardDetailLabelsItem, CardDetailTimeBlock,
-    CardListBoardResult, CardMoveParams, CardSetCompletedParams, CardType, CardUpdateParams,
-    CatalogItem, Column, ColumnCreateParams, ColumnReorderParams, ColumnRole, ColumnUpdateParams,
-    DateIso, ErrorCode, Hex, Hour, Instant, KanbanWidgetColumn, KanbanWidgetColumnTitlesItem,
-    KanbanWidgetData, Label, LabelCreateParams, Placement, PlacementVariant1,
-    PlacementVariant1Kind, PlannerItem, PlannerSummary, PlannerToday, Priority, ResultMessage,
-    Uuid,
+    AgendaBlock, AgendaDay, AppError, BoardColumn, CalendarMonth, CalendarMonthDay,
+    CalendarMonthDayPreviewItem, Card, CardAssignTimeBlockParams, CardCreateParams, CardDetail,
+    CardDetailColumn, CardDetailLabelsItem, CardDetailTimeBlock, CardListBoardResult,
+    CardMoveParams, CardSetCompletedParams, CardType, CardUpdateParams, CatalogItem, Column,
+    ColumnCreateParams, ColumnReorderParams, ColumnRole, ColumnUpdateParams, DateIso, ErrorCode,
+    Hex, Hour, Instant, KanbanWidgetColumn, KanbanWidgetColumnTitlesItem, KanbanWidgetData, Label,
+    LabelCreateParams, Placement, PlacementVariant1, PlacementVariant1Kind, PlannerItem,
+    PlannerSummary, PlannerToday, Priority, ResultMessage, Uuid,
 };
 
 /// Clave para ordenar nombres de la A a la Z sin distinguir mayúsculas ni tildes (D-165): «Árbol» va con la A.
@@ -61,6 +61,8 @@ pub const COLUMNAS_MAX: usize = 10;
 pub const PASO_DE_POSICION: f64 = 1024.0;
 /// Títulos que muestra cada columna del widget Kanban; el resto va en «+N más» (HE-06-HU05-ET02).
 pub const TITULOS_DEL_WIDGET_KANBAN: usize = 5;
+/// Títulos que muestra cada día de la vista mensual; el resto va en «+N más» (HE-10-HU01-ET05).
+pub const TITULOS_POR_DIA_DEL_MES: usize = 3;
 
 /// Fecha y hora del computador. La fecha es la local: «no puede ser anterior a la fecha actual» (ET08).
 pub trait Calendario: Send + Sync {
@@ -1321,6 +1323,68 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         })
     }
 
+    /// IPC-CARD-12 `calendar_get_month` (HE-10-HU01): todos los días del mes, cada uno con los títulos de hasta
+    /// `TITULOS_POR_DIA_DEL_MES` tarjetas cuya fecha límite es ese día y la cantidad restante para «+N más»
+    /// (ET03, ET05). Los conteos de vencidas y pendientes son de HE-10-HU05.
+    /// DUDA: HE-10-HU01 el orden de las tarjetas de un día no está definido. Valor usado: el del tablero
+    /// (`position`, después la fecha de creación) (docs/DUDAS.md).
+    pub async fn mes_del_calendario(
+        &self,
+        user_id: &str,
+        anio: i64,
+        mes: i64,
+    ) -> Result<CalendarMonth, AppError> {
+        let primero = i32::try_from(anio)
+            .ok()
+            .zip(u32::try_from(mes).ok())
+            .and_then(|(a, m)| NaiveDate::from_ymd_opt(a, m, 1))
+            .ok_or_else(inesperado)?;
+        let siguiente = primero
+            .checked_add_months(chrono::Months::new(1))
+            .ok_or_else(inesperado)?;
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let filas: Vec<(String, String, String)> = sqlx::query_as(
+            "SELECT id, title, due_date FROM card WHERE user_id = ? AND due_date >= ? AND due_date < ? \
+             ORDER BY due_date, position, created_at",
+        )
+        .bind(user_id)
+        .bind(primero.format("%Y-%m-%d").to_string())
+        .bind(siguiente.format("%Y-%m-%d").to_string())
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        let mut por_dia: HashMap<String, Vec<CalendarMonthDayPreviewItem>> = HashMap::new();
+        for (id, title, fecha_limite) in filas {
+            por_dia
+                .entry(fecha_limite)
+                .or_default()
+                .push(CalendarMonthDayPreviewItem {
+                    id: Uuid(id),
+                    title,
+                });
+        }
+        Ok(CalendarMonth {
+            days: primero
+                .iter_days()
+                .take_while(|d| *d < siguiente)
+                .map(|d| {
+                    let date = d.format("%Y-%m-%d").to_string();
+                    let mut preview = por_dia.remove(&date).unwrap_or_default();
+                    let resto = preview.split_off(preview.len().min(TITULOS_POR_DIA_DEL_MES));
+                    CalendarMonthDay {
+                        date: DateIso(date),
+                        preview,
+                        extra_count: i64::try_from(resto.len()).unwrap_or(i64::MAX),
+                        overdue_count: 0,
+                        pending_count: 0,
+                        has_overdue: false,
+                        has_pending: false,
+                    }
+                })
+                .collect(),
+        })
+    }
+
     /// Las etiquetas de cada tarjeta del usuario, en el orden en que se asignaron.
     async fn etiquetas_por_tarjeta(
         &self,
@@ -1786,6 +1850,8 @@ mod pruebas_de_etiquetas;
 mod pruebas_de_la_agenda;
 #[cfg(test)]
 mod pruebas_de_reportes;
+#[cfg(test)]
+mod pruebas_del_calendario;
 #[cfg(test)]
 mod pruebas_del_planificador_diario;
 #[cfg(test)]

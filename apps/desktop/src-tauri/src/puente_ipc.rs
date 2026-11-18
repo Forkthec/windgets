@@ -20,7 +20,6 @@ use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, ServicioDeSe
 use crate::servicio_del_planificador::{
     Calendario, CalendarioDelSistema, ServicioDelPlanificador, VigiaDelDia,
 };
-use crate::tipos::ThemeApplyParams;
 use crate::tipos::{
     AgendaDay, AgendaDayParams, AppError, AuthRegisterStartParams, AuthRegisterStartResult,
     AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams,
@@ -42,6 +41,7 @@ use crate::tipos::{
     WallpaperState, WallpaperStatus, WidgetCatalog, WidgetDeleteParams, WidgetItem,
     WidgetSetActiveParams,
 };
+use crate::tipos::{CalendarMonth, CalendarMonthParams, ThemeApplyParams};
 use crate::tipos::{
     EventMapLayoutChanged, LayoutEditMoveParams, LayoutEditOpenResult, LayoutEditRectResult,
     LayoutEditResizeParams, LayoutEditStatus,
@@ -1777,5 +1777,22 @@ pub async fn layout_edit_cancel(
         ok: true.into(),
         value: (),
         result_message: mensaje,
+    }))
+}
+
+/// IPC-CARD-12 `calendar_get_month` (HE-10-HU01): los días del mes con los títulos de sus tarjetas.
+#[tauri::command]
+pub async fn calendar_get_month(
+    nucleo: State<'_, Nucleo>,
+    params: CalendarMonthParams,
+) -> Result<IpcResult<CalendarMonth>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .mes_del_calendario(&user_id, params.year, params.month)
+                .await
+        }
+        Err(e) => Err(e),
     }))
 }

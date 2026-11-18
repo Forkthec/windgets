@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Escuchar } from '@/ipc/eventos';
+import { DIAS, nombreDelMes, semanasDelMes } from '@/screens/calendar/mes';
 
 // Widget Calendario de la capa (P-WAL-02, HE-06-HU07). Muestra el mes actual con el día actual resaltado; no es
 // la vista Calendario del planificador (ET01). «Hoy» es la fecha del computador (zona horaria local) y cambia con
@@ -7,37 +8,6 @@ import type { Escuchar } from '@/ipc/eventos';
 // DUDA: HE-06-HU07 el CA no pide datos de tarjetas, así que el widget no lee IPC-CARD-12 (llega con HE-10-HU01,
 // P17). El encabezado y los nombres de los días no están definidos. Valor usado: «<Mes> <año>» y los días de
 // lunes a domingo con su inicial, como la vista mensual (HE-10-HU01-ET02) (docs/DUDAS.md).
-
-const MESES = [
-  'Enero',
-  'Febrero',
-  'Marzo',
-  'Abril',
-  'Mayo',
-  'Junio',
-  'Julio',
-  'Agosto',
-  'Septiembre',
-  'Octubre',
-  'Noviembre',
-  'Diciembre',
-];
-const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-
-/** Las semanas del mes, de lunes a domingo; `null` en los días que no son del mes. */
-export function semanasDelMes(anio: number, mes: number): (number | null)[][] {
-  // getDay(): 0 es domingo; con lunes primero, el domingo va en la posición 6.
-  const hueco = (new Date(anio, mes, 1).getDay() + 6) % 7;
-  const dias = new Date(anio, mes + 1, 0).getDate();
-  const celdas: (number | null)[] = [
-    ...Array<null>(hueco).fill(null),
-    ...Array.from({ length: dias }, (_, i) => i + 1),
-  ];
-  while (celdas.length % 7 !== 0) celdas.push(null);
-  const semanas: (number | null)[][] = [];
-  for (let i = 0; i < celdas.length; i += 7) semanas.push(celdas.slice(i, i + 7));
-  return semanas;
-}
 
 export interface WidgetCalendarioProps {
   escuchar: Escuchar;
@@ -51,7 +21,7 @@ export function WidgetCalendario({ escuchar }: WidgetCalendarioProps) {
 
   const anio = hoy.getFullYear();
   const mes = hoy.getMonth();
-  const titulo = `${MESES[mes]} ${anio}`;
+  const titulo = nombreDelMes(anio, mes);
   return (
     <div style={{ width: '100%', height: '100%', overflow: 'auto' }}>
       <table className="wg-calendario-widget" aria-label={titulo}>

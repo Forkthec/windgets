@@ -4,12 +4,14 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type { ComponentType } from 'react';
 import { vi } from 'vitest';
 import type { Escuchar } from '@/ipc/eventos';
+import { mesDelCalendario } from '@/ipc/calendarioSimulado';
 import type {
   AgendaDay,
   BoardColumn,
   Card,
   CardCreateParams,
   CardDetail,
+  CalendarMonthParams,
   CardMoveParams,
   CardSetCompletedParams,
   CardUpdateParams,
@@ -233,6 +235,14 @@ export function crearNucleo(tarjetas: Card[] = []): {
           })),
         },
       }),
+    ],
+    // HE-10-HU01: los días del mes con hasta 3 títulos por día (IPC-CARD-12).
+    [
+      'calendar_get_month',
+      (params) => {
+        const { year, month } = params as CalendarMonthParams;
+        return { ok: true, value: mesDelCalendario(nucleo.tarjetas, year, month) };
+      },
     ],
     ['column_list', () => ({ ok: true, value: tablero().map((c) => c.column) })],
     [

@@ -697,3 +697,33 @@ button.wg-tarjeta__titulo:focus-visible {
   border: var(--wg-borde-ancho) solid;
   border-radius: var(--wg-radio);
 }
+
+/* Calendario (P-CAL-01, HE-10-HU01): la vista mensual, de lunes a domingo; el día actual va resaltado (ET02). */
+.wg-calendario {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+.wg-calendario th,
+.wg-calendario td {
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  padding: calc(var(--wg-unidad) * 2);
+  vertical-align: top;
+}
+.wg-calendario__dia--hoy {
+  outline: calc(var(--wg-borde-ancho) * 2) solid var(--wg-accion);
+  outline-offset: calc(var(--wg-borde-ancho) * -2);
+}
+.wg-calendario__dia--hoy .wg-calendario__numero {
+  font-weight: 700;
+}
+.wg-calendario__tarjetas {
+  margin: var(--wg-unidad) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.wg-calendario__tarjeta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -10,6 +10,7 @@ import type {
   WidgetItem,
 } from '@/types';
 import textos from '@/types/messages.es.json';
+import { mesDelCalendario } from './calendarioSimulado';
 
 // Núcleo simulado para `pnpm --filter desktop dev`: «solo las vistas en el navegador, con IPC simulado»
 // (convenciones.md, «Ejecutar en desarrollo»). Cada HU (historia de usuario) define aquí la respuesta de su
@@ -256,6 +257,11 @@ const respuestas: Respuestas = {
         extra_count: Math.max(cards.length - 5, 0),
       })),
     },
+  }),
+  // HE-10-HU01: los días del mes con sus tarjetas (IPC-CARD-12).
+  calendar_get_month: ({ year, month }) => ({
+    ok: true,
+    value: mesDelCalendario(tarjetasSimuladas, year, month),
   }),
   column_list: () => ({ ok: true, value: tableroSimulado().map((c) => c.column) }),
   // HE-09-HU05: el orden completo de las columnas.
