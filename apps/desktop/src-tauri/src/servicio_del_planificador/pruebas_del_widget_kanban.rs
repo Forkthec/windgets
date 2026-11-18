@@ -1,4 +1,5 @@
-//! Pruebas del Núcleo de HE-06-HU05 (consultar el tablero Kanban en el widget Kanban, IPC-CARD-15).
+//! Pruebas del Núcleo de HE-06-HU05 (consultar el tablero Kanban en el widget Kanban, IPC-CARD-15) y HE-06-HU06
+//! (mover tarjetas con drag-and-drop en el widget Kanban, IPC-CARD-06 con «before» o «end»).
 
 use super::pruebas::*;
 use super::*;
@@ -118,4 +119,67 @@ fn ca_he_06_hu05_ca04() {
             .iter()
             .all(|c| c.titles.is_empty() && c.extra_count == 0 && c.column.card_count == 0)
     );
+}
+
+/// Suelta la tarjeta como lo hace el widget: antes de otra tarjeta o al final de la columna.
+fn soltar(
+    servicio: &ServicioDelPlanificador<CalendarioDePrueba>,
+    id: &str,
+    columna: &str,
+    antes_de: Option<&str>,
+) -> Card {
+    let placement = match antes_de {
+        Some(otra) => Placement::Variant2(crate::tipos::PlacementVariant2 {
+            kind: crate::tipos::PlacementVariant2Kind::Before,
+            card_id: Uuid(otra.into()),
+        }),
+        None => Placement::Variant1(PlacementVariant1 {
+            kind: PlacementVariant1Kind::End,
+        }),
+    };
+    bloquear(servicio.mover_tarjeta(
+        USUARIO,
+        CardMoveParams {
+            card_id: Uuid(id.into()),
+            column_id: Uuid(columna.into()),
+            placement,
+        },
+    ))
+    .unwrap()
+}
+
+#[test]
+fn ca_he_06_hu06_ca02() {
+    // HE-06-HU06-CA02 · Mover una tarjeta a Hecho (ET03): queda completada, con la fecha de completado de hoy y
+    // guarda la columna anterior; el widget Tareas del día la muestra tachada con la siguiente lectura.
+    let servicio = con_semilla();
+    let id = tarjeta_en(&servicio, EN_PROGRESO, "Pagar la luz", "2026-11-14", 1024.0);
+    let otra = tarjeta_en(&servicio, HECHO, "Comprar pan", "2026-11-14", 1024.0);
+    let t = soltar(&servicio, &id, HECHO, Some(&otra));
+    assert!(t.is_completed);
+    assert_eq!(t.completed_on, Some(DateIso("2026-11-14".into())));
+    assert_eq!(t.previous_column_id, Some(Uuid(EN_PROGRESO.into())));
+    assert_eq!(
+        titulos(&widget(&servicio)[2]),
+        ["Pagar la luz", "Comprar pan"]
+    );
+    let hoy = bloquear(servicio.planificador_de_hoy(USUARIO)).unwrap();
+    assert!(
+        hoy.items
+            .iter()
+            .any(|i| i.card.id == Uuid(id.clone()) && i.card.is_completed)
+    );
+}
+
+#[test]
+fn ca_he_06_hu06_ca03() {
+    // HE-06-HU06-CA03 · Sacar una tarjeta de Hecho (ET04): deja de estar completada y se borra su fecha de
+    // completado.
+    let servicio = con_semilla();
+    let id = tarjeta_en(&servicio, POR_HACER, "Pagar la luz", "2026-11-14", 1024.0);
+    soltar(&servicio, &id, HECHO, None);
+    let t = soltar(&servicio, &id, POR_HACER, None);
+    assert!(!t.is_completed);
+    assert_eq!(t.completed_on, None);
+    assert_eq!(titulos(&widget(&servicio)[0]), ["Pagar la luz"]);
 }

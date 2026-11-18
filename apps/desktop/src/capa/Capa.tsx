@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { invocar as invocarNucleo } from '@/ipc/cliente';
 import { escuchar as escucharNucleo, type Escuchar } from '@/ipc/eventos';
+import { escucharArrastreReenviado, type EscucharArrastre } from '@/ipc/arrastreReenviado';
 import { urlDeArchivo } from '@/ipc/archivos';
 import { Reloj } from './Reloj';
 import { TareasDelDia } from './TareasDelDia';
@@ -81,9 +82,15 @@ interface Pintado {
 export interface CapaProps {
   invocar?: Invoke;
   escuchar?: Escuchar;
+  /** El arrastre que sigue a una selección reenviada (HE-06-HU06). */
+  escucharArrastre?: EscucharArrastre;
 }
 
-export function Capa({ invocar = invocarNucleo, escuchar = escucharNucleo }: CapaProps) {
+export function Capa({
+  invocar = invocarNucleo,
+  escuchar = escucharNucleo,
+  escucharArrastre = escucharArrastreReenviado,
+}: CapaProps) {
   const [pintado, setPintado] = useState<Pintado | null>(null);
 
   useEffect(() => {
@@ -155,7 +162,9 @@ export function Capa({ invocar = invocarNucleo, escuchar = escucharNucleo }: Cap
         >
           {w.type === 'clock' && <Reloj />}
           {w.type === 'daily_tasks' && <TareasDelDia invocar={invocar} escuchar={escuchar} />}
-          {w.type === 'kanban' && <WidgetKanban invocar={invocar} escuchar={escuchar} />}
+          {w.type === 'kanban' && (
+            <WidgetKanban invocar={invocar} escuchar={escuchar} escucharArrastre={escucharArrastre} />
+          )}
           {w.type === 'calendar' && <WidgetCalendario escuchar={escuchar} />}
         </section>
       ))}
