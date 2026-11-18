@@ -189,6 +189,9 @@ const respuestas: Respuestas = {
     });
     return error({ code: 'windi.unavailable', message: textos.WINDI_NO_DISPONIBLE });
   },
+  // HE-14-HU03: fuera de Tauri Windi no responde, así que no hay propuestas que confirmar o rechazar.
+  windi_confirm_proposal: () => error({ code: 'proposal.discarded', message: '' }),
+  windi_reject_proposal: () => error({ code: 'proposal.discarded', message: '' }),
   // HE-17-HU03: fuera de Tauri no hay programa que cerrar.
   app_exit: () => ({ ok: true, value: null }),
   autostart_get: () => ({ ok: true, value: { enabled: inicioAutomaticoSimulado } }),

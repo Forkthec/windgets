@@ -3,18 +3,30 @@
 // servicio_de_windi/pruebas.rs. El Núcleo de prueba simula la conversación de IPC-WIN-01 y 02.
 import { act, fireEvent, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import type { Result, WindiMessage, WindiSendMessageResult } from '@/types';
+import type {
+  Result,
+  WindiConfirmProposalResult,
+  WindiMessage,
+  WindiProposal,
+  WindiSendMessageResult,
+} from '@/types';
 import { abrirPantalla, llamadasA, screen } from '../kanban/pruebas';
 import { Windi } from './Windi';
 
 const SALUDO = '¡Hola, Prueba! Soy Windi. ¿Qué organizamos hoy con tus tarjetas o con la aplicación?';
 
 type Respuesta = (mensaje: string) => Result<WindiSendMessageResult>;
+type AlConfirmar = (id: string) => Result<WindiConfirmProposalResult>;
 
 /** Abre el Agente de IA con un Núcleo que guarda la conversación y responde con `responder`. */
 async function abrir(
   responder: Respuesta,
-  { online = true, historial = [] as WindiMessage[], espera = Promise.resolve() } = {},
+  {
+    online = true,
+    historial = [] as WindiMessage[],
+    espera = Promise.resolve(),
+    confirmar = undefined as AlConfirmar | undefined,
+  } = {},
 ) {
   const mensajes: WindiMessage[] = [...historial];
   let n = 0;
@@ -37,9 +49,39 @@ async function abrir(
       const r = responder(message);
       // CA08: con falla, el mensaje del usuario queda en el chat marcado como fallido.
       const enviado = mensajes.at(-1);
-      if (r.ok) agregar('assistant', r.value.reply.text);
-      else if (enviado) enviado.failed = true;
-      return r;
+      if (!r.ok) {
+        if (enviado) enviado.failed = true;
+        return r;
+      }
+      // La respuesta es el mensaje que guarda el Núcleo: la vista pone la propuesta después de él.
+      const m = agregar('assistant', r.value.reply.text);
+      return { ...r, value: { ...r.value, reply: m } };
+    }) as never);
+    // HE-14-HU03: IPC-WIN-03 y 04 guardan la respuesta de Windi en la conversación.
+    nucleo.responder('windi_confirm_proposal', (({ proposal_id }: { proposal_id: string }) => {
+      const r: Result<WindiConfirmProposalResult> = confirmar
+        ? confirmar(proposal_id)
+        : {
+            ok: true,
+            value: {
+              outcome: 'applied',
+              reply: {
+                id: '',
+                role: 'assistant',
+                text: 'Listo, ya hice el cambio.',
+                sent_at: '',
+                failed: false,
+              },
+              new_proposal: null,
+            },
+          };
+      if (!r.ok) return r;
+      const m = agregar('assistant', r.value.reply.text);
+      return { ...r, value: { ...r.value, reply: m } };
+    }) as never);
+    nucleo.responder('windi_reject_proposal', (() => {
+      const m = agregar('assistant', 'Entendido, no hice ningún cambio. ¿En qué más te ayudo?');
+      return { ok: true, value: { reply: m } };
     }) as never);
   });
   return { nucleo };
@@ -213,5 +255,120 @@ describe('HE-14-HU01 · Conversar con el agente de IA', () => {
     // ET21: una sola pregunta concreta, sin propuesta.
     expect(conversacion().at(-1)).toBe('¿Qué tarjeta quieres cambiar?');
     expect(screen.queryByRole('button', { name: 'Confirmar' })).toBeNull();
+  });
+});
+
+function propuesta(id: string, titulo: string): WindiProposal {
+  return {
+    id,
+    action: 'edit',
+    items: [{ card_id: `t-${id}`, current: null, changes: { title: titulo }, title: titulo }],
+    warnings: [],
+    state: 'active',
+  };
+}
+
+function proponer(...lista: WindiProposal[]): Respuesta {
+  let i = 0;
+  return () => {
+    const p = lista[Math.min(i, lista.length - 1)] ?? null;
+    i += 1;
+    return {
+      ok: true,
+      value: {
+        reply: {
+          id: 'r',
+          role: 'assistant',
+          text: `Te propongo: ${p?.items[0]?.title}`,
+          sent_at: '',
+          failed: false,
+        },
+        proposal: p,
+      },
+    };
+  };
+}
+
+async function pedir(texto: string) {
+  await escribir(texto);
+  await seleccionar(enviar());
+}
+
+function propuestas() {
+  return screen.queryAllByRole('region', { name: 'Propuesta' });
+}
+
+function boton(region: HTMLElement | undefined, nombre: string) {
+  if (!region) throw new Error('sin propuesta');
+  return within(region).getByRole('button', { name: nombre }) as HTMLButtonElement;
+}
+
+describe('HE-14-HU03 · Confirmar una propuesta del agente de IA', () => {
+  it('HE-14-HU03-CA01 · Confirmar una propuesta', async () => {
+    const { nucleo } = await abrir(proponer(propuesta('p1', 'Informe final')));
+    await pedir('Cambia el título del informe');
+    // ET02: la propuesta con «Confirmar» y «Rechazar».
+    const [p] = propuestas();
+    expect(within(p as HTMLElement).getByText('Informe final')).toBeTruthy();
+    await seleccionar(boton(p, 'Confirmar'));
+    // ET01, ET08: se aplica en el Núcleo y Windi confirma el cambio.
+    expect(llamadasA(nucleo, 'windi_confirm_proposal')).toEqual([{ proposal_id: 'p1' }]);
+    expect(conversacion()).toContain('Listo, ya hice el cambio.');
+    expect(boton(propuestas()[0], 'Confirmar').disabled).toBe(true);
+  });
+
+  it('HE-14-HU03-CA02 · Confirmar una propuesta sin conexión', async () => {
+    await abrir(proponer(propuesta('p1', 'Informe final')), {
+      confirmar: () => ({
+        ok: false,
+        error: { code: 'net.offline', message: 'Se perdió la conexión. No se hizo ningún cambio.' },
+      }),
+    });
+    await pedir('Cambia el título del informe');
+    await seleccionar(boton(propuestas()[0], 'Confirmar'));
+    // ET07: el aviso y «Confirmar» y «Rechazar» deshabilitados; no hay respuesta de cambio hecho.
+    expect(screen.getByText('Se perdió la conexión. No se hizo ningún cambio.')).toBeTruthy();
+    expect(boton(propuestas()[0], 'Confirmar').disabled).toBe(true);
+    expect(boton(propuestas()[0], 'Rechazar').disabled).toBe(true);
+    expect(conversacion()).not.toContain('Listo, ya hice el cambio.');
+  });
+
+  it('HE-14-HU03-CA03 · Propuesta desactualizada', async () => {
+    const explicacion =
+      'No hice ningún cambio porque tus tarjetas cambiaron desde que te lo propuse: «Informe» tiene otro valor en título.';
+    await abrir(proponer(propuesta('p1', 'Informe final')), {
+      confirmar: () => ({
+        ok: true,
+        value: {
+          outcome: 'stale',
+          reply: { id: '', role: 'assistant', text: explicacion, sent_at: '', failed: false },
+          new_proposal: propuesta('p2', 'Informe revisado'),
+        },
+      }),
+    });
+    await pedir('Cambia el título del informe');
+    await seleccionar(boton(propuestas()[0], 'Confirmar'));
+    // ET05, ET06: no se aplica; Windi explica qué cambió y muestra la propuesta nueva con los datos actuales.
+    expect(conversacion()).toContain(explicacion);
+    const [vieja, nueva] = propuestas();
+    expect(within(vieja as HTMLElement).getByText('Descartada')).toBeTruthy();
+    expect(within(nueva as HTMLElement).getByText('Informe revisado')).toBeTruthy();
+    expect(boton(nueva, 'Confirmar').disabled).toBe(false);
+  });
+
+  it('HE-14-HU03-CA04 · Una sola propuesta activa', async () => {
+    const { nucleo } = await abrir(
+      proponer(propuesta('p1', 'Informe final'), propuesta('p2', 'Informe corto')),
+    );
+    await pedir('Cambia el título del informe');
+    await pedir('Mejor algo más corto');
+    // ET03, ET04: la anterior queda «Descartada» con sus opciones deshabilitadas.
+    const [anterior, nueva] = propuestas();
+    expect(within(anterior as HTMLElement).getByText('Descartada')).toBeTruthy();
+    expect(boton(anterior, 'Confirmar').disabled).toBe(true);
+    expect(boton(anterior, 'Rechazar').disabled).toBe(true);
+    await seleccionar(boton(nueva, 'Confirmar'));
+    // Solo se aplica la nueva.
+    expect(llamadasA(nucleo, 'windi_confirm_proposal')).toEqual([{ proposal_id: 'p2' }]);
   });
 });
