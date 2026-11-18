@@ -8,6 +8,7 @@ import type {
   Result,
   ThemeDraftView,
   WidgetItem,
+  WindiMessage,
 } from '@/types';
 import textos from '@/types/messages.es.json';
 
@@ -44,6 +45,9 @@ const COLUMNAS_SIMULADAS: Column[] = [
   is_default: true,
 }));
 const tarjetasSimuladas: Card[] = [];
+// HE-14-HU01: la conversación con Windi del Núcleo simulado. Sin Supabase no hay windi-chat: todo mensaje
+// responde `windi.unavailable` (CA08).
+const conversacionSimulada: WindiMessage[] = [];
 let inicioAutomaticoSimulado = false;
 
 function tableroSimulado(): BoardColumn[] {
@@ -162,6 +166,29 @@ const respuestas: Respuestas = {
   // HE-16-HU02: el simulado guarda el inicio automático en memoria (fuera de Tauri no hay registro de Windows).
   // HE-17-HU02: el simulado no guarda la última pantalla (fuera de Tauri no hay área de notificación).
   app_set_last_screen: () => ({ ok: true, value: null }),
+  windi_get_conversation: () => {
+    if (conversacionSimulada.length === 0) {
+      const text = textos.WINDI_SALUDO.replace('<alias>', 'Prueba');
+      conversacionSimulada.push({
+        id: 'saludo',
+        role: 'assistant',
+        text,
+        sent_at: new Date().toISOString(),
+        failed: false,
+      });
+    }
+    return { ok: true, value: { messages: [...conversacionSimulada], proposal: null, online: true } };
+  },
+  windi_send_message: ({ message }) => {
+    conversacionSimulada.push({
+      id: `m${conversacionSimulada.length}`,
+      role: 'user',
+      text: message,
+      sent_at: new Date().toISOString(),
+      failed: true,
+    });
+    return error({ code: 'windi.unavailable', message: textos.WINDI_NO_DISPONIBLE });
+  },
   // HE-17-HU03: fuera de Tauri no hay programa que cerrar.
   app_exit: () => ({ ok: true, value: null }),
   autostart_get: () => ({ ok: true, value: { enabled: inicioAutomaticoSimulado } }),

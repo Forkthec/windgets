@@ -58,6 +58,8 @@ pub struct Nucleo {
     pub ciclo: tokio::sync::Mutex<()>,
     /// El registro de Windows para el inicio automático (INT-08).
     pub arranque: Box<dyn crate::integracion_con_el_sistema::inicio_automatico::RegistroDeArranque>,
+    /// La conversación con Windi, en memoria mientras la aplicación está abierta (HE-14-HU01-ET14).
+    pub windi: crate::servicio_de_windi::ServicioDeWindi,
 }
 
 impl Nucleo {
@@ -77,6 +79,7 @@ impl Nucleo {
             ciclo: tokio::sync::Mutex::new(()),
             arranque:
                 crate::integracion_con_el_sistema::inicio_automatico::registro_de_la_aplicacion(),
+            windi: crate::servicio_de_windi::ServicioDeWindi::nuevo(),
         }
     }
 }
@@ -1528,6 +1531,7 @@ pub async fn auth_sign_out(
             .await
     };
     nucleo.personalizacion.olvidar_borrador();
+    nucleo.windi.olvidar();
     avisar_wallpaper(&app).await;
     let _ = app.emit(
         "session_changed",
@@ -1765,4 +1769,65 @@ pub async fn layout_edit_cancel(
         value: (),
         result_message: mensaje,
     }))
+}
+
+/// IPC-WIN-01 `windi_get_conversation` (HE-14-HU01): el historial de la sesión, con el saludo la primera vez
+/// (ET07, ET08), y si hay conexión para conversar (ET12).
+#[tauri::command]
+pub fn windi_get_conversation(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> IpcResult<crate::tipos::WindiConversation> {
+    let _ = params;
+    let alias = nucleo
+        .sesion
+        .sesion_guardada()
+        .map(|s| s.alias)
+        .unwrap_or_default();
+    let ahora = chrono::Utc::now().timestamp_millis();
+    correcto(
+        nucleo
+            .windi
+            .conversacion(&alias, nucleo.sesion.auth().en_linea(), ahora),
+    )
+}
+
+/// IPC-WIN-02 `windi_send_message` (HE-14-HU01): envía el mensaje a `windi-chat` (EF-01) con el contexto mínimo y
+/// espera la respuesta como máximo 15 s (RNF-11).
+#[tauri::command]
+pub async fn windi_send_message(
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::WindiSendMessageParams,
+) -> Result<IpcResult<crate::tipos::WindiSendMessageResult>, ()> {
+    let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+        return Ok(leido(Err(crate::servicio_del_planificador::inesperado())));
+    };
+    let user_id = sesion.user_id.to_lowercase();
+    let ahora = chrono::Local::now();
+    let contexto = match crate::servicio_de_windi::contexto(
+        &nucleo.planificador,
+        &user_id,
+        &sesion.alias,
+        ahora.date_naive(),
+        u8::try_from(chrono::Timelike::hour(&ahora)).unwrap_or(0),
+    )
+    .await
+    {
+        Ok(contexto) => contexto,
+        Err(e) => return Ok(leido(Err(e))),
+    };
+    let cliente = nucleo.sesion.auth();
+    Ok(leido(
+        nucleo
+            .windi
+            .enviar(
+                cliente,
+                &sesion.access_token,
+                &params.message,
+                contexto,
+                cliente.en_linea(),
+                chrono::Utc::now().timestamp_millis(),
+            )
+            .await,
+    ))
 }

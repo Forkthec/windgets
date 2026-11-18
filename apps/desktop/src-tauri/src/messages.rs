@@ -280,6 +280,20 @@ pub const NO_PUDIMOS_CAMBIAR_EL_INICIO_AUTOMATICO: &str =
 /// Confirmación al salir con cambios sin guardar en la vista previa (HE-17-HU03-CA02, ET06).
 pub const SALIR_SIN_GUARDAR: &str = "Tienes cambios sin guardar. ¿Deseas salir sin guardarlos?";
 
+// HE-14-HU01 · Conversar por chat de texto con el agente de IA (IPC-WIN-01, IPC-WIN-02).
+
+/// `message.too_long` (HE-14-HU01-CA05; ET04).
+pub const MENSAJE_MUY_LARGO: &str = "Tu mensaje no puede superar los 2000 caracteres.";
+/// `net.offline` y aviso de la pantalla Agente de IA sin conexión (HE-14-HU01-CA07; ET13).
+pub const WINDI_SIN_CONEXION: &str =
+    "El agente de IA necesita conexión a internet. Podrás conversar con él cuando te reconectes.";
+/// `windi.unavailable`: tiempo agotado, cuota o error del servicio (HE-14-HU01-CA08; ET16).
+pub const WINDI_NO_DISPONIBLE: &str = "No pude responder en este momento. Intenta de nuevo.";
+/// Saludo del agente de IA (HE-14-HU01-ET07 a ET10). DUDA: HE-14-HU01 el texto no es literal (ET09 da un
+/// ejemplo). Valor usado: alias, nombre «Windi» y oferta de ayuda, con la personalidad de HE-14-HU02.
+pub const WINDI_SALUDO: &str =
+    "¡Hola, <alias>! Soy Windi. ¿Qué organizamos hoy con tus tarjetas o con la aplicación?";
+
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
     ("SERVICIO_NO_DISPONIBLE", SERVICIO_NO_DISPONIBLE),
@@ -402,6 +416,10 @@ pub const TEXTOS: &[(&str, &str)] = &[
         NO_PUDIMOS_CAMBIAR_EL_INICIO_AUTOMATICO,
     ),
     ("SALIR_SIN_GUARDAR", SALIR_SIN_GUARDAR),
+    ("MENSAJE_MUY_LARGO", MENSAJE_MUY_LARGO),
+    ("WINDI_SIN_CONEXION", WINDI_SIN_CONEXION),
+    ("WINDI_NO_DISPONIBLE", WINDI_NO_DISPONIBLE),
+    ("WINDI_SALUDO", WINDI_SALUDO),
 ];
 
 #[cfg(test)]
