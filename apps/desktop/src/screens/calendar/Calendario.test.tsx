@@ -4,7 +4,7 @@
 import { act, fireEvent, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Card } from '@/types';
-import { abrirPantalla, fijarHoy, llamadasA, screen, tarjeta } from '../kanban/pruebas';
+import { abrirPantalla, EN_PROGRESO, fijarHoy, llamadasA, screen, tarjeta } from '../kanban/pruebas';
 import { Calendario } from './Calendario';
 
 beforeEach(() => {
@@ -256,5 +256,96 @@ describe('HE-10-HU02 · Calendario en vista semanal', () => {
     expect(llamadasA(nucleo, 'calendar_get_week').at(-1)).toEqual({ week_start: '2026-11-09' });
     expect(screen.getByRole('heading', { name: 'Semana del 09/11/2026 al 15/11/2026' })).toBeTruthy();
     expect(semana()).toHaveLength(7);
+  });
+});
+
+function panel() {
+  return screen.getByRole('region', { name: 'Panel del día' });
+}
+
+/** Cada tarjeta del Panel del día como «tipo · título · prioridad · columna». */
+function tarjetasDelPanel() {
+  return within(panel())
+    .queryAllByRole('listitem')
+    .map((li) =>
+      Array.from(li.children)
+        .map((h) => h.textContent)
+        .join(' · '),
+    );
+}
+
+async function seleccionarDia(nombre: string) {
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: nombre }));
+  });
+}
+
+const DEL_VEINTE = [
+  tarjeta({ title: 'Pagar la luz', due_date: '2026-11-20', type: 'reminder', priority: 'high' }),
+  tarjeta({ title: 'Entregar informe', due_date: '2026-11-20', column_id: EN_PROGRESO.id }),
+  tarjeta({ title: 'Otro día', due_date: '2026-11-21' }),
+];
+
+describe('HE-10-HU03 · Tarjetas de un día desde el calendario', () => {
+  it('HE-10-HU03-CA01 · Consultar las tarjetas de un día', async () => {
+    const nucleo = await abrir(DEL_VEINTE);
+    expect(screen.queryByRole('region', { name: 'Panel del día' })).toBeNull();
+    // ET01: seleccionar el día en la vista mensual abre el Panel del día.
+    await seleccionarDia('20');
+    expect(llamadasA(nucleo, 'calendar_get_day')).toEqual([{ date: '2026-11-20' }]);
+    // ET02: la fecha del día y las opciones «Nueva tarjeta» y «Cerrar».
+    expect(within(panel()).getByRole('heading', { name: '20/11/2026' })).toBeTruthy();
+    expect(within(panel()).getByRole('button', { name: 'Nueva tarjeta' })).toBeTruthy();
+    expect(within(panel()).getByRole('button', { name: 'Cerrar' })).toBeTruthy();
+    // ET03: las 2 tarjetas, con tipo, título, prioridad y columna.
+    expect(tarjetasDelPanel()).toEqual([
+      'Recordatorio · Pagar la luz · Alta · Por hacer',
+      'Tarea · Entregar informe · En progreso',
+    ]);
+    // «Cerrar» vuelve al Calendario (T-120).
+    await act(async () => {
+      fireEvent.click(within(panel()).getByRole('button', { name: 'Cerrar' }));
+    });
+    expect(screen.queryByRole('region', { name: 'Panel del día' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Noviembre 2026' })).toBeTruthy();
+  });
+
+  it('HE-10-HU03-CA02 · Consultar las tarjetas de un día desde la vista semanal', async () => {
+    const nucleo = await abrir(DEL_VEINTE);
+    await elegir('Semana');
+    await elegir('Semana siguiente');
+    // ET08: también desde la vista semanal.
+    await seleccionarDia('Viernes 20/11/2026');
+    expect(llamadasA(nucleo, 'calendar_get_day')).toEqual([{ date: '2026-11-20' }]);
+    expect(within(panel()).getByRole('heading', { name: '20/11/2026' })).toBeTruthy();
+    expect(tarjetasDelPanel()).toHaveLength(2);
+    expect(within(panel()).getByRole('button', { name: 'Nueva tarjeta' })).toBeTruthy();
+    expect(within(panel()).getByRole('button', { name: 'Cerrar' })).toBeTruthy();
+  });
+
+  it('HE-10-HU03-CA03 · Día sin tarjetas', async () => {
+    await abrir(DEL_VEINTE);
+    await seleccionarDia('19');
+    // ET04: estado vacío (RT-04).
+    expect(within(panel()).getByText('No tienes tarjetas para este día.')).toBeTruthy();
+    expect(tarjetasDelPanel()).toEqual([]);
+  });
+
+  it('HE-10-HU03-CA04 · Abrir una tarjeta desde el día', async () => {
+    await abrir(DEL_VEINTE);
+    await seleccionarDia('20');
+    // ET05: el Detalle de tarjeta sobre la pantalla Calendario.
+    await act(async () => {
+      fireEvent.click(within(panel()).getByRole('button', { name: 'Entregar informe' }));
+    });
+    const detalle = await screen.findByRole('dialog', { name: 'Detalle de tarjeta' });
+    expect(screen.getByRole('main', { name: 'Calendario' })).toBeTruthy();
+    // ET06: al cerrar el detalle, el Panel del día sigue abierto.
+    await act(async () => {
+      fireEvent.click(within(detalle).getByRole('button', { name: 'Cerrar' }));
+    });
+    expect(screen.queryByRole('dialog', { name: 'Detalle de tarjeta' })).toBeNull();
+    expect(within(panel()).getByRole('heading', { name: '20/11/2026' })).toBeTruthy();
+    expect(tarjetasDelPanel()).toHaveLength(2);
   });
 });

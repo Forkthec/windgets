@@ -250,3 +250,59 @@ fn ca_he_10_hu02_ca06() {
         ("2026-10-04".into(), vec!["Inicio de octubre".into()])
     );
 }
+
+fn panel(servicio: &ServicioDelPlanificador<CalendarioDePrueba>, fecha: &str) -> CalendarDay {
+    bloquear(servicio.dia_del_calendario(USUARIO, fecha)).unwrap()
+}
+
+#[test]
+fn ca_he_10_hu03_ca01() {
+    // HE-10-HU03-CA01 · Las 2 tarjetas del día, cada una con su tipo, su título, su prioridad y su columna (ET03),
+    // en el orden del tablero; las de otro día no.
+    let servicio = con_semilla();
+    let informe = tarjeta_en(
+        &servicio,
+        EN_PROGRESO,
+        "Entregar informe",
+        "2026-11-20",
+        2048.0,
+    );
+    let luz = tarjeta_en(&servicio, POR_HACER, "Pagar la luz", "2026-11-20", 1024.0);
+    tarjeta_en(&servicio, POR_HACER, "Otro día", "2026-11-21", 512.0);
+    bloquear(async {
+        sqlx::query("UPDATE card SET type = 'reminder', priority = 'high' WHERE id = ?")
+            .bind(&luz)
+            .execute(servicio.base().pool().await.unwrap())
+            .await
+            .unwrap();
+    });
+    let dia = panel(&servicio, "2026-11-20");
+    assert_eq!(dia.date.0, "2026-11-20");
+    assert_eq!(
+        dia.cards,
+        [
+            CalendarDayCardsItem {
+                id: Uuid(luz),
+                r#type: CardType::Reminder,
+                title: "Pagar la luz".into(),
+                priority: Some(Priority::High),
+                column_name: "Por hacer".into(),
+            },
+            CalendarDayCardsItem {
+                id: Uuid(informe),
+                r#type: CardType::Task,
+                title: "Entregar informe".into(),
+                priority: None,
+                column_name: "En progreso".into(),
+            },
+        ]
+    );
+}
+
+#[test]
+fn ca_he_10_hu03_ca03() {
+    // HE-10-HU03-CA03 · Día sin tarjetas: la lista vacía; el mensaje lo pone la vista.
+    let servicio = con_semilla();
+    tarjeta_en(&servicio, POR_HACER, "Otro día", "2026-11-21", 1024.0);
+    assert!(panel(&servicio, "2026-11-20").cards.is_empty());
+}

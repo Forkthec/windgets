@@ -15,15 +15,15 @@ use crate::messages;
 use crate::repositorios_y_archivos_locales::{BaseLocal, encolar_cambio};
 use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, instante};
 use crate::tipos::{
-    AgendaBlock, AgendaDay, AppError, BoardColumn, CalendarMonth, CalendarMonthDay,
-    CalendarMonthDayPreviewItem, CalendarWeek, CalendarWeekDay, CalendarWeekDayCardsItem, Card,
-    CardAssignTimeBlockParams, CardCreateParams, CardDetail, CardDetailColumn,
-    CardDetailLabelsItem, CardDetailTimeBlock, CardListBoardResult, CardMoveParams,
-    CardSetCompletedParams, CardType, CardUpdateParams, CatalogItem, Column, ColumnCreateParams,
-    ColumnReorderParams, ColumnRole, ColumnUpdateParams, DateIso, ErrorCode, Hex, Hour, Instant,
-    KanbanWidgetColumn, KanbanWidgetColumnTitlesItem, KanbanWidgetData, Label, LabelCreateParams,
-    Placement, PlacementVariant1, PlacementVariant1Kind, PlannerItem, PlannerSummary, PlannerToday,
-    Priority, ResultMessage, Uuid,
+    AgendaBlock, AgendaDay, AppError, BoardColumn, CalendarDay, CalendarDayCardsItem,
+    CalendarMonth, CalendarMonthDay, CalendarMonthDayPreviewItem, CalendarWeek, CalendarWeekDay,
+    CalendarWeekDayCardsItem, Card, CardAssignTimeBlockParams, CardCreateParams, CardDetail,
+    CardDetailColumn, CardDetailLabelsItem, CardDetailTimeBlock, CardListBoardResult,
+    CardMoveParams, CardSetCompletedParams, CardType, CardUpdateParams, CatalogItem, Column,
+    ColumnCreateParams, ColumnReorderParams, ColumnRole, ColumnUpdateParams, DateIso, ErrorCode,
+    Hex, Hour, Instant, KanbanWidgetColumn, KanbanWidgetColumnTitlesItem, KanbanWidgetData, Label,
+    LabelCreateParams, Placement, PlacementVariant1, PlacementVariant1Kind, PlannerItem,
+    PlannerSummary, PlannerToday, Priority, ResultMessage, Uuid,
 };
 
 /// Clave para ordenar nombres de la A a la Z sin distinguir mayúsculas ni tildes (D-165): «Árbol» va con la A.
@@ -1442,6 +1442,53 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                     }
                 })
                 .collect(),
+        })
+    }
+
+    /// IPC-CARD-14 `calendar_get_day` (HE-10-HU03): todas las tarjetas cuya fecha límite es el día, cada una con
+    /// su tipo, su título, su prioridad y el nombre de su columna (ET03), en el orden del tablero. `can_create`
+    /// es falso en los días anteriores a hoy (HE-10-HU04-CA04).
+    pub async fn dia_del_calendario(
+        &self,
+        user_id: &str,
+        dia: &str,
+    ) -> Result<CalendarDay, AppError> {
+        let fecha_del_dia = fecha(dia).ok_or_else(inesperado)?;
+        let dia = fecha_del_dia.format("%Y-%m-%d").to_string();
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let filas = sqlx::query(&format!(
+            "{SELECT_TARJETA} WHERE c.user_id = ? AND c.due_date = ? ORDER BY c.position, c.created_at"
+        ))
+        .bind(user_id)
+        .bind(&dia)
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        let columnas: HashMap<String, String> = self
+            .columnas(user_id)
+            .await?
+            .into_iter()
+            .map(|c| (c.id.0, c.name))
+            .collect();
+        let hoy = self.calendario.hoy();
+        let mut cards = Vec::with_capacity(filas.len());
+        for fila in &filas {
+            let tarjeta = tarjeta_de_fila(fila, Vec::new(), hoy).map_err(de_sqlx)?;
+            cards.push(CalendarDayCardsItem {
+                column_name: columnas
+                    .get(&tarjeta.column_id.0)
+                    .cloned()
+                    .unwrap_or_default(),
+                id: tarjeta.id,
+                r#type: tarjeta.r#type,
+                title: tarjeta.title,
+                priority: tarjeta.priority,
+            });
+        }
+        Ok(CalendarDay {
+            date: DateIso(dia),
+            cards,
+            can_create: fecha_del_dia >= hoy,
         })
     }
 

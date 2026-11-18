@@ -4,13 +4,14 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type { ComponentType } from 'react';
 import { vi } from 'vitest';
 import type { Escuchar } from '@/ipc/eventos';
-import { mesDelCalendario, semanaDelCalendario } from '@/ipc/calendarioSimulado';
+import { diaDelCalendario, mesDelCalendario, semanaDelCalendario } from '@/ipc/calendarioSimulado';
 import type {
   AgendaDay,
   BoardColumn,
   Card,
   CardCreateParams,
   CardDetail,
+  CalendarDayParams,
   CalendarMonthParams,
   CalendarWeekParams,
   CardMoveParams,
@@ -251,6 +252,14 @@ export function crearNucleo(tarjetas: Card[] = []): {
       (params) => {
         const { week_start } = params as CalendarWeekParams;
         return { ok: true, value: semanaDelCalendario(nucleo.tarjetas, week_start) };
+      },
+    ],
+    // HE-10-HU03: las tarjetas del Panel del día (IPC-CARD-14).
+    [
+      'calendar_get_day',
+      (params) => {
+        const { date } = params as CalendarDayParams;
+        return { ok: true, value: diaDelCalendario(nucleo.tarjetas, nucleo.columnas, date, HOY) };
       },
     ],
     ['column_list', () => ({ ok: true, value: tablero().map((c) => c.column) })],

@@ -1,4 +1,4 @@
-import type { CalendarMonth, CalendarWeek, Card } from '@/types';
+import type { CalendarDay, CalendarMonth, CalendarWeek, Card, Column } from '@/types';
 
 // El Calendario del Núcleo simulado y del Núcleo de prueba, con las reglas de IPC-CARD-12 (servicio del
 // planificador, `mes_del_calendario`): todos los días del mes, hasta 3 títulos por día en el orden del tablero
@@ -43,4 +43,27 @@ export function semanaDelCalendario(tarjetas: readonly Card[], week_start: strin
       return { date, cards, overdue_count: 0, pending_count: 0, has_overdue: false, has_pending: false };
     }),
   };
+}
+
+/**
+ * IPC-CARD-14 (`dia_del_calendario`): las tarjetas cuya fecha límite es `date`, con su tipo, título, prioridad y
+ * columna, en el orden del tablero (HE-10-HU03-ET03). `can_create` es falso antes de `hoy` (HE-10-HU04-CA04).
+ */
+export function diaDelCalendario(
+  tarjetas: readonly Card[],
+  columnas: readonly Column[],
+  date: string,
+  hoy: string,
+): CalendarDay {
+  const cards = tarjetas
+    .filter((t) => t.due_date === date)
+    .sort((a, b) => a.position - b.position)
+    .map((t) => ({
+      id: t.id,
+      type: t.type,
+      title: t.title,
+      priority: t.priority,
+      column_name: columnas.find((c) => c.id === t.column_id)?.name ?? '',
+    }));
+  return { date, cards, can_create: date >= hoy };
 }

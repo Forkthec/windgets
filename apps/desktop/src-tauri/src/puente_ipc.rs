@@ -42,7 +42,8 @@ use crate::tipos::{
     WidgetSetActiveParams,
 };
 use crate::tipos::{
-    CalendarMonth, CalendarMonthParams, CalendarWeek, CalendarWeekParams, ThemeApplyParams,
+    CalendarDay, CalendarDayParams, CalendarMonth, CalendarMonthParams, CalendarWeek,
+    CalendarWeekParams, ThemeApplyParams,
 };
 use crate::tipos::{
     EventMapLayoutChanged, LayoutEditMoveParams, LayoutEditOpenResult, LayoutEditRectResult,
@@ -1810,6 +1811,23 @@ pub async fn calendar_get_week(
             nucleo
                 .planificador
                 .semana_del_calendario(&user_id, &params.week_start.0)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-CARD-14 `calendar_get_day` (HE-10-HU03): las tarjetas del Panel del día.
+#[tauri::command]
+pub async fn calendar_get_day(
+    nucleo: State<'_, Nucleo>,
+    params: CalendarDayParams,
+) -> Result<IpcResult<CalendarDay>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .dia_del_calendario(&user_id, &params.date.0)
                 .await
         }
         Err(e) => Err(e),

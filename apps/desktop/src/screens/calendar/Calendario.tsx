@@ -3,7 +3,9 @@ import type { CalendarMonth, CalendarMonthDay, CalendarWeek, CalendarWeekDay } f
 import { Boton } from '@/ui/Boton/Boton';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { fechaIso, fechaVisible, hoy } from '../tarjeta/fechas';
+import { useVentanasDeTarjeta } from '../tarjeta/useVentanasDeTarjeta';
 import { DIAS, nombreDelMes, semanasDelMes } from './mes';
+import { PanelDelDia } from './PanelDelDia';
 
 // P-CAL-01 Calendario (Menú principal > Planificador > Calendario). Al abrir muestra la vista mensual del mes
 // actual (HE-10-HU01-ET01); «Semana» cambia a la vista semanal (HE-10-HU02). Los días y sus tarjetas vienen del
@@ -37,10 +39,12 @@ function DiaDelMes({
   numero,
   dia,
   esHoy,
+  alSeleccionar,
 }: {
   numero: number;
   dia: CalendarMonthDay | undefined;
   esHoy: boolean;
+  alSeleccionar: () => void;
 }) {
   return (
     <td
@@ -48,7 +52,10 @@ function DiaDelMes({
       className={`wg-calendario__dia${esHoy ? ' wg-calendario__dia--hoy' : ''}`}
       aria-current={esHoy ? 'date' : undefined}
     >
-      <span className="wg-calendario__numero">{numero}</span>
+      {/* HE-10-HU03-ET01: seleccionar el día abre el Panel del día. */}
+      <button type="button" className="wg-calendario__numero" onClick={alSeleccionar}>
+        {numero}
+      </button>
       {dia && dia.preview.length > 0 && (
         <ul className="wg-calendario__tarjetas">
           {dia.preview.map((t) => (
@@ -64,14 +71,29 @@ function DiaDelMes({
 }
 
 /** Un día de la vista semanal: todas sus tarjetas, con la hora de inicio de su bloque (HE-10-HU02-ET03, ET05). */
-function DiaDeLaSemana({ nombre, dia, esHoy }: { nombre: string; dia: CalendarWeekDay; esHoy: boolean }) {
+function DiaDeLaSemana({
+  nombre,
+  dia,
+  esHoy,
+  alSeleccionar,
+}: {
+  nombre: string;
+  dia: CalendarWeekDay;
+  esHoy: boolean;
+  alSeleccionar: () => void;
+}) {
   return (
     <section
       className={`wg-calendario__dia${esHoy ? ' wg-calendario__dia--hoy' : ''}`}
       aria-label={`${nombre} ${fechaVisible(dia.date)}`}
       aria-current={esHoy ? 'date' : undefined}
     >
-      <h3 className="wg-calendario__numero">{`${nombre} ${fechaVisible(dia.date)}`}</h3>
+      <h3>
+        {/* HE-10-HU03-ET08: también desde la vista semanal. */}
+        <button type="button" className="wg-calendario__numero" onClick={alSeleccionar}>
+          {`${nombre} ${fechaVisible(dia.date)}`}
+        </button>
+      </h3>
       {dia.cards.length > 0 && (
         <ul className="wg-calendario__tarjetas">
           {dia.cards.map(({ card, start_hour }) => (
@@ -93,6 +115,8 @@ export function Calendario() {
   const [vista, setVista] = useState<Vista>(() => mesDe(hoy()));
   const [datos, setDatos] = useState<Datos | null>(null);
   const [hoyEs, setHoyEs] = useState(() => fechaIso(hoy()));
+  // P-CAL-02: el día del Panel del día abierto, o ninguno (HE-10-HU03).
+  const [diaAbierto, setDiaAbierto] = useState<string | null>(null);
 
   const leer = useCallback(async () => {
     if (vista.tipo === 'mes') {
@@ -115,6 +139,9 @@ export function Calendario() {
       dejarDia();
     };
   }, [escuchar, leer]);
+
+  // Detalle de tarjeta sobre el Calendario (T-090, HE-10-HU03-ET05).
+  const tarjetas = useVentanasDeTarjeta(useCallback(() => void leer(), [leer]));
 
   /** «Mes anterior» o «Semana anterior» (n = -1), y «Mes siguiente» o «Semana siguiente» (n = 1). */
   const mover = (n: number) =>
@@ -161,15 +188,31 @@ export function Calendario() {
           mes={datos?.tipo === 'mes' ? datos.mes : null}
           hoyEs={hoyEs}
           titulo={titulo}
+          alSeleccionar={setDiaAbierto}
         />
       )}
       {vista.tipo === 'semana' && datos?.tipo === 'semana' && (
         <div className="wg-calendario-semana" aria-label={titulo}>
           {datos.semana.days.map((dia, i) => (
-            <DiaDeLaSemana key={dia.date} nombre={DIAS[i] ?? ''} dia={dia} esHoy={dia.date === hoyEs} />
+            <DiaDeLaSemana
+              key={dia.date}
+              nombre={DIAS[i] ?? ''}
+              dia={dia}
+              esHoy={dia.date === hoyEs}
+              alSeleccionar={() => setDiaAbierto(dia.date)}
+            />
           ))}
         </div>
       )}
+      {diaAbierto && (
+        <PanelDelDia
+          fecha={diaAbierto}
+          alAbrirTarjeta={tarjetas.abrirDetalle}
+          alNuevaTarjeta={() => undefined}
+          alCerrar={() => setDiaAbierto(null)}
+        />
+      )}
+      {tarjetas.ventanas}
     </main>
   );
 }
@@ -179,9 +222,10 @@ interface VistaMensualProps {
   mes: CalendarMonth | null;
   hoyEs: string;
   titulo: string;
+  alSeleccionar: (fecha: string) => void;
 }
 
-function VistaMensual({ vista, mes, hoyEs, titulo }: VistaMensualProps) {
+function VistaMensual({ vista, mes, hoyEs, titulo, alSeleccionar }: VistaMensualProps) {
   const porFecha = new Map((mes?.days ?? []).map((d) => [d.date, d]));
   return (
     <table className="wg-calendario" aria-label={titulo}>
@@ -200,7 +244,15 @@ function VistaMensual({ vista, mes, hoyEs, titulo }: VistaMensualProps) {
             {semana.map((numero, j) => {
               if (numero === null) return <td key={j} />;
               const fecha = fechaIso(new Date(vista.anio, vista.mes, numero));
-              return <DiaDelMes key={j} numero={numero} dia={porFecha.get(fecha)} esHoy={fecha === hoyEs} />;
+              return (
+                <DiaDelMes
+                  key={j}
+                  numero={numero}
+                  dia={porFecha.get(fecha)}
+                  esHoy={fecha === hoyEs}
+                  alSeleccionar={() => alSeleccionar(fecha)}
+                />
+              );
             })}
           </tr>
         ))}

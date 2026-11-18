@@ -10,7 +10,8 @@ import type {
   WidgetItem,
 } from '@/types';
 import textos from '@/types/messages.es.json';
-import { mesDelCalendario, semanaDelCalendario } from './calendarioSimulado';
+import { diaDelCalendario, mesDelCalendario, semanaDelCalendario } from './calendarioSimulado';
+import { fechaIso } from '@/screens/tarjeta/fechas';
 
 // Núcleo simulado para `pnpm --filter desktop dev`: «solo las vistas en el navegador, con IPC simulado»
 // (convenciones.md, «Ejecutar en desarrollo»). Cada HU (historia de usuario) define aquí la respuesta de su
@@ -267,6 +268,11 @@ const respuestas: Respuestas = {
   calendar_get_week: ({ week_start }) => ({
     ok: true,
     value: semanaDelCalendario(tarjetasSimuladas, week_start),
+  }),
+  // HE-10-HU03: las tarjetas del Panel del día (IPC-CARD-14).
+  calendar_get_day: ({ date }) => ({
+    ok: true,
+    value: diaDelCalendario(tarjetasSimuladas, COLUMNAS_SIMULADAS, date, fechaIso(new Date())),
   }),
   column_list: () => ({ ok: true, value: tableroSimulado().map((c) => c.column) }),
   // HE-09-HU05: el orden completo de las columnas.
