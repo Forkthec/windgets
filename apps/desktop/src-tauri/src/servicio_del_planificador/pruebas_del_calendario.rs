@@ -1,4 +1,5 @@
-//! Pruebas del Núcleo del Calendario (HE-10): vista mensual (IPC-CARD-12). Hoy es el 14/11/2026.
+//! Pruebas del Núcleo del Calendario (HE-10): vista mensual (IPC-CARD-12) y vista semanal (IPC-CARD-13). Hoy es
+//! el sábado 14/11/2026.
 
 use super::pruebas::*;
 use super::*;
@@ -105,5 +106,147 @@ fn ca_he_10_hu01_ca06() {
             .days
             .iter()
             .all(|d| d.preview.is_empty() && d.extra_count == 0)
+    );
+}
+
+fn semana(servicio: &ServicioDelPlanificador<CalendarioDePrueba>, lunes: &str) -> CalendarWeek {
+    bloquear(servicio.semana_del_calendario(USUARIO, lunes)).unwrap()
+}
+
+/// Los títulos de cada día de la semana, con la hora de inicio de su bloque si la tiene.
+fn dias(semana: &CalendarWeek) -> Vec<(String, Vec<String>)> {
+    semana
+        .days
+        .iter()
+        .map(|d| {
+            let tarjetas = d
+                .cards
+                .iter()
+                .map(|c| match &c.start_hour {
+                    Some(h) => format!("{} {:02}:00", c.card.title, h.0),
+                    None => c.card.title.clone(),
+                })
+                .collect();
+            (d.date.0.clone(), tarjetas)
+        })
+        .collect()
+}
+
+#[test]
+fn ca_he_10_hu02_ca01() {
+    // HE-10-HU02-CA01 · Abrir la vista semanal: los 7 días desde el lunes (ET02), cada uno con todas sus
+    // tarjetas, sin límite de 3 (ET03).
+    let servicio = con_semilla();
+    for i in 1..=5 {
+        tarjeta_en(
+            &servicio,
+            POR_HACER,
+            &format!("Tarjeta {i}"),
+            "2026-11-11",
+            f64::from(i) * 1024.0,
+        );
+    }
+    tarjeta_en(&servicio, HECHO, "Pagar la luz", "2026-11-15", 1024.0);
+    tarjeta_en(&servicio, POR_HACER, "Otra semana", "2026-11-16", 9000.0);
+    let s = semana(&servicio, "2026-11-09");
+    let fechas: Vec<_> = s.days.iter().map(|d| d.date.0.as_str()).collect();
+    assert_eq!(
+        fechas,
+        [
+            "2026-11-09",
+            "2026-11-10",
+            "2026-11-11",
+            "2026-11-12",
+            "2026-11-13",
+            "2026-11-14",
+            "2026-11-15"
+        ]
+    );
+    let dias = dias(&s);
+    assert_eq!(dias[2].1.len(), 5);
+    assert_eq!(dias[6].1, ["Pagar la luz"]);
+    assert_eq!(
+        dias.iter().map(|d| d.1.len()).sum::<usize>(),
+        6,
+        "solo las tarjetas de esa semana"
+    );
+}
+
+#[test]
+fn ca_he_10_hu02_ca02() {
+    // HE-10-HU02-CA02 · Tarjeta con bloque horario: «Entregar informe» en el bloque de 14:00 a 15:00 muestra la
+    // hora de inicio de su bloque, 14:00 (ET05), y va antes de las que no tienen bloque.
+    let servicio = con_semilla();
+    tarjeta_en(&servicio, POR_HACER, "Pagar la luz", "2026-11-12", 1024.0);
+    let id = tarjeta_en(
+        &servicio,
+        POR_HACER,
+        "Entregar informe",
+        "2026-11-12",
+        2048.0,
+    );
+    con_bloque(&servicio, &id, "2026-11-12", 14);
+    let s = semana(&servicio, "2026-11-09");
+    assert_eq!(dias(&s)[3].1, ["Entregar informe 14:00", "Pagar la luz"]);
+    assert_eq!(s.days[3].cards[0].start_hour, Some(Hour(14)));
+    assert_eq!(s.days[3].cards[1].start_hour, None);
+}
+
+#[test]
+fn ca_he_10_hu02_ca03() {
+    // HE-10-HU02-CA03 · Navegar a la semana siguiente: la del lunes 16 al domingo 22.
+    let servicio = con_semilla();
+    tarjeta_en(
+        &servicio,
+        POR_HACER,
+        "Entregar informe",
+        "2026-11-22",
+        1024.0,
+    );
+    let dias = dias(&semana(&servicio, "2026-11-16"));
+    assert_eq!(dias[0].0, "2026-11-16");
+    assert_eq!(
+        dias[6],
+        ("2026-11-22".into(), vec!["Entregar informe".into()])
+    );
+}
+
+#[test]
+fn ca_he_10_hu02_ca04() {
+    // HE-10-HU02-CA04 · Navegar a la semana anterior: la del lunes 2 al domingo 8.
+    let servicio = con_semilla();
+    tarjeta_en(&servicio, POR_HACER, "Informe", "2026-11-02", 1024.0);
+    let dias = dias(&semana(&servicio, "2026-11-02"));
+    assert_eq!(dias[0], ("2026-11-02".into(), vec!["Informe".into()]));
+    assert_eq!(dias[6].0, "2026-11-08");
+}
+
+#[test]
+fn ca_he_10_hu02_ca06() {
+    // HE-10-HU02-CA06 · Una semana que cruza dos meses: del lunes 28 de septiembre al domingo 4 de octubre, con
+    // las tarjetas de ambos meses.
+    let servicio = con_semilla();
+    tarjeta_en(
+        &servicio,
+        POR_HACER,
+        "Fin de septiembre",
+        "2026-09-30",
+        1024.0,
+    );
+    tarjeta_en(
+        &servicio,
+        POR_HACER,
+        "Inicio de octubre",
+        "2026-10-04",
+        2048.0,
+    );
+    let dias = dias(&semana(&servicio, "2026-09-28"));
+    assert_eq!(
+        dias[2],
+        ("2026-09-30".into(), vec!["Fin de septiembre".into()])
+    );
+    assert_eq!(
+        dias[6],
+        ("2026-10-04".into(), vec!["Inicio de octubre".into()])
     );
 }

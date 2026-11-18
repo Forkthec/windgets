@@ -54,6 +54,7 @@ pub fn run() {
             puente_ipc::card_list_board,
             puente_ipc::kanban_widget_get,
             puente_ipc::calendar_get_month,
+            puente_ipc::calendar_get_week,
             puente_ipc::column_list,
             puente_ipc::card_get,
             puente_ipc::card_update,

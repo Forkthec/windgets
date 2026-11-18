@@ -16,13 +16,14 @@ use crate::repositorios_y_archivos_locales::{BaseLocal, encolar_cambio};
 use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, instante};
 use crate::tipos::{
     AgendaBlock, AgendaDay, AppError, BoardColumn, CalendarMonth, CalendarMonthDay,
-    CalendarMonthDayPreviewItem, Card, CardAssignTimeBlockParams, CardCreateParams, CardDetail,
-    CardDetailColumn, CardDetailLabelsItem, CardDetailTimeBlock, CardListBoardResult,
-    CardMoveParams, CardSetCompletedParams, CardType, CardUpdateParams, CatalogItem, Column,
-    ColumnCreateParams, ColumnReorderParams, ColumnRole, ColumnUpdateParams, DateIso, ErrorCode,
-    Hex, Hour, Instant, KanbanWidgetColumn, KanbanWidgetColumnTitlesItem, KanbanWidgetData, Label,
-    LabelCreateParams, Placement, PlacementVariant1, PlacementVariant1Kind, PlannerItem,
-    PlannerSummary, PlannerToday, Priority, ResultMessage, Uuid,
+    CalendarMonthDayPreviewItem, CalendarWeek, CalendarWeekDay, CalendarWeekDayCardsItem, Card,
+    CardAssignTimeBlockParams, CardCreateParams, CardDetail, CardDetailColumn,
+    CardDetailLabelsItem, CardDetailTimeBlock, CardListBoardResult, CardMoveParams,
+    CardSetCompletedParams, CardType, CardUpdateParams, CatalogItem, Column, ColumnCreateParams,
+    ColumnReorderParams, ColumnRole, ColumnUpdateParams, DateIso, ErrorCode, Hex, Hour, Instant,
+    KanbanWidgetColumn, KanbanWidgetColumnTitlesItem, KanbanWidgetData, Label, LabelCreateParams,
+    Placement, PlacementVariant1, PlacementVariant1Kind, PlannerItem, PlannerSummary, PlannerToday,
+    Priority, ResultMessage, Uuid,
 };
 
 /// Clave para ordenar nombres de la A a la Z sin distinguir mayúsculas ni tildes (D-165): «Árbol» va con la A.
@@ -1375,6 +1376,65 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                         date: DateIso(date),
                         preview,
                         extra_count: i64::try_from(resto.len()).unwrap_or(i64::MAX),
+                        overdue_count: 0,
+                        pending_count: 0,
+                        has_overdue: false,
+                        has_pending: false,
+                    }
+                })
+                .collect(),
+        })
+    }
+
+    /// IPC-CARD-13 `calendar_get_week` (HE-10-HU02): los 7 días desde `week_start` (el lunes, ET02), cada uno con
+    /// todas las tarjetas cuya fecha límite es ese día (ET03) y la hora de inicio de su bloque horario si lo
+    /// tiene (ET05). Los conteos de vencidas y pendientes son de HE-10-HU05.
+    /// DUDA: HE-10-HU02 no está definido en qué día va una tarjeta con bloque horario ni el orden del día. Valor
+    /// usado: el día de su fecha límite, como en la vista mensual; primero las de bloque por hora y después las
+    /// demás en el orden del tablero (docs/DUDAS.md).
+    pub async fn semana_del_calendario(
+        &self,
+        user_id: &str,
+        lunes: &str,
+    ) -> Result<CalendarWeek, AppError> {
+        let lunes = fecha(lunes).ok_or_else(inesperado)?;
+        let fin = lunes + chrono::Days::new(7);
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let filas = sqlx::query(&format!(
+            "{SELECT_TARJETA} WHERE c.user_id = ? AND c.due_date >= ? AND c.due_date < ? \
+             ORDER BY c.due_date, c.scheduled_hour IS NULL, c.scheduled_hour, c.position, c.created_at"
+        ))
+        .bind(user_id)
+        .bind(lunes.format("%Y-%m-%d").to_string())
+        .bind(fin.format("%Y-%m-%d").to_string())
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        let etiquetas = self.etiquetas_por_tarjeta(user_id).await?;
+        let hoy = self.calendario.hoy();
+        let mut por_dia: HashMap<String, Vec<CalendarWeekDayCardsItem>> = HashMap::new();
+        for fila in &filas {
+            let id: String = fila.try_get("id").map_err(de_sqlx)?;
+            let tarjeta =
+                tarjeta_de_fila(fila, etiquetas.get(&id).cloned().unwrap_or_default(), hoy)
+                    .map_err(de_sqlx)?;
+            por_dia
+                .entry(tarjeta.due_date.0.clone())
+                .or_default()
+                .push(CalendarWeekDayCardsItem {
+                    start_hour: tarjeta.scheduled_hour.clone(),
+                    card: tarjeta,
+                });
+        }
+        Ok(CalendarWeek {
+            days: lunes
+                .iter_days()
+                .take(7)
+                .map(|d| {
+                    let date = d.format("%Y-%m-%d").to_string();
+                    CalendarWeekDay {
+                        cards: por_dia.remove(&date).unwrap_or_default(),
+                        date: DateIso(date),
                         overdue_count: 0,
                         pending_count: 0,
                         has_overdue: false,

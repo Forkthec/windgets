@@ -4,7 +4,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type { ComponentType } from 'react';
 import { vi } from 'vitest';
 import type { Escuchar } from '@/ipc/eventos';
-import { mesDelCalendario } from '@/ipc/calendarioSimulado';
+import { mesDelCalendario, semanaDelCalendario } from '@/ipc/calendarioSimulado';
 import type {
   AgendaDay,
   BoardColumn,
@@ -12,6 +12,7 @@ import type {
   CardCreateParams,
   CardDetail,
   CalendarMonthParams,
+  CalendarWeekParams,
   CardMoveParams,
   CardSetCompletedParams,
   CardUpdateParams,
@@ -242,6 +243,14 @@ export function crearNucleo(tarjetas: Card[] = []): {
       (params) => {
         const { year, month } = params as CalendarMonthParams;
         return { ok: true, value: mesDelCalendario(nucleo.tarjetas, year, month) };
+      },
+    ],
+    // HE-10-HU02: los 7 días de la semana con todas sus tarjetas (IPC-CARD-13).
+    [
+      'calendar_get_week',
+      (params) => {
+        const { week_start } = params as CalendarWeekParams;
+        return { ok: true, value: semanaDelCalendario(nucleo.tarjetas, week_start) };
       },
     ],
     ['column_list', () => ({ ok: true, value: tablero().map((c) => c.column) })],

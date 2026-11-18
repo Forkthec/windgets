@@ -130,3 +130,131 @@ describe('HE-10-HU01 · Calendario en vista mensual', () => {
     expect(document.querySelectorAll('.wg-calendario__mas')).toHaveLength(0);
   });
 });
+
+/** Los días de la vista semanal: «<día> <fecha>» y sus tarjetas como «hora · título» o «título». */
+function semana() {
+  return Array.from(document.querySelectorAll('.wg-calendario-semana > section')).map((dia) => ({
+    dia: dia.getAttribute('aria-label'),
+    tarjetas: within(dia as HTMLElement)
+      .queryAllByRole('listitem')
+      .map((li) =>
+        Array.from(li.children)
+          .map((s) => s.textContent)
+          .join(' · '),
+      ),
+  }));
+}
+
+describe('HE-10-HU02 · Calendario en vista semanal', () => {
+  it('HE-10-HU02-CA01 · Abrir la vista semanal', async () => {
+    const nucleo = await abrir([
+      ...[1, 2, 3, 4, 5].map((i) => tarjeta({ title: `Tarjeta ${i}`, due_date: '2026-11-11' })),
+      tarjeta({ title: 'Pagar la luz', due_date: '2026-11-15' }),
+      tarjeta({ title: 'Otra semana', due_date: '2026-11-16' }),
+    ]);
+    await elegir('Semana');
+    // ET01: la semana actual (el lunes 9); ET02: de lunes a domingo.
+    expect(llamadasA(nucleo, 'calendar_get_week')).toEqual([{ week_start: '2026-11-09' }]);
+    expect(screen.getByRole('heading', { name: 'Semana del 09/11/2026 al 15/11/2026' })).toBeTruthy();
+    const dias = semana();
+    expect(dias.map((d) => d.dia)).toEqual([
+      'Lunes 09/11/2026',
+      'Martes 10/11/2026',
+      'Miércoles 11/11/2026',
+      'Jueves 12/11/2026',
+      'Viernes 13/11/2026',
+      'Sábado 14/11/2026',
+      'Domingo 15/11/2026',
+    ]);
+    // ET03: cada día con todas sus tarjetas, sin «+N más».
+    expect(dias[2]?.tarjetas).toEqual(['Tarjeta 1', 'Tarjeta 2', 'Tarjeta 3', 'Tarjeta 4', 'Tarjeta 5']);
+    expect(dias[6]?.tarjetas).toEqual(['Pagar la luz']);
+    expect(document.querySelectorAll('.wg-calendario__mas')).toHaveLength(0);
+    // El día actual va resaltado.
+    expect(screen.getByRole('region', { current: 'date' }).getAttribute('aria-label')).toBe(
+      'Sábado 14/11/2026',
+    );
+    // ET04: las opciones de la vista semanal.
+    for (const opcion of ['Semana anterior', 'Semana siguiente', 'Hoy', 'Mes']) {
+      expect(screen.getByRole('button', { name: opcion })).toBeTruthy();
+    }
+    expect(screen.queryByRole('button', { name: 'Mes anterior' })).toBeNull();
+  });
+
+  it('HE-10-HU02-CA02 · Tarjeta con bloque horario', async () => {
+    await abrir([
+      tarjeta({ title: 'Pagar la luz', due_date: '2026-11-12' }),
+      tarjeta({
+        title: 'Entregar informe',
+        due_date: '2026-11-12',
+        scheduled_date: '2026-11-12',
+        scheduled_hour: 14,
+      }),
+    ]);
+    await elegir('Semana');
+    // ET05: la hora de inicio de su bloque, 14:00.
+    expect(semana()[3]?.tarjetas).toEqual(['14:00 · Entregar informe', 'Pagar la luz']);
+  });
+
+  it('HE-10-HU02-CA03 · Navegar a la semana siguiente', async () => {
+    const nucleo = await abrir([tarjeta({ title: 'Entregar informe', due_date: '2026-11-22' })]);
+    await elegir('Semana');
+    await elegir('Semana siguiente');
+    // ET06: de a una semana.
+    expect(llamadasA(nucleo, 'calendar_get_week').at(-1)).toEqual({ week_start: '2026-11-16' });
+    const dias = semana();
+    expect(dias[0]?.dia).toBe('Lunes 16/11/2026');
+    expect(dias[6]).toEqual({ dia: 'Domingo 22/11/2026', tarjetas: ['Entregar informe'] });
+  });
+
+  it('HE-10-HU02-CA04 · Navegar a la semana anterior', async () => {
+    const nucleo = await abrir([tarjeta({ title: 'Informe', due_date: '2026-11-02' })]);
+    await elegir('Semana');
+    await elegir('Semana anterior');
+    expect(llamadasA(nucleo, 'calendar_get_week').at(-1)).toEqual({ week_start: '2026-11-02' });
+    const dias = semana();
+    expect(dias[0]).toEqual({ dia: 'Lunes 02/11/2026', tarjetas: ['Informe'] });
+    expect(dias[6]?.dia).toBe('Domingo 08/11/2026');
+  });
+
+  it('HE-10-HU02-CA05 · Cambiar a la vista mensual', async () => {
+    const nucleo = await abrir();
+    await elegir('Semana');
+    for (let i = 0; i < 3; i += 1) await elegir('Semana siguiente');
+    expect(screen.getByRole('heading', { name: 'Semana del 30/11/2026 al 06/12/2026' })).toBeTruthy();
+    // ET07: el mes que contiene el lunes de la semana consultada.
+    await elegir('Mes');
+    expect(llamadasA(nucleo, 'calendar_get_month').at(-1)).toEqual({ year: 2026, month: 11 });
+    expect(screen.getByRole('heading', { name: 'Noviembre 2026' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Mes siguiente' })).toBeTruthy();
+  });
+
+  it('HE-10-HU02-CA06 · Cambiar a la vista mensual con una semana que cruza dos meses', async () => {
+    await abrir([
+      tarjeta({ title: 'Fin de septiembre', due_date: '2026-09-30' }),
+      tarjeta({ title: 'Inicio de octubre', due_date: '2026-10-04' }),
+    ]);
+    await elegir('Semana');
+    for (let i = 0; i < 6; i += 1) await elegir('Semana anterior');
+    expect(screen.getByRole('heading', { name: 'Semana del 28/09/2026 al 04/10/2026' })).toBeTruthy();
+    expect(semana()[2]?.tarjetas).toEqual(['Fin de septiembre']);
+    expect(semana()[6]?.tarjetas).toEqual(['Inicio de octubre']);
+    // ET09 (D-168): septiembre, el mes del lunes de esa semana.
+    await elegir('Mes');
+    expect(screen.getByRole('heading', { name: 'Septiembre 2026' })).toBeTruthy();
+    expect(contenido(30).titulos).toEqual(['Fin de septiembre']);
+  });
+
+  it('HE-10-HU02-CA07 · Ir a la semana actual', async () => {
+    const nucleo = await abrir();
+    await elegir('Semana');
+    await elegir('Semana anterior');
+    await elegir('Semana anterior');
+    expect(screen.getByRole('heading', { name: 'Semana del 26/10/2026 al 01/11/2026' })).toBeTruthy();
+    // ET08: «Hoy» muestra la semana actual.
+    await elegir('Hoy');
+    expect(llamadasA(nucleo, 'calendar_get_week').at(-1)).toEqual({ week_start: '2026-11-09' });
+    expect(screen.getByRole('heading', { name: 'Semana del 09/11/2026 al 15/11/2026' })).toBeTruthy();
+    expect(semana()).toHaveLength(7);
+  });
+});

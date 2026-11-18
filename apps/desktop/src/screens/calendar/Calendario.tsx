@@ -1,34 +1,50 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { CalendarMonth, CalendarMonthDay } from '@/types';
+import type { CalendarMonth, CalendarMonthDay, CalendarWeek, CalendarWeekDay } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
-import { fechaIso, hoy } from '../tarjeta/fechas';
+import { fechaIso, fechaVisible, hoy } from '../tarjeta/fechas';
 import { DIAS, nombreDelMes, semanasDelMes } from './mes';
 
-// P-CAL-01 Calendario (Menú principal > Planificador > Calendario; HE-10-HU01). Al abrir muestra la vista
-// mensual del mes actual (ET01). Los días y los títulos de sus tarjetas vienen del Núcleo (IPC-CARD-12); la
-// pantalla se vuelve a leer con cards_changed y al cambiar el día.
+// P-CAL-01 Calendario (Menú principal > Planificador > Calendario). Al abrir muestra la vista mensual del mes
+// actual (HE-10-HU01-ET01); «Semana» cambia a la vista semanal (HE-10-HU02). Los días y sus tarjetas vienen del
+// Núcleo (IPC-CARD-12 y 13); la pantalla se vuelve a leer con cards_changed y al cambiar el día.
+// DUDA: HE-10-HU02 el encabezado de la vista semanal y de cada día no está definido. Valor usado: «Semana del
+// <lunes> al <domingo>» y «<día> <DD/MM/AAAA>» (docs/DUDAS.md).
 
-/** El mes que se muestra: año y mes de 0 (enero) a 11. */
-interface Mes {
-  anio: number;
-  mes: number;
+/** Lo que se muestra: un mes (año y mes de 0 a 11) o una semana (su lunes). */
+type Vista = { tipo: 'mes'; anio: number; mes: number } | { tipo: 'semana'; lunes: Date };
+
+function mesDe(fecha: Date): Vista {
+  return { tipo: 'mes', anio: fecha.getFullYear(), mes: fecha.getMonth() };
 }
 
-function mesDe(fecha: Date): Mes {
-  return { anio: fecha.getFullYear(), mes: fecha.getMonth() };
+/** El lunes de la semana de `fecha` (la semana va de lunes a domingo, HE-10-HU02-ET02). */
+function lunesDe(fecha: Date): Date {
+  return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate() - ((fecha.getDay() + 6) % 7));
 }
 
-/** El mes `n` meses antes o después. */
-function otroMes({ anio, mes }: Mes, n: number): Mes {
-  return mesDe(new Date(anio, mes + n, 1));
+function masDias(fecha: Date, dias: number): Date {
+  return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate() + dias);
 }
 
-/** Un día de la vista mensual: su número, hasta 3 títulos y «+N más» (ET03, ET05). */
-function Dia({ numero, dia, esHoy }: { numero: number; dia: CalendarMonthDay | undefined; esHoy: boolean }) {
+/** «14:00»: la hora de inicio del bloque horario (D-169). */
+function horaVisible(hora: number): string {
+  return `${String(hora).padStart(2, '0')}:00`;
+}
+
+/** Un día de la vista mensual: su número, hasta 3 títulos y «+N más» (HE-10-HU01-ET03, ET05). */
+function DiaDelMes({
+  numero,
+  dia,
+  esHoy,
+}: {
+  numero: number;
+  dia: CalendarMonthDay | undefined;
+  esHoy: boolean;
+}) {
   return (
     <td
-      // ET02: el día actual resaltado.
+      // HE-10-HU01-ET02: el día actual resaltado.
       className={`wg-calendario__dia${esHoy ? ' wg-calendario__dia--hoy' : ''}`}
       aria-current={esHoy ? 'date' : undefined}
     >
@@ -47,18 +63,49 @@ function Dia({ numero, dia, esHoy }: { numero: number; dia: CalendarMonthDay | u
   );
 }
 
+/** Un día de la vista semanal: todas sus tarjetas, con la hora de inicio de su bloque (HE-10-HU02-ET03, ET05). */
+function DiaDeLaSemana({ nombre, dia, esHoy }: { nombre: string; dia: CalendarWeekDay; esHoy: boolean }) {
+  return (
+    <section
+      className={`wg-calendario__dia${esHoy ? ' wg-calendario__dia--hoy' : ''}`}
+      aria-label={`${nombre} ${fechaVisible(dia.date)}`}
+      aria-current={esHoy ? 'date' : undefined}
+    >
+      <h3 className="wg-calendario__numero">{`${nombre} ${fechaVisible(dia.date)}`}</h3>
+      {dia.cards.length > 0 && (
+        <ul className="wg-calendario__tarjetas">
+          {dia.cards.map(({ card, start_hour }) => (
+            <li key={card.id} className="wg-calendario__tarjeta wg-fila">
+              {start_hour !== null && <span>{horaVisible(start_hour)}</span>}
+              <span>{card.title}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+type Datos = { tipo: 'mes'; mes: CalendarMonth } | { tipo: 'semana'; semana: CalendarWeek };
+
 export function Calendario() {
   const { invocar, escuchar } = useNucleo();
-  const [visto, setVisto] = useState<Mes>(() => mesDe(hoy()));
-  const [datos, setDatos] = useState<{ visto: Mes; mes: CalendarMonth } | null>(null);
+  const [vista, setVista] = useState<Vista>(() => mesDe(hoy()));
+  const [datos, setDatos] = useState<Datos | null>(null);
   const [hoyEs, setHoyEs] = useState(() => fechaIso(hoy()));
 
   const leer = useCallback(async () => {
-    const r = await invocar('calendar_get_month', { year: visto.anio, month: visto.mes + 1 });
-    if (r.ok) setDatos({ visto, mes: r.value });
-  }, [invocar, visto]);
+    if (vista.tipo === 'mes') {
+      const r = await invocar('calendar_get_month', { year: vista.anio, month: vista.mes + 1 });
+      if (r.ok) setDatos({ tipo: 'mes', mes: r.value });
+    } else {
+      const r = await invocar('calendar_get_week', { week_start: fechaIso(vista.lunes) });
+      if (r.ok) setDatos({ tipo: 'semana', semana: r.value });
+    }
+  }, [invocar, vista]);
 
   useEffect(() => {
+    setDatos(null);
     void leer();
     const dejarTarjetas = escuchar('cards_changed', () => void leer());
     // «Hoy» es la fecha del computador: a las 00:00 cambia el día resaltado (EV-22).
@@ -69,44 +116,95 @@ export function Calendario() {
     };
   }, [escuchar, leer]);
 
-  const porFecha = new Map((datos?.mes.days ?? []).map((d) => [d.date, d]));
-  const titulo = nombreDelMes(visto.anio, visto.mes);
+  /** «Mes anterior» o «Semana anterior» (n = -1), y «Mes siguiente» o «Semana siguiente» (n = 1). */
+  const mover = (n: number) =>
+    setVista((v) =>
+      v.tipo === 'mes'
+        ? mesDe(new Date(v.anio, v.mes + n, 1))
+        : // HE-10-HU02-ET06: de a una semana.
+          { tipo: 'semana', lunes: masDias(v.lunes, 7 * n) },
+    );
+  // HE-10-HU01-ET07 y HE-10-HU02-ET08: «Hoy» vuelve al mes o a la semana actual.
+  const irAHoy = () =>
+    setVista((v) => (v.tipo === 'mes' ? mesDe(hoy()) : { tipo: 'semana', lunes: lunesDe(hoy()) }));
+  // HE-10-HU02-ET07, ET09 (D-168): «Mes» muestra el mes que contiene el lunes de la semana consultada.
+  const aMes = () => setVista((v) => (v.tipo === 'mes' ? v : mesDe(v.lunes)));
+  // HE-10-HU02-ET01: «Semana» abre la semana actual.
+  const aSemana = () =>
+    setVista((v) => (v.tipo === 'semana' ? v : { tipo: 'semana', lunes: lunesDe(hoy()) }));
+
+  const esMes = vista.tipo === 'mes';
+  const titulo =
+    vista.tipo === 'mes'
+      ? nombreDelMes(vista.anio, vista.mes)
+      : `Semana del ${fechaVisible(fechaIso(vista.lunes))} al ${fechaVisible(fechaIso(masDias(vista.lunes, 6)))}`;
   return (
     <main aria-label="Calendario" aria-busy={datos === null}>
-      {/* ET04: las opciones de la vista mensual. «Semana» es de HE-10-HU02. */}
+      {/* HE-10-HU01-ET04 y HE-10-HU02-ET04: las opciones de cada vista. */}
       <div className="wg-fila">
-        <Boton onClick={() => setVisto((v) => otroMes(v, -1))}>Mes anterior</Boton>
-        <Boton onClick={() => setVisto((v) => otroMes(v, 1))}>Mes siguiente</Boton>
-        <Boton onClick={() => setVisto(mesDe(hoy()))}>Hoy</Boton>
-        <Boton principal aria-pressed>
+        <Boton onClick={() => mover(-1)}>{esMes ? 'Mes anterior' : 'Semana anterior'}</Boton>
+        <Boton onClick={() => mover(1)}>{esMes ? 'Mes siguiente' : 'Semana siguiente'}</Boton>
+        <Boton onClick={irAHoy}>Hoy</Boton>
+        <Boton principal={esMes} aria-pressed={esMes} onClick={aMes}>
           Mes
         </Boton>
-        <Boton aria-pressed={false}>Semana</Boton>
+        {esMes && (
+          <Boton aria-pressed={false} onClick={aSemana}>
+            Semana
+          </Boton>
+        )}
       </div>
-      {/* ET02: el nombre del mes y el año. */}
       <h2>{titulo}</h2>
-      <table className="wg-calendario" aria-label={titulo}>
-        <thead>
-          <tr>
-            {DIAS.map((d) => (
-              <th key={d} scope="col">
-                {d}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {semanasDelMes(visto.anio, visto.mes).map((semana, i) => (
-            <tr key={i}>
-              {semana.map((numero, j) => {
-                if (numero === null) return <td key={j} />;
-                const fecha = fechaIso(new Date(visto.anio, visto.mes, numero));
-                return <Dia key={j} numero={numero} dia={porFecha.get(fecha)} esHoy={fecha === hoyEs} />;
-              })}
-            </tr>
+      {vista.tipo === 'mes' && (
+        <VistaMensual
+          vista={vista}
+          mes={datos?.tipo === 'mes' ? datos.mes : null}
+          hoyEs={hoyEs}
+          titulo={titulo}
+        />
+      )}
+      {vista.tipo === 'semana' && datos?.tipo === 'semana' && (
+        <div className="wg-calendario-semana" aria-label={titulo}>
+          {datos.semana.days.map((dia, i) => (
+            <DiaDeLaSemana key={dia.date} nombre={DIAS[i] ?? ''} dia={dia} esHoy={dia.date === hoyEs} />
           ))}
-        </tbody>
-      </table>
+        </div>
+      )}
     </main>
+  );
+}
+
+interface VistaMensualProps {
+  vista: { anio: number; mes: number };
+  mes: CalendarMonth | null;
+  hoyEs: string;
+  titulo: string;
+}
+
+function VistaMensual({ vista, mes, hoyEs, titulo }: VistaMensualProps) {
+  const porFecha = new Map((mes?.days ?? []).map((d) => [d.date, d]));
+  return (
+    <table className="wg-calendario" aria-label={titulo}>
+      <thead>
+        <tr>
+          {DIAS.map((d) => (
+            <th key={d} scope="col">
+              {d}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {semanasDelMes(vista.anio, vista.mes).map((semana, i) => (
+          <tr key={i}>
+            {semana.map((numero, j) => {
+              if (numero === null) return <td key={j} />;
+              const fecha = fechaIso(new Date(vista.anio, vista.mes, numero));
+              return <DiaDelMes key={j} numero={numero} dia={porFecha.get(fecha)} esHoy={fecha === hoyEs} />;
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }

@@ -41,7 +41,9 @@ use crate::tipos::{
     WallpaperState, WallpaperStatus, WidgetCatalog, WidgetDeleteParams, WidgetItem,
     WidgetSetActiveParams,
 };
-use crate::tipos::{CalendarMonth, CalendarMonthParams, ThemeApplyParams};
+use crate::tipos::{
+    CalendarMonth, CalendarMonthParams, CalendarWeek, CalendarWeekParams, ThemeApplyParams,
+};
 use crate::tipos::{
     EventMapLayoutChanged, LayoutEditMoveParams, LayoutEditOpenResult, LayoutEditRectResult,
     LayoutEditResizeParams, LayoutEditStatus,
@@ -1791,6 +1793,23 @@ pub async fn calendar_get_month(
             nucleo
                 .planificador
                 .mes_del_calendario(&user_id, params.year, params.month)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-CARD-13 `calendar_get_week` (HE-10-HU02): los 7 días de la semana con todas sus tarjetas.
+#[tauri::command]
+pub async fn calendar_get_week(
+    nucleo: State<'_, Nucleo>,
+    params: CalendarWeekParams,
+) -> Result<IpcResult<CalendarWeek>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .semana_del_calendario(&user_id, &params.week_start.0)
                 .await
         }
         Err(e) => Err(e),

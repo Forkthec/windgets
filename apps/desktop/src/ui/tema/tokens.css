@@ -727,3 +727,17 @@ button.wg-tarjeta__titulo:focus-visible {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Vista semanal (HE-10-HU02): los 7 días, de lunes a domingo, uno al lado del otro. */
+.wg-calendario-semana {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: calc(var(--wg-unidad) * 2);
+}
+.wg-calendario-semana .wg-calendario__dia {
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  padding: calc(var(--wg-unidad) * 2);
+}
+.wg-calendario-semana .wg-calendario__numero {
+  margin: 0;
+  font-size: inherit;
+}
