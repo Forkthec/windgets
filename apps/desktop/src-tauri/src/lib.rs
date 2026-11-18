@@ -52,6 +52,7 @@ pub fn run() {
             puente_ipc::report_get_compliance,
             puente_ipc::report_get_status_breakdown,
             puente_ipc::card_list_board,
+            puente_ipc::kanban_widget_get,
             puente_ipc::column_list,
             puente_ipc::card_get,
             puente_ipc::card_update,

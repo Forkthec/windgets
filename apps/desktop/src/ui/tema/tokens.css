@@ -375,6 +375,24 @@ body {
 .wg-columna__cantidad {
   margin-left: auto;
 }
+/* Widget Kanban de la capa (HE-06-HU05): columnas que se reparten el ancho del widget. */
+.wg-tablero--widget {
+  padding-block: 0;
+  gap: calc(var(--wg-unidad) * 2);
+}
+.wg-columna--widget {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: calc(var(--wg-unidad) * 2);
+}
+.wg-columna--widget .wg-tarjeta__titulo {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wg-columna__mas {
+  margin: calc(var(--wg-unidad) * 2) 0 0;
+}
 .wg-columna__tarjetas {
   display: flex;
   flex-direction: column;

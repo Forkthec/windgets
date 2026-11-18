@@ -246,6 +246,17 @@ const respuestas: Respuestas = {
   },
   // HE-09-HU01: el tablero con las columnas por defecto y las tarjetas creadas.
   card_list_board: () => ({ ok: true, value: { columns: tableroSimulado() } }),
+  // HE-06-HU05: el widget Kanban, con hasta 5 títulos por columna (IPC-CARD-15).
+  kanban_widget_get: () => ({
+    ok: true,
+    value: {
+      columns: tableroSimulado().map(({ column, cards }) => ({
+        column,
+        titles: cards.slice(0, 5).map((t) => ({ card_id: t.id, title: t.title })),
+        extra_count: Math.max(cards.length - 5, 0),
+      })),
+    },
+  }),
   column_list: () => ({ ok: true, value: tableroSimulado().map((c) => c.column) }),
   // HE-09-HU05: el orden completo de las columnas.
   column_reorder: ({ column_ids }) => {

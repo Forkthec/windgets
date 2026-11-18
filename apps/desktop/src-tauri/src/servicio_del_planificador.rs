@@ -19,7 +19,8 @@ use crate::tipos::{
     CardCreateParams, CardDetail, CardDetailColumn, CardDetailLabelsItem, CardDetailTimeBlock,
     CardListBoardResult, CardMoveParams, CardSetCompletedParams, CardType, CardUpdateParams,
     CatalogItem, Column, ColumnCreateParams, ColumnReorderParams, ColumnRole, ColumnUpdateParams,
-    DateIso, ErrorCode, Hex, Hour, Instant, Label, LabelCreateParams, Placement, PlacementVariant1,
+    DateIso, ErrorCode, Hex, Hour, Instant, KanbanWidgetColumn, KanbanWidgetColumnTitlesItem,
+    KanbanWidgetData, Label, LabelCreateParams, Placement, PlacementVariant1,
     PlacementVariant1Kind, PlannerItem, PlannerSummary, PlannerToday, Priority, ResultMessage,
     Uuid,
 };
@@ -58,6 +59,8 @@ pub const COLUMNAS_MAX: usize = 10;
 /// Distancia entre posiciones al poner una tarjeta al final de una columna. DUDA: HE-07-HU01 el paso no está
 /// definido; se usa el del ejemplo de `contratos.md` (RPC-02, `position: 1024`).
 pub const PASO_DE_POSICION: f64 = 1024.0;
+/// Títulos que muestra cada columna del widget Kanban; el resto va en «+N más» (HE-06-HU05-ET02).
+pub const TITULOS_DEL_WIDGET_KANBAN: usize = 5;
 
 /// Fecha y hora del computador. La fecha es la local: «no puede ser anterior a la fecha actual» (ET08).
 pub trait Calendario: Send + Sync {
@@ -1678,6 +1681,35 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 .collect(),
         })
     }
+
+    /// IPC-CARD-15 `kanban_widget_get` (HE-06-HU05): las columnas del tablero en su orden, con hasta
+    /// `TITULOS_DEL_WIDGET_KANBAN` títulos cada una y la cantidad restante para «+N más» (ET01, ET02; CA03).
+    pub async fn widget_kanban(&self, user_id: &str) -> Result<KanbanWidgetData, AppError> {
+        let tablero = self.tablero(user_id).await?;
+        Ok(KanbanWidgetData {
+            columns: tablero
+                .columns
+                .into_iter()
+                .map(|BoardColumn { column, cards }| {
+                    let total = cards.len();
+                    let titles: Vec<_> = cards
+                        .into_iter()
+                        .take(TITULOS_DEL_WIDGET_KANBAN)
+                        .map(|t| KanbanWidgetColumnTitlesItem {
+                            card_id: t.id,
+                            title: t.title,
+                        })
+                        .collect();
+                    let extra_count = i64::try_from(total - titles.len()).unwrap_or(i64::MAX);
+                    KanbanWidgetColumn {
+                        column,
+                        titles,
+                        extra_count,
+                    }
+                })
+                .collect(),
+        })
+    }
 }
 
 /// Las columnas de una tarjeta con la función de su columna (para «Vencida» y «completada»).
@@ -1758,6 +1790,8 @@ mod pruebas_de_reportes;
 mod pruebas_del_planificador_diario;
 #[cfg(test)]
 mod pruebas_del_tablero;
+#[cfg(test)]
+mod pruebas_del_widget_kanban;
 
 #[cfg(test)]
 pub(crate) mod pruebas {

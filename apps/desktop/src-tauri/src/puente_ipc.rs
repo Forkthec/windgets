@@ -30,7 +30,7 @@ use crate::tipos::{
     ColumnReorderParams, ColumnUpdateParams, Connectivity, EntityChange, ErrorCode,
     EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
     EventMapSessionChangedState, ImageImportParams, ImageImportResult, IpcErr, IpcOk, IpcResult,
-    Label, LabelCreateParams, NoParams, OriginKind, PlannerToday, SessionInfo,
+    KanbanWidgetData, Label, LabelCreateParams, NoParams, OriginKind, PlannerToday, SessionInfo,
     ThemeDraftOpenParams, ThemeDraftResetParams, ThemeDraftSelectParams, ThemeDraftStatus,
     ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
 };
@@ -1016,6 +1016,19 @@ pub async fn card_list_board(
     let _ = params;
     Ok(leido(match usuario(&nucleo) {
         Ok(user_id) => nucleo.planificador.tablero(&user_id).await,
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-CARD-15 `kanban_widget_get` (HE-06-HU05): el tablero resumido para el widget Kanban.
+#[tauri::command]
+pub async fn kanban_widget_get(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<KanbanWidgetData>, ()> {
+    let _ = params;
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.widget_kanban(&user_id).await,
         Err(e) => Err(e),
     }))
 }

@@ -4,6 +4,7 @@ import { escuchar as escucharNucleo, type Escuchar } from '@/ipc/eventos';
 import { urlDeArchivo } from '@/ipc/archivos';
 import { Reloj } from './Reloj';
 import { TareasDelDia } from './TareasDelDia';
+import { WidgetKanban } from './WidgetKanban';
 import { tokensDelTema } from '@/ui/tema/temaAplicado';
 import { aplicarTokens } from '@/ui/tema/tokens';
 import type {
@@ -18,8 +19,8 @@ import type {
 // C-02 Capa del wallpaper y los widgets (P-WAL-02, HE-02-HU01). Es la ventana anclada detrás de los íconos del
 // escritorio (D-131): pinta el wallpaper del tema aplicado a partir de lo guardado, sin red (IPC-DESK-01; RNF-08).
 // Encima pinta los widgets activos del tema aplicado en su posición y tamaño (HE-04-HU01-CA01, CA03). El
-// contenido de cada widget llega con su HU: el Reloj (HE-04-HU03) y Tareas del día (HE-06-HU02) ya lo tienen; faltan
-// Kanban HE-06-HU05 y Calendario HE-06-HU07 (docs/DUDAS.md).
+// contenido de cada widget llega con su HU: el Reloj (HE-04-HU03), Tareas del día (HE-06-HU02) y Kanban
+// (HE-06-HU05) ya lo tienen; falta Calendario HE-06-HU07 (docs/DUDAS.md).
 
 /** Nombre de cada widget (glosario). */
 export const NOMBRE_DEL_WIDGET: Record<WidgetType, string> = {
@@ -153,6 +154,7 @@ export function Capa({ invocar = invocarNucleo, escuchar = escucharNucleo }: Cap
         >
           {w.type === 'clock' && <Reloj />}
           {w.type === 'daily_tasks' && <TareasDelDia invocar={invocar} escuchar={escuchar} />}
+          {w.type === 'kanban' && <WidgetKanban invocar={invocar} escuchar={escuchar} />}
         </section>
       ))}
     </main>

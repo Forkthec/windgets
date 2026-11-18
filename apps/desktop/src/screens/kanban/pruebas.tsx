@@ -220,6 +220,20 @@ export function crearNucleo(tarjetas: Card[] = []): {
       },
     ],
     ['card_list_board', () => ({ ok: true, value: { columns: tablero() } })],
+    // HE-06-HU05: hasta 5 títulos por columna y el resto en «+N más» (IPC-CARD-15).
+    [
+      'kanban_widget_get',
+      () => ({
+        ok: true,
+        value: {
+          columns: tablero().map(({ column, cards }) => ({
+            column,
+            titles: cards.slice(0, 5).map((t) => ({ card_id: t.id, title: t.title })),
+            extra_count: Math.max(cards.length - 5, 0),
+          })),
+        },
+      }),
+    ],
     ['column_list', () => ({ ok: true, value: tablero().map((c) => c.column) })],
     [
       'column_update',
