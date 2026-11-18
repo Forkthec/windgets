@@ -14,7 +14,7 @@
 
 use std::ffi::c_void;
 use std::mem::size_of;
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 
 use tauri::{AppHandle, Emitter, Manager};
 use windows::Win32::Foundation::{CloseHandle, HANDLE, HWND, LPARAM, LRESULT, POINT, WPARAM};
@@ -125,8 +125,17 @@ unsafe extern "system" fn procedimiento(
     wparam: WPARAM,
     lparam: LPARAM,
 ) -> LRESULT {
-    if mensaje == WM_INPUT && boton_principal_abajo(HRAWINPUT(lparam.0 as *mut c_void)) {
-        al_seleccionar();
+    if mensaje == WM_INPUT
+        && let Some((banderas, intercambiados)) = botones(HRAWINPUT(lparam.0 as *mut c_void))
+    {
+        if seleccion::es_el_boton_principal(banderas, intercambiados) {
+            al_seleccionar();
+        } else {
+            al_arrastrar(seleccion::se_solto_el_boton_principal(
+                banderas,
+                intercambiados,
+            ));
+        }
     }
     if (mensaje == WM_DISPLAYCHANGE || mensaje == WM_DPICHANGED)
         && let Some(app) = APLICACION.get()
@@ -137,7 +146,8 @@ unsafe extern "system" fn procedimiento(
     unsafe { DefWindowProcW(ventana, mensaje, wparam, lparam) }
 }
 
-fn boton_principal_abajo(entrada: HRAWINPUT) -> bool {
+/// Las banderas de los botones de una entrada del mouse y si los botones están intercambiados en Windows.
+fn botones(entrada: HRAWINPUT) -> Option<(u16, bool)> {
     let mut datos = RAWINPUT::default();
     let mut tamano = size_of::<RAWINPUT>() as u32;
     // SAFETY: `datos` es un RAWINPUT local y `tamano` dice su tamaño; para el mouse alcanza.
@@ -151,13 +161,40 @@ fn boton_principal_abajo(entrada: HRAWINPUT) -> bool {
         )
     };
     if leidos == u32::MAX || datos.header.dwType != RIM_TYPEMOUSE.0 {
-        return false;
+        return None;
     }
     // SAFETY: el encabezado dice que es un mouse, así que la unión contiene un RAWMOUSE.
     let banderas = unsafe { datos.data.mouse.Anonymous.Anonymous.usButtonFlags };
     // SAFETY: GetSystemMetrics no recibe punteros.
     let intercambiados = unsafe { GetSystemMetrics(SM_SWAPBUTTON) } != 0;
-    seleccion::es_el_boton_principal(banderas, intercambiados)
+    Some((banderas, intercambiados))
+}
+
+/// El arrastre que sigue a una selección reenviada (HE-06-HU06): empieza en `al_seleccionar` y termina al soltar
+/// el botón principal.
+static ARRASTRE: Mutex<seleccion::Arrastre> = Mutex::new(seleccion::Arrastre::nuevo());
+
+/// Cada movimiento del mouse, o el botón que se suelta, mientras dura un arrastre: la capa lo recibe como
+/// `pointer_drag_forwarded` en sus coordenadas.
+fn al_arrastrar(soltado: bool) {
+    let Some(app) = APLICACION.get() else {
+        return;
+    };
+    let Ok(mut arrastre) = ARRASTRE.lock() else {
+        return;
+    };
+    if !arrastre.en_curso() {
+        return;
+    }
+    let mut punto = POINT::default();
+    // SAFETY: `punto` es local.
+    if unsafe { GetCursorPos(&mut punto) }.is_err() {
+        return;
+    }
+    let nucleo = app.state::<Nucleo>();
+    if let Some(evento) = arrastre.seguir(&nucleo.host.capa(), (punto.x, punto.y), soltado) {
+        let _ = app.emit(seleccion::ARRASTRE_REENVIADO, evento);
+    }
 }
 
 /// La selección con el botón principal: si cae en un widget interactivo del escritorio sin un ícono encima, la
@@ -189,6 +226,12 @@ fn al_seleccionar() {
         que_hay,
         || hay_icono(bajo_el_cursor, punto),
     );
+    if let Ok(mut arrastre) = ARRASTRE.lock() {
+        match &evento {
+            Some(seleccion_reenviada) => arrastre.empezar(seleccion_reenviada),
+            None => arrastre.cancelar(),
+        }
+    }
     if let Some(evento) = evento {
         let _ = app.emit("pointer_forwarded", evento);
     }
