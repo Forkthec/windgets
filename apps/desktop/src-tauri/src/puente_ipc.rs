@@ -1810,6 +1810,7 @@ pub async fn windi_send_message(
         &sesion.alias,
         ahora.date_naive(),
         u8::try_from(chrono::Timelike::hour(&ahora)).unwrap_or(0),
+        &params.message,
     )
     .await
     {

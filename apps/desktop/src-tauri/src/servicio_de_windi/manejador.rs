@@ -6,10 +6,13 @@ use serde_json::{Value, json};
 
 use super::ManejadorDePropuestas;
 use crate::messages;
-use crate::servicio_del_planificador::{Calendario, ServicioDelPlanificador, validar_creacion};
+use crate::servicio_del_planificador::{
+    Calendario, ServicioDelPlanificador, validar_cantidad_de_etiquetas, validar_creacion,
+    validar_descripcion, validar_fecha_limite, validar_titulo,
+};
 use crate::tipos::{
-    AppError, Card, CardCreateParams, CardType, ProposalAction, ProposalState, Uuid,
-    WindiChatProposal, WindiProposal, WindiProposalItem,
+    AppError, Card, CardCreateParams, CardPatch, CardType, CardUpdateParams, ProposalAction,
+    ProposalState, Uuid, WindiChatProposal, WindiProposal, WindiProposalItem,
 };
 
 /// Los campos de una tarjeta que se comparan para saber si una propuesta quedó desactualizada (HE-14-HU03-ET05).
@@ -41,7 +44,8 @@ impl<C: Calendario> ManejadorDePropuestas for ManejadorDelPlanificador<'_, C> {
     ) -> Result<Option<WindiProposal>, AppError> {
         match propuesta.action {
             ProposalAction::Create => self.preparar_creacion(propuesta).await,
-            // Las demás acciones llegan con HE-14-HU05 a HU07; sin ellas no hay propuesta.
+            ProposalAction::Edit => self.preparar_edicion(propuesta).await,
+            // Las demás acciones llegan con HE-14-HU06 y HU07; sin ellas no hay propuesta.
             _ => Ok(None),
         }
     }
@@ -57,6 +61,7 @@ impl<C: Calendario> ManejadorDePropuestas for ManejadorDelPlanificador<'_, C> {
     async fn aplicar(&self, propuesta: &WindiProposal) -> Result<Option<String>, AppError> {
         match propuesta.action {
             ProposalAction::Create => self.aplicar_creacion(propuesta).await,
+            ProposalAction::Edit => self.aplicar_edicion(propuesta).await,
             _ => {
                 let _ = self.alias;
                 Err(crate::servicio_del_planificador::inesperado())
@@ -118,6 +123,121 @@ impl<C: Calendario> ManejadorDelPlanificador<'_, C> {
             warnings: Vec::new(),
             state: ProposalState::Active,
         }))
+    }
+
+    /// HE-14-HU05: la propuesta de editar una tarjeta con el valor actual y el nuevo de cada dato que cambia (ET01).
+    /// Sin propuesta si la tarjeta no existe (ET08), si ningún dato cambia (ET09) o si un dato no cumple las reglas
+    /// de HE-07-HU04 (ET04, ET07). Una tarjeta completada lleva el aviso de ET05.
+    async fn preparar_edicion(
+        &self,
+        propuesta: &WindiChatProposal,
+    ) -> Result<Option<WindiProposal>, AppError> {
+        let [item] = propuesta.items.as_slice() else {
+            return Ok(None);
+        };
+        let Some(card_id) = &item.card_id else {
+            return Ok(None);
+        };
+        let Some(tarjeta) = self.planificador.tarjeta(self.user_id, &card_id.0).await? else {
+            return Ok(None);
+        };
+        let Some(patch) = item
+            .changes
+            .clone()
+            .and_then(|c| serde_json::from_value::<CardPatch>(c).ok())
+        else {
+            return Ok(None);
+        };
+        // Solo los datos que cambian.
+        let actual = estado_de_la_tarjeta(&tarjeta);
+        let pedido = serde_json::to_value(&patch).unwrap_or_default();
+        let mut antes = serde_json::Map::new();
+        let mut despues = serde_json::Map::new();
+        for (campo, valor) in pedido.as_object().into_iter().flatten() {
+            let valor = match valor {
+                Value::String(texto) => Value::from(texto.trim()),
+                otro => otro.clone(),
+            };
+            let previo = actual.get(campo).cloned().unwrap_or(Value::Null);
+            if previo != valor {
+                antes.insert(campo.clone(), previo);
+                despues.insert(campo.clone(), valor);
+            }
+        }
+        if despues.is_empty() {
+            return Ok(None);
+        }
+        let Ok(patch) = serde_json::from_value::<CardPatch>(Value::Object(despues.clone())) else {
+            return Ok(None);
+        };
+        let etiquetas: Vec<String> = self
+            .planificador
+            .etiquetas(self.user_id)
+            .await?
+            .into_iter()
+            .map(|e| e.id.0.to_lowercase())
+            .collect();
+        let hoy = self.planificador.hoy();
+        let invalido = patch.title.as_deref().and_then(validar_titulo).is_some()
+            || patch
+                .due_date
+                .as_ref()
+                .and_then(|f| validar_fecha_limite(&f.0, hoy))
+                .is_some()
+            || patch
+                .description
+                .as_ref()
+                .and_then(|d| validar_descripcion(d.as_deref()))
+                .is_some()
+            || patch.label_ids.as_deref().is_some_and(|ids| {
+                validar_cantidad_de_etiquetas(ids).is_some()
+                    || !ids
+                        .iter()
+                        .all(|id| etiquetas.contains(&id.0.to_lowercase()))
+            });
+        if invalido {
+            return Ok(None);
+        }
+        Ok(Some(WindiProposal {
+            id: Uuid(uuid::Uuid::new_v4().to_string()),
+            action: ProposalAction::Edit,
+            items: vec![WindiProposalItem {
+                card_id: Some(tarjeta.id.clone()),
+                current: Some(Value::Object(antes)),
+                changes: Some(Value::Object(despues)),
+                title: tarjeta.title.clone(),
+            }],
+            warnings: if tarjeta.is_completed {
+                vec![messages::WINDI_EDITAR_COMPLETADA.to_string()]
+            } else {
+                Vec::new()
+            },
+            state: ProposalState::Active,
+        }))
+    }
+
+    /// Actualiza la tarjeta con `card_update` (ET02, ET07) y confirma mencionando el título (CA01).
+    async fn aplicar_edicion(&self, propuesta: &WindiProposal) -> Result<Option<String>, AppError> {
+        let item = propuesta
+            .items
+            .first()
+            .ok_or_else(crate::servicio_del_planificador::inesperado)?;
+        let id = item
+            .card_id
+            .clone()
+            .ok_or_else(crate::servicio_del_planificador::inesperado)?;
+        let patch: CardPatch = item
+            .changes
+            .clone()
+            .and_then(|c| serde_json::from_value(c).ok())
+            .ok_or_else(crate::servicio_del_planificador::inesperado)?;
+        let tarjeta = self
+            .planificador
+            .actualizar_tarjeta(self.user_id, CardUpdateParams { id, patch })
+            .await?;
+        Ok(Some(
+            messages::WINDI_TARJETA_ACTUALIZADA.replace("<título>", &tarjeta.valor.title),
+        ))
     }
 
     /// Crea las tarjetas en la columna Por hacer con `card_create` (ET04) y confirma con el título o la cantidad

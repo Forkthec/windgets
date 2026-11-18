@@ -446,6 +446,7 @@ pub async fn contexto<C: Calendario>(
     alias: &str,
     hoy: chrono::NaiveDate,
     hora: u8,
+    mensaje: &str,
 ) -> Result<WindiChatContext, AppError> {
     let columnas = planificador.columnas(user_id).await?;
     let etiquetas = planificador.etiquetas(user_id).await?;
@@ -479,9 +480,54 @@ pub async fn contexto<C: Calendario>(
                 name: e.name,
             })
             .collect(),
-        cards: Vec::new(),
+        // DUDA: HE-14-HU05 EF-01 dice «solo las necesarias para la pregunta» sin definir cuáles. Valor usado: las
+        // tarjetas cuyo título comparte una palabra de 3 letras o más con el mensaje, hasta 50 (docs/DUDAS.md).
+        cards: {
+            let buscadas = palabras(mensaje);
+            tarjetas
+                .iter()
+                .filter(|t| palabras(&t.title).iter().any(|p| buscadas.contains(p)))
+                .take(TARJETAS_EN_EL_CONTEXTO)
+                .map(|t| crate::tipos::WindiChatContextCard {
+                    id: t.id.clone(),
+                    r#type: t.r#type.clone(),
+                    title: t.title.clone(),
+                    due_date: t.due_date.clone(),
+                    priority: t.priority.clone(),
+                    column_id: t.column_id.clone(),
+                    label_ids: t.label_ids.clone(),
+                    completed_on: t.completed_on.clone(),
+                    scheduled_date: t.scheduled_date.clone(),
+                    scheduled_hour: t.scheduled_hour.clone(),
+                    description: t.description.clone(),
+                })
+                .collect()
+        },
         active_proposal: None,
     })
+}
+
+/// Cuántas tarjetas van como máximo en el contexto de `windi-chat`.
+const TARJETAS_EN_EL_CONTEXTO: usize = 50;
+
+/// Las palabras de 3 letras o más de un texto, en minúsculas y sin tildes, para buscar tarjetas por su título.
+fn palabras(texto: &str) -> Vec<String> {
+    texto
+        .to_lowercase()
+        .chars()
+        .map(|c| match c {
+            'á' => 'a',
+            'é' => 'e',
+            'í' => 'i',
+            'ó' | 'ö' => 'o',
+            'ú' | 'ü' => 'u',
+            otro => otro,
+        })
+        .collect::<String>()
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|p| p.chars().count() >= 3)
+        .map(str::to_string)
+        .collect()
 }
 
 pub mod manejador;

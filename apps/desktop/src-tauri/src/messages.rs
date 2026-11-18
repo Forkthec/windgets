@@ -315,6 +315,12 @@ pub const WINDI_PROPUESTA_NUEVA: &str = "Esta es la propuesta con los datos actu
 // creación mencionando el título», «confirma la cantidad de tarjetas creadas»).
 pub const WINDI_TARJETA_CREADA: &str = "Listo, creé la tarjeta «<título>».";
 pub const WINDI_TARJETAS_CREADAS: &str = "Listo, creé <cantidad> tarjetas.";
+// HE-14-HU05 · Editar tarjetas con el agente de IA.
+/// Aviso en la propuesta de editar una tarjeta completada (HE-14-HU05-CA06, ET05).
+pub const WINDI_EDITAR_COMPLETADA: &str =
+    "Esta tarjeta está completada. Editarla no cambia su columna.";
+/// DUDA: HE-14-HU05 el texto no es literal («confirma el cambio mencionando el título»).
+pub const WINDI_TARJETA_ACTUALIZADA: &str = "Listo, actualicé la tarjeta «<título>».";
 pub const WINDI_TARJETA_YA_NO_EXISTE: &str = "«<título>» ya no existe";
 pub const WINDI_TARJETA_CAMBIO: &str = "«<título>» tiene otro valor en <campos>";
 

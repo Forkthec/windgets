@@ -127,6 +127,21 @@ export function instruccionDelSistema(contexto: Contexto): string {
     'Si piden varias tarjetas en un mensaje, las propones todas en una sola llamada.',
     'Solo usas etiquetas que existen y nunca creas etiquetas. Si piden una que no existe, dices que no existe,',
     'mencionas las disponibles y preguntas si prefiere una de ellas o crear la tarjeta sin etiqueta.',
+    // HE-14-HU05: editar tarjetas.
+    'Para cambiar datos de una tarjeta llamas a propose_edit_card con su id y solo los datos que cambian.',
+    'Si no encuentras una tarjeta con el nombre que menciona, lo dices, pides más detalles y no propones.',
+    'Si varias tarjetas coinciden, muestras el título y la fecha límite de cada una y preguntas a cuál se refiere',
+    'antes de proponer.',
+    'Si el valor pedido es el que la tarjeta ya tiene, lo dices y no propones.',
+    'Si la tarjeta está completada (tiene completed_on), avisas que está completada; si además pide que vuelva a',
+    'estar pendiente, eso es mover la tarjeta, no editarla.',
+    `Tarjetas relacionadas con el mensaje: ${
+      contexto.cards.length
+        ? contexto.cards
+            .map((t) => `${String(t.title)} (id ${String(t.id)}, fecha límite ${String(t.due_date)}${t.completed_on ? ', completada' : ''})`)
+            .join('; ')
+        : 'ninguna'
+    }.`,
     `Etiquetas disponibles: ${
       contexto.labels.length ? contexto.labels.map((e) => `${e.name} (id ${e.id})`).join(', ') : 'ninguna'
     }.`,
@@ -161,10 +176,46 @@ export const FUNCIONES = [
       required: ['cards'],
     },
   },
+  {
+    name: 'propose_edit_card',
+    description: 'Propone cambiar datos de una tarjeta. La persona confirma antes de cambiarla.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        card_id: { type: 'STRING', description: 'El id de una tarjeta de las relacionadas con el mensaje.' },
+        changes: {
+          type: 'OBJECT',
+          description: 'Solo los datos que cambian.',
+          properties: {
+            type: { type: 'STRING', enum: ['task', 'reminder', 'event'] },
+            title: { type: 'STRING', description: 'De 1 a 100 caracteres.' },
+            due_date: { type: 'STRING', description: 'Fecha límite AAAA-MM-DD, no anterior a hoy.' },
+            description: { type: 'STRING' },
+            priority: { type: 'STRING', enum: ['high', 'medium', 'low'] },
+            label_ids: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Solo ids de etiquetas que existen.' },
+          },
+        },
+      },
+      required: ['card_id', 'changes'],
+    },
+  },
 ];
 
 /** La acción de la propuesta según la función que llamó Gemini. */
-const ACCION: Record<string, Propuesta['action']> = { propose_create_cards: 'create' };
+const ACCION: Record<string, Propuesta['action']> = {
+  propose_create_cards: 'create',
+  propose_edit_card: 'edit',
+};
+
+/** Los elementos de la propuesta a partir de los argumentos de la función (INT-03 → EF-01). */
+function elementos(nombre: string, args: Record<string, unknown>): Propuesta['items'] {
+  if (nombre === 'propose_edit_card') {
+    const cambios = esObjeto(args.changes) ? args.changes : null;
+    return typeof args.card_id === 'string' ? [{ card_id: args.card_id, changes: cambios }] : [];
+  }
+  const tarjetas = Array.isArray(args.cards) ? args.cards.filter(esObjeto) : [];
+  return tarjetas.map((t) => ({ card_id: null, changes: t }));
+}
 
 /** El cuerpo de `generateContent` (INT-03): instrucción, historial y mensaje, y la configuración de generación. */
 export function cuerpoParaGemini(peticion: PeticionWindi): Record<string, unknown> {
@@ -206,12 +257,11 @@ export function leerGemini(respuesta: unknown): RespuestaWindi | CodigoDeError {
   const accion = llamada && typeof llamada.name === 'string' ? ACCION[llamada.name] : undefined;
   if (llamada && accion) {
     const args = esObjeto(llamada.args) ? llamada.args : {};
-    const tarjetas = Array.isArray(args.cards) ? args.cards.filter(esObjeto) : [];
     return {
       // DUDA: HE-14-HU04 Gemini puede llamar a la función sin texto. Valor usado: el texto del ejemplo de INT-03.
       reply: reply || 'Esto es lo que voy a crear. ¿Confirmas?',
       intent: 'propose',
-      proposal: { action: accion, items: tarjetas.map((t) => ({ card_id: null, changes: t })) },
+      proposal: { action: accion, items: elementos(String(llamada.name), args) },
     };
   }
   if (!reply) return 'provider_error';

@@ -216,3 +216,61 @@ describe('EF-01 windi-chat · HE-14-HU04 (crear tarjetas)', () => {
     expect(texto).toContain('Etiquetas disponibles: Trabajo (id l1).');
   });
 });
+
+describe('EF-01 windi-chat · HE-14-HU05 (editar tarjetas)', () => {
+  const conTarjetas: Contexto = {
+    ...CONTEXTO,
+    cards: [
+      { id: 't1', title: 'Pagar la luz', due_date: '2026-11-20', completed_on: null },
+      { id: 't2', title: 'Pagar el agua', due_date: '2026-11-25', completed_on: '2026-11-10' },
+    ],
+  };
+
+  it('HE-14-HU05-CA01 · declara propose_edit_card y convierte la llamada en una propuesta de edición', () => {
+    const gemini = {
+      candidates: [
+        {
+          content: {
+            parts: [
+              { text: 'Esto es lo que voy a cambiar. ¿Confirmas?' },
+              {
+                functionCall: {
+                  name: 'propose_edit_card',
+                  args: { card_id: 't1', changes: { title: 'Pagar la luz ya' } },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    };
+    expect(leerGemini(gemini)).toEqual({
+      reply: 'Esto es lo que voy a cambiar. ¿Confirmas?',
+      intent: 'propose',
+      proposal: { action: 'edit', items: [{ card_id: 't1', changes: { title: 'Pagar la luz ya' } }] },
+    });
+  });
+
+  it('HE-14-HU05-CA03 · si no encuentra la tarjeta, lo dice y pide más detalles', () => {
+    expect(instruccionDelSistema(CONTEXTO)).toContain(
+      'Si no encuentras una tarjeta con el nombre que menciona',
+    );
+  });
+
+  it('HE-14-HU05-CA04 · varias coinciden: ve el título y la fecha límite de cada una y pregunta', () => {
+    const texto = instruccionDelSistema(conTarjetas);
+    expect(texto).toContain('preguntas a cuál se refiere');
+    expect(texto).toContain('Pagar la luz (id t1, fecha límite 2026-11-20)');
+    expect(texto).toContain('Pagar el agua (id t2, fecha límite 2026-11-25, completada)');
+  });
+
+  it('HE-14-HU05-CA05 · la fecha límite no puede ser anterior a hoy', () => {
+    expect(instruccionDelSistema(CONTEXTO)).toContain('La fecha límite no puede ser anterior a hoy');
+  });
+
+  it('HE-14-HU05-CA06 y CA07 · avisa si está completada y no propone un valor que ya tiene', () => {
+    const texto = instruccionDelSistema(CONTEXTO);
+    expect(texto).toContain('avisas que está completada');
+    expect(texto).toContain('Si el valor pedido es el que la tarjeta ya tiene, lo dices y no propones.');
+  });
+});

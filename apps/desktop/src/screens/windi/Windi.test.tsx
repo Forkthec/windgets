@@ -375,3 +375,53 @@ describe('HE-14-HU03 · Confirmar una propuesta del agente de IA', () => {
     expect(llamadasA(nucleo, 'windi_confirm_proposal')).toEqual([{ proposal_id: 'p2' }]);
   });
 });
+
+describe('HE-14-HU05 · Editar tarjetas con el agente de IA', () => {
+  it('HE-14-HU05-CA01 · Editar con confirmación', async () => {
+    // ET01: el valor actual y el nuevo de cada dato que cambia.
+    const edicion: WindiProposal = {
+      id: 'p1',
+      action: 'edit',
+      items: [
+        {
+          card_id: 't1',
+          current: { title: 'Informe', due_date: '2026-11-20' },
+          changes: { title: 'Informe final', due_date: '2026-11-22' },
+          title: 'Informe',
+        },
+      ],
+      warnings: [],
+      state: 'active',
+    };
+    await abrir(proponer(edicion));
+    await pedir('Cambia el informe');
+    const cambios = within(propuestas()[0] as HTMLElement).getByRole('list', { name: 'Cambios' });
+    expect(within(cambios).getByText('Título: Informe → Informe final')).toBeTruthy();
+    expect(within(cambios).getByText('Fecha límite: 20/11/2026 → 22/11/2026')).toBeTruthy();
+  });
+
+  it('HE-14-HU05-CA06 · Editar una tarjeta completada', async () => {
+    // ET05: el aviso en la propuesta, con «Confirmar» y «Rechazar» habilitados.
+    const aviso = 'Esta tarjeta está completada. Editarla no cambia su columna.';
+    await abrir(
+      proponer({
+        id: 'p1',
+        action: 'edit',
+        items: [
+          {
+            card_id: 't1',
+            current: { title: 'Informe' },
+            changes: { title: 'Informe final' },
+            title: 'Informe',
+          },
+        ],
+        warnings: [aviso],
+        state: 'active',
+      }),
+    );
+    await pedir('Cambia el informe');
+    const p = propuestas()[0] as HTMLElement;
+    expect(within(p).getByText(aviso)).toBeTruthy();
+    expect(boton(p, 'Confirmar').disabled).toBe(false);
+  });
+});

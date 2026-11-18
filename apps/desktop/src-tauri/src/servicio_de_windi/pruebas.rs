@@ -372,7 +372,7 @@ fn contexto_minimo() {
     );
     let hoy = chrono::NaiveDate::from_ymd_opt(2026, 11, 14).unwrap();
     let c = bloquear(contexto::<CalendarioDePrueba>(
-        &servicio, USUARIO, " Prueba ", hoy, 14,
+        &servicio, USUARIO, " Prueba ", hoy, 14, "Hola",
     ))
     .unwrap();
     assert_eq!(c.alias, "Prueba");
@@ -892,5 +892,245 @@ fn ca_he_14_hu04_ca09() {
     assert_eq!(
         bloquear(planificador.etiquetas(USUARIO)).unwrap().len(),
         antes
+    );
+}
+
+// HE-14-HU05 · Editar tarjetas con el agente de IA. Lo que Windi dice cuando no encuentra la tarjeta, cuando varias
+// coinciden o cuando la fecha es anterior a hoy lo produce `windi-chat`; el Núcleo vuelve a aplicar las reglas y,
+// sin una edición válida, no muestra la propuesta.
+
+fn propone_editar(card_id: &str, cambios: Value) -> WindiChatResponse {
+    WindiChatResponse {
+        reply: "Esto es lo que voy a cambiar. ¿Confirmas?".into(),
+        intent: WindiChatResponseIntent::Propose,
+        proposal: Some(WindiChatProposal {
+            action: crate::tipos::ProposalAction::Edit,
+            items: vec![WindiChatProposalItemsItem {
+                card_id: Some(Uuid(card_id.into())),
+                changes: Some(cambios),
+            }],
+        }),
+    }
+}
+
+fn pedir_edicion(
+    planificador: &Planificador,
+    windi: &ServicioDeWindi,
+    card_id: &str,
+    cambios: Value,
+) -> Option<WindiProposal> {
+    let nube = WindiSimulado::responde(vec![Ok(propone_editar(card_id, cambios))]);
+    enviar_con(
+        windi,
+        &nube,
+        &manejador_de(planificador),
+        "Cambia la tarjeta",
+        true,
+    )
+    .unwrap()
+    .proposal
+}
+
+#[test]
+fn ca_he_14_hu05_ca01() {
+    // HE-14-HU05-CA01 · La propuesta trae el valor actual y el nuevo de cada dato que cambia (ET01); al confirmar
+    // se actualiza con las reglas de HE-07-HU04 (ET02, ET07) y Windi menciona el título.
+    let planificador = con_semilla();
+    let id = tarjeta_en(&planificador, POR_HACER, "Informe", "2026-11-20", 1024.0);
+    let windi = ServicioDeWindi::nuevo();
+    let propuesta = pedir_edicion(
+        &planificador,
+        &windi,
+        &id,
+        serde_json::json!({ "title": "Informe final", "due_date": "2026-11-22" }),
+    )
+    .unwrap();
+    let item = &propuesta.items[0];
+    assert_eq!(item.title, "Informe");
+    assert_eq!(
+        item.current,
+        Some(serde_json::json!({ "title": "Informe", "due_date": "2026-11-20" }))
+    );
+    assert_eq!(
+        item.changes,
+        Some(serde_json::json!({ "title": "Informe final", "due_date": "2026-11-22" }))
+    );
+    assert!(propuesta.warnings.is_empty());
+    let r = confirmar(&windi, &manejador_de(&planificador), &propuesta, true).unwrap();
+    assert_eq!(r.reply.text, "Listo, actualicé la tarjeta «Informe final».");
+    let tarjeta = bloquear(planificador.tarjeta(USUARIO, &id))
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        (tarjeta.title.as_str(), tarjeta.due_date.0.as_str()),
+        ("Informe final", "2026-11-22")
+    );
+}
+
+#[test]
+fn ca_he_14_hu05_ca02() {
+    // HE-14-HU05-CA02 · «Rechazar» no modifica la tarjeta y Windi dice que no hay cambios.
+    let planificador = con_semilla();
+    let id = tarjeta_en(&planificador, POR_HACER, "Informe", "2026-11-20", 1024.0);
+    let windi = ServicioDeWindi::nuevo();
+    let propuesta = pedir_edicion(
+        &planificador,
+        &windi,
+        &id,
+        serde_json::json!({ "title": "Otro" }),
+    )
+    .unwrap();
+    let r = windi.rechazar(&propuesta.id, AHORA).unwrap();
+    assert!(
+        r.reply
+            .text
+            .starts_with("Entendido, no hice ningún cambio.")
+    );
+    assert_eq!(
+        bloquear(planificador.tarjeta(USUARIO, &id))
+            .unwrap()
+            .unwrap()
+            .title,
+        "Informe"
+    );
+}
+
+#[test]
+fn ca_he_14_hu05_ca03() {
+    // HE-14-HU05-CA03 · Una tarjeta que no existe: ninguna propuesta (ET08).
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    assert!(
+        pedir_edicion(
+            &planificador,
+            &windi,
+            "00000000-0000-4000-8000-0000000000ee",
+            serde_json::json!({ "title": "Otro" })
+        )
+        .is_none()
+    );
+}
+
+#[test]
+fn ca_he_14_hu05_ca04() {
+    // HE-14-HU05-CA04 · Varias tarjetas coinciden: Windi recibe en el contexto las que comparten palabras con el
+    // mensaje, con su título y fecha límite (ET03), para preguntar a cuál se refiere.
+    let planificador = con_semilla();
+    tarjeta_en(
+        &planificador,
+        POR_HACER,
+        "Pagar la luz",
+        "2026-11-20",
+        1024.0,
+    );
+    tarjeta_en(
+        &planificador,
+        POR_HACER,
+        "Pagar el agua",
+        "2026-11-25",
+        2048.0,
+    );
+    tarjeta_en(
+        &planificador,
+        POR_HACER,
+        "Llamar a mamá",
+        "2026-11-21",
+        3072.0,
+    );
+    let hoy = chrono::NaiveDate::from_ymd_opt(2026, 11, 14).unwrap();
+    let c = bloquear(contexto::<CalendarioDePrueba>(
+        &planificador,
+        USUARIO,
+        "Prueba",
+        hoy,
+        14,
+        "Cambia la fecha de la tarjeta de pagar",
+    ))
+    .unwrap();
+    let mut vistas: Vec<(String, String)> = c
+        .cards
+        .iter()
+        .map(|t| (t.title.clone(), t.due_date.0.clone()))
+        .collect();
+    vistas.sort();
+    assert_eq!(
+        vistas,
+        vec![
+            ("Pagar el agua".to_string(), "2026-11-25".to_string()),
+            ("Pagar la luz".to_string(), "2026-11-20".to_string()),
+        ]
+    );
+}
+
+#[test]
+fn ca_he_14_hu05_ca05() {
+    // HE-14-HU05-CA05 · Fecha límite anterior a hoy: no hay propuesta (ET04).
+    let planificador = con_semilla();
+    let id = tarjeta_en(&planificador, POR_HACER, "Informe", "2026-11-20", 1024.0);
+    let windi = ServicioDeWindi::nuevo();
+    assert!(
+        pedir_edicion(
+            &planificador,
+            &windi,
+            &id,
+            serde_json::json!({ "due_date": "2026-11-13" })
+        )
+        .is_none()
+    );
+}
+
+#[test]
+fn ca_he_14_hu05_ca06() {
+    // HE-14-HU05-CA06 · Una tarjeta completada se puede editar con el aviso de ET05; editarla no cambia su columna.
+    let planificador = con_semilla();
+    let id = tarjeta_en(&planificador, POR_HACER, "Informe", "2026-11-20", 1024.0);
+    bloquear(planificador.marcar_completada(
+        USUARIO,
+        crate::tipos::CardSetCompletedParams {
+            card_id: Uuid(id.clone()),
+            completed: true,
+        },
+    ))
+    .unwrap();
+    let antes = bloquear(planificador.tarjeta(USUARIO, &id))
+        .unwrap()
+        .unwrap()
+        .column_id;
+    let windi = ServicioDeWindi::nuevo();
+    let propuesta = pedir_edicion(
+        &planificador,
+        &windi,
+        &id,
+        serde_json::json!({ "title": "Informe final" }),
+    )
+    .unwrap();
+    assert_eq!(
+        propuesta.warnings,
+        vec!["Esta tarjeta está completada. Editarla no cambia su columna.".to_string()]
+    );
+    confirmar(&windi, &manejador_de(&planificador), &propuesta, true).unwrap();
+    let tarjeta = bloquear(planificador.tarjeta(USUARIO, &id))
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        (tarjeta.title.as_str(), tarjeta.column_id),
+        ("Informe final", antes)
+    );
+}
+
+#[test]
+fn ca_he_14_hu05_ca07() {
+    // HE-14-HU05-CA07 · Pedir un valor que ya tiene: ninguna propuesta (ET09).
+    let planificador = con_semilla();
+    let id = tarjeta_en(&planificador, POR_HACER, "Informe", "2026-11-20", 1024.0);
+    let windi = ServicioDeWindi::nuevo();
+    assert!(
+        pedir_edicion(
+            &planificador,
+            &windi,
+            &id,
+            serde_json::json!({ "due_date": "2026-11-20" })
+        )
+        .is_none()
     );
 }
