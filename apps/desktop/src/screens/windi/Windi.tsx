@@ -1,27 +1,56 @@
 import { useCallback, useEffect, useId, useState, type KeyboardEvent } from 'react';
-import type { WindiMessage } from '@/types';
+import type { WindiMessage, WindiProposal } from '@/types';
 import textos from '@/types/messages.es.json';
 import { Aviso } from '@/ui/Aviso/Aviso';
 import { Boton } from '@/ui/Boton/Boton';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { Propuesta } from './Propuesta';
 
 // P-IA-01 Agente de IA (Menú principal > Planificador > Agente de IA; HE-14-HU01). La conversación vive en el
 // Núcleo mientras la aplicación está abierta (IPC-WIN-01; ET14). Cada mensaje va a Windi por IPC-WIN-02, que
 // espera la respuesta como máximo 15 s (RNF-11). Sin conexión no se puede escribir (ET12).
 // DUDA: HE-14-HU01 el campo «Escribe un mensaje» no define si «Enter» con Mayúsculas hace un salto de línea.
 // Valor usado: «Enter» envía (ET05) y Mayúsculas + «Enter» hace un salto de línea (docs/DUDAS.md).
+// HE-14-HU03: cada propuesta va en el chat después de la respuesta que la trajo, con «Confirmar» y «Rechazar».
+// DUDA: HE-14-HU03 IPC-WIN-01 devuelve solo la última propuesta. Valor usado: la vista guarda las anteriores
+// mientras está abierta, para mostrar la «Descartada» (CA04) (docs/DUDAS.md).
 
 /** Largo máximo de un mensaje (HE-14-HU01-ET03). */
 export const LARGO_MAXIMO = 2000;
 
+/** Una propuesta y el mensaje de Windi después del cual se muestra. */
+interface PropuestaEnElChat {
+  despuesDe: string;
+  propuesta: WindiProposal;
+}
+
+/** Agrega `nueva` y deja como «Descartada» la activa anterior (HE-14-HU03-ET04). */
+function conNueva(lista: PropuestaEnElChat[], nueva: PropuestaEnElChat): PropuestaEnElChat[] {
+  const anteriores = lista
+    .filter((p) => p.propuesta.id !== nueva.propuesta.id)
+    .map((p) =>
+      p.propuesta.state === 'active'
+        ? { ...p, propuesta: { ...p.propuesta, state: 'discarded' as const } }
+        : p,
+    );
+  return [...anteriores, nueva];
+}
+
+function conEstado(lista: PropuestaEnElChat[], id: string, state: WindiProposal['state']) {
+  return lista.map((p) => (p.propuesta.id === id ? { ...p, propuesta: { ...p.propuesta, state } } : p));
+}
+
 export function Windi() {
   const { invocar, escuchar } = useNucleo();
   const [mensajes, setMensajes] = useState<WindiMessage[] | null>(null);
+  const [propuestas, setPropuestas] = useState<PropuestaEnElChat[]>([]);
   const [enLinea, setEnLinea] = useState(true);
   const [texto, setTexto] = useState('');
   const [escribiendo, setEscribiendo] = useState(false);
   // CA08: el mensaje que falló, para «Reintentar».
   const [fallido, setFallido] = useState<string | null>(null);
+  // HE-14-HU03-CA02: se perdió la conexión al confirmar.
+  const [sinConexionAlConfirmar, setSinConexionAlConfirmar] = useState(false);
   const idCampo = useId();
 
   const leer = useCallback(async () => {
@@ -29,12 +58,24 @@ export function Windi() {
     if (!r.ok) return;
     setMensajes(r.value.messages);
     setEnLinea(r.value.online);
+    const actual = r.value.proposal;
+    const ultimoDeWindi = r.value.messages.filter((m) => m.role === 'assistant').at(-1);
+    if (actual && ultimoDeWindi) {
+      setPropuestas((lista) =>
+        lista.some((p) => p.propuesta.id === actual.id)
+          ? conEstado(lista, actual.id, actual.state)
+          : conNueva(lista, { despuesDe: ultimoDeWindi.id, propuesta: actual }),
+      );
+    }
   }, [invocar]);
 
   useEffect(() => {
     void leer();
     // ET12, ET13: al perder o recuperar la conexión se habilita o deshabilita el chat.
-    return escuchar('connectivity_changed', (carga) => setEnLinea(carga.online));
+    return escuchar('connectivity_changed', (carga) => {
+      setEnLinea(carga.online);
+      if (carga.online) setSinConexionAlConfirmar(false);
+    });
   }, [escuchar, leer]);
 
   const enviar = async (mensaje: string) => {
@@ -54,10 +95,41 @@ export function Windi() {
     });
     const r = await invocar('windi_send_message', { message: mensaje });
     setEscribiendo(false);
-    if (!r.ok) {
-      if (r.error.code === 'net.offline') setEnLinea(false);
-      else setFallido(mensaje);
+    if (r.ok) {
+      const { reply, proposal } = r.value;
+      if (proposal) setPropuestas((lista) => conNueva(lista, { despuesDe: reply.id, propuesta: proposal }));
+    } else if (r.error.code === 'net.offline') {
+      setEnLinea(false);
+    } else {
+      setFallido(mensaje);
     }
+    await leer();
+  };
+
+  const confirmar = async (propuesta: WindiProposal) => {
+    setEscribiendo(true);
+    const r = await invocar('windi_confirm_proposal', { proposal_id: propuesta.id });
+    setEscribiendo(false);
+    if (r.ok) {
+      const { outcome, reply, new_proposal } = r.value;
+      setPropuestas((lista) => {
+        const actualizada = conEstado(lista, propuesta.id, outcome === 'applied' ? 'confirmed' : 'discarded');
+        return new_proposal
+          ? conNueva(actualizada, { despuesDe: reply.id, propuesta: new_proposal })
+          : actualizada;
+      });
+    } else if (r.error.code === 'net.offline') {
+      // ET07: no aplica, deshabilita «Confirmar» y «Rechazar» y muestra el aviso.
+      setSinConexionAlConfirmar(true);
+    } else if (r.error.code === 'proposal.discarded') {
+      setPropuestas((lista) => conEstado(lista, propuesta.id, 'discarded'));
+    }
+    await leer();
+  };
+
+  const rechazar = async (propuesta: WindiProposal) => {
+    const r = await invocar('windi_reject_proposal', { proposal_id: propuesta.id });
+    setPropuestas((lista) => conEstado(lista, propuesta.id, r.ok ? 'rejected' : 'discarded'));
     await leer();
   };
 
@@ -85,12 +157,24 @@ export function Windi() {
     <main aria-label="Agente de IA" aria-busy={mensajes === null}>
       {/* ET13: sin conexión, el aviso (RT-04); el historial sigue visible. */}
       {!enLinea && <Aviso texto={textos.WINDI_SIN_CONEXION} />}
+      {sinConexionAlConfirmar && <Aviso texto={textos.WINDI_SIN_CONEXION_AL_CONFIRMAR} />}
       {/* ET01: el área de conversación. */}
       <ol className="wg-windi__conversacion" aria-label="Conversación" aria-live="polite">
         {(mensajes ?? []).map((m) => (
           <li key={m.id} className={`wg-windi__mensaje wg-windi__mensaje--${m.role}`}>
             {m.role === 'assistant' && <span className="wg-windi__autor">Windi</span>}
             <p>{m.text}</p>
+            {propuestas
+              .filter((p) => p.despuesDe === m.id)
+              .map(({ propuesta }) => (
+                <Propuesta
+                  key={propuesta.id}
+                  propuesta={propuesta}
+                  habilitada={enLinea && !escribiendo && !sinConexionAlConfirmar}
+                  alConfirmar={() => void confirmar(propuesta)}
+                  alRechazar={() => void rechazar(propuesta)}
+                />
+              ))}
           </li>
         ))}
         {escribiendo && <li className="wg-windi__escribiendo">Escribiendo…</li>}

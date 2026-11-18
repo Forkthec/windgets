@@ -1817,11 +1817,17 @@ pub async fn windi_send_message(
         Err(e) => return Ok(leido(Err(e))),
     };
     let cliente = nucleo.sesion.auth();
+    let manejador = crate::servicio_de_windi::manejador::ManejadorDelPlanificador {
+        planificador: &nucleo.planificador,
+        user_id: &user_id,
+        alias: &sesion.alias,
+    };
     Ok(leido(
         nucleo
             .windi
             .enviar(
                 cliente,
+                &manejador,
                 &sesion.access_token,
                 &params.message,
                 contexto,
@@ -1830,4 +1836,67 @@ pub async fn windi_send_message(
             )
             .await,
     ))
+}
+
+/// IPC-WIN-03 `windi_confirm_proposal` (HE-14-HU03): antes de aplicar, una consulta inmediata a la nube trae los
+/// cambios de otros computadores (ET05; D-047); sin conexión no aplica nada (ET07). Avisa con EV-07 si aplicó.
+#[tauri::command]
+pub async fn windi_confirm_proposal(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::WindiConfirmProposalParams,
+) -> Result<IpcResult<crate::tipos::WindiConfirmProposalResult>, ()> {
+    let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+        return Ok(leido(Err(crate::servicio_del_planificador::inesperado())));
+    };
+    let user_id = sesion.user_id.to_lowercase();
+    let cliente = nucleo.sesion.auth();
+    let en_linea = {
+        let _ciclo = nucleo.ciclo.lock().await;
+        let credenciales = motor_de_sincronizacion::Credenciales {
+            user_id: &user_id,
+            token: &sesion.access_token,
+        };
+        let _ =
+            motor_de_sincronizacion::descargar(nucleo.planificador.base(), cliente, &credenciales)
+                .await;
+        cliente.comprobar_conexion().await
+    };
+    let manejador = crate::servicio_de_windi::manejador::ManejadorDelPlanificador {
+        planificador: &nucleo.planificador,
+        user_id: &user_id,
+        alias: &sesion.alias,
+    };
+    let r = nucleo
+        .windi
+        .confirmar(
+            &manejador,
+            &params.proposal_id,
+            en_linea,
+            chrono::Utc::now().timestamp_millis(),
+        )
+        .await;
+    if matches!(&r, Ok(c) if c.outcome == crate::tipos::WindiConfirmProposalResultOutcome::Applied)
+    {
+        avisar_tarjetas(&app, Vec::new(), ChangeOp::Upsert);
+    }
+    Ok(leido(r))
+}
+
+/// IPC-WIN-04 `windi_reject_proposal` (HE-14-HU03): no aplica cambios.
+#[tauri::command]
+pub fn windi_reject_proposal(
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::WindiRejectProposalParams,
+) -> IpcResult<crate::tipos::WindiRejectProposalResult> {
+    match nucleo
+        .windi
+        .rechazar(&params.proposal_id, chrono::Utc::now().timestamp_millis())
+    {
+        Ok(r) => correcto(r),
+        Err(error) => IpcResult::Err(IpcErr {
+            ok: false.into(),
+            error,
+        }),
+    }
 }

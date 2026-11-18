@@ -297,6 +297,23 @@ pub const WINDI_SALUDO: &str =
 /// DUDA: HE-14-HU02 el texto no es literal. Valor usado: una frase breve con el alias y un solo emoji (ET07).
 pub const WINDI_CELEBRACION: &str = "¡Bien hecho, <alias>! 🎉 Ya está en Hecho.";
 
+// HE-14-HU03 · Confirmar una propuesta del agente de IA (IPC-WIN-03, IPC-WIN-04).
+
+/// `net.offline` al confirmar (HE-14-HU03-CA02, ET07; HE-14-HU04-CA07).
+pub const WINDI_SIN_CONEXION_AL_CONFIRMAR: &str =
+    "Se perdió la conexión. No se hizo ningún cambio.";
+/// Respuestas de Windi al confirmar o rechazar. DUDA: HE-14-HU03 los textos no son literales. Valor usado: frases
+/// breves con la personalidad de HE-14-HU02.
+pub const WINDI_CAMBIO_HECHO: &str = "Listo, ya hice el cambio.";
+pub const WINDI_PROPUESTA_RECHAZADA: &str =
+    "Entendido, no hice ningún cambio. ¿En qué más te ayudo?";
+/// HE-14-HU03-CA03, ET06: qué cambió desde la propuesta.
+pub const WINDI_PROPUESTA_DESACTUALIZADA: &str =
+    "No hice ningún cambio porque tus tarjetas cambiaron desde que te lo propuse: <cambios>.";
+pub const WINDI_PROPUESTA_NUEVA: &str = "Esta es la propuesta con los datos actuales. ¿Confirmas?";
+pub const WINDI_TARJETA_YA_NO_EXISTE: &str = "«<título>» ya no existe";
+pub const WINDI_TARJETA_CAMBIO: &str = "«<título>» tiene otro valor en <campos>";
+
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
     ("SERVICIO_NO_DISPONIBLE", SERVICIO_NO_DISPONIBLE),
@@ -424,6 +441,19 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("WINDI_NO_DISPONIBLE", WINDI_NO_DISPONIBLE),
     ("WINDI_SALUDO", WINDI_SALUDO),
     ("WINDI_CELEBRACION", WINDI_CELEBRACION),
+    (
+        "WINDI_SIN_CONEXION_AL_CONFIRMAR",
+        WINDI_SIN_CONEXION_AL_CONFIRMAR,
+    ),
+    ("WINDI_CAMBIO_HECHO", WINDI_CAMBIO_HECHO),
+    ("WINDI_PROPUESTA_RECHAZADA", WINDI_PROPUESTA_RECHAZADA),
+    (
+        "WINDI_PROPUESTA_DESACTUALIZADA",
+        WINDI_PROPUESTA_DESACTUALIZADA,
+    ),
+    ("WINDI_PROPUESTA_NUEVA", WINDI_PROPUESTA_NUEVA),
+    ("WINDI_TARJETA_YA_NO_EXISTE", WINDI_TARJETA_YA_NO_EXISTE),
+    ("WINDI_TARJETA_CAMBIO", WINDI_TARJETA_CAMBIO),
 ];
 
 #[cfg(test)]

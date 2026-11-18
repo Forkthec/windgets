@@ -79,7 +79,89 @@ pub(crate) fn enviar(
     texto: &str,
     en_linea: bool,
 ) -> Result<WindiSendMessageResult, AppError> {
-    bloquear(windi.enviar(nube, "jwt", texto, contexto_vacio(), en_linea, AHORA))
+    enviar_con(windi, nube, &ManejadorSimulado::default(), texto, en_linea)
+}
+
+pub(crate) fn enviar_con<M: ManejadorDePropuestas>(
+    windi: &ServicioDeWindi,
+    nube: &WindiSimulado,
+    manejador: &M,
+    texto: &str,
+    en_linea: bool,
+) -> Result<WindiSendMessageResult, AppError> {
+    bloquear(windi.enviar(
+        nube,
+        manejador,
+        "jwt",
+        texto,
+        contexto_vacio(),
+        en_linea,
+        AHORA,
+    ))
+}
+
+/// Manejador de propuestas simulado (HE-14-HU03): las tarjetas son un mapa id → (título, estado) y aplicar solo
+/// registra la propuesta.
+#[derive(Default)]
+pub(crate) struct ManejadorSimulado {
+    pub(crate) tarjetas: Mutex<std::collections::HashMap<String, (String, Value)>>,
+    pub(crate) aplicadas: Mutex<Vec<WindiProposal>>,
+}
+
+impl ManejadorSimulado {
+    pub(crate) fn con(tarjetas: &[(&str, &str, Value)]) -> Self {
+        Self {
+            tarjetas: Mutex::new(
+                tarjetas
+                    .iter()
+                    .map(|(id, titulo, estado)| ((*id).into(), ((*titulo).into(), estado.clone())))
+                    .collect(),
+            ),
+            aplicadas: Mutex::default(),
+        }
+    }
+}
+
+impl ManejadorDePropuestas for ManejadorSimulado {
+    async fn preparar(
+        &self,
+        propuesta: &WindiChatProposal,
+    ) -> Result<Option<WindiProposal>, AppError> {
+        let tarjetas = self.tarjetas.lock().unwrap();
+        Ok(Some(WindiProposal {
+            id: Uuid(uuid::Uuid::new_v4().to_string()),
+            action: propuesta.action.clone(),
+            items: propuesta
+                .items
+                .iter()
+                .map(|i| {
+                    let tarjeta = i.card_id.as_ref().and_then(|id| tarjetas.get(&id.0));
+                    crate::tipos::WindiProposalItem {
+                        card_id: i.card_id.clone(),
+                        current: tarjeta.map(|(_, estado)| estado.clone()),
+                        changes: i.changes.clone(),
+                        title: tarjeta.map(|(t, _)| t.clone()).unwrap_or_default(),
+                    }
+                })
+                .collect(),
+            warnings: Vec::new(),
+            state: ProposalState::Active,
+        }))
+    }
+
+    async fn actual(&self, card_id: &str) -> Result<Option<Value>, AppError> {
+        Ok(self
+            .tarjetas
+            .lock()
+            .unwrap()
+            .get(card_id)
+            .map(|(_, e)| e.clone()))
+    }
+
+    async fn aplicar(&self, propuesta: &WindiProposal) -> Result<Option<String>, AppError> {
+        self.aplicadas.lock().unwrap().push(propuesta.clone());
+        Ok(None)
+    }
 }
 
 fn textos(windi: &ServicioDeWindi) -> Vec<(WindiMessageRole, String, bool)> {
@@ -328,4 +410,210 @@ fn ca_he_14_hu02_ca02() {
         .text
         .clone();
     assert!(saludo.contains("Prueba") && emojis(&saludo) <= 1);
+}
+
+/// Una respuesta de windi-chat con una propuesta de mover la tarjeta `id` a `columna`.
+fn propone_mover(id: &str, columna: &str) -> WindiChatResponse {
+    WindiChatResponse {
+        reply: "Esto es lo que voy a mover. ¿Confirmas?".into(),
+        intent: WindiChatResponseIntent::Propose,
+        proposal: Some(WindiChatProposal {
+            action: crate::tipos::ProposalAction::Move,
+            items: vec![WindiChatProposalItemsItem {
+                card_id: Some(Uuid(id.into())),
+                changes: Some(serde_json::json!({ "column_id": columna })),
+            }],
+        }),
+    }
+}
+
+fn confirmar<M: ManejadorDePropuestas>(
+    windi: &ServicioDeWindi,
+    manejador: &M,
+    propuesta: &WindiProposal,
+    en_linea: bool,
+) -> Result<WindiConfirmProposalResult, AppError> {
+    bloquear(windi.confirmar(manejador, &propuesta.id, en_linea, AHORA))
+}
+
+#[test]
+fn ca_he_14_hu03_ca01() {
+    // HE-14-HU03-CA01 · Confirmar una propuesta: sin «Confirmar» nada cambia (ET01); al confirmar se aplica y Windi
+    // confirma el cambio. «Rechazar» no aplica nada (ET02).
+    let windi = ServicioDeWindi::nuevo();
+    let manejador = ManejadorSimulado::con(&[(
+        "t1",
+        "Pagar la luz",
+        serde_json::json!({ "column_id": "c1" }),
+    )]);
+    let nube = WindiSimulado::responde(vec![
+        Ok(propone_mover("t1", "c2")),
+        Ok(propone_mover("t1", "c3")),
+    ]);
+    let propuesta = enviar_con(&windi, &nube, &manejador, "Mueve Pagar la luz", true)
+        .unwrap()
+        .proposal
+        .unwrap();
+    assert_eq!(propuesta.state, ProposalState::Active);
+    assert_eq!(propuesta.items[0].title, "Pagar la luz");
+    assert!(manejador.aplicadas.lock().unwrap().is_empty());
+    let r = confirmar(&windi, &manejador, &propuesta, true).unwrap();
+    assert_eq!(r.outcome, WindiConfirmProposalResultOutcome::Applied);
+    assert_eq!(r.reply.text, "Listo, ya hice el cambio.");
+    assert_eq!(manejador.aplicadas.lock().unwrap().len(), 1);
+    assert_eq!(
+        windi
+            .conversacion("Prueba", true, AHORA)
+            .proposal
+            .unwrap()
+            .state,
+        ProposalState::Confirmed
+    );
+    // Una propuesta confirmada no se vuelve a aplicar.
+    assert_eq!(
+        confirmar(&windi, &manejador, &propuesta, true)
+            .unwrap_err()
+            .code,
+        ErrorCode::ProposalDiscarded
+    );
+    // «Rechazar» no aplica cambios y Windi lo dice.
+    let otra = enviar_con(&windi, &nube, &manejador, "Mejor a Hecho", true)
+        .unwrap()
+        .proposal
+        .unwrap();
+    let r = bloquear(async { windi.rechazar(&otra.id, AHORA) }).unwrap();
+    assert_eq!(
+        r.reply.text,
+        "Entendido, no hice ningún cambio. ¿En qué más te ayudo?"
+    );
+    assert_eq!(manejador.aplicadas.lock().unwrap().len(), 1);
+}
+
+#[test]
+fn ca_he_14_hu03_ca02() {
+    // HE-14-HU03-CA02 · Confirmar sin conexión: no aplica nada y responde «Se perdió la conexión. No se hizo ningún
+    // cambio.» (ET07); la propuesta sigue sin confirmar.
+    let windi = ServicioDeWindi::nuevo();
+    let manejador = ManejadorSimulado::con(&[(
+        "t1",
+        "Pagar la luz",
+        serde_json::json!({ "column_id": "c1" }),
+    )]);
+    let nube = WindiSimulado::responde(vec![Ok(propone_mover("t1", "c2"))]);
+    let propuesta = enviar_con(&windi, &nube, &manejador, "Mueve Pagar la luz", true)
+        .unwrap()
+        .proposal
+        .unwrap();
+    let e = confirmar(&windi, &manejador, &propuesta, false).unwrap_err();
+    assert_eq!(
+        (e.code, e.message.as_str()),
+        (
+            ErrorCode::NetOffline,
+            "Se perdió la conexión. No se hizo ningún cambio."
+        )
+    );
+    assert!(manejador.aplicadas.lock().unwrap().is_empty());
+    assert_eq!(
+        windi
+            .conversacion("Prueba", true, AHORA)
+            .proposal
+            .unwrap()
+            .state,
+        ProposalState::Active
+    );
+}
+
+#[test]
+fn ca_he_14_hu03_ca03() {
+    // HE-14-HU03-CA03 · Propuesta desactualizada: la tarjeta cambió desde otra pantalla, un widget u otro
+    // computador (ET05). No aplica, explica qué cambió y propone de nuevo con los datos actuales (ET06). Si la
+    // tarjeta ya no existe, lo dice y no hay propuesta nueva.
+    let windi = ServicioDeWindi::nuevo();
+    let manejador = ManejadorSimulado::con(&[(
+        "t1",
+        "Pagar la luz",
+        serde_json::json!({ "column_id": "c1", "title": "Pagar la luz" }),
+    )]);
+    let nube = WindiSimulado::responde(vec![
+        Ok(propone_mover("t1", "c2")),
+        Ok(propone_mover("t1", "c2")),
+    ]);
+    let propuesta = enviar_con(&windi, &nube, &manejador, "Mueve Pagar la luz", true)
+        .unwrap()
+        .proposal
+        .unwrap();
+    manejador.tarjetas.lock().unwrap().insert(
+        "t1".into(),
+        (
+            "Pagar la luz".into(),
+            serde_json::json!({ "column_id": "c3", "title": "Pagar la luz" }),
+        ),
+    );
+    let r = confirmar(&windi, &manejador, &propuesta, true).unwrap();
+    assert_eq!(r.outcome, WindiConfirmProposalResultOutcome::Stale);
+    assert_eq!(
+        r.reply.text,
+        "No hice ningún cambio porque tus tarjetas cambiaron desde que te lo propuse: «Pagar la luz» tiene otro \
+         valor en la columna. Esta es la propuesta con los datos actuales. ¿Confirmas?"
+    );
+    assert!(manejador.aplicadas.lock().unwrap().is_empty());
+    let nueva = r.new_proposal.unwrap();
+    assert_eq!(nueva.state, ProposalState::Active);
+    assert_eq!(
+        nueva.items[0].current,
+        Some(serde_json::json!({ "column_id": "c3", "title": "Pagar la luz" }))
+    );
+    // La tarjeta se eliminó: no hay propuesta nueva.
+    let otra = enviar_con(&windi, &nube, &manejador, "Mueve Pagar la luz", true)
+        .unwrap()
+        .proposal
+        .unwrap();
+    manejador.tarjetas.lock().unwrap().clear();
+    let r = confirmar(&windi, &manejador, &otra, true).unwrap();
+    assert_eq!(r.outcome, WindiConfirmProposalResultOutcome::Stale);
+    assert!(r.reply.text.contains("«Pagar la luz» ya no existe"));
+    assert!(r.new_proposal.is_none());
+}
+
+#[test]
+fn ca_he_14_hu03_ca04() {
+    // HE-14-HU03-CA04 · Una sola propuesta activa (ET03): la nueva deja la anterior como «Descartada» (ET04), que ya
+    // no se puede confirmar; confirmar la nueva aplica solo la nueva.
+    let windi = ServicioDeWindi::nuevo();
+    let manejador = ManejadorSimulado::con(&[
+        (
+            "t1",
+            "Pagar la luz",
+            serde_json::json!({ "column_id": "c1" }),
+        ),
+        (
+            "t2",
+            "Entregar informe",
+            serde_json::json!({ "column_id": "c1" }),
+        ),
+    ]);
+    let nube = WindiSimulado::responde(vec![
+        Ok(propone_mover("t1", "c2")),
+        Ok(propone_mover("t2", "c3")),
+    ]);
+    let anterior = enviar_con(&windi, &nube, &manejador, "Mueve Pagar la luz", true)
+        .unwrap()
+        .proposal
+        .unwrap();
+    let nueva = enviar_con(&windi, &nube, &manejador, "Mejor mueve el informe", true)
+        .unwrap()
+        .proposal
+        .unwrap();
+    // La propuesta activa viaja en el contexto de windi-chat.
+    assert!(nube.peticiones()[1].context.active_proposal.is_some());
+    assert_eq!(
+        confirmar(&windi, &manejador, &anterior, true)
+            .unwrap_err()
+            .code,
+        ErrorCode::ProposalDiscarded
+    );
+    confirmar(&windi, &manejador, &nueva, true).unwrap();
+    let aplicadas = manejador.aplicadas.lock().unwrap();
+    assert_eq!(aplicadas.len(), 1);
+    assert_eq!(aplicadas[0].items[0].title, "Entregar informe");
 }

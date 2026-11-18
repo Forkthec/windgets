@@ -37,6 +37,8 @@ pub fn run() {
             puente_ipc::app_hide_main_window,
             puente_ipc::windi_get_conversation,
             puente_ipc::windi_send_message,
+            puente_ipc::windi_confirm_proposal,
+            puente_ipc::windi_reject_proposal,
             puente_ipc::app_get_last_screen,
             puente_ipc::app_set_last_screen,
             puente_ipc::app_request_exit,

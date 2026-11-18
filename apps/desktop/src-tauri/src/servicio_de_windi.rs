@@ -14,10 +14,13 @@ use crate::messages;
 use crate::servicio_de_sesion::instante;
 use crate::servicio_del_planificador::{Calendario, ServicioDelPlanificador, error, inesperado};
 use crate::tipos::{
-    AppError, ErrorCode, Uuid, WindiChatContext, WindiChatRequest, WindiChatRequestHistoryItem,
-    WindiChatRequestHistoryItemRole, WindiChatResponse, WindiConversation, WindiMessage,
-    WindiMessageRole, WindiProposal, WindiSendMessageResult,
+    AppError, ErrorCode, ProposalState, Uuid, WindiChatContext, WindiChatProposal,
+    WindiChatProposalItemsItem, WindiChatRequest, WindiChatRequestHistoryItem,
+    WindiChatRequestHistoryItemRole, WindiChatResponse, WindiConfirmProposalResult,
+    WindiConfirmProposalResultOutcome, WindiConversation, WindiMessage, WindiMessageRole,
+    WindiProposal, WindiRejectProposalResult, WindiSendMessageResult,
 };
+use serde_json::Value;
 
 /// Largo máximo de un mensaje (HE-14-HU01-ET03, ET04).
 pub const LARGO_MAXIMO: usize = 2000;
@@ -43,6 +46,60 @@ pub trait AgenteEnLaNube: Send + Sync {
         token: &str,
         peticion: &WindiChatRequest,
     ) -> impl std::future::Future<Output = Result<WindiChatResponse, FallaDeWindi>> + Send;
+}
+
+/// HE-14-HU03: lo que cada acción (crear, editar, mover, eliminar; HE-14-HU04 a HU07) sabe hacer con una
+/// propuesta. El servicio guarda una sola propuesta activa (ET03) y solo la aplica al confirmar (ET01; D-047).
+pub trait ManejadorDePropuestas: Send + Sync {
+    /// La propuesta que ve el usuario a partir de la de `windi-chat`: el título y el estado actual de cada tarjeta
+    /// y las advertencias. `None` si no se puede proponer (las reglas de `card_*` la rechazan).
+    fn preparar(
+        &self,
+        propuesta: &WindiChatProposal,
+    ) -> impl std::future::Future<Output = Result<Option<WindiProposal>, AppError>> + Send;
+    /// El estado actual de una tarjeta, con los mismos campos que `WindiProposalItem.current`; `None` si ya no
+    /// existe (ET05).
+    fn actual(
+        &self,
+        card_id: &str,
+    ) -> impl std::future::Future<Output = Result<Option<Value>, AppError>> + Send;
+    /// Aplica la propuesta con las mismas reglas de `card_*`. Devuelve la respuesta de Windi, si la acción tiene
+    /// una propia (la celebración de HE-14-HU06-CA02); si no, «Listo, ya hice el cambio.».
+    fn aplicar(
+        &self,
+        propuesta: &WindiProposal,
+    ) -> impl std::future::Future<Output = Result<Option<String>, AppError>> + Send;
+}
+
+/// El nombre de un campo de la tarjeta en la explicación de una propuesta desactualizada (HE-14-HU03-ET06).
+fn nombre_del_campo(campo: &str) -> &str {
+    match campo {
+        "title" => "el título",
+        "due_date" => "la fecha límite",
+        "column_id" => "la columna",
+        "priority" => "la prioridad",
+        "type" => "el tipo",
+        "description" => "la descripción",
+        "label_ids" => "las etiquetas",
+        "scheduled_date" | "scheduled_hour" => "el bloque horario",
+        "completed_on" => "la fecha de completado",
+        otro => otro,
+    }
+}
+
+/// La propuesta tal como viaja a `windi-chat` (`context.active_proposal`).
+fn para_el_chat(propuesta: &WindiProposal) -> WindiChatProposal {
+    WindiChatProposal {
+        action: propuesta.action.clone(),
+        items: propuesta
+            .items
+            .iter()
+            .map(|i| WindiChatProposalItemsItem {
+                card_id: i.card_id.clone(),
+                changes: i.changes.clone(),
+            })
+            .collect(),
+    }
 }
 
 #[derive(Default)]
@@ -108,9 +165,11 @@ impl ServicioDeWindi {
     /// IPC-WIN-02 `windi_send_message`. Valida el largo (ET03, ET04), agrega el mensaje del usuario (o reusa el
     /// último si falló y es el mismo: «Reintentar», ET16), llama a `windi-chat` con el historial y el contexto, y
     /// agrega la respuesta. Sin conexión o con falla, el mensaje del usuario queda marcado como fallido.
-    pub async fn enviar<N: AgenteEnLaNube>(
+    #[allow(clippy::too_many_arguments)]
+    pub async fn enviar<N: AgenteEnLaNube, M: ManejadorDePropuestas>(
         &self,
         nube: &N,
+        manejador: &M,
         token: &str,
         texto: &str,
         contexto: WindiChatContext,
@@ -170,7 +229,15 @@ impl ServicioDeWindi {
                     client_request_id: nuevo_id(),
                     message: texto.to_string(),
                     history,
-                    context: contexto,
+                    context: WindiChatContext {
+                        // HE-14-HU03: la propuesta activa viaja para que el agente sepa qué está pendiente.
+                        active_proposal: estado
+                            .propuesta
+                            .as_ref()
+                            .filter(|p| p.state == ProposalState::Active)
+                            .map(para_el_chat),
+                        ..contexto
+                    },
                 },
                 id,
             )
@@ -180,14 +247,32 @@ impl ServicioDeWindi {
         } else {
             Err(FallaDeWindi::SinConexion)
         };
+        // HE-14-HU03: la propuesta de windi-chat se prepara con los datos actuales; si las reglas de `card_*` no la
+        // permiten, no hay propuesta.
+        let preparada = match &respuesta {
+            Ok(WindiChatResponse {
+                proposal: Some(propuesta),
+                ..
+            }) => manejador.preparar(propuesta).await.ok().flatten(),
+            _ => None,
+        };
         let mut estado = self.estado.lock().unwrap_or_else(|e| e.into_inner());
         match respuesta {
             Ok(respuesta) => {
                 let reply = mensaje(WindiMessageRole::Assistant, &respuesta.reply, ahora_ms);
                 estado.mensajes.push(reply.clone());
+                // ET03, ET04: una sola propuesta activa; la anterior sin confirmar ni rechazar queda «Descartada».
+                if let Some(nueva) = &preparada {
+                    if let Some(anterior) = estado.propuesta.as_mut()
+                        && anterior.state == ProposalState::Active
+                    {
+                        anterior.state = ProposalState::Discarded;
+                    }
+                    estado.propuesta = Some(nueva.clone());
+                }
                 Ok(WindiSendMessageResult {
                     reply,
-                    proposal: estado.propuesta.clone(),
+                    proposal: preparada,
                 })
             }
             Err(falla) => {
@@ -206,6 +291,149 @@ impl ServicioDeWindi {
                 })
             }
         }
+    }
+
+    /// La propuesta activa con ese id; si no es la activa (por ejemplo, quedó «Descartada»), `proposal.discarded`.
+    fn activa(&self, id: &Uuid) -> Result<WindiProposal, AppError> {
+        let estado = self.estado.lock().unwrap_or_else(|e| e.into_inner());
+        estado
+            .propuesta
+            .clone()
+            .filter(|p| &p.id == id && p.state == ProposalState::Active)
+            .ok_or_else(|| error(ErrorCode::ProposalDiscarded, "", None))
+    }
+
+    /// Agrega la respuesta de Windi a la conversación.
+    fn responder(&self, texto: &str, ahora_ms: i64) -> WindiMessage {
+        let respuesta = mensaje(WindiMessageRole::Assistant, texto, ahora_ms);
+        let mut estado = self.estado.lock().unwrap_or_else(|e| e.into_inner());
+        estado.mensajes.push(respuesta.clone());
+        respuesta
+    }
+
+    fn cambiar_estado(&self, id: &Uuid, nuevo: ProposalState) {
+        let mut estado = self.estado.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(p) = estado.propuesta.as_mut().filter(|p| &p.id == id) {
+            p.state = nuevo;
+        }
+    }
+
+    /// IPC-WIN-03 `windi_confirm_proposal` (HE-14-HU03). `en_linea` es el resultado de la consulta inmediata a la
+    /// nube que hace el Puente IPC antes de llamar (ET05): sin conexión no aplica nada (ET07). Si alguna tarjeta
+    /// cambió o se eliminó, no aplica, explica qué cambió y propone de nuevo con los datos actuales si aún se puede
+    /// (ET05, ET06). Si no, aplica con las reglas de `card_*` y Windi confirma el cambio (CA01).
+    pub async fn confirmar<M: ManejadorDePropuestas>(
+        &self,
+        manejador: &M,
+        id: &Uuid,
+        en_linea: bool,
+        ahora_ms: i64,
+    ) -> Result<WindiConfirmProposalResult, AppError> {
+        let propuesta = self.activa(id)?;
+        if !en_linea {
+            return Err(error(
+                ErrorCode::NetOffline,
+                messages::WINDI_SIN_CONEXION_AL_CONFIRMAR,
+                None,
+            ));
+        }
+        let mut diferencias = Vec::new();
+        let mut vigentes = Vec::new();
+        for item in &propuesta.items {
+            let Some(card_id) = &item.card_id else {
+                vigentes.push(item);
+                continue;
+            };
+            match manejador.actual(&card_id.0).await? {
+                None => diferencias
+                    .push(messages::WINDI_TARJETA_YA_NO_EXISTE.replace("<título>", &item.title)),
+                Some(actual) => {
+                    let campos: Vec<&str> = item
+                        .current
+                        .as_ref()
+                        .and_then(Value::as_object)
+                        .map(|antes| {
+                            antes
+                                .iter()
+                                .filter(|(campo, valor)| actual.get(campo.as_str()) != Some(*valor))
+                                .map(|(campo, _)| nombre_del_campo(campo))
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                    if !campos.is_empty() {
+                        let mut campos = campos;
+                        campos.dedup();
+                        diferencias.push(
+                            messages::WINDI_TARJETA_CAMBIO
+                                .replace("<título>", &item.title)
+                                .replace("<campos>", &campos.join(", ")),
+                        );
+                    }
+                    vigentes.push(item);
+                }
+            }
+        }
+        if diferencias.is_empty() {
+            let texto = manejador
+                .aplicar(&propuesta)
+                .await?
+                .unwrap_or_else(|| messages::WINDI_CAMBIO_HECHO.to_string());
+            self.cambiar_estado(id, ProposalState::Confirmed);
+            return Ok(WindiConfirmProposalResult {
+                outcome: WindiConfirmProposalResultOutcome::Applied,
+                reply: self.responder(&texto, ahora_ms),
+                new_proposal: None,
+            });
+        }
+        // ET06: la propuesta nueva con los datos actuales, solo con las tarjetas que todavía existen.
+        let nueva = if vigentes.is_empty() {
+            None
+        } else {
+            let chat = WindiChatProposal {
+                action: propuesta.action.clone(),
+                items: vigentes
+                    .iter()
+                    .map(|i| WindiChatProposalItemsItem {
+                        card_id: i.card_id.clone(),
+                        changes: i.changes.clone(),
+                    })
+                    .collect(),
+            };
+            manejador.preparar(&chat).await?
+        };
+        let mut texto =
+            messages::WINDI_PROPUESTA_DESACTUALIZADA.replace("<cambios>", &diferencias.join("; "));
+        if nueva.is_some() {
+            texto.push(' ');
+            texto.push_str(messages::WINDI_PROPUESTA_NUEVA);
+        }
+        {
+            let mut estado = self.estado.lock().unwrap_or_else(|e| e.into_inner());
+            if let Some(p) = estado.propuesta.as_mut() {
+                p.state = ProposalState::Discarded;
+            }
+            if let Some(nueva) = &nueva {
+                estado.propuesta = Some(nueva.clone());
+            }
+        }
+        Ok(WindiConfirmProposalResult {
+            outcome: WindiConfirmProposalResultOutcome::Stale,
+            reply: self.responder(&texto, ahora_ms),
+            new_proposal: nueva,
+        })
+    }
+
+    /// IPC-WIN-04 `windi_reject_proposal` (HE-14-HU03): no aplica cambios y Windi lo confirma.
+    pub fn rechazar(
+        &self,
+        id: &Uuid,
+        ahora_ms: i64,
+    ) -> Result<WindiRejectProposalResult, AppError> {
+        self.activa(id)?;
+        self.cambiar_estado(id, ProposalState::Rejected);
+        Ok(WindiRejectProposalResult {
+            reply: self.responder(messages::WINDI_PROPUESTA_RECHAZADA, ahora_ms),
+        })
     }
 }
 
@@ -255,6 +483,8 @@ pub async fn contexto<C: Calendario>(
         active_proposal: None,
     })
 }
+
+pub mod manejador;
 
 #[cfg(test)]
 mod pruebas;
