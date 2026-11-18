@@ -293,6 +293,9 @@ pub const WINDI_NO_DISPONIBLE: &str = "No pude responder en este momento. Intent
 /// ejemplo). Valor usado: alias, nombre «Windi» y oferta de ayuda, con la personalidad de HE-14-HU02.
 pub const WINDI_SALUDO: &str =
     "¡Hola, <alias>! Soy Windi. ¿Qué organizamos hoy con tus tarjetas o con la aplicación?";
+/// Celebración al completar una tarjeta desde una propuesta (HE-14-HU02-CA02, ET03, ET08; HE-14-HU06-CA02).
+/// DUDA: HE-14-HU02 el texto no es literal. Valor usado: una frase breve con el alias y un solo emoji (ET07).
+pub const WINDI_CELEBRACION: &str = "¡Bien hecho, <alias>! 🎉 Ya está en Hecho.";
 
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
@@ -420,6 +423,7 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("WINDI_SIN_CONEXION", WINDI_SIN_CONEXION),
     ("WINDI_NO_DISPONIBLE", WINDI_NO_DISPONIBLE),
     ("WINDI_SALUDO", WINDI_SALUDO),
+    ("WINDI_CELEBRACION", WINDI_CELEBRACION),
 ];
 
 #[cfg(test)]

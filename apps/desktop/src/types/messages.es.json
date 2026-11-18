@@ -81,6 +81,7 @@
   "WIDGET_ELIMINADO": "Widget eliminado.",
   "WIDGET_POR_DEFECTO_NO_ELIMINABLE": "Los widgets por defecto no se pueden eliminar. Puedes desactivarlos.",
   "WIDGET_YA_AGREGADO": "Ya agregaste este widget.",
+  "WINDI_CELEBRACION": "¡Bien hecho, <alias>! 🎉 Ya está en Hecho.",
   "WINDI_NO_DISPONIBLE": "No pude responder en este momento. Intenta de nuevo.",
   "WINDI_SALUDO": "¡Hola, <alias>! Soy Windi. ¿Qué organizamos hoy con tus tarjetas o con la aplicación?",
   "WINDI_SIN_CONEXION": "El agente de IA necesita conexión a internet. Podrás conversar con él cuando te reconectes."

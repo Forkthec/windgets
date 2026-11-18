@@ -95,6 +95,11 @@ impl ServicioDeWindi {
         }
     }
 
+    /// HE-14-HU02-CA02: la frase breve con el alias con la que Windi celebra una tarjeta completada (ET03, ET08).
+    pub fn celebracion(alias: &str) -> String {
+        messages::WINDI_CELEBRACION.replace("<alias>", alias.trim())
+    }
+
     /// Al cerrar sesión la conversación empieza de nuevo (el historial es de la sesión de la aplicación).
     pub fn olvidar(&self) {
         *self.estado.lock().unwrap_or_else(|e| e.into_inner()) = Conversacion::default();

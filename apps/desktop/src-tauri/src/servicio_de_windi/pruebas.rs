@@ -307,3 +307,25 @@ fn contexto_minimo() {
     );
     assert!(c.cards.is_empty());
 }
+
+/// Emojis de un texto (los caracteres fuera del plano básico, como 🎉).
+fn emojis(texto: &str) -> usize {
+    texto.chars().filter(|c| u32::from(*c) >= 0x1F000).count()
+}
+
+#[test]
+fn ca_he_14_hu02_ca02() {
+    // HE-14-HU02-CA02 · Celebrar un logro: al confirmar el movimiento a Hecho, una frase breve con el alias (ET03,
+    // ET08) y como máximo un emoji, porque es una celebración (ET07). La usa la confirmación de HE-14-HU06.
+    let texto = ServicioDeWindi::celebracion(" Prueba ");
+    assert_eq!(texto, "¡Bien hecho, Prueba! 🎉 Ya está en Hecho.");
+    assert!(texto.split_whitespace().count() <= 10);
+    assert_eq!(emojis(&texto), 1);
+    // El saludo también lleva el alias (ET03) y no lleva más de un emoji (ET07).
+    let saludo = ServicioDeWindi::nuevo()
+        .conversacion("Prueba", true, AHORA)
+        .messages[0]
+        .text
+        .clone();
+    assert!(saludo.contains("Prueba") && emojis(&saludo) <= 1);
+}

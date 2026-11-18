@@ -95,3 +95,34 @@ describe('EF-01 windi-chat · HE-14-HU01', () => {
     });
   });
 });
+
+describe('EF-01 windi-chat · HE-14-HU02 (instrucción del sistema de INT-03)', () => {
+  const texto = instruccionDelSistema(CONTEXTO);
+
+  it('HE-14-HU02-CA01 · Tono y formato de las respuestas', () => {
+    // ET01, ET02, ET04 a ET07, ET12.
+    expect(texto).toContain('cercano, relajado y optimista, cálido sin exagerar');
+    expect(texto).toContain('Tratas a la persona de tú');
+    expect(texto).toContain('español neutro, con frases cortas y sencillas y sin tecnicismos');
+    expect(texto).toContain('máximo 3 oraciones antes de una lista');
+    expect(texto).toContain('lista numerada de máximo 6 pasos');
+    expect(texto).toContain('como máximo un emoji por mensaje y solo en saludos o celebraciones');
+    expect(leerPeticion(peticion('a'.repeat(2001)))).toBeNull();
+  });
+
+  it('HE-14-HU02-CA03 · Hablar de tarjetas vencidas sin culpar', () => {
+    // ET09.
+    expect(texto).toContain('Nunca regañas ni culpas por las tarjetas vencidas');
+    expect(texto).toContain('cambiar la fecha límite');
+  });
+
+  it('HE-14-HU02-CA04 · Preguntar si es una persona', () => {
+    // ET10.
+    expect(texto).toContain('aclaras que eres el agente de IA de Windgets y sigues ofreciendo ayuda');
+  });
+
+  it('HE-14-HU02-CA05 · Mensaje ofensivo', () => {
+    // ET11.
+    expect(texto).toContain('mantienes la calma, no devuelves el tono ni juzgas');
+  });
+});
