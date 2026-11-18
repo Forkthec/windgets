@@ -306,11 +306,15 @@ pub const WINDI_SIN_CONEXION_AL_CONFIRMAR: &str =
 /// breves con la personalidad de HE-14-HU02.
 pub const WINDI_CAMBIO_HECHO: &str = "Listo, ya hice el cambio.";
 pub const WINDI_PROPUESTA_RECHAZADA: &str =
-    "Entendido, no hice ningún cambio. ¿En qué más te ayudo?";
+    "Entendido, no hice ningún cambio. ¿Quieres cambiar algo de la propuesta?";
 /// HE-14-HU03-CA03, ET06: qué cambió desde la propuesta.
 pub const WINDI_PROPUESTA_DESACTUALIZADA: &str =
     "No hice ningún cambio porque tus tarjetas cambiaron desde que te lo propuse: <cambios>.";
 pub const WINDI_PROPUESTA_NUEVA: &str = "Esta es la propuesta con los datos actuales. ¿Confirmas?";
+// HE-14-HU04 · Crear tarjetas con el agente de IA. DUDA: HE-14-HU04 los textos no son literales («confirma la
+// creación mencionando el título», «confirma la cantidad de tarjetas creadas»).
+pub const WINDI_TARJETA_CREADA: &str = "Listo, creé la tarjeta «<título>».";
+pub const WINDI_TARJETAS_CREADAS: &str = "Listo, creé <cantidad> tarjetas.";
 pub const WINDI_TARJETA_YA_NO_EXISTE: &str = "«<título>» ya no existe";
 pub const WINDI_TARJETA_CAMBIO: &str = "«<título>» tiene otro valor en <campos>";
 

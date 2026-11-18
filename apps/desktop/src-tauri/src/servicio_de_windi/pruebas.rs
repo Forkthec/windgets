@@ -484,7 +484,7 @@ fn ca_he_14_hu03_ca01() {
     let r = bloquear(async { windi.rechazar(&otra.id, AHORA) }).unwrap();
     assert_eq!(
         r.reply.text,
-        "Entendido, no hice ningún cambio. ¿En qué más te ayudo?"
+        "Entendido, no hice ningún cambio. ¿Quieres cambiar algo de la propuesta?"
     );
     assert_eq!(manejador.aplicadas.lock().unwrap().len(), 1);
 }
@@ -616,4 +616,281 @@ fn ca_he_14_hu03_ca04() {
     let aplicadas = manejador.aplicadas.lock().unwrap();
     assert_eq!(aplicadas.len(), 1);
     assert_eq!(aplicadas[0].items[0].title, "Entregar informe");
+}
+
+// HE-14-HU04 · Crear tarjetas con el agente de IA. Hoy en las pruebas del planificador es 14/11/2026. Lo que dice
+// Windi (preguntar por la fecha o el título, avisar de una etiqueta que no existe) lo produce `windi-chat`; el
+// Núcleo vuelve a aplicar las reglas y sin datos válidos no muestra la propuesta.
+
+fn propone_crear(tarjetas: Value) -> WindiChatResponse {
+    WindiChatResponse {
+        reply: "Esto es lo que voy a crear. ¿Confirmas?".into(),
+        intent: WindiChatResponseIntent::Propose,
+        proposal: Some(WindiChatProposal {
+            action: crate::tipos::ProposalAction::Create,
+            items: tarjetas
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|t| WindiChatProposalItemsItem {
+                    card_id: None,
+                    changes: Some(t.clone()),
+                })
+                .collect(),
+        }),
+    }
+}
+
+type Planificador = crate::servicio_del_planificador::ServicioDelPlanificador<CalendarioDePrueba>;
+
+fn manejador_de(
+    planificador: &Planificador,
+) -> super::manejador::ManejadorDelPlanificador<'_, CalendarioDePrueba> {
+    super::manejador::ManejadorDelPlanificador {
+        planificador,
+        user_id: USUARIO,
+        alias: "Prueba",
+    }
+}
+
+/// Las tarjetas de Por hacer: (título, tipo, fecha límite).
+fn por_hacer(planificador: &Planificador) -> Vec<(String, String, String)> {
+    let tablero = bloquear(planificador.tablero(USUARIO)).unwrap();
+    tablero
+        .columns
+        .iter()
+        .filter(|c| c.column.id.0 == POR_HACER)
+        .flat_map(|c| &c.cards)
+        .map(|t| {
+            (
+                t.title.clone(),
+                serde_json::to_value(&t.r#type)
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_string(),
+                t.due_date.0.clone(),
+            )
+        })
+        .collect()
+}
+
+fn pedir_creacion(
+    planificador: &Planificador,
+    windi: &ServicioDeWindi,
+    tarjetas: Value,
+) -> Option<WindiProposal> {
+    let nube = WindiSimulado::responde(vec![Ok(propone_crear(tarjetas))]);
+    enviar_con(
+        windi,
+        &nube,
+        &manejador_de(planificador),
+        "Crea una tarea",
+        true,
+    )
+    .unwrap()
+    .proposal
+}
+
+#[test]
+fn ca_he_14_hu04_ca01() {
+    // HE-14-HU04-CA01 · La propuesta trae Tarea por defecto, el título y la fecha límite (ET01, ET02); al confirmar
+    // se crea en Por hacer con las reglas de HE-07-HU01 (ET04, ET09) y Windi menciona el título.
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    let propuesta = pedir_creacion(
+        &planificador,
+        &windi,
+        serde_json::json!([{ "title": "Entregar el informe", "due_date": "2026-11-20" }]),
+    )
+    .unwrap();
+    assert_eq!(propuesta.items[0].title, "Entregar el informe");
+    let cambios = propuesta.items[0].changes.as_ref().unwrap();
+    assert_eq!(
+        (cambios["type"].as_str(), cambios["due_date"].as_str()),
+        (Some("task"), Some("2026-11-20"))
+    );
+    assert!(
+        por_hacer(&planificador).is_empty(),
+        "sin «Confirmar» no se crea nada"
+    );
+    let r = confirmar(&windi, &manejador_de(&planificador), &propuesta, true).unwrap();
+    assert_eq!(
+        r.reply.text,
+        "Listo, creé la tarjeta «Entregar el informe»."
+    );
+    assert_eq!(
+        por_hacer(&planificador),
+        vec![(
+            "Entregar el informe".into(),
+            "task".into(),
+            "2026-11-20".into()
+        )]
+    );
+}
+
+#[test]
+fn ca_he_14_hu04_ca02() {
+    // HE-14-HU04-CA02 · «Rechazar» no crea la tarjeta y Windi pregunta si quiere cambiar algo de la propuesta.
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    let propuesta = pedir_creacion(
+        &planificador,
+        &windi,
+        serde_json::json!([{ "title": "Entregar el informe", "due_date": "2026-11-20" }]),
+    )
+    .unwrap();
+    let r = windi.rechazar(&propuesta.id, AHORA).unwrap();
+    assert_eq!(
+        r.reply.text,
+        "Entendido, no hice ningún cambio. ¿Quieres cambiar algo de la propuesta?"
+    );
+    assert!(por_hacer(&planificador).is_empty());
+}
+
+#[test]
+fn ca_he_14_hu04_ca03() {
+    // HE-14-HU04-CA03 · Sin fecha límite no hay propuesta (ET05).
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    assert!(
+        pedir_creacion(
+            &planificador,
+            &windi,
+            serde_json::json!([{ "title": "Entregar el informe" }])
+        )
+        .is_none()
+    );
+}
+
+#[test]
+fn ca_he_14_hu04_ca04() {
+    // HE-14-HU04-CA04 · Sin título (o vacío) no hay propuesta (ET05).
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    assert!(
+        pedir_creacion(
+            &planificador,
+            &windi,
+            serde_json::json!([{ "due_date": "2026-11-20" }])
+        )
+        .is_none()
+    );
+    assert!(
+        pedir_creacion(
+            &planificador,
+            &windi,
+            serde_json::json!([{ "title": "  ", "due_date": "2026-11-20" }])
+        )
+        .is_none()
+    );
+}
+
+#[test]
+fn ca_he_14_hu04_ca05() {
+    // HE-14-HU04-CA05 · Fecha límite anterior a hoy: no hay propuesta (ET06).
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    assert!(
+        pedir_creacion(
+            &planificador,
+            &windi,
+            serde_json::json!([{ "title": "Informe", "due_date": "2026-11-13" }])
+        )
+        .is_none()
+    );
+}
+
+#[test]
+fn ca_he_14_hu04_ca06() {
+    // HE-14-HU04-CA06 · Ajustar la propuesta: la nueva trae el dato cambiado y la anterior queda «Descartada».
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    let primera = pedir_creacion(
+        &planificador,
+        &windi,
+        serde_json::json!([{ "title": "Informe", "due_date": "2026-11-20" }]),
+    )
+    .unwrap();
+    let segunda = pedir_creacion(
+        &planificador,
+        &windi,
+        serde_json::json!([{ "title": "Informe", "due_date": "2026-11-21" }]),
+    )
+    .unwrap();
+    assert_eq!(
+        segunda.items[0].changes.as_ref().unwrap()["due_date"],
+        "2026-11-21"
+    );
+    assert_eq!(
+        confirmar(&windi, &manejador_de(&planificador), &primera, true)
+            .unwrap_err()
+            .code,
+        ErrorCode::ProposalDiscarded
+    );
+    assert!(por_hacer(&planificador).is_empty());
+}
+
+#[test]
+fn ca_he_14_hu04_ca07() {
+    // HE-14-HU04-CA07 · Sin conexión al confirmar: no se crea la tarjeta (`net.offline`).
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    let propuesta = pedir_creacion(
+        &planificador,
+        &windi,
+        serde_json::json!([{ "title": "Informe", "due_date": "2026-11-20" }]),
+    )
+    .unwrap();
+    let error = confirmar(&windi, &manejador_de(&planificador), &propuesta, false).unwrap_err();
+    assert_eq!(error.code, ErrorCode::NetOffline);
+    assert_eq!(
+        error.message,
+        "Se perdió la conexión. No se hizo ningún cambio."
+    );
+    assert!(por_hacer(&planificador).is_empty());
+}
+
+#[test]
+fn ca_he_14_hu04_ca08() {
+    // HE-14-HU04-CA08 · Varias tarjetas en una sola propuesta (ET07): se crean todas y Windi dice cuántas.
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    let propuesta = pedir_creacion(
+        &planificador,
+        &windi,
+        serde_json::json!([
+            { "title": "Comprar pan", "due_date": "2026-11-15" },
+            { "title": "Llamar a mamá", "due_date": "2026-11-16", "type": "reminder" },
+            { "title": "Cita médica", "due_date": "2026-11-17", "type": "event" }
+        ]),
+    )
+    .unwrap();
+    assert_eq!(propuesta.items.len(), 3);
+    let r = confirmar(&windi, &manejador_de(&planificador), &propuesta, true).unwrap();
+    assert_eq!(r.reply.text, "Listo, creé 3 tarjetas.");
+    assert_eq!(por_hacer(&planificador).len(), 3);
+}
+
+#[test]
+fn ca_he_14_hu04_ca09() {
+    // HE-14-HU04-CA09 · Una etiqueta que no existe: no hay propuesta y no se crean etiquetas (ET08).
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    let antes = bloquear(planificador.etiquetas(USUARIO)).unwrap().len();
+    assert!(
+        pedir_creacion(
+            &planificador,
+            &windi,
+            serde_json::json!([{
+                "title": "Informe", "due_date": "2026-11-20",
+                "label_ids": ["00000000-0000-4000-8000-0000000000ff"]
+            }]),
+        )
+        .is_none()
+    );
+    assert_eq!(
+        bloquear(planificador.etiquetas(USUARIO)).unwrap().len(),
+        antes
+    );
 }

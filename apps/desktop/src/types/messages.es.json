@@ -86,7 +86,7 @@
   "WINDI_NO_DISPONIBLE": "No pude responder en este momento. Intenta de nuevo.",
   "WINDI_PROPUESTA_DESACTUALIZADA": "No hice ningún cambio porque tus tarjetas cambiaron desde que te lo propuse: <cambios>.",
   "WINDI_PROPUESTA_NUEVA": "Esta es la propuesta con los datos actuales. ¿Confirmas?",
-  "WINDI_PROPUESTA_RECHAZADA": "Entendido, no hice ningún cambio. ¿En qué más te ayudo?",
+  "WINDI_PROPUESTA_RECHAZADA": "Entendido, no hice ningún cambio. ¿Quieres cambiar algo de la propuesta?",
   "WINDI_SALUDO": "¡Hola, <alias>! Soy Windi. ¿Qué organizamos hoy con tus tarjetas o con la aplicación?",
   "WINDI_SIN_CONEXION": "El agente de IA necesita conexión a internet. Podrás conversar con él cuando te reconectes.",
   "WINDI_SIN_CONEXION_AL_CONFIRMAR": "Se perdió la conexión. No se hizo ningún cambio.",

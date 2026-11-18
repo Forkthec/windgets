@@ -80,7 +80,10 @@ async function abrir(
       return { ...r, value: { ...r.value, reply: m } };
     }) as never);
     nucleo.responder('windi_reject_proposal', (() => {
-      const m = agregar('assistant', 'Entendido, no hice ningún cambio. ¿En qué más te ayudo?');
+      const m = agregar(
+        'assistant',
+        'Entendido, no hice ningún cambio. ¿Quieres cambiar algo de la propuesta?',
+      );
       return { ok: true, value: { reply: m } };
     }) as never);
   });

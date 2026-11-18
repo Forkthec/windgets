@@ -116,9 +116,55 @@ export function instruccionDelSistema(contexto: Contexto): string {
     'Si te preguntan si eres una persona, aclaras que eres el agente de IA de Windgets y sigues ofreciendo ayuda.',
     'Ante mensajes ofensivos mantienes la calma, no devuelves el tono ni juzgas, y ofreces ayuda con sus',
     'tarjetas o con la aplicación.',
+    // HE-14-HU04: crear tarjetas.
+    'Para crear tarjetas llamas a propose_create_cards; nunca dices que ya las creaste.',
+    'El tipo es Tarea (task) si la persona no indica otro; también hay Recordatorio (reminder) y Evento (event).',
+    'Entiendes la fecha límite exacta o relativa, como un día de la semana, y la conviertes a AAAA-MM-DD; al',
+    'mostrarla la escribes como DD/MM/AAAA.',
+    'El título y la fecha límite son obligatorios: si falta la fecha, preguntas por ella mencionando el título que',
+    'entiendes; si falta el título y no se puede deducir, preguntas qué título ponerle. No propones hasta tenerlos.',
+    'La fecha límite no puede ser anterior a hoy: si lo es, lo explicas y pides otra fecha, sin proponer.',
+    'Si piden varias tarjetas en un mensaje, las propones todas en una sola llamada.',
+    'Solo usas etiquetas que existen y nunca creas etiquetas. Si piden una que no existe, dices que no existe,',
+    'mencionas las disponibles y preguntas si prefiere una de ellas o crear la tarjeta sin etiqueta.',
+    `Etiquetas disponibles: ${
+      contexto.labels.length ? contexto.labels.map((e) => `${e.name} (id ${e.id})`).join(', ') : 'ninguna'
+    }.`,
   ];
   return reglas.join(' ');
 }
+
+/** Las funciones que Windi puede llamar para proponer cambios (INT-03). HE-14-HU04: crear tarjetas. */
+export const FUNCIONES = [
+  {
+    name: 'propose_create_cards',
+    description: 'Propone crear una o varias tarjetas. La persona confirma antes de crearlas.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        cards: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              type: { type: 'STRING', enum: ['task', 'reminder', 'event'] },
+              title: { type: 'STRING', description: 'De 1 a 100 caracteres.' },
+              due_date: { type: 'STRING', description: 'Fecha límite AAAA-MM-DD, no anterior a hoy.' },
+              description: { type: 'STRING' },
+              priority: { type: 'STRING', enum: ['high', 'medium', 'low'] },
+              label_ids: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Solo ids de etiquetas que existen.' },
+            },
+            required: ['title', 'due_date'],
+          },
+        },
+      },
+      required: ['cards'],
+    },
+  },
+];
+
+/** La acción de la propuesta según la función que llamó Gemini. */
+const ACCION: Record<string, Propuesta['action']> = { propose_create_cards: 'create' };
 
 /** El cuerpo de `generateContent` (INT-03): instrucción, historial y mensaje, y la configuración de generación. */
 export function cuerpoParaGemini(peticion: PeticionWindi): Record<string, unknown> {
@@ -129,6 +175,8 @@ export function cuerpoParaGemini(peticion: PeticionWindi): Record<string, unknow
   return {
     systemInstruction: { parts: [{ text: instruccionDelSistema(peticion.context) }] },
     contents,
+    tools: [{ functionDeclarations: FUNCIONES }],
+    toolConfig: { functionCallingConfig: { mode: 'AUTO' } },
     generationConfig: { temperature: 0.4, maxOutputTokens: 600 },
   };
 }
@@ -152,6 +200,20 @@ export function leerGemini(respuesta: unknown): RespuestaWindi | CodigoDeError {
     .map((p: unknown) => (esObjeto(p) && typeof p.text === 'string' ? p.text : ''))
     .join('')
     .trim();
+  const llamada = lista
+    .map((p: unknown) => (esObjeto(p) && esObjeto(p.functionCall) ? p.functionCall : null))
+    .find((f) => f !== null);
+  const accion = llamada && typeof llamada.name === 'string' ? ACCION[llamada.name] : undefined;
+  if (llamada && accion) {
+    const args = esObjeto(llamada.args) ? llamada.args : {};
+    const tarjetas = Array.isArray(args.cards) ? args.cards.filter(esObjeto) : [];
+    return {
+      // DUDA: HE-14-HU04 Gemini puede llamar a la función sin texto. Valor usado: el texto del ejemplo de INT-03.
+      reply: reply || 'Esto es lo que voy a crear. ¿Confirmas?',
+      intent: 'propose',
+      proposal: { action: accion, items: tarjetas.map((t) => ({ card_id: null, changes: t })) },
+    };
+  }
   if (!reply) return 'provider_error';
   return { reply, intent: 'answer', proposal: null };
 }

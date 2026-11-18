@@ -126,3 +126,93 @@ describe('EF-01 windi-chat · HE-14-HU02 (instrucción del sistema de INT-03)', 
     expect(texto).toContain('mantienes la calma, no devuelves el tono ni juzgas');
   });
 });
+
+describe('EF-01 windi-chat · HE-14-HU04 (crear tarjetas)', () => {
+  const conEtiquetas: Contexto = { ...CONTEXTO, labels: [{ id: 'l1', name: 'Trabajo' }] };
+
+  it('HE-14-HU04-CA01 · declara propose_create_cards y convierte la llamada en una propuesta de creación', () => {
+    const cuerpo = cuerpoParaGemini(
+      leerPeticion(peticion('Crea una tarea para entregar el informe el viernes')) ?? (null as never),
+    ) as {
+      tools: { functionDeclarations: { name: string }[] }[];
+      toolConfig: unknown;
+    };
+    expect(cuerpo.tools[0]?.functionDeclarations.map((f) => f.name)).toContain('propose_create_cards');
+    expect(cuerpo.toolConfig).toEqual({ functionCallingConfig: { mode: 'AUTO' } });
+    const gemini = {
+      candidates: [
+        {
+          content: {
+            parts: [
+              { text: 'Esto es lo que voy a crear. ¿Confirmas?' },
+              {
+                functionCall: {
+                  name: 'propose_create_cards',
+                  args: { cards: [{ title: 'Entregar el informe', due_date: '2026-11-20' }] },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    };
+    expect(leerGemini(gemini)).toEqual({
+      reply: 'Esto es lo que voy a crear. ¿Confirmas?',
+      intent: 'propose',
+      proposal: {
+        action: 'create',
+        items: [{ card_id: null, changes: { title: 'Entregar el informe', due_date: '2026-11-20' } }],
+      },
+    });
+  });
+
+  it('HE-14-HU04-CA01 · el tipo es Tarea por defecto y la fecha se muestra DD/MM/AAAA', () => {
+    const texto = instruccionDelSistema(CONTEXTO);
+    expect(texto).toContain('El tipo es Tarea (task) si la persona no indica otro');
+    expect(texto).toContain('DD/MM/AAAA');
+  });
+
+  it('HE-14-HU04-CA03 y CA04 · pregunta por la fecha o el título antes de proponer', () => {
+    const texto = instruccionDelSistema(CONTEXTO);
+    expect(texto).toContain('si falta la fecha, preguntas por ella mencionando el título');
+    expect(texto).toContain('preguntas qué título ponerle');
+  });
+
+  it('HE-14-HU04-CA05 · la fecha límite no puede ser anterior a hoy', () => {
+    expect(instruccionDelSistema(CONTEXTO)).toContain('La fecha límite no puede ser anterior a hoy');
+  });
+
+  it('HE-14-HU04-CA08 · varias tarjetas en una sola propuesta', () => {
+    expect(instruccionDelSistema(CONTEXTO)).toContain('las propones todas en una sola llamada');
+    const gemini = {
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                functionCall: {
+                  name: 'propose_create_cards',
+                  args: {
+                    cards: [
+                      { title: 'Comprar pan', due_date: '2026-11-15' },
+                      { title: 'Cita médica', due_date: '2026-11-17', type: 'event' },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    };
+    const r = leerGemini(gemini);
+    expect(typeof r === 'object' && r.proposal?.items).toHaveLength(2);
+  });
+
+  it('HE-14-HU04-CA09 · solo etiquetas que existen, con las disponibles en la instrucción', () => {
+    const texto = instruccionDelSistema(conEtiquetas);
+    expect(texto).toContain('nunca creas etiquetas');
+    expect(texto).toContain('mencionas las disponibles');
+    expect(texto).toContain('Etiquetas disponibles: Trabajo (id l1).');
+  });
+});

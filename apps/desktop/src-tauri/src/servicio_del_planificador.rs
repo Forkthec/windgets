@@ -315,6 +315,11 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         Self { base, calendario }
     }
 
+    /// La fecha de hoy del computador.
+    pub fn hoy(&self) -> chrono::NaiveDate {
+        self.calendario.hoy()
+    }
+
     pub fn base(&self) -> &BaseLocal {
         &self.base
     }
