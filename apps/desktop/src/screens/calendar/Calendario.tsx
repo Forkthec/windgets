@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { CalendarMonth, CalendarMonthDay, CalendarWeek, CalendarWeekDay, ScreenParams } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
+import { IconoAlerta, IconoReloj } from '@/ui/Iconos/Iconos';
 import { useNucleo, useParametrosDeNavegacion } from '@/ventana_principal/VentanaPrincipal';
 import { fechaIso, fechaVisible, hoy } from '../tarjeta/fechas';
 import { useVentanasDeTarjeta } from '../tarjeta/useVentanasDeTarjeta';
@@ -34,6 +35,54 @@ function horaVisible(hora: number): string {
   return `${String(hora).padStart(2, '0')}:00`;
 }
 
+/** Vencidas y pendientes de un día (HE-10-HU05): lo que comparten las vistas mensual y semanal (ET08). */
+type EstadoDelDia = Pick<CalendarMonthDay, 'overdue_count' | 'has_overdue' | 'has_pending'>;
+
+/** Las clases del día: hoy (HE-10-HU01-ET02), rojo con vencidas (ET03) y amarillo con pendientes (ET04). */
+function clasesDelDia(esHoy: boolean, estado: EstadoDelDia | undefined): string {
+  return [
+    'wg-calendario__dia',
+    esHoy && 'wg-calendario__dia--hoy',
+    estado?.has_overdue && 'wg-calendario__dia--vencida',
+    estado?.has_pending && 'wg-calendario__dia--pendiente',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+/** El número o el nombre del día, que abre el Panel del día, y el ícono de reloj con pendientes (ET17). */
+function EncabezadoDelDia({
+  texto,
+  estado,
+  alSeleccionar,
+}: {
+  texto: string;
+  estado: EstadoDelDia | undefined;
+  alSeleccionar: () => void;
+}) {
+  return (
+    <span className="wg-fila wg-calendario__encabezado">
+      {/* HE-10-HU03-ET01, ET08: seleccionar el día abre el Panel del día. */}
+      <button type="button" className="wg-calendario__numero" onClick={alSeleccionar}>
+        {texto}
+      </button>
+      {estado?.has_pending && <IconoReloj />}
+    </span>
+  );
+}
+
+/** «1 vencida» o «<cantidad> vencidas» con el ícono de alerta (ET06, ET07, ET13). */
+function Vencidas({ estado }: { estado: EstadoDelDia | undefined }) {
+  if (!estado?.has_overdue) return null;
+  const n = estado.overdue_count;
+  return (
+    <span className="wg-fila wg-calendario__vencidas">
+      <IconoAlerta />
+      {`${n} ${n === 1 ? 'vencida' : 'vencidas'}`}
+    </span>
+  );
+}
+
 /** Un día de la vista mensual: su número, hasta 3 títulos y «+N más» (HE-10-HU01-ET03, ET05). */
 function DiaDelMes({
   numero,
@@ -47,15 +96,8 @@ function DiaDelMes({
   alSeleccionar: () => void;
 }) {
   return (
-    <td
-      // HE-10-HU01-ET02: el día actual resaltado.
-      className={`wg-calendario__dia${esHoy ? ' wg-calendario__dia--hoy' : ''}`}
-      aria-current={esHoy ? 'date' : undefined}
-    >
-      {/* HE-10-HU03-ET01: seleccionar el día abre el Panel del día. */}
-      <button type="button" className="wg-calendario__numero" onClick={alSeleccionar}>
-        {numero}
-      </button>
+    <td className={clasesDelDia(esHoy, dia)} aria-current={esHoy ? 'date' : undefined}>
+      <EncabezadoDelDia texto={String(numero)} estado={dia} alSeleccionar={alSeleccionar} />
       {dia && dia.preview.length > 0 && (
         <ul className="wg-calendario__tarjetas">
           {dia.preview.map((t) => (
@@ -66,6 +108,8 @@ function DiaDelMes({
         </ul>
       )}
       {dia && dia.extra_count > 0 && <span className="wg-calendario__mas">{`+${dia.extra_count} más`}</span>}
+      {/* HE-10-HU05-ET15: debajo de las tarjetas y de «+N más». */}
+      <Vencidas estado={dia} />
     </td>
   );
 }
@@ -84,16 +128,18 @@ function DiaDeLaSemana({
 }) {
   return (
     <section
-      className={`wg-calendario__dia${esHoy ? ' wg-calendario__dia--hoy' : ''}`}
+      className={clasesDelDia(esHoy, dia)}
       aria-label={`${nombre} ${fechaVisible(dia.date)}`}
       aria-current={esHoy ? 'date' : undefined}
     >
       <h3>
-        {/* HE-10-HU03-ET08: también desde la vista semanal. */}
-        <button type="button" className="wg-calendario__numero" onClick={alSeleccionar}>
-          {`${nombre} ${fechaVisible(dia.date)}`}
-        </button>
+        <EncabezadoDelDia
+          texto={`${nombre} ${fechaVisible(dia.date)}`}
+          estado={dia}
+          alSeleccionar={alSeleccionar}
+        />
       </h3>
+      <Vencidas estado={dia} />
       {dia.cards.length > 0 && (
         <ul className="wg-calendario__tarjetas">
           {dia.cards.map(({ card, start_hour }) => (
@@ -133,7 +179,11 @@ export function Calendario() {
     void leer();
     const dejarTarjetas = escuchar('cards_changed', () => void leer());
     // «Hoy» es la fecha del computador: a las 00:00 cambia el día resaltado (EV-22).
-    const dejarDia = escuchar('day_changed', () => setHoyEs(fechaIso(hoy())));
+    // HE-10-HU05-ET09: también se vuelve a leer, porque las pendientes de ayer pasan a vencidas.
+    const dejarDia = escuchar('day_changed', () => {
+      setHoyEs(fechaIso(hoy()));
+      void leer();
+    });
     return () => {
       dejarTarjetas();
       dejarDia();

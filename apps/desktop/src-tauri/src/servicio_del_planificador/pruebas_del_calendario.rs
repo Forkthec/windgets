@@ -353,3 +353,150 @@ fn ca_he_10_hu04_ca04() {
     assert!(panel(&servicio, "2026-11-14").can_create);
     assert!(panel(&servicio, "2026-11-20").can_create);
 }
+
+/// Los conteos de un día de la vista mensual: (vencidas, pendientes, rojo, amarillo).
+fn estado_en_mes(
+    servicio: &ServicioDelPlanificador<CalendarioDePrueba>,
+    fecha: &str,
+) -> (i64, i64, bool, bool) {
+    let mes = mes(servicio, 2026, 11);
+    let d = dia(&mes, fecha);
+    (
+        d.overdue_count,
+        d.pending_count,
+        d.has_overdue,
+        d.has_pending,
+    )
+}
+
+#[test]
+fn ca_he_10_hu05_ca01() {
+    // HE-10-HU05-CA01 · Día con una tarjeta vencida: fecha límite anterior a hoy y fuera de Hecho (ET01), en rojo
+    // (ET03) con «1 vencida» (ET06; el texto lo pone la vista).
+    let servicio = con_semilla();
+    tarjeta_en(&servicio, EN_PROGRESO, "Pagar la luz", "2026-11-10", 1024.0);
+    assert_eq!(estado_en_mes(&servicio, "2026-11-10"), (1, 0, true, false));
+}
+
+#[test]
+fn ca_he_10_hu05_ca02() {
+    // HE-10-HU05-CA02 · Varias vencidas: cuenta todas las del día, sin el límite de 3 de la vista previa (ET14).
+    let servicio = con_semilla();
+    for i in 1..=5 {
+        tarjeta_en(
+            &servicio,
+            POR_HACER,
+            &format!("Tarjeta {i}"),
+            "2026-11-10",
+            f64::from(i) * 1024.0,
+        );
+    }
+    tarjeta_en(&servicio, HECHO, "Hecha", "2026-11-10", 1024.0);
+    let mes = mes(&servicio, 2026, 11);
+    let d = dia(&mes, "2026-11-10");
+    assert_eq!(d.preview.len(), 3);
+    assert_eq!((d.overdue_count, d.has_overdue), (5, true));
+}
+
+#[test]
+fn ca_he_10_hu05_ca03() {
+    // HE-10-HU05-CA03 · Día con tarjetas pendientes: hoy o después y fuera de Hecho (ET02), en amarillo (ET04).
+    let servicio = con_semilla();
+    tarjeta_en(&servicio, POR_HACER, "Hoy", "2026-11-14", 1024.0);
+    tarjeta_en(&servicio, EN_PROGRESO, "Después", "2026-11-20", 1024.0);
+    tarjeta_en(&servicio, POR_HACER, "Otra después", "2026-11-20", 2048.0);
+    assert_eq!(estado_en_mes(&servicio, "2026-11-14"), (0, 1, false, true));
+    assert_eq!(estado_en_mes(&servicio, "2026-11-20"), (0, 2, false, true));
+    // Con una vencida y pendientes en el mismo día no puede pasar (una fecha es pasada o no), pero la regla da
+    // prioridad al rojo: amarillo solo sin vencidas (ET04).
+    let mut estado = EstadoDelDia::default();
+    let hoy = NaiveDate::from_ymd_opt(2026, 11, 14).unwrap();
+    estado.contar(NaiveDate::from_ymd_opt(2026, 11, 10), false, hoy);
+    estado.contar(NaiveDate::from_ymd_opt(2026, 11, 20), false, hoy);
+    assert!(estado.hay_vencidas() && !estado.hay_pendientes());
+}
+
+#[test]
+fn ca_he_10_hu05_ca04() {
+    // HE-10-HU05-CA04 · Día solo con tarjetas completadas: sin resaltado (ET05), también en días pasados.
+    let servicio = con_semilla();
+    tarjeta_en(&servicio, HECHO, "Hecha", "2026-11-20", 1024.0);
+    tarjeta_en(&servicio, HECHO, "Hecha antes", "2026-11-10", 1024.0);
+    assert_eq!(estado_en_mes(&servicio, "2026-11-20"), (0, 0, false, false));
+    assert_eq!(estado_en_mes(&servicio, "2026-11-10"), (0, 0, false, false));
+}
+
+#[test]
+fn ca_he_10_hu05_ca05() {
+    // HE-10-HU05-CA05 · Día sin tarjetas: sin resaltado.
+    assert_eq!(
+        estado_en_mes(&con_semilla(), "2026-11-10"),
+        (0, 0, false, false)
+    );
+}
+
+#[test]
+fn ca_he_10_hu05_ca06() {
+    // HE-10-HU05-CA06 · La única vencida pasa a Hecho: deja de contar y el día queda sin resaltado (ET10).
+    let servicio = con_semilla();
+    let id = tarjeta_en(&servicio, POR_HACER, "Pagar la luz", "2026-11-10", 1024.0);
+    assert!(estado_en_mes(&servicio, "2026-11-10").2);
+    bloquear(servicio.mover_tarjeta(
+        USUARIO,
+        CardMoveParams {
+            card_id: Uuid(id),
+            column_id: Uuid(HECHO.into()),
+            placement: Placement::Variant1(PlacementVariant1 {
+                kind: PlacementVariant1Kind::End,
+            }),
+        },
+    ))
+    .unwrap();
+    assert_eq!(estado_en_mes(&servicio, "2026-11-10"), (0, 0, false, false));
+}
+
+#[test]
+fn ca_he_10_hu05_ca07() {
+    // HE-10-HU05-CA07 · Cambio de día: la tarjeta con fecha límite del día que termina, fuera de Hecho, es pendiente
+    // hasta las 23:59 y vencida desde las 00:00 (ET09); «hoy» es la fecha del computador (ET18). Con hoy en 14/11,
+    // la de ayer (13/11) ya es vencida.
+    let ayer = NaiveDate::from_ymd_opt(2026, 11, 13);
+    let mut antes = EstadoDelDia::default();
+    antes.contar(ayer, false, NaiveDate::from_ymd_opt(2026, 11, 13).unwrap());
+    assert!(antes.hay_pendientes() && !antes.hay_vencidas());
+    let mut despues = EstadoDelDia::default();
+    despues.contar(ayer, false, NaiveDate::from_ymd_opt(2026, 11, 14).unwrap());
+    assert!(despues.hay_vencidas());
+    let servicio = con_semilla();
+    tarjeta_en(&servicio, POR_HACER, "Ayer", "2026-11-13", 1024.0);
+    assert_eq!(estado_en_mes(&servicio, "2026-11-13"), (1, 0, true, false));
+}
+
+#[test]
+fn ca_he_10_hu05_ca08() {
+    // HE-10-HU05-CA08 · Resaltado en la vista semanal: los mismos conteos (ET08).
+    let servicio = con_semilla();
+    tarjeta_en(&servicio, POR_HACER, "Pagar la luz", "2026-11-10", 1024.0);
+    tarjeta_en(
+        &servicio,
+        POR_HACER,
+        "Entregar informe",
+        "2026-11-15",
+        1024.0,
+    );
+    let s = semana(&servicio, "2026-11-09");
+    let martes = &s.days[1];
+    assert_eq!(
+        (martes.overdue_count, martes.has_overdue, martes.has_pending),
+        (1, true, false)
+    );
+    let domingo = &s.days[6];
+    assert_eq!(
+        (
+            domingo.pending_count,
+            domingo.has_overdue,
+            domingo.has_pending
+        ),
+        (1, false, true)
+    );
+}

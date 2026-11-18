@@ -1326,7 +1326,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
 
     /// IPC-CARD-12 `calendar_get_month` (HE-10-HU01): todos los días del mes, cada uno con los títulos de hasta
     /// `TITULOS_POR_DIA_DEL_MES` tarjetas cuya fecha límite es ese día y la cantidad restante para «+N más»
-    /// (ET03, ET05). Los conteos de vencidas y pendientes son de HE-10-HU05.
+    /// (ET03, ET05), y los conteos de vencidas y pendientes del día (HE-10-HU05, `EstadoDelDia`).
     /// DUDA: HE-10-HU01 el orden de las tarjetas de un día no está definido. Valor usado: el del tablero
     /// (`position`, después la fecha de creación) (docs/DUDAS.md).
     pub async fn mes_del_calendario(
@@ -1344,9 +1344,10 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
             .checked_add_months(chrono::Months::new(1))
             .ok_or_else(inesperado)?;
         let pool = self.base.pool().await.map_err(de_sqlx)?;
-        let filas: Vec<(String, String, String)> = sqlx::query_as(
-            "SELECT id, title, due_date FROM card WHERE user_id = ? AND due_date >= ? AND due_date < ? \
-             ORDER BY due_date, position, created_at",
+        let filas: Vec<(String, String, String, String)> = sqlx::query_as(
+            "SELECT c.id, c.title, c.due_date, k.role FROM card c JOIN kanban_column k ON k.id = c.column_id \
+             WHERE c.user_id = ? AND c.due_date >= ? AND c.due_date < ? \
+             ORDER BY c.due_date, c.position, c.created_at",
         )
         .bind(user_id)
         .bind(primero.format("%Y-%m-%d").to_string())
@@ -1354,15 +1355,17 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         .fetch_all(pool)
         .await
         .map_err(de_sqlx)?;
-        let mut por_dia: HashMap<String, Vec<CalendarMonthDayPreviewItem>> = HashMap::new();
-        for (id, title, fecha_limite) in filas {
-            por_dia
-                .entry(fecha_limite)
-                .or_default()
-                .push(CalendarMonthDayPreviewItem {
-                    id: Uuid(id),
-                    title,
-                });
+        let hoy = self.calendario.hoy();
+        let mut por_dia: HashMap<String, (Vec<CalendarMonthDayPreviewItem>, EstadoDelDia)> =
+            HashMap::new();
+        for (id, title, fecha_limite, rol) in filas {
+            let dia = fecha(&fecha_limite);
+            let (preview, estado) = por_dia.entry(fecha_limite).or_default();
+            estado.contar(dia, rol == "done", hoy);
+            preview.push(CalendarMonthDayPreviewItem {
+                id: Uuid(id),
+                title,
+            });
         }
         Ok(CalendarMonth {
             days: primero
@@ -1370,16 +1373,16 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 .take_while(|d| *d < siguiente)
                 .map(|d| {
                     let date = d.format("%Y-%m-%d").to_string();
-                    let mut preview = por_dia.remove(&date).unwrap_or_default();
+                    let (mut preview, estado) = por_dia.remove(&date).unwrap_or_default();
                     let resto = preview.split_off(preview.len().min(TITULOS_POR_DIA_DEL_MES));
                     CalendarMonthDay {
                         date: DateIso(date),
                         preview,
                         extra_count: i64::try_from(resto.len()).unwrap_or(i64::MAX),
-                        overdue_count: 0,
-                        pending_count: 0,
-                        has_overdue: false,
-                        has_pending: false,
+                        overdue_count: estado.vencidas,
+                        pending_count: estado.pendientes,
+                        has_overdue: estado.hay_vencidas(),
+                        has_pending: estado.hay_pendientes(),
                     }
                 })
                 .collect(),
@@ -1388,7 +1391,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
 
     /// IPC-CARD-13 `calendar_get_week` (HE-10-HU02): los 7 días desde `week_start` (el lunes, ET02), cada uno con
     /// todas las tarjetas cuya fecha límite es ese día (ET03) y la hora de inicio de su bloque horario si lo
-    /// tiene (ET05). Los conteos de vencidas y pendientes son de HE-10-HU05.
+    /// tiene (ET05), y los conteos de vencidas y pendientes del día (HE-10-HU05-ET08).
     /// DUDA: HE-10-HU02 no está definido en qué día va una tarjeta con bloque horario ni el orden del día. Valor
     /// usado: el día de su fecha límite, como en la vista mensual; primero las de bloque por hora y después las
     /// demás en el orden del tablero (docs/DUDAS.md).
@@ -1412,19 +1415,19 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         .map_err(de_sqlx)?;
         let etiquetas = self.etiquetas_por_tarjeta(user_id).await?;
         let hoy = self.calendario.hoy();
-        let mut por_dia: HashMap<String, Vec<CalendarWeekDayCardsItem>> = HashMap::new();
+        let mut por_dia: HashMap<String, (Vec<CalendarWeekDayCardsItem>, EstadoDelDia)> =
+            HashMap::new();
         for fila in &filas {
             let id: String = fila.try_get("id").map_err(de_sqlx)?;
             let tarjeta =
                 tarjeta_de_fila(fila, etiquetas.get(&id).cloned().unwrap_or_default(), hoy)
                     .map_err(de_sqlx)?;
-            por_dia
-                .entry(tarjeta.due_date.0.clone())
-                .or_default()
-                .push(CalendarWeekDayCardsItem {
-                    start_hour: tarjeta.scheduled_hour.clone(),
-                    card: tarjeta,
-                });
+            let (tarjetas, estado) = por_dia.entry(tarjeta.due_date.0.clone()).or_default();
+            estado.contar(fecha(&tarjeta.due_date.0), tarjeta.is_completed, hoy);
+            tarjetas.push(CalendarWeekDayCardsItem {
+                start_hour: tarjeta.scheduled_hour.clone(),
+                card: tarjeta,
+            });
         }
         Ok(CalendarWeek {
             days: lunes
@@ -1432,13 +1435,14 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 .take(7)
                 .map(|d| {
                     let date = d.format("%Y-%m-%d").to_string();
+                    let (cards, estado) = por_dia.remove(&date).unwrap_or_default();
                     CalendarWeekDay {
-                        cards: por_dia.remove(&date).unwrap_or_default(),
+                        cards,
                         date: DateIso(date),
-                        overdue_count: 0,
-                        pending_count: 0,
-                        has_overdue: false,
-                        has_pending: false,
+                        overdue_count: estado.vencidas,
+                        pending_count: estado.pendientes,
+                        has_overdue: estado.hay_vencidas(),
+                        has_pending: estado.hay_pendientes(),
                     }
                 })
                 .collect(),
@@ -1888,6 +1892,37 @@ const SELECT_TARJETA: &str = "SELECT c.id, c.type, c.title, c.description, c.pri
      c.column_id, c.position, c.previous_column_id, c.completed_on, c.scheduled_date, \
      c.scheduled_hour, c.created_at, k.role AS column_role \
      FROM card c JOIN kanban_column k ON k.id = c.column_id";
+
+/// Vencidas y pendientes de un día del calendario (HE-10-HU05). Una tarjeta fuera de la columna Hecho está vencida
+/// si su fecha límite es anterior a hoy (ET01) y pendiente si es hoy o después (ET02); las de Hecho no cuentan
+/// (ET05, ET10). Cuenta todas las del día, sin el límite de la vista previa (ET14). «Hoy» es la fecha del
+/// computador (ET18).
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct EstadoDelDia {
+    pub vencidas: i64,
+    pub pendientes: i64,
+}
+
+impl EstadoDelDia {
+    pub fn contar(&mut self, fecha_limite: Option<NaiveDate>, completada: bool, hoy: NaiveDate) {
+        match fecha_limite {
+            _ if completada => {}
+            Some(dia) if dia < hoy => self.vencidas += 1,
+            Some(_) => self.pendientes += 1,
+            None => {}
+        }
+    }
+
+    /// Resaltado en rojo (ET03).
+    pub fn hay_vencidas(self) -> bool {
+        self.vencidas > 0
+    }
+
+    /// Resaltado en amarillo: pendientes y ninguna vencida (ET04).
+    pub fn hay_pendientes(self) -> bool {
+        self.pendientes > 0 && self.vencidas == 0
+    }
+}
 
 /// «10:00 – 11:00» (contratos.md, `CardDetail.time_block.label`). El bloque de las 23 termina a las 00:00.
 pub fn texto_del_bloque(hora: u8) -> String {

@@ -264,12 +264,12 @@ const respuestas: Respuestas = {
   // HE-10-HU01: los días del mes con sus tarjetas (IPC-CARD-12).
   calendar_get_month: ({ year, month }) => ({
     ok: true,
-    value: mesDelCalendario(tarjetasSimuladas, year, month),
+    value: mesDelCalendario(tarjetasSimuladas, year, month, fechaIso(new Date())),
   }),
   // HE-10-HU02: los 7 días de la semana con sus tarjetas (IPC-CARD-13).
   calendar_get_week: ({ week_start }) => ({
     ok: true,
-    value: semanaDelCalendario(tarjetasSimuladas, week_start),
+    value: semanaDelCalendario(tarjetasSimuladas, week_start, fechaIso(new Date())),
   }),
   // HE-10-HU03: las tarjetas del Panel del día (IPC-CARD-14).
   calendar_get_day: ({ date }) => ({

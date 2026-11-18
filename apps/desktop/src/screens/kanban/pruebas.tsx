@@ -245,7 +245,7 @@ export function crearNucleo(tarjetas: Card[] = []): {
       'calendar_get_month',
       (params) => {
         const { year, month } = params as CalendarMonthParams;
-        return { ok: true, value: mesDelCalendario(nucleo.tarjetas, year, month) };
+        return { ok: true, value: mesDelCalendario(nucleo.tarjetas, year, month, HOY) };
       },
     ],
     // HE-10-HU02: los 7 días de la semana con todas sus tarjetas (IPC-CARD-13).
@@ -253,7 +253,7 @@ export function crearNucleo(tarjetas: Card[] = []): {
       'calendar_get_week',
       (params) => {
         const { week_start } = params as CalendarWeekParams;
-        return { ok: true, value: semanaDelCalendario(nucleo.tarjetas, week_start) };
+        return { ok: true, value: semanaDelCalendario(nucleo.tarjetas, week_start, HOY) };
       },
     ],
     // HE-10-HU03: las tarjetas del Panel del día (IPC-CARD-14).

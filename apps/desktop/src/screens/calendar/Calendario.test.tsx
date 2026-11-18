@@ -4,10 +4,13 @@
 import { act, fireEvent, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Card } from '@/types';
+import { mesDelCalendario } from '@/ipc/calendarioSimulado';
+import { contraste, derivarTokens } from '@/ui/tema/derivar';
 import {
   abrirPantalla,
   EN_PROGRESO,
   fijarHoy,
+  HECHO,
   llamadasA,
   POR_HACER,
   screen,
@@ -451,3 +454,137 @@ describe('HE-10-HU04 · Crear una tarjeta desde un día del calendario', () => {
     expect(within(panel()).getByRole('heading', { name: '20/11/2026' })).toBeTruthy();
   });
 });
+
+/** El resaltado de la celda del día `numero` en la vista mensual. */
+function resaltado(numero: number) {
+  const celda = dia(numero);
+  if (celda.classList.contains('wg-calendario__dia--vencida')) return 'rojo';
+  if (celda.classList.contains('wg-calendario__dia--pendiente')) return 'amarillo';
+  return 'sin resaltado';
+}
+
+function vencidas(celda: HTMLElement) {
+  return celda.querySelector('.wg-calendario__vencidas');
+}
+
+describe('HE-10-HU05 · Días con tarjetas vencidas o pendientes', () => {
+  it('HE-10-HU05-CA01 · Día con una tarjeta vencida', async () => {
+    await abrir([tarjeta({ title: 'Pagar la luz', due_date: '2026-11-10', column_id: EN_PROGRESO.id })]);
+    // ET03: en rojo; ET06: «1 vencida»; ET13: con el ícono de alerta junto al texto.
+    expect(resaltado(10)).toBe('rojo');
+    const texto = vencidas(dia(10));
+    expect(texto?.textContent).toBe('1 vencida');
+    expect(texto?.querySelector('svg')).toBeTruthy();
+    // ET11, ET12: el rojo es un color de estado del tema (tono 4°, 3:1 con la superficie), con relleno y borde.
+    const tokens = derivarTokens({ ...TEMA, fuente: 'Nunito', tamano: '16px' });
+    expect(tonoDe(tokens.estado_vencida)).toBe(4);
+    expect(contraste(tokens.estado_vencida, tokens.superficie)).toBeGreaterThanOrEqual(3);
+    expect(tokens.relleno_vencida).not.toBe(tokens.estado_vencida);
+  });
+
+  it('HE-10-HU05-CA02 · Día con varias tarjetas vencidas', async () => {
+    await abrir([1, 2, 3, 4, 5].map((i) => tarjeta({ title: `Tarjeta ${i}`, due_date: '2026-11-10' })));
+    // ET07, ET14: «5 vencidas», sin el límite de 3 de la vista previa.
+    expect(resaltado(10)).toBe('rojo');
+    const celda = dia(10);
+    expect(vencidas(celda)?.textContent).toBe('5 vencidas');
+    // ET15: debajo de las tarjetas y de «+N más».
+    const partes = Array.from(celda.children).map((h) => h.className);
+    expect(partes.indexOf('wg-fila wg-calendario__vencidas')).toBeGreaterThan(
+      partes.indexOf('wg-calendario__mas'),
+    );
+    expect(partes.indexOf('wg-calendario__mas')).toBeGreaterThan(partes.indexOf('wg-calendario__tarjetas'));
+  });
+
+  it('HE-10-HU05-CA03 · Día con tarjetas pendientes', async () => {
+    await abrir([
+      tarjeta({ title: 'Hoy', due_date: '2026-11-14' }),
+      tarjeta({ title: 'Después', due_date: '2026-11-20', column_id: EN_PROGRESO.id }),
+    ]);
+    // ET04: en amarillo; ET17: el ícono de reloj junto al número del día; sin texto de vencidas.
+    for (const n of [14, 20]) {
+      expect(resaltado(n)).toBe('amarillo');
+      expect(dia(n).querySelector('.wg-calendario__encabezado svg')).toBeTruthy();
+      expect(vencidas(dia(n))).toBeNull();
+    }
+    // ET16: el amarillo es un color de estado del tema (tono 45°, 3:1 con la superficie).
+    const tokens = derivarTokens({ ...TEMA, fuente: 'Nunito', tamano: '16px' });
+    expect(tonoDe(tokens.estado_pendiente)).toBe(45);
+    expect(contraste(tokens.estado_pendiente, tokens.superficie)).toBeGreaterThanOrEqual(3);
+  });
+
+  it('HE-10-HU05-CA04 · Día solo con tarjetas completadas', async () => {
+    await abrir([
+      tarjeta({ title: 'Hecha', due_date: '2026-11-20', column_id: HECHO.id, is_completed: true }),
+      tarjeta({ title: 'Hecha antes', due_date: '2026-11-10', column_id: HECHO.id, is_completed: true }),
+    ]);
+    // ET05: sin resaltado.
+    expect(resaltado(20)).toBe('sin resaltado');
+    expect(resaltado(10)).toBe('sin resaltado');
+  });
+
+  it('HE-10-HU05-CA05 · Día sin tarjetas', async () => {
+    await abrir();
+    expect(resaltado(10)).toBe('sin resaltado');
+    expect(resaltado(20)).toBe('sin resaltado');
+  });
+
+  it('HE-10-HU05-CA06 · Tarjeta vencida completada', async () => {
+    const pagar = tarjeta({ title: 'Pagar la luz', due_date: '2026-11-10' });
+    const nucleo = await abrir([pagar]);
+    expect(resaltado(10)).toBe('rojo');
+    // ET10: pasa a Hecho; con EV-07 el calendario se actualiza.
+    await act(async () => {
+      await nucleo.responderYMover({ card_id: pagar.id, column_id: HECHO.id, placement: { kind: 'end' } });
+    });
+    expect(resaltado(10)).toBe('sin resaltado');
+    expect(vencidas(dia(10))).toBeNull();
+  });
+
+  it('HE-10-HU05-CA07 · Cambio de día', async () => {
+    vi.setSystemTime(new Date(2026, 10, 13, 23, 59, 0));
+    const nucleo = await abrir([tarjeta({ title: 'Entregar informe', due_date: '2026-11-13' })]);
+    const hoyEs = (fecha: string) =>
+      nucleo.responder('calendar_get_month', ({ year, month }) => ({
+        ok: true,
+        value: mesDelCalendario(nucleo.tarjetas, year, month, fecha),
+      }));
+    hoyEs('2026-11-13');
+    await elegir('Hoy');
+    expect(resaltado(13)).toBe('amarillo');
+    // ET09, ET18: a las 00:00 del computador (EV-22) la tarjeta de ayer pasa a vencida.
+    vi.setSystemTime(new Date(2026, 10, 14, 0, 0, 0));
+    hoyEs('2026-11-14');
+    nucleo.emitir('day_changed', { date: '2026-11-14' });
+    await act(async () => {});
+    expect(resaltado(13)).toBe('rojo');
+    expect(vencidas(dia(13))?.textContent).toBe('1 vencida');
+    expect(screen.getByRole('cell', { current: 'date' })).toBe(dia(14));
+  });
+
+  it('HE-10-HU05-CA08 · Resaltado en la vista semanal', async () => {
+    await abrir([
+      tarjeta({ title: 'Pagar la luz', due_date: '2026-11-10' }),
+      tarjeta({ title: 'Entregar informe', due_date: '2026-11-15' }),
+    ]);
+    await elegir('Semana');
+    // ET08: el mismo resaltado en la vista semanal.
+    const martes = screen.getByRole('region', { name: 'Martes 10/11/2026' });
+    expect(martes.classList.contains('wg-calendario__dia--vencida')).toBe(true);
+    expect(vencidas(martes)?.textContent).toBe('1 vencida');
+    const domingo = screen.getByRole('region', { name: 'Domingo 15/11/2026' });
+    expect(domingo.classList.contains('wg-calendario__dia--pendiente')).toBe(true);
+  });
+});
+
+/** El tono (0 a 360) de un color #RRGGBB. */
+function tonoDe(hex: string): number {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255) as [number, number, number];
+  const max = Math.max(r, g, b);
+  const d = max - Math.min(r, g, b);
+  if (d === 0) return 0;
+  const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return Math.round((((h * 60) % 360) + 360) % 360);
+}
+
+const TEMA = { primary: '#96B2B2', secondary: '#829890', text: '#14201C' };

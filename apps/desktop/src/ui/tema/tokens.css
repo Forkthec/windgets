@@ -751,3 +751,30 @@ button.wg-tarjeta__titulo:focus-visible {
   font: inherit;
   cursor: pointer;
 }
+/* Días con vencidas o pendientes (HE-10-HU05-ET11, ET12, ET16): relleno con la mezcla del color de estado con la
+   superficie y borde del color de estado completo, en las vistas mensual y semanal (ET08). */
+.wg-calendario .wg-calendario__dia--vencida,
+.wg-calendario-semana .wg-calendario__dia--vencida {
+  background: var(--wg-relleno-vencida);
+  border: calc(var(--wg-borde-ancho) * 2) solid var(--wg-estado-vencida);
+}
+.wg-calendario .wg-calendario__dia--pendiente,
+.wg-calendario-semana .wg-calendario__dia--pendiente {
+  background: var(--wg-relleno-pendiente);
+  border: calc(var(--wg-borde-ancho) * 2) solid var(--wg-estado-pendiente);
+}
+.wg-calendario__encabezado,
+.wg-calendario__vencidas {
+  gap: var(--wg-unidad);
+}
+.wg-calendario__numero {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.wg-icono {
+  flex: none;
+}
