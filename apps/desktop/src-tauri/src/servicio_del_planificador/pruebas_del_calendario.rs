@@ -306,3 +306,50 @@ fn ca_he_10_hu03_ca03() {
     tarjeta_en(&servicio, POR_HACER, "Otro día", "2026-11-21", 1024.0);
     assert!(panel(&servicio, "2026-11-20").cards.is_empty());
 }
+
+#[test]
+fn ca_he_10_hu04_ca01() {
+    // HE-10-HU04-CA01 · Crear una tarjeta desde un día: «Preparar informe» queda con la fecha límite de ese día en
+    // la columna Por hacer (ET03) y se ve en ese día del calendario y en el tablero (ET05), con «Tarjeta creada.».
+    let servicio = con_semilla();
+    let creada = crear(&servicio, params("Preparar informe", "2026-11-20")).unwrap();
+    assert_eq!(creada.mensaje.message, "Tarjeta creada.");
+    assert_eq!(creada.valor.due_date.0, "2026-11-20");
+    assert_eq!(creada.valor.column_id, Uuid(POR_HACER.into()));
+    let noviembre = mes(&servicio, 2026, 11);
+    assert_eq!(titulos(dia(&noviembre, "2026-11-20")), ["Preparar informe"]);
+    let tablero = bloquear(servicio.tablero(USUARIO)).unwrap();
+    assert_eq!(tablero.columns[0].cards[0].title, "Preparar informe");
+    assert_eq!(
+        panel(&servicio, "2026-11-20").cards[0].title,
+        "Preparar informe"
+    );
+}
+
+#[test]
+fn ca_he_10_hu04_ca03() {
+    // HE-10-HU04-CA03 · Validaciones del formulario: sin título, «Este campo es obligatorio.» en Título y no se crea
+    // (las mismas reglas de HE-07-HU01, ET06).
+    let servicio = con_semilla();
+    let e = crear(&servicio, params("   ", "2026-11-20")).unwrap_err();
+    assert_eq!(
+        (e.code, e.message.as_str(), e.field.as_deref()),
+        (
+            ErrorCode::TitleRequired,
+            "Este campo es obligatorio.",
+            Some("title")
+        )
+    );
+    assert!(panel(&servicio, "2026-11-20").cards.is_empty());
+}
+
+#[test]
+fn ca_he_10_hu04_ca04() {
+    // HE-10-HU04-CA04 · Día pasado: el Panel de un día anterior a hoy no permite crear (ET07); hoy y los días
+    // siguientes sí.
+    let servicio = con_semilla();
+    assert!(!panel(&servicio, "2026-11-13").can_create);
+    assert!(!panel(&servicio, "2025-12-31").can_create);
+    assert!(panel(&servicio, "2026-11-14").can_create);
+    assert!(panel(&servicio, "2026-11-20").can_create);
+}

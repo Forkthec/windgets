@@ -4,7 +4,15 @@
 import { act, fireEvent, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Card } from '@/types';
-import { abrirPantalla, EN_PROGRESO, fijarHoy, llamadasA, screen, tarjeta } from '../kanban/pruebas';
+import {
+  abrirPantalla,
+  EN_PROGRESO,
+  fijarHoy,
+  llamadasA,
+  POR_HACER,
+  screen,
+  tarjeta,
+} from '../kanban/pruebas';
 import { Calendario } from './Calendario';
 
 beforeEach(() => {
@@ -347,5 +355,99 @@ describe('HE-10-HU03 · Tarjetas de un día desde el calendario', () => {
     expect(screen.queryByRole('dialog', { name: 'Detalle de tarjeta' })).toBeNull();
     expect(within(panel()).getByRole('heading', { name: '20/11/2026' })).toBeTruthy();
     expect(tarjetasDelPanel()).toHaveLength(2);
+  });
+});
+
+function formulario() {
+  return screen.getByRole('dialog', { name: 'Formulario de tarjeta' });
+}
+
+function campo(etiqueta: string) {
+  return within(formulario()).getByLabelText(etiqueta) as HTMLInputElement;
+}
+
+/** El Formulario de tarjeta abierto con «Nueva tarjeta» desde el Panel del día `numero`. */
+async function nuevaDesde(numero: string, tarjetas: Card[] = []) {
+  const nucleo = await abrir(tarjetas);
+  await seleccionarDia(numero);
+  await act(async () => {
+    fireEvent.click(within(panel()).getByRole('button', { name: 'Nueva tarjeta' }));
+  });
+  return nucleo;
+}
+
+async function enFormulario(boton: 'Guardar' | 'Cancelar') {
+  await act(async () => {
+    fireEvent.click(within(formulario()).getByRole('button', { name: boton }));
+  });
+}
+
+describe('HE-10-HU04 · Crear una tarjeta desde un día del calendario', () => {
+  it('HE-10-HU04-CA01 · Crear una tarjeta desde un día', async () => {
+    const nucleo = await nuevaDesde('20');
+    fireEvent.change(campo('Título'), { target: { value: 'Preparar informe' } });
+    await enFormulario('Guardar');
+    // ET03: con la fecha límite de ese día, en Por hacer (IPC-CARD-01).
+    expect(llamadasA(nucleo, 'card_create')).toEqual([
+      expect.objectContaining({ title: 'Preparar informe', due_date: '2026-11-20' }),
+    ]);
+    expect(nucleo.tarjetas.at(-1)).toMatchObject({ title: 'Preparar informe', column_id: POR_HACER.id });
+    // ET04: se cierra el formulario, sigo en el Calendario y veo «Tarjeta creada.».
+    expect(screen.queryByRole('dialog', { name: 'Formulario de tarjeta' })).toBeNull();
+    expect(screen.getByRole('main', { name: 'Calendario' })).toBeTruthy();
+    expect(screen.getByText('Tarjeta creada.')).toBeTruthy();
+    // ET05: la tarjeta en su día del calendario y, con EV-07 del Núcleo, en el Panel del día, que sigue abierto.
+    expect(contenido(20).titulos).toEqual(['Preparar informe']);
+    const creada = nucleo.tarjetas.at(-1);
+    nucleo.emitir('cards_changed', { ids: creada ? [creada.id] : [], op: 'upsert', origin: 'local' });
+    await act(async () => {});
+    expect(tarjetasDelPanel()).toEqual(['Tarea · Preparar informe · Por hacer']);
+  });
+
+  it('HE-10-HU04-CA02 · Fecha límite precargada', async () => {
+    await nuevaDesde('20');
+    // ET01, ET08: el Formulario de tarjeta de HE-07-HU01, con la fecha del día ya diligenciada (ET02).
+    expect(formulario()).toBeTruthy();
+    expect(campo('Fecha límite').value).toBe('20/11/2026');
+    expect(campo('Título').value).toBe('');
+  });
+
+  it('HE-10-HU04-CA03 · Validaciones del formulario', async () => {
+    const nucleo = await nuevaDesde('20');
+    await enFormulario('Guardar');
+    // ET06: las mismas validaciones de HE-07-HU01, debajo del campo.
+    const id = campo('Título').getAttribute('aria-describedby');
+    expect(id && document.getElementById(id)?.textContent).toBe('Este campo es obligatorio.');
+    expect(llamadasA(nucleo, 'card_create')).toEqual([]);
+    expect(formulario()).toBeTruthy();
+  });
+
+  it('HE-10-HU04-CA04 · Día pasado', async () => {
+    await abrir();
+    await seleccionarDia('13');
+    // ET07: «Nueva tarjeta» deshabilitada con su texto (RT-04); no abre el formulario.
+    const nueva = within(panel()).getByRole('button', { name: 'Nueva tarjeta' }) as HTMLButtonElement;
+    expect(nueva.disabled).toBe(true);
+    expect(within(panel()).getByText('No puedes crear tarjetas en días pasados.')).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(nueva);
+    });
+    expect(screen.queryByRole('dialog', { name: 'Formulario de tarjeta' })).toBeNull();
+    // Hoy sí se puede.
+    await seleccionarDia('14');
+    expect(
+      (within(panel()).getByRole('button', { name: 'Nueva tarjeta' }) as HTMLButtonElement).disabled,
+    ).toBe(false);
+  });
+
+  it('HE-10-HU04-CA05 · Cancelar la creación', async () => {
+    const nucleo = await nuevaDesde('20');
+    fireEvent.change(campo('Título'), { target: { value: 'Preparar informe' } });
+    await enFormulario('Cancelar');
+    // ET09: se cierra, no crea y el Panel del día sigue abierto en el Calendario.
+    expect(screen.queryByRole('dialog', { name: 'Formulario de tarjeta' })).toBeNull();
+    expect(llamadasA(nucleo, 'card_create')).toEqual([]);
+    expect(screen.getByRole('main', { name: 'Calendario' })).toBeTruthy();
+    expect(within(panel()).getByRole('heading', { name: '20/11/2026' })).toBeTruthy();
   });
 });

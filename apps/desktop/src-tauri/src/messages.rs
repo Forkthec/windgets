@@ -94,6 +94,8 @@ pub const TARJETA_COMPLETADA: &str = "¡Bien hecho! Tarjeta completada.";
 
 /// Con todas las tarjetas de hoy completadas (HE-12-HU03-CA04; ET05).
 pub const COMPLETASTE_TODAS: &str = "¡Completaste todas tus tarjetas de hoy!";
+/// «Nueva tarjeta» deshabilitada en el Panel de un día anterior a hoy (HE-10-HU04-CA04, ET07; IPC-CARD-14).
+pub const NO_CREAR_EN_DIAS_PASADOS: &str = "No puedes crear tarjetas en días pasados.";
 
 // HE-11-HU02 · Asignar una tarjeta a un bloque horario (IPC-CARD-10 card_assign_time_block).
 
@@ -326,6 +328,7 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("TARJETA_ELIMINADA", TARJETA_ELIMINADA),
     ("TARJETA_COMPLETADA", TARJETA_COMPLETADA),
     ("COMPLETASTE_TODAS", COMPLETASTE_TODAS),
+    ("NO_CREAR_EN_DIAS_PASADOS", NO_CREAR_EN_DIAS_PASADOS),
     (
         "CAMBIOS_SIN_GUARDAR_AL_CAMBIAR_DE_TEMA",
         CAMBIOS_SIN_GUARDAR_AL_CAMBIAR_DE_TEMA,

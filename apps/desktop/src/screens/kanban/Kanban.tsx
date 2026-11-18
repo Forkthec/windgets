@@ -211,7 +211,7 @@ export function Kanban() {
     <main aria-label="Tablero Kanban" aria-busy={columnas === null}>
       {/* ET03. El cambio de vista es de HE-09-HU07. */}
       <div className="wg-fila">
-        <Boton principal onClick={tarjetas.abrirNueva}>
+        <Boton principal onClick={() => tarjetas.abrirNueva()}>
           Nueva tarjeta
         </Boton>
         {/* HE-09-HU03-ET01, ET08: con 10 columnas, deshabilitada con su texto (RT-04). */}

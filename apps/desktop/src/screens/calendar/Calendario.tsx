@@ -224,7 +224,8 @@ export function Calendario() {
         <PanelDelDia
           fecha={diaAbierto}
           alAbrirTarjeta={tarjetas.abrirDetalle}
-          alNuevaTarjeta={() => undefined}
+          // HE-10-HU04-ET02: el Formulario de tarjeta con la fecha límite del día ya diligenciada.
+          alNuevaTarjeta={(dia) => tarjetas.abrirNueva(dia.date)}
           alCerrar={() => setDiaAbierto(null)}
         />
       )}

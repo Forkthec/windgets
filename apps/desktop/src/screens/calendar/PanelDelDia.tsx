@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { CalendarDay } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
+import textos from '@/types/messages.es.json';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { fechaVisible } from '../tarjeta/fechas';
 import { NOMBRE_DE_PRIORIDAD, NOMBRE_DE_TIPO } from '../tarjeta/nombres';
@@ -40,7 +41,14 @@ export function PanelDelDia({ fecha, alAbrirTarjeta, alNuevaTarjeta, alCerrar }:
       <div className="wg-fila">
         {/* ET02: la fecha del día. */}
         <h3>{fechaVisible(fecha)}</h3>
-        <Boton onClick={() => dia && alNuevaTarjeta(dia)}>Nueva tarjeta</Boton>
+        {/* HE-10-HU04-ET01, ET07: abre el Formulario de tarjeta; en un día pasado va deshabilitada con su texto. */}
+        <Boton
+          disabled={dia?.can_create === false}
+          motivo={dia?.can_create === false ? textos.NO_CREAR_EN_DIAS_PASADOS : undefined}
+          onClick={() => dia && alNuevaTarjeta(dia)}
+        >
+          Nueva tarjeta
+        </Boton>
         <Boton onClick={alCerrar}>Cerrar</Boton>
       </div>
       {dia &&
