@@ -373,6 +373,18 @@ const respuestas: Respuestas = {
     );
     return { ok: true, value: t, result_message: { code: 'card_assign_time_block', message } };
   },
+  // HE-11-HU03: quita la tarjeta de su bloque sin eliminarla (IPC-CARD-11).
+  card_unassign_time_block: ({ card_id }) => {
+    const t = tarjetasSimuladas.find((c) => c.id === card_id);
+    if (!t) return error({ code: 'card.not_found', message: textos.TARJETA_NO_EXISTE });
+    t.scheduled_date = null;
+    t.scheduled_hour = null;
+    return {
+      ok: true,
+      value: t,
+      result_message: { code: 'card_unassign_time_block', message: textos.TARJETA_QUITADA_DEL_HORARIO },
+    };
+  },
   // HE-09-HU02: mueve la tarjeta, con las reglas de la columna Hecho.
   card_move: ({ card_id, column_id, placement }) => {
     const t = tarjetasSimuladas.find((c) => c.id === card_id);

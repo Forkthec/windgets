@@ -19,11 +19,12 @@ use crate::tipos::{
     CalendarMonth, CalendarMonthDay, CalendarMonthDayPreviewItem, CalendarWeek, CalendarWeekDay,
     CalendarWeekDayCardsItem, Card, CardAssignTimeBlockParams, CardCreateParams, CardDetail,
     CardDetailColumn, CardDetailLabelsItem, CardDetailTimeBlock, CardListBoardResult,
-    CardMoveParams, CardSetCompletedParams, CardType, CardUpdateParams, CatalogItem, Column,
-    ColumnCreateParams, ColumnReorderParams, ColumnRole, ColumnUpdateParams, DateIso, ErrorCode,
-    Hex, Hour, Instant, KanbanWidgetColumn, KanbanWidgetColumnTitlesItem, KanbanWidgetData, Label,
-    LabelCreateParams, Placement, PlacementVariant1, PlacementVariant1Kind, PlannerItem,
-    PlannerSummary, PlannerToday, Priority, ResultMessage, Uuid,
+    CardMoveParams, CardSetCompletedParams, CardType, CardUnassignTimeBlockParams,
+    CardUpdateParams, CatalogItem, Column, ColumnCreateParams, ColumnReorderParams, ColumnRole,
+    ColumnUpdateParams, DateIso, ErrorCode, Hex, Hour, Instant, KanbanWidgetColumn,
+    KanbanWidgetColumnTitlesItem, KanbanWidgetData, Label, LabelCreateParams, Placement,
+    PlacementVariant1, PlacementVariant1Kind, PlannerItem, PlannerSummary, PlannerToday, Priority,
+    ResultMessage, Uuid,
 };
 
 /// Clave para ordenar nombres de la A a la Z sin distinguir mayúsculas ni tildes (D-165): «Árbol» va con la A.
@@ -1211,6 +1212,55 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         Ok(ConMensaje {
             valor: tarjeta,
             mensaje,
+        })
+    }
+
+    /// IPC-CARD-11 `card_unassign_time_block` (HE-11-HU03): quita la tarjeta de su bloque horario sin eliminarla;
+    /// vuelve al panel Tarjetas sin horario (ET02) y, si su fecha límite no es hoy, deja de estar en el planificador
+    /// diario (ET04). El cambio se guarda y se encola para sincronizar. «Tarjeta quitada del horario.» (ET03).
+    pub async fn quitar_bloque(
+        &self,
+        user_id: &str,
+        params: CardUnassignTimeBlockParams,
+    ) -> Result<ConMensaje<Card>, AppError> {
+        let id = params.card_id.0.to_lowercase();
+        self.tarjeta(user_id, &id)
+            .await?
+            .ok_or_else(tarjeta_no_existe)?;
+        let ahora = instante(self.calendario.ahora_ms()).0;
+        let (fields, mods) = campos(
+            &[
+                ("scheduled_date", Value::Null),
+                ("scheduled_hour", Value::Null),
+            ],
+            &ahora,
+        );
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let mut tx = pool.begin().await.map_err(de_sqlx)?;
+        sqlx::query(
+            "UPDATE card SET scheduled_date = NULL, scheduled_hour = NULL, \
+             field_mods = json_patch(field_mods, ?) WHERE id = ? AND user_id = ?",
+        )
+        .bind(mods.to_string())
+        .bind(&id)
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(de_sqlx)?;
+        encolar_cambio(&mut tx, "card", &id, "upsert", &fields, &ahora)
+            .await
+            .map_err(de_sqlx)?;
+        tx.commit().await.map_err(de_sqlx)?;
+        let tarjeta = self
+            .tarjeta(user_id, &id)
+            .await?
+            .ok_or_else(tarjeta_no_existe)?;
+        Ok(ConMensaje {
+            valor: tarjeta,
+            mensaje: resultado(
+                "card_unassign_time_block",
+                messages::TARJETA_QUITADA_DEL_HORARIO,
+            ),
         })
     }
 

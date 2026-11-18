@@ -108,6 +108,11 @@ pub const BLOQUE_YA_PASO: &str = "No puedes asignar tarjetas a un bloque horario
 pub const BLOQUE_DESPUES_DE_FECHA_LIMITE: &str =
     "No puedes programar la tarjeta después de su fecha límite.";
 
+// HE-11-HU03 · Quitar una tarjeta de un bloque horario (IPC-CARD-11 card_unassign_time_block).
+
+/// Resultado de `card_unassign_time_block` (HE-11-HU03-CA01; ET03).
+pub const TARJETA_QUITADA_DEL_HORARIO: &str = "Tarjeta quitada del horario.";
+
 // HE-08-HU02 · Crear una etiqueta con nombre y color (IPC-LABEL-02 label_create).
 
 /// Resultado de `label_create` (HE-08-HU02-CA01, CA08; ET09).
@@ -334,6 +339,7 @@ pub const TEXTOS: &[(&str, &str)] = &[
         CAMBIOS_SIN_GUARDAR_AL_CAMBIAR_DE_TEMA,
     ),
     ("TARJETA_ASIGNADA_AL_BLOQUE", TARJETA_ASIGNADA_AL_BLOQUE),
+    ("TARJETA_QUITADA_DEL_HORARIO", TARJETA_QUITADA_DEL_HORARIO),
     (
         "FORMATO_DE_IMAGEN_NO_PERMITIDO",
         FORMATO_DE_IMAGEN_NO_PERMITIDO,

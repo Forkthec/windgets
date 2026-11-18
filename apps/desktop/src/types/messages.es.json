@@ -72,6 +72,7 @@
   "TARJETA_CREADA": "Tarjeta creada.",
   "TARJETA_ELIMINADA": "Tarjeta eliminada.",
   "TARJETA_NO_EXISTE": "Esta tarjeta ya no existe.",
+  "TARJETA_QUITADA_DEL_HORARIO": "Tarjeta quitada del horario.",
   "TEMA_APLICADO": "Tema “<nombre del tema>” aplicado.",
   "TEMA_DUPLICADO": "Ya existe un tema con ese nombre. Elige otro.",
   "TEMA_GUARDADO": "Tema “<nombre del tema>” guardado.",

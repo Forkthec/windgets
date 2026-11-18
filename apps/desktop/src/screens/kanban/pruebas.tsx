@@ -109,6 +109,8 @@ export interface NucleoDelPlanificador {
    * `card_move` y emite `cards_changed`, y la pantalla vuelve a leer el tablero.
    */
   responderYMover: (movimiento: CardMoveParams) => Promise<void>;
+  /** El mismo cliente IPC que usa la pantalla, para leer lo que vería otra vista (por ejemplo, HE-11-HU03-CA02). */
+  invocar: Invoke;
 }
 
 export function llamadasA(nucleo: NucleoDelPlanificador, comando: CommandName) {
@@ -128,6 +130,8 @@ export function crearNucleo(tarjetas: Card[] = []): {
     llamadas: [],
     responder: (comando, respuesta) => respuestas.set(comando, respuesta as Respuesta),
     emitir: (evento, carga) => act(() => (oyentes.get(evento) ?? []).forEach((o) => o(carga))),
+    // Se reemplaza por el cliente de abajo, que necesita este objeto.
+    invocar: (() => Promise.reject(new Error('sin cliente'))) as unknown as Invoke,
     responderYMover: async (movimiento) => {
       await invocar('card_move', movimiento);
       (oyentes.get('cards_changed') ?? []).forEach((o) =>
@@ -368,6 +372,22 @@ export function crearNucleo(tarjetas: Card[] = []): {
         return { ok: true, value: agenda };
       },
     ],
+    // HE-11-HU03: quita la tarjeta de su bloque sin eliminarla (IPC-CARD-11).
+    [
+      'card_unassign_time_block',
+      (params) => {
+        const { card_id } = params as { card_id: string };
+        const t = nucleo.tarjetas.find((c) => c.id === card_id);
+        if (!t)
+          return { ok: false, error: { code: 'card.not_found', message: 'Esta tarjeta ya no existe.' } };
+        Object.assign(t, { scheduled_date: null, scheduled_hour: null });
+        return {
+          ok: true,
+          value: t,
+          result_message: { code: 'card_unassign_time_block', message: 'Tarjeta quitada del horario.' },
+        };
+      },
+    ],
     [
       'card_move',
       (params) => {
@@ -494,6 +514,7 @@ export function crearNucleo(tarjetas: Card[] = []): {
       r ? r(params) : { ok: false, error: { code: 'internal.unexpected', message: '' } },
     );
   }) as unknown as Invoke;
+  nucleo.invocar = invocar;
   const escuchar = ((evento: string, alRecibir: (c: unknown) => void) => {
     const lista = oyentes.get(evento) ?? [];
     lista.push(alRecibir);

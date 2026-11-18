@@ -43,7 +43,7 @@ use crate::tipos::{
 };
 use crate::tipos::{
     CalendarDay, CalendarDayParams, CalendarMonth, CalendarMonthParams, CalendarWeek,
-    CalendarWeekParams, ThemeApplyParams,
+    CalendarWeekParams, CardUnassignTimeBlockParams, ThemeApplyParams,
 };
 use crate::tipos::{
     EventMapLayoutChanged, LayoutEditMoveParams, LayoutEditOpenResult, LayoutEditRectResult,
@@ -1844,4 +1844,21 @@ pub fn app_open_screen(app: AppHandle, params: crate::tipos::AppOpenScreenParams
         params.params,
     );
     correcto(())
+}
+
+/// IPC-CARD-11 `card_unassign_time_block` (HE-11-HU03): quita la tarjeta de su bloque horario y avisa con EV-07.
+#[tauri::command]
+pub async fn card_unassign_time_block(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: CardUnassignTimeBlockParams,
+) -> Result<IpcResult<Card>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.quitar_bloque(&user_id, params).await,
+        Err(e) => Err(e),
+    };
+    if let Ok(quitada) = &r {
+        avisar_tarjetas(&app, vec![quitada.valor.id.clone()], ChangeOp::Upsert);
+    }
+    Ok(con_mensaje(r))
 }

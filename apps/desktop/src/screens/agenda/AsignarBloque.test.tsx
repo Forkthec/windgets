@@ -36,10 +36,11 @@ describe('HE-11-HU02 · Asignar una tarjeta a un bloque horario', () => {
     // ET04, ET05: las dos en el bloque, una debajo de la otra (una lista).
     const bloque = screen.getByRole('region', { name: '16:00 – 17:00' });
     const lista = within(bloque).getByRole('list');
+    // Cada tarjeta es un elemento de la lista; su título va primero (después, «Quitar del horario», HE-11-HU03).
     expect(
       within(lista)
-        .getAllByRole('button')
-        .map((b) => b.textContent),
+        .getAllByRole('listitem')
+        .map((li) => li.querySelector('.wg-tarjeta__titulo')?.textContent),
     ).toEqual(['Estudiar redes', 'Leer capítulo 3']);
   });
 

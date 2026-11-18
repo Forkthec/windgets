@@ -39,7 +39,16 @@ function otroDia(iso: string, dias: number): string {
  * Una tarjeta de la agenda: su título abre el Detalle de tarjeta (HE-07-HU03, T-090) y se arrastra a un bloque
  * horario (HE-11-HU02-ET01).
  */
-function TarjetaDeLaAgenda({ tarjeta, alAbrir }: { tarjeta: Card; alAbrir: (id: string) => void }) {
+function TarjetaDeLaAgenda({
+  tarjeta,
+  alAbrir,
+  alQuitar,
+}: {
+  tarjeta: Card;
+  alAbrir: (id: string) => void;
+  /** Solo en un bloque horario: «Quitar del horario» (HE-11-HU03-ET01). */
+  alQuitar?: (id: string) => void;
+}) {
   const arrastre = useDraggable({ id: tarjeta.id, data: { hora: tarjeta.scheduled_hour } });
   const { transform } = arrastre;
   return (
@@ -52,6 +61,11 @@ function TarjetaDeLaAgenda({ tarjeta, alAbrir }: { tarjeta: Card; alAbrir: (id: 
       <button type="button" className="wg-tarjeta__titulo" onClick={() => alAbrir(tarjeta.id)}>
         {tarjeta.title}
       </button>
+      {alQuitar && (
+        <button type="button" className="wg-boton" onClick={() => alQuitar(tarjeta.id)}>
+          Quitar del horario
+        </button>
+      )}
     </li>
   );
 }
@@ -62,12 +76,14 @@ function Bloque({
   actual,
   arrastrando,
   alAbrir,
+  alQuitar,
   alUbicar,
 }: {
   bloque: AgendaBlock;
   actual: boolean;
   arrastrando: boolean;
   alAbrir: (id: string) => void;
+  alQuitar: (id: string) => void;
   alUbicar: (nodo: HTMLElement | null) => void;
 }) {
   const lugar: BloqueDeSoltar = { hora: bloque.hour };
@@ -95,7 +111,7 @@ function Bloque({
         {bloque.cards.length > 0 && (
           <ul className="wg-columna__tarjetas">
             {bloque.cards.map((t) => (
-              <TarjetaDeLaAgenda key={t.id} tarjeta={t} alAbrir={alAbrir} />
+              <TarjetaDeLaAgenda key={t.id} tarjeta={t} alAbrir={alAbrir} alQuitar={alQuitar} />
             ))}
           </ul>
         )}
@@ -155,6 +171,18 @@ export function Agenda() {
     [dia, invocar, leer, mostrarResultado],
   );
 
+  // HE-11-HU03: quitar la tarjeta del bloque la devuelve a Tarjetas sin horario con «Tarjeta quitada del
+  // horario.» (ET02, ET03); DP-04 si ya no existe.
+  const quitar = useCallback(
+    async (id: string) => {
+      const r = await invocar('card_unassign_time_block', { card_id: id });
+      if (r.ok) mostrarResultado(r.result_message?.message ?? '');
+      else if (r.error.message) mostrarResultado(r.error.message);
+      await leer();
+    },
+    [invocar, leer, mostrarResultado],
+  );
+
   return (
     <main aria-label="Agenda diaria" aria-busy={agenda === null}>
       {/* ET02: la fecha del día consultado y la navegación entre días (ET06, ET07). */}
@@ -189,6 +217,7 @@ export function Agenda() {
                   actual={bloque.hour === agenda.current_hour}
                   arrastrando={arrastrando}
                   alAbrir={tarjetas.abrirDetalle}
+                  alQuitar={(id) => void quitar(id)}
                   alUbicar={(nodo) => {
                     bloques.current[bloque.hour] = nodo;
                   }}
