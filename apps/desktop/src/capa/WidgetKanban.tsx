@@ -4,6 +4,7 @@ import type { EscucharArrastre } from '@/ipc/arrastreReenviado';
 import type { Invoke, KanbanWidgetColumn, KanbanWidgetData } from '@/types';
 import { type LugarDeSoltar, movimientoDelArrastre } from '@/screens/kanban/arrastre';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
+import { abrirPantalla } from './abrirPantalla';
 
 // Widget Kanban de la capa (P-WAL-02, HE-06-HU05). Muestra las columnas del tablero en su orden, con su nombre,
 // su color y su cantidad de tarjetas, y hasta 5 títulos por columna con «+N más» (IPC-CARD-15; ET01, ET02).
@@ -20,6 +21,8 @@ interface Arrastre {
   origen: { x: number; y: number };
   punto: { x: number; y: number };
   lugar: LugarDeSoltar | undefined;
+  /** Si el puntero se desplazó desde que se tomó: sin moverla, soltarla abre su detalle (HE-06-HU08-ET05). */
+  movido: boolean;
 }
 
 interface ColumnaProps {
@@ -131,17 +134,23 @@ export function WidgetKanban({ invocar, escuchar, escucharArrastre }: WidgetKanb
     // EV-18: la selección sobre una tarjeta visible la toma; cualquier otra no empieza un arrastre.
     const dejarSeleccion = escuchar('pointer_forwarded', ({ x, y }) => {
       const id = enElWidget(x, y)?.closest<HTMLElement>('[data-tarjeta]')?.dataset.tarjeta;
-      cambiar(id ? { id, origen: { x, y }, punto: { x, y }, lugar: lugarEn(x, y) } : null);
+      cambiar(id ? { id, origen: { x, y }, punto: { x, y }, lugar: lugarEn(x, y), movido: false } : null);
     });
     const dejarArrastre = escucharArrastre(({ x, y, phase }) => {
       const tomada = actual.current;
       if (!tomada) return;
       const lugar = lugarEn(x, y);
       if (phase === 'move') {
-        cambiar({ ...tomada, punto: { x, y }, lugar });
+        const movido = tomada.movido || x !== tomada.origen.x || y !== tomada.origen.y;
+        cambiar({ ...tomada, punto: { x, y }, lugar, movido });
         return;
       }
       cambiar(null);
+      // HE-06-HU08-CA03, ET05: seleccionada sin moverla, abre su detalle en el Tablero Kanban.
+      if (!tomada.movido && x === tomada.origen.x && y === tomada.origen.y) {
+        abrirPantalla(invocar, 'kanban', { card_id: tomada.id });
+        return;
+      }
       // HE-06-HU06-ET01, ET03, ET04: el Núcleo mueve la tarjeta y la completa o la saca de Hecho. Soltada fuera
       // de las columnas o sobre sí misma no cambia (ET05). El widget no se mueve ni cambia de tamaño (ET06).
       const movimiento = movimientoDelArrastre(tomada.id, lugar);
@@ -156,7 +165,15 @@ export function WidgetKanban({ invocar, escuchar, escucharArrastre }: WidgetKanb
   if (!tablero) return null;
   const sinTarjetas = tablero.columns.every((c) => c.column.card_count === 0);
   return (
-    <div ref={raiz} style={{ width: '100%', height: '100%', overflow: 'auto' }}>
+    <div
+      ref={raiz}
+      style={{ width: '100%', height: '100%', overflow: 'auto' }}
+      // HE-06-HU08-CA04, ET04: el encabezado de una columna, «+N más» y los espacios sin tarjetas abren el tablero.
+      onClick={(e) => {
+        if (e.target instanceof Element && !e.target.closest('[data-tarjeta]'))
+          abrirPantalla(invocar, 'kanban');
+      }}
+    >
       {/* HE-06-HU05-CA04: las columnas vacías y el estado vacío del tablero (RT-04). */}
       {sinTarjetas && <EstadoVacio texto="Tu tablero no tiene tarjetas." />}
       <div className="wg-tablero wg-tablero--widget">

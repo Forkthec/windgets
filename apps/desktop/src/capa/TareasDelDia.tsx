@@ -4,6 +4,7 @@ import type { Column, Invoke, PlannerItem, PlannerToday } from '@/types';
 import { MoverA } from '@/screens/tarjeta/MoverA';
 import { NOMBRE_DE_PRIORIDAD } from '@/screens/tarjeta/nombres';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
+import { abrirPantalla, esUnControl } from './abrirPantalla';
 
 // Widget Tareas del día de la capa (P-WAL-02). Muestra las tarjetas del planificador diario (IPC-CARD-08) con
 // su casilla de completada, su título, la hora del bloque horario si la tiene y su prioridad, en el mismo orden
@@ -55,7 +56,14 @@ function Elemento({ item, invocar, alCambiar }: ElementoProps) {
 
   return (
     // HE-06-HU02-ET03, HE-06-HU03-ET04: una tarjeta completada va tachada y con la casilla marcada.
-    <li className={`wg-tarjeta wg-fila${card.is_completed ? ' wg-tachada' : ''}`}>
+    <li
+      className={`wg-tarjeta wg-fila${card.is_completed ? ' wg-tachada' : ''}`}
+      // HE-06-HU08-CA01, ET01: la tarjeta, fuera de la casilla y de «⋮», abre su detalle en el Planificador diario.
+      data-tarjeta={card.id}
+      onClick={(e) => {
+        if (!esUnControl(e.target)) abrirPantalla(invocar, 'planner_daily', { card_id: card.id });
+      }}
+    >
       <input
         type="checkbox"
         checked={card.is_completed}
@@ -121,7 +129,14 @@ export function TareasDelDia({ invocar, escuchar }: TareasDelDiaProps) {
 
   if (!dia) return null;
   return (
-    <div style={{ width: '100%', height: '100%', overflow: 'auto' }}>
+    <div
+      style={{ width: '100%', height: '100%', overflow: 'auto' }}
+      // HE-06-HU08-CA02, ET02, ET03: los espacios sin tarjetas abren el Planificador diario.
+      onClick={(e) => {
+        if (e.target instanceof Element && !e.target.closest('[data-tarjeta]'))
+          abrirPantalla(invocar, 'planner_daily');
+      }}
+    >
       {dia.items.length === 0 ? (
         // HE-06-HU02-CA05: estado vacío (RT-04).
         <EstadoVacio texto="No tienes tarjetas para hoy." />

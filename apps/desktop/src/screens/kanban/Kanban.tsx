@@ -9,13 +9,13 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import type { BoardColumn, Card, CardMoveParams, Column } from '@/types';
+import type { BoardColumn, Card, CardMoveParams, Column, ScreenParams } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import textos from '@/types/messages.es.json';
 import { FormularioColumna } from './FormularioColumna';
-import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { useNucleo, useParametrosDeNavegacion } from '@/ventana_principal/VentanaPrincipal';
 import { fechaVisible } from '../tarjeta/fechas';
 import { MoverA } from '../tarjeta/MoverA';
 import { NOMBRE_DE_PRIORIDAD, NOMBRE_DE_TIPO } from '../tarjeta/nombres';
@@ -185,6 +185,16 @@ export function Kanban() {
     [columnas, mover, reordenar],
   );
   const { abrirDetalle } = tarjetas;
+  // HE-06-HU08-CA03: desde el widget Kanban, el Detalle de tarjeta de la tarjeta seleccionada.
+  useParametrosDeNavegacion(
+    'kanban',
+    useCallback(
+      ({ card_id }: ScreenParams) => {
+        if (card_id) abrirDetalle(card_id);
+      },
+      [abrirDetalle],
+    ),
+  );
   const acciones = useMemo<AccionesDelTablero>(
     () => ({
       columnas: columnas?.map((c) => c.column) ?? [],
@@ -201,7 +211,7 @@ export function Kanban() {
     <main aria-label="Tablero Kanban" aria-busy={columnas === null}>
       {/* ET03. El cambio de vista es de HE-09-HU07. */}
       <div className="wg-fila">
-        <Boton principal onClick={tarjetas.abrirNueva}>
+        <Boton principal onClick={() => tarjetas.abrirNueva()}>
           Nueva tarjeta
         </Boton>
         {/* HE-09-HU03-ET01, ET08: con 10 columnas, deshabilitada con su texto (RT-04). */}

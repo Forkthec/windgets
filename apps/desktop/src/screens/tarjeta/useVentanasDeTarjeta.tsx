@@ -12,14 +12,17 @@ import { FormularioTarjeta } from './FormularioTarjeta';
 // se ve la última; «Editar» y «Eliminar» se abren sobre el detalle y, al terminar, vuelven a él.
 
 type Ventana =
-  | { tipo: 'formulario' }
+  | { tipo: 'formulario'; fechaLimite?: string }
   | { tipo: 'detalle'; id: string }
   | { tipo: 'edicion'; tarjeta: CardDetail }
   | { tipo: 'eliminar'; tarjeta: CardDetail };
 
 export interface VentanasDeTarjeta {
-  /** «Nueva tarjeta»: Formulario de tarjeta en modo creación (HE-07-HU01-ET25). */
-  abrirNueva: () => void;
+  /**
+   * «Nueva tarjeta»: Formulario de tarjeta en modo creación (HE-07-HU01-ET25); desde un día del calendario, con
+   * la fecha límite de ese día ya diligenciada (HE-10-HU04-ET02).
+   */
+  abrirNueva: (fechaLimite?: string) => void;
   /** El título de una tarjeta: Detalle de tarjeta (HE-07-HU03-ET02). */
   abrirDetalle: (id: string) => void;
   /** Las ventanas abiertas, para dibujar en la pantalla. */
@@ -52,13 +55,22 @@ export function useVentanasDeTarjeta(alCambiar: () => void): VentanasDeTarjeta {
   // HE-07-HU05-CA02 y DP-04 (HE-07-HU04-CA11): cierran todas las ventanas.
   const cerradas = useMemo(() => terminar(true), [terminar]);
 
-  const abrirNueva = useCallback(() => abrir({ tipo: 'formulario' }), [abrir]);
+  const abrirNueva = useCallback(
+    (fechaLimite?: string) => abrir({ tipo: 'formulario', fechaLimite }),
+    [abrir],
+  );
   const abrirDetalle = useCallback((id: string) => abrir({ tipo: 'detalle', id }), [abrir]);
   const ventana = emergentes.actual;
 
   let ventanas: ReactNode = null;
   if (ventana?.tipo === 'formulario') {
-    ventanas = <FormularioTarjeta alGuardar={guardada} alCancelar={emergentes.volver} />;
+    ventanas = (
+      <FormularioTarjeta
+        fechaLimite={ventana.fechaLimite}
+        alGuardar={guardada}
+        alCancelar={emergentes.volver}
+      />
+    );
   } else if (ventana?.tipo === 'detalle') {
     ventanas = (
       <DetalleTarjeta

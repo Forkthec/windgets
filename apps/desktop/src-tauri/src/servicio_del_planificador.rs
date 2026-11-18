@@ -15,14 +15,16 @@ use crate::messages;
 use crate::repositorios_y_archivos_locales::{BaseLocal, encolar_cambio};
 use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, instante};
 use crate::tipos::{
-    AgendaBlock, AgendaDay, AppError, BoardColumn, Card, CardAssignTimeBlockParams,
-    CardCreateParams, CardDetail, CardDetailColumn, CardDetailLabelsItem, CardDetailTimeBlock,
-    CardListBoardResult, CardMoveParams, CardSetCompletedParams, CardType, CardUpdateParams,
-    CatalogItem, Column, ColumnCreateParams, ColumnReorderParams, ColumnRole, ColumnUpdateParams,
-    DateIso, ErrorCode, Hex, Hour, Instant, KanbanWidgetColumn, KanbanWidgetColumnTitlesItem,
-    KanbanWidgetData, Label, LabelCreateParams, Placement, PlacementVariant1,
-    PlacementVariant1Kind, PlannerItem, PlannerSummary, PlannerToday, Priority, ResultMessage,
-    Uuid,
+    AgendaBlock, AgendaDay, AppError, BoardColumn, CalendarDay, CalendarDayCardsItem,
+    CalendarMonth, CalendarMonthDay, CalendarMonthDayPreviewItem, CalendarWeek, CalendarWeekDay,
+    CalendarWeekDayCardsItem, Card, CardAssignTimeBlockParams, CardCreateParams, CardDetail,
+    CardDetailColumn, CardDetailLabelsItem, CardDetailTimeBlock, CardListBoardResult,
+    CardMoveParams, CardSetCompletedParams, CardType, CardUnassignTimeBlockParams,
+    CardUpdateParams, CatalogItem, Column, ColumnCreateParams, ColumnReorderParams, ColumnRole,
+    ColumnUpdateParams, DateIso, ErrorCode, Hex, Hour, Instant, KanbanWidgetColumn,
+    KanbanWidgetColumnTitlesItem, KanbanWidgetData, Label, LabelCreateParams, Placement,
+    PlacementVariant1, PlacementVariant1Kind, PlannerItem, PlannerSummary, PlannerToday, Priority,
+    ResultMessage, Uuid,
 };
 
 /// Clave para ordenar nombres de la A a la Z sin distinguir mayúsculas ni tildes (D-165): «Árbol» va con la A.
@@ -61,6 +63,8 @@ pub const COLUMNAS_MAX: usize = 10;
 pub const PASO_DE_POSICION: f64 = 1024.0;
 /// Títulos que muestra cada columna del widget Kanban; el resto va en «+N más» (HE-06-HU05-ET02).
 pub const TITULOS_DEL_WIDGET_KANBAN: usize = 5;
+/// Títulos que muestra cada día de la vista mensual; el resto va en «+N más» (HE-10-HU01-ET05).
+pub const TITULOS_POR_DIA_DEL_MES: usize = 3;
 
 /// Fecha y hora del computador. La fecha es la local: «no puede ser anterior a la fecha actual» (ET08).
 pub trait Calendario: Send + Sync {
@@ -1211,6 +1215,55 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         })
     }
 
+    /// IPC-CARD-11 `card_unassign_time_block` (HE-11-HU03): quita la tarjeta de su bloque horario sin eliminarla;
+    /// vuelve al panel Tarjetas sin horario (ET02) y, si su fecha límite no es hoy, deja de estar en el planificador
+    /// diario (ET04). El cambio se guarda y se encola para sincronizar. «Tarjeta quitada del horario.» (ET03).
+    pub async fn quitar_bloque(
+        &self,
+        user_id: &str,
+        params: CardUnassignTimeBlockParams,
+    ) -> Result<ConMensaje<Card>, AppError> {
+        let id = params.card_id.0.to_lowercase();
+        self.tarjeta(user_id, &id)
+            .await?
+            .ok_or_else(tarjeta_no_existe)?;
+        let ahora = instante(self.calendario.ahora_ms()).0;
+        let (fields, mods) = campos(
+            &[
+                ("scheduled_date", Value::Null),
+                ("scheduled_hour", Value::Null),
+            ],
+            &ahora,
+        );
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let mut tx = pool.begin().await.map_err(de_sqlx)?;
+        sqlx::query(
+            "UPDATE card SET scheduled_date = NULL, scheduled_hour = NULL, \
+             field_mods = json_patch(field_mods, ?) WHERE id = ? AND user_id = ?",
+        )
+        .bind(mods.to_string())
+        .bind(&id)
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(de_sqlx)?;
+        encolar_cambio(&mut tx, "card", &id, "upsert", &fields, &ahora)
+            .await
+            .map_err(de_sqlx)?;
+        tx.commit().await.map_err(de_sqlx)?;
+        let tarjeta = self
+            .tarjeta(user_id, &id)
+            .await?
+            .ok_or_else(tarjeta_no_existe)?;
+        Ok(ConMensaje {
+            valor: tarjeta,
+            mensaje: resultado(
+                "card_unassign_time_block",
+                messages::TARJETA_QUITADA_DEL_HORARIO,
+            ),
+        })
+    }
+
     /// IPC-CARD-08 `planner_get_today` (HE-12-HU01): las tarjetas con fecha límite hoy y las asignadas a un
     /// bloque de hoy, sin duplicados (ET02, ET08); primero las de bloque por hora y después las sin hora (ET03).
     /// La hora es la de inicio del bloque de hoy (ET05). El resumen cuenta las completadas (HE-12-HU03).
@@ -1318,6 +1371,178 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
             current_hour: es_hoy.then_some(Hour(hora_actual)),
             blocks: bloques,
             unscheduled: sin_horario,
+        })
+    }
+
+    /// IPC-CARD-12 `calendar_get_month` (HE-10-HU01): todos los días del mes, cada uno con los títulos de hasta
+    /// `TITULOS_POR_DIA_DEL_MES` tarjetas cuya fecha límite es ese día y la cantidad restante para «+N más»
+    /// (ET03, ET05), y los conteos de vencidas y pendientes del día (HE-10-HU05, `EstadoDelDia`).
+    /// DUDA: HE-10-HU01 el orden de las tarjetas de un día no está definido. Valor usado: el del tablero
+    /// (`position`, después la fecha de creación) (docs/DUDAS.md).
+    pub async fn mes_del_calendario(
+        &self,
+        user_id: &str,
+        anio: i64,
+        mes: i64,
+    ) -> Result<CalendarMonth, AppError> {
+        let primero = i32::try_from(anio)
+            .ok()
+            .zip(u32::try_from(mes).ok())
+            .and_then(|(a, m)| NaiveDate::from_ymd_opt(a, m, 1))
+            .ok_or_else(inesperado)?;
+        let siguiente = primero
+            .checked_add_months(chrono::Months::new(1))
+            .ok_or_else(inesperado)?;
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let filas: Vec<(String, String, String, String)> = sqlx::query_as(
+            "SELECT c.id, c.title, c.due_date, k.role FROM card c JOIN kanban_column k ON k.id = c.column_id \
+             WHERE c.user_id = ? AND c.due_date >= ? AND c.due_date < ? \
+             ORDER BY c.due_date, c.position, c.created_at",
+        )
+        .bind(user_id)
+        .bind(primero.format("%Y-%m-%d").to_string())
+        .bind(siguiente.format("%Y-%m-%d").to_string())
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        let hoy = self.calendario.hoy();
+        let mut por_dia: HashMap<String, (Vec<CalendarMonthDayPreviewItem>, EstadoDelDia)> =
+            HashMap::new();
+        for (id, title, fecha_limite, rol) in filas {
+            let dia = fecha(&fecha_limite);
+            let (preview, estado) = por_dia.entry(fecha_limite).or_default();
+            estado.contar(dia, rol == "done", hoy);
+            preview.push(CalendarMonthDayPreviewItem {
+                id: Uuid(id),
+                title,
+            });
+        }
+        Ok(CalendarMonth {
+            days: primero
+                .iter_days()
+                .take_while(|d| *d < siguiente)
+                .map(|d| {
+                    let date = d.format("%Y-%m-%d").to_string();
+                    let (mut preview, estado) = por_dia.remove(&date).unwrap_or_default();
+                    let resto = preview.split_off(preview.len().min(TITULOS_POR_DIA_DEL_MES));
+                    CalendarMonthDay {
+                        date: DateIso(date),
+                        preview,
+                        extra_count: i64::try_from(resto.len()).unwrap_or(i64::MAX),
+                        overdue_count: estado.vencidas,
+                        pending_count: estado.pendientes,
+                        has_overdue: estado.hay_vencidas(),
+                        has_pending: estado.hay_pendientes(),
+                    }
+                })
+                .collect(),
+        })
+    }
+
+    /// IPC-CARD-13 `calendar_get_week` (HE-10-HU02): los 7 días desde `week_start` (el lunes, ET02), cada uno con
+    /// todas las tarjetas cuya fecha límite es ese día (ET03) y la hora de inicio de su bloque horario si lo
+    /// tiene (ET05), y los conteos de vencidas y pendientes del día (HE-10-HU05-ET08).
+    /// DUDA: HE-10-HU02 no está definido en qué día va una tarjeta con bloque horario ni el orden del día. Valor
+    /// usado: el día de su fecha límite, como en la vista mensual; primero las de bloque por hora y después las
+    /// demás en el orden del tablero (docs/DUDAS.md).
+    pub async fn semana_del_calendario(
+        &self,
+        user_id: &str,
+        lunes: &str,
+    ) -> Result<CalendarWeek, AppError> {
+        let lunes = fecha(lunes).ok_or_else(inesperado)?;
+        let fin = lunes + chrono::Days::new(7);
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let filas = sqlx::query(&format!(
+            "{SELECT_TARJETA} WHERE c.user_id = ? AND c.due_date >= ? AND c.due_date < ? \
+             ORDER BY c.due_date, c.scheduled_hour IS NULL, c.scheduled_hour, c.position, c.created_at"
+        ))
+        .bind(user_id)
+        .bind(lunes.format("%Y-%m-%d").to_string())
+        .bind(fin.format("%Y-%m-%d").to_string())
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        let etiquetas = self.etiquetas_por_tarjeta(user_id).await?;
+        let hoy = self.calendario.hoy();
+        let mut por_dia: HashMap<String, (Vec<CalendarWeekDayCardsItem>, EstadoDelDia)> =
+            HashMap::new();
+        for fila in &filas {
+            let id: String = fila.try_get("id").map_err(de_sqlx)?;
+            let tarjeta =
+                tarjeta_de_fila(fila, etiquetas.get(&id).cloned().unwrap_or_default(), hoy)
+                    .map_err(de_sqlx)?;
+            let (tarjetas, estado) = por_dia.entry(tarjeta.due_date.0.clone()).or_default();
+            estado.contar(fecha(&tarjeta.due_date.0), tarjeta.is_completed, hoy);
+            tarjetas.push(CalendarWeekDayCardsItem {
+                start_hour: tarjeta.scheduled_hour.clone(),
+                card: tarjeta,
+            });
+        }
+        Ok(CalendarWeek {
+            days: lunes
+                .iter_days()
+                .take(7)
+                .map(|d| {
+                    let date = d.format("%Y-%m-%d").to_string();
+                    let (cards, estado) = por_dia.remove(&date).unwrap_or_default();
+                    CalendarWeekDay {
+                        cards,
+                        date: DateIso(date),
+                        overdue_count: estado.vencidas,
+                        pending_count: estado.pendientes,
+                        has_overdue: estado.hay_vencidas(),
+                        has_pending: estado.hay_pendientes(),
+                    }
+                })
+                .collect(),
+        })
+    }
+
+    /// IPC-CARD-14 `calendar_get_day` (HE-10-HU03): todas las tarjetas cuya fecha límite es el día, cada una con
+    /// su tipo, su título, su prioridad y el nombre de su columna (ET03), en el orden del tablero. `can_create`
+    /// es falso en los días anteriores a hoy (HE-10-HU04-CA04).
+    pub async fn dia_del_calendario(
+        &self,
+        user_id: &str,
+        dia: &str,
+    ) -> Result<CalendarDay, AppError> {
+        let fecha_del_dia = fecha(dia).ok_or_else(inesperado)?;
+        let dia = fecha_del_dia.format("%Y-%m-%d").to_string();
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let filas = sqlx::query(&format!(
+            "{SELECT_TARJETA} WHERE c.user_id = ? AND c.due_date = ? ORDER BY c.position, c.created_at"
+        ))
+        .bind(user_id)
+        .bind(&dia)
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        let columnas: HashMap<String, String> = self
+            .columnas(user_id)
+            .await?
+            .into_iter()
+            .map(|c| (c.id.0, c.name))
+            .collect();
+        let hoy = self.calendario.hoy();
+        let mut cards = Vec::with_capacity(filas.len());
+        for fila in &filas {
+            let tarjeta = tarjeta_de_fila(fila, Vec::new(), hoy).map_err(de_sqlx)?;
+            cards.push(CalendarDayCardsItem {
+                column_name: columnas
+                    .get(&tarjeta.column_id.0)
+                    .cloned()
+                    .unwrap_or_default(),
+                id: tarjeta.id,
+                r#type: tarjeta.r#type,
+                title: tarjeta.title,
+                priority: tarjeta.priority,
+            });
+        }
+        Ok(CalendarDay {
+            date: DateIso(dia),
+            cards,
+            can_create: fecha_del_dia >= hoy,
         })
     }
 
@@ -1718,6 +1943,37 @@ const SELECT_TARJETA: &str = "SELECT c.id, c.type, c.title, c.description, c.pri
      c.scheduled_hour, c.created_at, k.role AS column_role \
      FROM card c JOIN kanban_column k ON k.id = c.column_id";
 
+/// Vencidas y pendientes de un día del calendario (HE-10-HU05). Una tarjeta fuera de la columna Hecho está vencida
+/// si su fecha límite es anterior a hoy (ET01) y pendiente si es hoy o después (ET02); las de Hecho no cuentan
+/// (ET05, ET10). Cuenta todas las del día, sin el límite de la vista previa (ET14). «Hoy» es la fecha del
+/// computador (ET18).
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct EstadoDelDia {
+    pub vencidas: i64,
+    pub pendientes: i64,
+}
+
+impl EstadoDelDia {
+    pub fn contar(&mut self, fecha_limite: Option<NaiveDate>, completada: bool, hoy: NaiveDate) {
+        match fecha_limite {
+            _ if completada => {}
+            Some(dia) if dia < hoy => self.vencidas += 1,
+            Some(_) => self.pendientes += 1,
+            None => {}
+        }
+    }
+
+    /// Resaltado en rojo (ET03).
+    pub fn hay_vencidas(self) -> bool {
+        self.vencidas > 0
+    }
+
+    /// Resaltado en amarillo: pendientes y ninguna vencida (ET04).
+    pub fn hay_pendientes(self) -> bool {
+        self.pendientes > 0 && self.vencidas == 0
+    }
+}
+
 /// «10:00 – 11:00» (contratos.md, `CardDetail.time_block.label`). El bloque de las 23 termina a las 00:00.
 pub fn texto_del_bloque(hora: u8) -> String {
     format!("{:02}:00 – {:02}:00", hora, (hora + 1) % 24)
@@ -1786,6 +2042,8 @@ mod pruebas_de_etiquetas;
 mod pruebas_de_la_agenda;
 #[cfg(test)]
 mod pruebas_de_reportes;
+#[cfg(test)]
+mod pruebas_del_calendario;
 #[cfg(test)]
 mod pruebas_del_planificador_diario;
 #[cfg(test)]

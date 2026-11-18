@@ -20,7 +20,6 @@ use crate::servicio_de_sesion::{ConMensaje, Reloj, RelojDelSistema, ServicioDeSe
 use crate::servicio_del_planificador::{
     Calendario, CalendarioDelSistema, ServicioDelPlanificador, VigiaDelDia,
 };
-use crate::tipos::ThemeApplyParams;
 use crate::tipos::{
     AgendaDay, AgendaDayParams, AppError, AuthRegisterStartParams, AuthRegisterStartResult,
     AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams,
@@ -41,6 +40,10 @@ use crate::tipos::{
     ThemeDraftApplyParams, ThemeDraftSaveAsParams, ThemeDraftSaveResult, ThemeIdResult,
     WallpaperState, WallpaperStatus, WidgetCatalog, WidgetDeleteParams, WidgetItem,
     WidgetSetActiveParams,
+};
+use crate::tipos::{
+    CalendarDay, CalendarDayParams, CalendarMonth, CalendarMonthParams, CalendarWeek,
+    CalendarWeekParams, CardUnassignTimeBlockParams, ThemeApplyParams,
 };
 use crate::tipos::{
     EventMapLayoutChanged, LayoutEditMoveParams, LayoutEditOpenResult, LayoutEditRectResult,
@@ -1778,4 +1781,84 @@ pub async fn layout_edit_cancel(
         value: (),
         result_message: mensaje,
     }))
+}
+
+/// IPC-CARD-12 `calendar_get_month` (HE-10-HU01): los días del mes con los títulos de sus tarjetas.
+#[tauri::command]
+pub async fn calendar_get_month(
+    nucleo: State<'_, Nucleo>,
+    params: CalendarMonthParams,
+) -> Result<IpcResult<CalendarMonth>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .mes_del_calendario(&user_id, params.year, params.month)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-CARD-13 `calendar_get_week` (HE-10-HU02): los 7 días de la semana con todas sus tarjetas.
+#[tauri::command]
+pub async fn calendar_get_week(
+    nucleo: State<'_, Nucleo>,
+    params: CalendarWeekParams,
+) -> Result<IpcResult<CalendarWeek>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .semana_del_calendario(&user_id, &params.week_start.0)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-CARD-14 `calendar_get_day` (HE-10-HU03): las tarjetas del Panel del día.
+#[tauri::command]
+pub async fn calendar_get_day(
+    nucleo: State<'_, Nucleo>,
+    params: CalendarDayParams,
+) -> Result<IpcResult<CalendarDay>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .dia_del_calendario(&user_id, &params.date.0)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-DESK-03 `app_open_screen` (HE-06-HU08): abre una pantalla de la ventana principal desde un widget
+/// interactivo, con la ventana al frente aunque esté minimizada o solo en el área de notificación (CA07, ET06).
+#[tauri::command]
+pub fn app_open_screen(app: AppHandle, params: crate::tipos::AppOpenScreenParams) -> IpcResult<()> {
+    crate::integracion_con_el_sistema::area_de_notificacion::abrir_pantalla(
+        &app,
+        params.screen,
+        params.params,
+    );
+    correcto(())
+}
+
+/// IPC-CARD-11 `card_unassign_time_block` (HE-11-HU03): quita la tarjeta de su bloque horario y avisa con EV-07.
+#[tauri::command]
+pub async fn card_unassign_time_block(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: CardUnassignTimeBlockParams,
+) -> Result<IpcResult<Card>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.quitar_bloque(&user_id, params).await,
+        Err(e) => Err(e),
+    };
+    if let Ok(quitada) = &r {
+        avisar_tarjetas(&app, vec![quitada.valor.id.clone()], ChangeOp::Upsert);
+    }
+    Ok(con_mensaje(r))
 }

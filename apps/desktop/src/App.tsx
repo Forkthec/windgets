@@ -1,4 +1,5 @@
 import { Agenda } from '@/screens/agenda/Agenda';
+import { Calendario } from '@/screens/calendar/Calendario';
 import { Kanban } from '@/screens/kanban/Kanban';
 import { Labels } from '@/screens/labels/Labels';
 import { Personalization } from '@/screens/personalization/Personalization';
@@ -17,6 +18,7 @@ export default function App() {
     <VentanaPrincipal
       pantallas={{
         agenda: Agenda,
+        calendar: Calendario,
         kanban: Kanban,
         labels: Labels,
         personalization: Personalization,

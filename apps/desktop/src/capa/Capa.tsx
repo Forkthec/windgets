@@ -165,7 +165,7 @@ export function Capa({
           {w.type === 'kanban' && (
             <WidgetKanban invocar={invocar} escuchar={escuchar} escucharArrastre={escucharArrastre} />
           )}
-          {w.type === 'calendar' && <WidgetCalendario escuchar={escuchar} />}
+          {w.type === 'calendar' && <WidgetCalendario invocar={invocar} escuchar={escuchar} />}
         </section>
       ))}
     </main>

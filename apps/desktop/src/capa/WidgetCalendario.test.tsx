@@ -76,7 +76,9 @@ describe('HE-06-HU07 · Mes actual en el widget Calendario', () => {
     expect(hoy.className).toBe('wg-calendario-widget__hoy');
     expect(widget.querySelectorAll('.wg-calendario-widget__hoy')).toHaveLength(1);
     // No es la vista Calendario del planificador: sin «Mes anterior», «Mes siguiente», «Hoy», «Mes» ni «Semana».
-    expect(within(widget).queryAllByRole('button')).toHaveLength(0);
+    for (const opcion of ['Mes anterior', 'Mes siguiente', 'Hoy', 'Mes', 'Semana']) {
+      expect(within(widget).queryByRole('button', { name: opcion })).toBeNull();
+    }
 
     // Al pasar al 1 de diciembre (EV-22), el widget muestra el mes nuevo con su día resaltado.
     vi.setSystemTime(new Date(2026, 11, 1, 0, 0));

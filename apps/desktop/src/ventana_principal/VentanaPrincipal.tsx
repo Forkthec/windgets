@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { invocar as invocarNucleo } from '@/ipc/cliente';
 import { escuchar as escucharNucleo, type Escuchar } from '@/ipc/eventos';
-import type { Invoke, ScreenId } from '@/types';
+import type { Invoke, ScreenId, ScreenParams } from '@/types';
 import textos from '@/types/messages.es.json';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { ProveedorDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
@@ -69,6 +69,30 @@ interface Navegacion {
 }
 
 const ContextoDeNavegacion = createContext<Navegacion | null>(null);
+
+/** Un pedido de EV-23 con parámetros (HE-06-HU08): el detalle de una tarjeta, el Panel de un día o la vista mensual. */
+interface PedidoDeNavegacion {
+  pantalla: ScreenId;
+  params: ScreenParams;
+}
+
+const ContextoDePedido = createContext<{
+  pedido: PedidoDeNavegacion | null;
+  atender: () => void;
+}>({ pedido: null, atender: () => undefined });
+
+/**
+ * Los parámetros con los que se pidió abrir `pantalla` desde un widget (IPC-DESK-03, EV-23). `alRecibir` corre una
+ * sola vez por pedido, también si la pantalla se monta después de llegar el pedido.
+ */
+export function useParametrosDeNavegacion(pantalla: ScreenId, alRecibir: (params: ScreenParams) => void) {
+  const { pedido, atender } = useContext(ContextoDePedido);
+  useEffect(() => {
+    if (!pedido || pedido.pantalla !== pantalla) return;
+    atender();
+    alRecibir(pedido.params);
+  }, [alRecibir, atender, pantalla, pedido]);
+}
 
 interface Nucleo {
   invocar: Invoke;
@@ -205,8 +229,16 @@ export function VentanaPrincipal({
   useEffect(() => {
     ultimaNavegacion.current = navegacion;
   }, [navegacion]);
+  // HE-06-HU08: un widget pide además el detalle de una tarjeta, el Panel de un día o la vista mensual.
+  const [pedido, setPedido] = useState<PedidoDeNavegacion | null>(null);
+  const atender = useCallback(() => setPedido(null), []);
+  const contextoDePedido = useMemo(() => ({ pedido, atender }), [atender, pedido]);
   useEffect(
-    () => escuchar('navigate_requested', (carga) => void ultimaNavegacion.current.abrir(carga.screen)),
+    () =>
+      escuchar('navigate_requested', (carga) => {
+        setPedido(carga.params ? { pantalla: carga.screen, params: carga.params } : null);
+        void ultimaNavegacion.current.abrir(carga.screen);
+      }),
     [escuchar],
   );
 
@@ -252,24 +284,26 @@ export function VentanaPrincipal({
   return (
     <ContextoDelNucleo.Provider value={nucleo}>
       <ContextoDeNavegacion.Provider value={navegacion}>
-        <ContextoDeBloqueo.Provider value={bloquear}>
-          <ProveedorDeResultado>
-            {contenido}
-            {confirmarSalida && (
-              // DUDA: HE-17-HU03 el título de la confirmación no está definido; se usa «Salir».
-              <Confirmacion
-                titulo="Salir"
-                texto={textos.SALIR_SIN_GUARDAR}
-                opcionPrincipal="Salir sin guardar"
-                opcionSalir="Seguir editando"
-                // CA03: descarta los cambios y cierra la aplicación sin cerrar la sesión.
-                alConfirmar={() => void invocar('app_exit', { discard_changes: true })}
-                // CA04: cierra el mensaje; la vista previa conserva sus cambios.
-                alCancelar={() => setConfirmarSalida(false)}
-              />
-            )}
-          </ProveedorDeResultado>
-        </ContextoDeBloqueo.Provider>
+        <ContextoDePedido.Provider value={contextoDePedido}>
+          <ContextoDeBloqueo.Provider value={bloquear}>
+            <ProveedorDeResultado>
+              {contenido}
+              {confirmarSalida && (
+                // DUDA: HE-17-HU03 el título de la confirmación no está definido; se usa «Salir».
+                <Confirmacion
+                  titulo="Salir"
+                  texto={textos.SALIR_SIN_GUARDAR}
+                  opcionPrincipal="Salir sin guardar"
+                  opcionSalir="Seguir editando"
+                  // CA03: descarta los cambios y cierra la aplicación sin cerrar la sesión.
+                  alConfirmar={() => void invocar('app_exit', { discard_changes: true })}
+                  // CA04: cierra el mensaje; la vista previa conserva sus cambios.
+                  alCancelar={() => setConfirmarSalida(false)}
+                />
+              )}
+            </ProveedorDeResultado>
+          </ContextoDeBloqueo.Provider>
+        </ContextoDePedido.Provider>
       </ContextoDeNavegacion.Provider>
     </ContextoDelNucleo.Provider>
   );

@@ -6,7 +6,7 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{AppHandle, Emitter, Manager, Runtime, Window, WindowEvent};
 
 use crate::servicio_de_personalizacion_y_configuracion::ultima_pantalla;
-use crate::tipos::{EventMapExitRequested, EventMapNavigateRequested};
+use crate::tipos::{EventMapExitRequested, EventMapNavigateRequested, ScreenId, ScreenParams};
 
 /// Etiqueta de la ventana principal (C-01) en `tauri.conf.json`.
 pub const VENTANA_PRINCIPAL: &str = "main";
@@ -76,6 +76,21 @@ pub fn abrir_ventana(app: &AppHandle) {
             );
         }
     });
+}
+
+/// IPC-DESK-03 `app_open_screen` (HE-06-HU08): muestra la ventana principal al frente, aunque esté minimizada o solo
+/// en el área de notificación (CA07, ET06), y le pide la pantalla con sus parámetros (EV-23 `navigate_requested`):
+/// el detalle de una tarjeta, el Panel de un día o la vista mensual (CA01 a CA06).
+pub fn abrir_pantalla(app: &AppHandle, screen: ScreenId, params: Option<ScreenParams>) {
+    if let Some(ventana) = app.get_webview_window(VENTANA_PRINCIPAL) {
+        let _ = ventana.show();
+        let _ = ventana.unminimize();
+        let _ = ventana.set_focus();
+    }
+    let _ = app.emit(
+        "navigate_requested",
+        EventMapNavigateRequested { screen, params },
+    );
 }
 
 /// IPC-DESK-07 `app_request_exit` (HE-17-HU03-CA02): pide confirmación si la vista previa tiene cambios sin guardar.

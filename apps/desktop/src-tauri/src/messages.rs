@@ -94,6 +94,8 @@ pub const TARJETA_COMPLETADA: &str = "¡Bien hecho! Tarjeta completada.";
 
 /// Con todas las tarjetas de hoy completadas (HE-12-HU03-CA04; ET05).
 pub const COMPLETASTE_TODAS: &str = "¡Completaste todas tus tarjetas de hoy!";
+/// «Nueva tarjeta» deshabilitada en el Panel de un día anterior a hoy (HE-10-HU04-CA04, ET07; IPC-CARD-14).
+pub const NO_CREAR_EN_DIAS_PASADOS: &str = "No puedes crear tarjetas en días pasados.";
 
 // HE-11-HU02 · Asignar una tarjeta a un bloque horario (IPC-CARD-10 card_assign_time_block).
 
@@ -105,6 +107,11 @@ pub const BLOQUE_YA_PASO: &str = "No puedes asignar tarjetas a un bloque horario
 /// `time_block.after_due_date` (HE-11-HU02-CA05; ET11).
 pub const BLOQUE_DESPUES_DE_FECHA_LIMITE: &str =
     "No puedes programar la tarjeta después de su fecha límite.";
+
+// HE-11-HU03 · Quitar una tarjeta de un bloque horario (IPC-CARD-11 card_unassign_time_block).
+
+/// Resultado de `card_unassign_time_block` (HE-11-HU03-CA01; ET03).
+pub const TARJETA_QUITADA_DEL_HORARIO: &str = "Tarjeta quitada del horario.";
 
 // HE-08-HU02 · Crear una etiqueta con nombre y color (IPC-LABEL-02 label_create).
 
@@ -326,11 +333,13 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("TARJETA_ELIMINADA", TARJETA_ELIMINADA),
     ("TARJETA_COMPLETADA", TARJETA_COMPLETADA),
     ("COMPLETASTE_TODAS", COMPLETASTE_TODAS),
+    ("NO_CREAR_EN_DIAS_PASADOS", NO_CREAR_EN_DIAS_PASADOS),
     (
         "CAMBIOS_SIN_GUARDAR_AL_CAMBIAR_DE_TEMA",
         CAMBIOS_SIN_GUARDAR_AL_CAMBIAR_DE_TEMA,
     ),
     ("TARJETA_ASIGNADA_AL_BLOQUE", TARJETA_ASIGNADA_AL_BLOQUE),
+    ("TARJETA_QUITADA_DEL_HORARIO", TARJETA_QUITADA_DEL_HORARIO),
     (
         "FORMATO_DE_IMAGEN_NO_PERMITIDO",
         FORMATO_DE_IMAGEN_NO_PERMITIDO,

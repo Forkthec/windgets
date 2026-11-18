@@ -10,6 +10,8 @@ import type {
   WidgetItem,
 } from '@/types';
 import textos from '@/types/messages.es.json';
+import { diaDelCalendario, mesDelCalendario, semanaDelCalendario } from './calendarioSimulado';
+import { fechaIso } from '@/screens/tarjeta/fechas';
 
 // Núcleo simulado para `pnpm --filter desktop dev`: «solo las vistas en el navegador, con IPC simulado»
 // (convenciones.md, «Ejecutar en desarrollo»). Cada HU (historia de usuario) define aquí la respuesta de su
@@ -162,6 +164,8 @@ const respuestas: Respuestas = {
   // HE-16-HU02: el simulado guarda el inicio automático en memoria (fuera de Tauri no hay registro de Windows).
   // HE-17-HU02: el simulado no guarda la última pantalla (fuera de Tauri no hay área de notificación).
   app_set_last_screen: () => ({ ok: true, value: null }),
+  // HE-06-HU08: fuera de Tauri no hay ventana que mostrar ni EV-23 (IPC-DESK-03).
+  app_open_screen: () => ({ ok: true, value: null }),
   // HE-17-HU03: fuera de Tauri no hay programa que cerrar.
   app_exit: () => ({ ok: true, value: null }),
   autostart_get: () => ({ ok: true, value: { enabled: inicioAutomaticoSimulado } }),
@@ -256,6 +260,21 @@ const respuestas: Respuestas = {
         extra_count: Math.max(cards.length - 5, 0),
       })),
     },
+  }),
+  // HE-10-HU01: los días del mes con sus tarjetas (IPC-CARD-12).
+  calendar_get_month: ({ year, month }) => ({
+    ok: true,
+    value: mesDelCalendario(tarjetasSimuladas, year, month, fechaIso(new Date())),
+  }),
+  // HE-10-HU02: los 7 días de la semana con sus tarjetas (IPC-CARD-13).
+  calendar_get_week: ({ week_start }) => ({
+    ok: true,
+    value: semanaDelCalendario(tarjetasSimuladas, week_start, fechaIso(new Date())),
+  }),
+  // HE-10-HU03: las tarjetas del Panel del día (IPC-CARD-14).
+  calendar_get_day: ({ date }) => ({
+    ok: true,
+    value: diaDelCalendario(tarjetasSimuladas, COLUMNAS_SIMULADAS, date, fechaIso(new Date())),
   }),
   column_list: () => ({ ok: true, value: tableroSimulado().map((c) => c.column) }),
   // HE-09-HU05: el orden completo de las columnas.
@@ -353,6 +372,18 @@ const respuestas: Respuestas = {
       `${dos((hour + 1) % 24)}:00`,
     );
     return { ok: true, value: t, result_message: { code: 'card_assign_time_block', message } };
+  },
+  // HE-11-HU03: quita la tarjeta de su bloque sin eliminarla (IPC-CARD-11).
+  card_unassign_time_block: ({ card_id }) => {
+    const t = tarjetasSimuladas.find((c) => c.id === card_id);
+    if (!t) return error({ code: 'card.not_found', message: textos.TARJETA_NO_EXISTE });
+    t.scheduled_date = null;
+    t.scheduled_hour = null;
+    return {
+      ok: true,
+      value: t,
+      result_message: { code: 'card_unassign_time_block', message: textos.TARJETA_QUITADA_DEL_HORARIO },
+    };
   },
   // HE-09-HU02: mueve la tarjeta, con las reglas de la columna Hecho.
   card_move: ({ card_id, column_id, placement }) => {
