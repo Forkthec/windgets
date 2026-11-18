@@ -34,6 +34,7 @@ pub fn run() {
             puente_ipc::auth_sign_out,
             puente_ipc::autostart_get,
             puente_ipc::autostart_set,
+            puente_ipc::app_open_screen,
             puente_ipc::app_hide_main_window,
             puente_ipc::app_get_last_screen,
             puente_ipc::app_set_last_screen,

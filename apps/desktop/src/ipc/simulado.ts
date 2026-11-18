@@ -164,6 +164,8 @@ const respuestas: Respuestas = {
   // HE-16-HU02: el simulado guarda el inicio automático en memoria (fuera de Tauri no hay registro de Windows).
   // HE-17-HU02: el simulado no guarda la última pantalla (fuera de Tauri no hay área de notificación).
   app_set_last_screen: () => ({ ok: true, value: null }),
+  // HE-06-HU08: fuera de Tauri no hay ventana que mostrar ni EV-23 (IPC-DESK-03).
+  app_open_screen: () => ({ ok: true, value: null }),
   // HE-17-HU03: fuera de Tauri no hay programa que cerrar.
   app_exit: () => ({ ok: true, value: null }),
   autostart_get: () => ({ ok: true, value: { enabled: inicioAutomaticoSimulado } }),

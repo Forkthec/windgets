@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { PlannerItem, PlannerSummary, PlannerToday } from '@/types';
+import type { PlannerItem, PlannerSummary, PlannerToday, ScreenParams } from '@/types';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
-import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { useNucleo, useParametrosDeNavegacion } from '@/ventana_principal/VentanaPrincipal';
 import { fechaVisible } from '../tarjeta/fechas';
 import { NOMBRE_DE_PRIORIDAD } from '../tarjeta/nombres';
 import { useVentanasDeTarjeta } from '../tarjeta/useVentanasDeTarjeta';
@@ -78,6 +78,17 @@ export function PlannerDaily() {
   }, [escuchar, leer]);
 
   const tarjetas = useVentanasDeTarjeta(useCallback(() => void leer(), [leer]));
+  // HE-06-HU08-CA01: desde el widget Tareas del día, el Detalle de tarjeta de la tarjeta seleccionada.
+  const { abrirDetalle } = tarjetas;
+  useParametrosDeNavegacion(
+    'planner_daily',
+    useCallback(
+      ({ card_id }: ScreenParams) => {
+        if (card_id) abrirDetalle(card_id);
+      },
+      [abrirDetalle],
+    ),
+  );
 
   // HE-12-HU02: marcar mueve a Hecho y muestra «¡Bien hecho! Tarjeta completada.» (ET07); desmarcar la
   // devuelve a su columna anterior o a Por hacer (IPC-CARD-07). El resumen se actualiza al volver a leer

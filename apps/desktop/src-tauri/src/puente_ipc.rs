@@ -1833,3 +1833,15 @@ pub async fn calendar_get_day(
         Err(e) => Err(e),
     }))
 }
+
+/// IPC-DESK-03 `app_open_screen` (HE-06-HU08): abre una pantalla de la ventana principal desde un widget
+/// interactivo, con la ventana al frente aunque esté minimizada o solo en el área de notificación (CA07, ET06).
+#[tauri::command]
+pub fn app_open_screen(app: AppHandle, params: crate::tipos::AppOpenScreenParams) -> IpcResult<()> {
+    crate::integracion_con_el_sistema::area_de_notificacion::abrir_pantalla(
+        &app,
+        params.screen,
+        params.params,
+    );
+    correcto(())
+}

@@ -741,3 +741,13 @@ button.wg-tarjeta__titulo:focus-visible {
   margin: 0;
   font-size: inherit;
 }
+/* HE-06-HU08: el nombre del mes y los días del widget Calendario se seleccionan, sin parecer botones. */
+.wg-calendario-widget__mes,
+.wg-calendario-widget__dia {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}

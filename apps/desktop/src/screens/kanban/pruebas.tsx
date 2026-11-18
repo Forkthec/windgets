@@ -148,6 +148,8 @@ export function crearNucleo(tarjetas: Card[] = []): {
       () => ({ ok: true, value: { state: 'signed_in', alias: 'Prueba', token: 'valid' } }),
     ],
     ['label_list', () => ({ ok: true, value: [...nucleo.etiquetas] })],
+    // HE-06-HU08: IPC-DESK-03; el Núcleo muestra la ventana y emite EV-23 (las pruebas lo emiten aparte).
+    ['app_open_screen', () => ({ ok: true, value: null })],
     // HE-13-HU02: una cuenta con tarjetas, desde antes del rango, y la gráfica de «Últimos 30 días».
     [
       'report_get_meta',

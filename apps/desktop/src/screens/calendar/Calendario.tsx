@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { CalendarMonth, CalendarMonthDay, CalendarWeek, CalendarWeekDay } from '@/types';
+import type { CalendarMonth, CalendarMonthDay, CalendarWeek, CalendarWeekDay, ScreenParams } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
-import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { useNucleo, useParametrosDeNavegacion } from '@/ventana_principal/VentanaPrincipal';
 import { fechaIso, fechaVisible, hoy } from '../tarjeta/fechas';
 import { useVentanasDeTarjeta } from '../tarjeta/useVentanasDeTarjeta';
 import { DIAS, nombreDelMes, semanasDelMes } from './mes';
@@ -142,6 +142,22 @@ export function Calendario() {
 
   // Detalle de tarjeta sobre el Calendario (T-090, HE-10-HU03-ET05).
   const tarjetas = useVentanasDeTarjeta(useCallback(() => void leer(), [leer]));
+
+  // HE-06-HU08: desde el widget Calendario, el Panel de un día en la vista mensual de ese mes (CA05) o la vista
+  // mensual del mes actual (CA06).
+  useParametrosDeNavegacion(
+    'calendar',
+    useCallback(({ date, calendar_view }: ScreenParams) => {
+      if (date) {
+        const [anio, mes, dia] = date.split('-').map(Number);
+        setVista(mesDe(new Date(anio ?? 0, (mes ?? 1) - 1, dia ?? 1)));
+        setDiaAbierto(date);
+      } else if (calendar_view === 'month') {
+        setVista(mesDe(hoy()));
+        setDiaAbierto(null);
+      }
+    }, []),
+  );
 
   /** «Mes anterior» o «Semana anterior» (n = -1), y «Mes siguiente» o «Semana siguiente» (n = 1). */
   const mover = (n: number) =>
