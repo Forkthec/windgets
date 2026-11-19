@@ -59,6 +59,7 @@
   "NOMBRE_DE_COLUMNA_MUY_LARGO": "El nombre de la columna no puede superar los 30 caracteres.",
   "NOMBRE_DE_ETIQUETA_MUY_LARGO": "El nombre de la etiqueta no puede superar los 30 caracteres.",
   "NOMBRE_DE_TEMA_MUY_LARGO": "El nombre no puede superar los 40 caracteres.",
+  "NOTICIAS_NO_DISPONIBLES": "No pudimos cargar las noticias. Intenta de nuevo más tarde.",
   "NO_CREAR_EN_DIAS_PASADOS": "No puedes crear tarjetas en días pasados.",
   "NO_PUDIMOS_CAMBIAR_EL_INICIO_AUTOMATICO": "No pudimos cambiar el inicio automático. Intenta de nuevo.",
   "NO_SE_GUARDARON_CAMBIOS": "No se guardaron cambios.",

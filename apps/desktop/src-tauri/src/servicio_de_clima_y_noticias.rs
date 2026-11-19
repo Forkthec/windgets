@@ -17,13 +17,17 @@ use crate::repositorios_y_archivos_locales::BaseLocal;
 use crate::servicio_de_sesion::instante;
 use crate::servicio_del_planificador::{de_sqlx, error};
 use crate::tipos::{
-    AppError, ErrorCode, GeocodeResult, Instant, WeatherCurrentRequest, WeatherCurrentResponse,
-    WeatherData, WeatherGeocodeRequest, WeatherGeocodeResponse, WidgetData, WidgetDataPayload,
-    WidgetDataStatus,
+    AppError, ErrorCode, GeocodeResult, Instant, NewsData, NewsHeadlinesRequest,
+    NewsHeadlinesResponse, WeatherCurrentRequest, WeatherCurrentResponse, WeatherData,
+    WeatherGeocodeRequest, WeatherGeocodeResponse, WidgetData, WidgetDataPayload, WidgetDataStatus,
 };
 
 /// HE-04-HU05-ET05 (RNF-09): el widget Clima se actualiza cada 30 minutos.
 pub const ACTUALIZACION_DEL_CLIMA_MS: i64 = 30 * 60 * 1000;
+/// HE-04-HU06-ET03 (RNF-09): el widget Noticias se actualiza cada 60 minutos.
+pub const ACTUALIZACION_DE_NOTICIAS_MS: i64 = 60 * 60 * 1000;
+/// HE-04-HU06-ET02: los 5 titulares más recientes.
+pub const TITULARES: usize = 5;
 /// HE-04-HU05-ET10: la ciudad tiene de 1 a 100 caracteres.
 pub const CIUDAD_MAX: usize = 100;
 
@@ -39,6 +43,12 @@ pub trait NubeDeClima: Send + Sync {
         token: &str,
         peticion: &WeatherCurrentRequest,
     ) -> impl Future<Output = Result<WeatherCurrentResponse, FallaDeAuth>> + Send;
+    /// EF-04 `news-headlines` (HE-04-HU06; INT-05).
+    fn titulares(
+        &self,
+        token: &str,
+        peticion: &NewsHeadlinesRequest,
+    ) -> impl Future<Output = Result<NewsHeadlinesResponse, FallaDeAuth>> + Send;
 }
 
 /// HE-04-HU05: la ciudad del campo Ciudad, sin espacios al inicio ni al final, validada con el servicio de clima
@@ -118,6 +128,17 @@ pub fn toca_actualizar(
     en_linea: bool,
     ahora_ms: i64,
 ) -> bool {
+    toca_actualizar_cada(ultima, en_linea, ahora_ms, ACTUALIZACION_DEL_CLIMA_MS)
+}
+
+/// Como [`toca_actualizar`], con el intervalo de cada widget externo: 30 min el Clima y 60 min Noticias
+/// (HE-04-HU06-ET03, ET05, ET06).
+pub fn toca_actualizar_cada(
+    ultima: Option<(&str, &WidgetDataStatus)>,
+    en_linea: bool,
+    ahora_ms: i64,
+    intervalo_ms: i64,
+) -> bool {
     if !en_linea {
         return false;
     }
@@ -128,7 +149,7 @@ pub fn toca_actualizar(
         return true;
     }
     chrono::DateTime::parse_from_rfc3339(fecha)
-        .map(|f| ahora_ms - f.timestamp_millis() >= ACTUALIZACION_DEL_CLIMA_MS)
+        .map(|f| ahora_ms - f.timestamp_millis() >= intervalo_ms)
         .unwrap_or(true)
 }
 
@@ -234,6 +255,56 @@ pub async fn actualizar_clima(
         Err(FallaDeAuth::SinConexion) => (WidgetDataStatus::Offline, None),
         Err(_) => (WidgetDataStatus::Error, None),
     };
+    guardar(base, id, estado, nuevo, ahora_ms).await
+}
+
+/// Los widgets Noticias del usuario (uno como máximo, HE-04-HU04-ET04).
+pub async fn widgets_de_noticias(base: &BaseLocal, user_id: &str) -> Result<Vec<String>, AppError> {
+    let pool = base.pool().await.map_err(de_sqlx)?;
+    sqlx::query_scalar("SELECT id FROM widget WHERE user_id = ? AND type = 'news'")
+        .bind(user_id)
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)
+}
+
+/// HE-04-HU06: consulta los titulares y guarda los 5 más recientes con su fuente (ET02). Sin conexión o con falla
+/// del servicio conserva los últimos con el estado `offline` o `error` (ET05, ET06).
+pub async fn actualizar_noticias(
+    base: &BaseLocal,
+    nube: &impl NubeDeClima,
+    token: &str,
+    widget_id: &str,
+    ahora_ms: i64,
+) -> Result<WidgetData, AppError> {
+    // DUDA: HE-04-HU06 la edición de los titulares no está definida (DP-18). Valor usado: la de la Edge Function.
+    let peticion = NewsHeadlinesRequest { edition: None };
+    let (estado, nuevo) = match nube.titulares(token, &peticion).await {
+        Ok(mut r) => {
+            r.headlines
+                .sort_by(|a, b| b.published_at.0.cmp(&a.published_at.0));
+            r.headlines.truncate(TITULARES);
+            (
+                WidgetDataStatus::Ok,
+                Some(WidgetDataPayload::NewsData(NewsData {
+                    headlines: r.headlines,
+                })),
+            )
+        }
+        Err(FallaDeAuth::SinConexion) => (WidgetDataStatus::Offline, None),
+        Err(_) => (WidgetDataStatus::Error, None),
+    };
+    guardar(base, widget_id, estado, nuevo, ahora_ms).await
+}
+
+/// Guarda el resultado de una consulta en `external_widget_cache`; sin dato nuevo conserva el anterior.
+async fn guardar(
+    base: &BaseLocal,
+    id: &str,
+    estado: WidgetDataStatus,
+    nuevo: Option<WidgetDataPayload>,
+    ahora_ms: i64,
+) -> Result<WidgetData, AppError> {
     let anterior = datos(base, id).await?.payload;
     let payload = nuevo.or(anterior);
     let texto = payload.as_ref().map_or(Value::Null, |p| {

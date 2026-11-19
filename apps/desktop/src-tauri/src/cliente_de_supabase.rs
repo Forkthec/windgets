@@ -333,6 +333,14 @@ impl crate::servicio_de_clima_y_noticias::NubeDeClima for ClienteDeSupabase {
     ) -> Result<crate::tipos::WeatherCurrentResponse, FallaDeAuth> {
         self.funcion("weather-current", token, peticion).await
     }
+
+    async fn titulares(
+        &self,
+        token: &str,
+        peticion: &crate::tipos::NewsHeadlinesRequest,
+    ) -> Result<crate::tipos::NewsHeadlinesResponse, FallaDeAuth> {
+        self.funcion("news-headlines", token, peticion).await
+    }
 }
 
 impl crate::motor_de_sincronizacion::NubeDeSincronizacion for ClienteDeSupabase {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AgregarClima } from './AgregarClima';
+import { AgregarSinDatos } from './AgregarSinDatos';
 import { EncabezadoDeRuta } from '@/reglas/ruta';
 import type { AddableWidgetType, WidgetCatalog, WidgetCatalogEntry } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
@@ -65,6 +66,18 @@ export function AgregarWidget({ alRegresar }: AgregarWidgetProps) {
 
   if (elegido === 'weather') {
     return <AgregarClima alRegresar={() => setElegido(null)} alIrAWidgets={alRegresar} />;
+  }
+  const entrada = [...(catalogo?.external ?? []), ...(catalogo?.local ?? [])].find((e) => e.type === elegido);
+  if (entrada && elegido === 'news') {
+    return (
+      <AgregarSinDatos
+        tipo={entrada.type}
+        nombre={entrada.name}
+        descripcion={entrada.description}
+        alRegresar={() => setElegido(null)}
+        alIrAWidgets={alRegresar}
+      />
+    );
   }
 
   return (

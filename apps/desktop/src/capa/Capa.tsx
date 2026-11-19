@@ -8,6 +8,7 @@ import { TareasDelDia } from './TareasDelDia';
 import { WidgetCalendario } from './WidgetCalendario';
 import { WidgetKanban } from './WidgetKanban';
 import { WidgetClima } from './WidgetClima';
+import { WidgetNoticias } from './WidgetNoticias';
 import { tokensDelTema } from '@/ui/tema/temaAplicado';
 import { aplicarTokens } from '@/ui/tema/tokens';
 import type {
@@ -169,6 +170,9 @@ export function Capa({
           {w.type === 'calendar' && <WidgetCalendario invocar={invocar} escuchar={escuchar} />}
           {w.type === 'weather' && (
             <WidgetClima widgetId={w.widget_id} invocar={invocar} escuchar={escuchar} />
+          )}
+          {w.type === 'news' && (
+            <WidgetNoticias widgetId={w.widget_id} invocar={invocar} escuchar={escuchar} />
           )}
         </section>
       ))}

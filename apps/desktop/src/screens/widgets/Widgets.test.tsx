@@ -583,3 +583,28 @@ describe('HE-04-HU05 · Agregar el widget Clima', () => {
     expect(llamadasA(nucleo, 'widget_add')).toEqual([]);
   });
 });
+
+describe('HE-04-HU06 · Agregar el widget Noticias', () => {
+  it('HE-04-HU06-CA01 · Agregar el widget Noticias', async () => {
+    const nucleo = await abrir([...POR_DEFECTO]);
+    nucleo.responder('widget_catalog_get', () => ({ ok: true, value: catalogo() }));
+    nucleo.responder('widget_add', () => ({
+      ok: true,
+      value: widget({ widget_id: 'w-noticias', type: 'news', display_name: 'Noticias' }),
+    }));
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar widget' }));
+    const enCatalogo = await screen.findByRole('main', { name: 'Agregar widget' });
+    fireEvent.click(await within(enCatalogo).findByRole('button', { name: /Noticias/ }));
+    const sub = await screen.findByRole('main', { name: 'Noticias' });
+    // ET01: miga de pan, la descripción del widget, «Agregar» y «Regresar».
+    expect(within(sub).getByRole('navigation', { name: 'Miga de pan' }).textContent).toBe(
+      'Widgets>Agregar widget>Noticias',
+    );
+    expect(within(sub).getByText('Descripción de Noticias.')).toBeTruthy();
+    expect(within(sub).getByRole('button', { name: 'Regresar' })).toBeTruthy();
+    fireEvent.click(within(sub).getByRole('button', { name: 'Agregar' }));
+    // Regresa a la pantalla Widgets.
+    expect(await screen.findByRole('main', { name: 'Widgets' })).toBeTruthy();
+    expect(llamadasA(nucleo, 'widget_add')).toEqual([{ type: 'news', config: {} }]);
+  });
+});

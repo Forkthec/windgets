@@ -20,15 +20,17 @@ use crate::tipos::{
 const AHORA_MS: i64 = 1_794_657_600_000;
 
 /// Servicio de clima simulado: Popayán y Cali existen; el clima responde lo que se le indique.
-struct ClimaSimulado {
+pub(super) struct ClimaSimulado {
     clima: Mutex<Result<(f64, &'static str), FallaDeAuth>>,
+    noticias: Mutex<Result<usize, FallaDeAuth>>,
     consultas: Mutex<Vec<String>>,
 }
 
 impl ClimaSimulado {
-    fn nuevo() -> Self {
+    pub(super) fn nuevo() -> Self {
         Self {
             clima: Mutex::new(Ok((21.4, "2"))),
+            noticias: Mutex::new(Ok(6)),
             consultas: Mutex::new(Vec::new()),
         }
     }
@@ -46,6 +48,12 @@ fn ciudad(geo: &str, nombre: &str) -> GeocodeResult {
         country: "Colombia".into(),
         latitude: 2.44,
         longitude: -76.61,
+    }
+}
+
+impl ClimaSimulado {
+    pub(super) fn noticias(&self, r: Result<usize, FallaDeAuth>) {
+        *self.noticias.lock().unwrap() = r;
     }
 }
 
@@ -77,6 +85,26 @@ impl NubeDeClima for ClimaSimulado {
             condition_text: String::new(),
             observed_at: Instant("2026-11-14T12:00:00.000Z".into()),
             cache: WeatherCurrentResponseCache::Miss,
+        })
+    }
+
+    async fn titulares(
+        &self,
+        _token: &str,
+        _peticion: &crate::tipos::NewsHeadlinesRequest,
+    ) -> Result<crate::tipos::NewsHeadlinesResponse, FallaDeAuth> {
+        let r = self.noticias.lock().unwrap().clone();
+        r.map(|cantidad| crate::tipos::NewsHeadlinesResponse {
+            headlines: (0..cantidad)
+                .map(|i| crate::tipos::Headline {
+                    title: format!("Titular {i}"),
+                    source: format!("Medio {i}"),
+                    url: format!("https://example.com/{i}"),
+                    published_at: Instant(format!("2026-11-14T{:02}:00:00.000Z", 10 + i)),
+                })
+                .collect(),
+            fetched_at: Instant("2026-11-14T12:00:00.000Z".into()),
+            cache: crate::tipos::NewsHeadlinesResponseCache::Miss,
         })
     }
 }
@@ -329,4 +357,129 @@ fn ca_he_04_hu05_ca09() {
     // 100 sí llegan al servicio de clima.
     let _ = agregar(&base, &servicio, &nube, &"a".repeat(100));
     assert_eq!(nube.consultas.lock().unwrap().len(), 1);
+}
+
+// HE-04-HU06 · Agregar el widget Noticias.
+
+fn agregar_noticias(
+    base: &BaseLocal,
+    servicio: &ServicioDePersonalizacion,
+) -> Result<crate::tipos::WidgetItem, AppError> {
+    bloquear(servicio.agregar_noticias(base, USUARIO, AHORA_MS))
+}
+
+fn titulares(d: &crate::tipos::WidgetData) -> Vec<(String, String)> {
+    match &d.payload {
+        Some(WidgetDataPayload::NewsData(n)) => n
+            .headlines
+            .iter()
+            .map(|h| (h.title.clone(), h.source.clone()))
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
+#[test]
+fn ca_he_04_hu06_ca01() {
+    // HE-04-HU06-CA01 · Agrega y activa Noticias de 480 × 360 en la primera posición libre (ET08) y guarda los 5
+    // titulares más recientes con su fuente (ET02). Va una sola vez (HE-04-HU04-ET04).
+    let (base, servicio) = con_widgets_por_defecto();
+    let nube = ClimaSimulado::nuevo();
+    let w = agregar_noticias(&base, &servicio).unwrap();
+    assert!(w.is_active);
+    assert_eq!(w.display_name, "Noticias");
+    assert_eq!(rectangulo(&base, &w.widget_id.0), (1400, 0, 480, 360));
+    let d = bloquear(clima::actualizar_noticias(
+        &base,
+        &nube,
+        "jwt",
+        &w.widget_id.0,
+        AHORA_MS,
+    ))
+    .unwrap();
+    assert_eq!(
+        titulares(&d),
+        (1..6)
+            .rev()
+            .map(|i| (format!("Titular {i}"), format!("Medio {i}")))
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(
+        agregar_noticias(&base, &servicio).unwrap_err().code,
+        ErrorCode::WidgetAlreadyAdded
+    );
+}
+
+#[test]
+fn ca_he_04_hu06_ca02() {
+    // HE-04-HU06-CA02 · A los 60 minutos de la última consulta toca actualizar (ET03, RNF-09).
+    let ok = WidgetDataStatus::Ok;
+    let consulta = "2026-11-14T12:00:00.000Z";
+    let cada = clima::ACTUALIZACION_DE_NOTICIAS_MS;
+    assert!(!clima::toca_actualizar_cada(
+        Some((consulta, &ok)),
+        true,
+        AHORA_MS + cada - 1,
+        cada
+    ));
+    assert!(clima::toca_actualizar_cada(
+        Some((consulta, &ok)),
+        true,
+        AHORA_MS + cada,
+        cada
+    ));
+}
+
+#[test]
+fn ca_he_04_hu06_ca03() {
+    // HE-04-HU06-CA03 · El servicio de noticias no responde: `error` con los últimos titulares (ET05).
+    let (base, servicio) = con_widgets_por_defecto();
+    let nube = ClimaSimulado::nuevo();
+    let w = agregar_noticias(&base, &servicio).unwrap();
+    bloquear(clima::actualizar_noticias(
+        &base,
+        &nube,
+        "jwt",
+        &w.widget_id.0,
+        AHORA_MS,
+    ))
+    .unwrap();
+    nube.noticias(Err(FallaDeAuth::SinRespuesta));
+    let d = bloquear(clima::actualizar_noticias(
+        &base,
+        &nube,
+        "jwt",
+        &w.widget_id.0,
+        AHORA_MS + 1,
+    ))
+    .unwrap();
+    assert_eq!(d.status, WidgetDataStatus::Error);
+    assert_eq!(titulares(&d).len(), 5);
+}
+
+#[test]
+fn ca_he_04_hu06_ca04() {
+    // HE-04-HU06-CA04 · Sin conexión: `offline`, y se consulta al volver la conexión (ET06).
+    let (base, servicio) = con_widgets_por_defecto();
+    let nube = ClimaSimulado::nuevo();
+    let w = agregar_noticias(&base, &servicio).unwrap();
+    nube.noticias(Err(FallaDeAuth::SinConexion));
+    let d = bloquear(clima::actualizar_noticias(
+        &base,
+        &nube,
+        "jwt",
+        &w.widget_id.0,
+        AHORA_MS,
+    ))
+    .unwrap();
+    assert_eq!(d.status, WidgetDataStatus::Offline);
+    let offline = WidgetDataStatus::Offline;
+    let fecha = d.fetched_at.unwrap().0;
+    let cada = clima::ACTUALIZACION_DE_NOTICIAS_MS;
+    assert!(clima::toca_actualizar_cada(
+        Some((&fecha, &offline)),
+        true,
+        AHORA_MS + 1,
+        cada
+    ));
 }

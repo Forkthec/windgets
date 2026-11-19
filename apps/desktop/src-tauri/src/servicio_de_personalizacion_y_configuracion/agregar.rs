@@ -156,6 +156,31 @@ impl ServicioDePersonalizacion {
             .ok_or_else(inesperado)
     }
 
+    /// HE-04-HU06: agrega el widget Noticias. Va una sola vez (HE-04-HU04-ET04): si ya está, `widget.already_added`.
+    pub async fn agregar_noticias(
+        &self,
+        base: &BaseLocal,
+        user_id: &str,
+        ahora_ms: i64,
+    ) -> Result<WidgetItem, AppError> {
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let ya: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM widget WHERE user_id = ? AND type = 'news'")
+                .bind(user_id)
+                .fetch_one(pool)
+                .await
+                .map_err(de_sqlx)?;
+        if ya > 0 {
+            return Err(error(
+                ErrorCode::WidgetAlreadyAdded,
+                messages::WIDGET_YA_AGREGADO,
+                None,
+            ));
+        }
+        self.insertar_widget(base, user_id, "news", &[], ahora_ms)
+            .await
+    }
+
     /// HE-04-HU05: agrega un widget Clima para la ciudad que reconoció el servicio de clima. Un widget por ciudad
     /// (ET04; D-038): si ya hay uno para esa ciudad, `city.duplicate` (CA05).
     pub async fn agregar_clima(

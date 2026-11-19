@@ -285,6 +285,9 @@ pub const CIUDAD_SIN_CONEXION: &str =
     "No hay conexión a internet. Conéctate para validar la ciudad.";
 /// Aviso del widget cuando el servicio de clima no responde (CA07, ET07).
 pub const CLIMA_NO_DISPONIBLE: &str = "No pudimos cargar el clima. Intenta de nuevo más tarde.";
+/// Aviso del widget cuando el servicio de noticias no responde (HE-04-HU06-CA03, ET05).
+pub const NOTICIAS_NO_DISPONIBLES: &str =
+    "No pudimos cargar las noticias. Intenta de nuevo más tarde.";
 /// Aviso de un widget externo sin conexión (CA08, ET08; HE-15-HU02-CA06).
 pub const WIDGET_EXTERNO_SIN_CONEXION: &str =
     "Sin conexión. El widget se actualizará al reconectarte.";
@@ -431,6 +434,7 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("CIUDAD_MUY_LARGA", CIUDAD_MUY_LARGA),
     ("CIUDAD_SIN_CONEXION", CIUDAD_SIN_CONEXION),
     ("CLIMA_NO_DISPONIBLE", CLIMA_NO_DISPONIBLE),
+    ("NOTICIAS_NO_DISPONIBLES", NOTICIAS_NO_DISPONIBLES),
     ("WIDGET_EXTERNO_SIN_CONEXION", WIDGET_EXTERNO_SIN_CONEXION),
     ("SESION_CERRADA", SESION_CERRADA),
     ("DESEAS_CERRAR_SESION", DESEAS_CERRAR_SESION),

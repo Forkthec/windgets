@@ -732,6 +732,12 @@ pub async fn widget_add(
                 Err(e) => Err(e),
             }
         }
+        (crate::tipos::AddableWidgetType::News, _) => {
+            nucleo
+                .personalizacion
+                .agregar_noticias(base, &user_id, RelojDelSistema.ahora_ms())
+                .await
+        }
         _ => Err(crate::servicio_del_planificador::inesperado()),
     };
     if let Ok(widget) = &r {
@@ -744,7 +750,10 @@ pub async fn widget_add(
             },
         );
         let manejador = app.clone();
-        tauri::async_runtime::spawn(async move { actualizar_widgets_de_clima(&manejador).await });
+        tauri::async_runtime::spawn(async move {
+            actualizar_widgets_de_clima(&manejador).await;
+            actualizar_widgets_de_noticias(&manejador).await;
+        });
     }
     Ok(leido(r))
 }
@@ -816,11 +825,68 @@ pub async fn actualizar_widgets_de_clima(app: &AppHandle) {
     }
 }
 
+/// HE-04-HU06-ET03, ET05, ET06: consulta los titulares cada 60 min, o al volver la conexión, y avisa con EV-20.
+pub async fn actualizar_widgets_de_noticias(app: &AppHandle) {
+    let nucleo = app.state::<Nucleo>();
+    let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+        return;
+    };
+    let user_id = sesion.user_id.to_lowercase();
+    let base = nucleo.planificador.base();
+    let cliente = nucleo.sesion.auth();
+    let Ok(widgets) =
+        crate::servicio_de_clima_y_noticias::widgets_de_noticias(base, &user_id).await
+    else {
+        return;
+    };
+    for id in &widgets {
+        let ultima = crate::servicio_de_clima_y_noticias::ultima_consulta(base, id)
+            .await
+            .ok()
+            .flatten();
+        let ahora = RelojDelSistema.ahora_ms();
+        if !crate::servicio_de_clima_y_noticias::toca_actualizar_cada(
+            ultima.as_ref().map(|(f, e)| (f.as_str(), e)),
+            cliente.en_linea(),
+            ahora,
+            crate::servicio_de_clima_y_noticias::ACTUALIZACION_DE_NOTICIAS_MS,
+        ) {
+            continue;
+        }
+        let Ok(datos) = crate::servicio_de_clima_y_noticias::actualizar_noticias(
+            base,
+            cliente,
+            &sesion.access_token,
+            id,
+            ahora,
+        )
+        .await
+        else {
+            continue;
+        };
+        let payload = datos.payload.and_then(|p| match p {
+            crate::tipos::WidgetDataPayload::NewsData(d) => {
+                Some(crate::tipos::EventMapWidgetDataChangedPayload::NewsData(d))
+            }
+            crate::tipos::WidgetDataPayload::WeatherData(_) => None,
+        });
+        let _ = app.emit(
+            "widget_data_changed",
+            crate::tipos::EventMapWidgetDataChanged {
+                widget_id: crate::tipos::Uuid(id.clone()),
+                status: datos.status,
+                payload,
+            },
+        );
+    }
+}
+
 /// Revisa cada minuto qué widgets externos toca actualizar (HE-04-HU05-ET05, ET08).
 pub fn vigilar_widgets_externos(app: AppHandle) {
     std::thread::spawn(move || {
         loop {
             tauri::async_runtime::block_on(actualizar_widgets_de_clima(&app));
+            tauri::async_runtime::block_on(actualizar_widgets_de_noticias(&app));
             std::thread::sleep(Duration::from_secs(60));
         }
     });
