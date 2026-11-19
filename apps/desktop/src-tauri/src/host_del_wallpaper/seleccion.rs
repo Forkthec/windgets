@@ -10,9 +10,14 @@ use crate::tipos::{
     EventMapPointerForwarded, EventMapPointerForwardedButton, Monitor, WidgetRect, WidgetType,
 };
 
+use serde::Serialize;
+
 /// Banderas de `RAWMOUSE.usButtonFlags`: RI_MOUSE_LEFT_BUTTON_DOWN y RI_MOUSE_RIGHT_BUTTON_DOWN.
 pub const BOTON_IZQUIERDO_ABAJO: u16 = 0x0001;
 pub const BOTON_DERECHO_ABAJO: u16 = 0x0004;
+/// RI_MOUSE_LEFT_BUTTON_UP y RI_MOUSE_RIGHT_BUTTON_UP.
+pub const BOTON_IZQUIERDO_ARRIBA: u16 = 0x0002;
+pub const BOTON_DERECHO_ARRIBA: u16 = 0x0008;
 
 /// Lo que la capa necesita para decidir: dónde empieza, su escala y los widgets activos que pinta.
 #[derive(Debug, Clone, PartialEq)]
@@ -64,6 +69,96 @@ pub fn es_el_boton_principal(banderas: u16, botones_intercambiados: bool) -> boo
         BOTON_IZQUIERDO_ABAJO
     };
     banderas & principal != 0
+}
+
+/// ¿La entrada suelta el botón principal? Con los botones intercambiados, es soltar el derecho.
+pub fn se_solto_el_boton_principal(banderas: u16, botones_intercambiados: bool) -> bool {
+    let principal = if botones_intercambiados {
+        BOTON_DERECHO_ARRIBA
+    } else {
+        BOTON_IZQUIERDO_ARRIBA
+    };
+    banderas & principal != 0
+}
+
+/// Evento interno con el arrastre que sigue a una selección reenviada (HE-06-HU06-ET01).
+/// DUDA: HE-06-HU06 EV-18 solo lleva la selección (el botón presionado) y el drag-and-drop del widget Kanban
+/// necesita también el movimiento y el lugar donde se suelta. Ningún evento del contrato lo lleva. Valor usado:
+/// este evento, solo hacia la capa, desde una selección reenviada hasta que se suelta el botón (docs/DUDAS.md).
+pub const ARRASTRE_REENVIADO: &str = "pointer_drag_forwarded";
+
+/// `move` mientras el botón sigue presionado; `up` al soltarlo.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FaseDelArrastre {
+    Move,
+    Up,
+}
+
+/// Carga de `pointer_drag_forwarded`, en coordenadas de la capa como EV-18.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct ArrastreReenviado {
+    pub x: i64,
+    pub y: i64,
+    pub phase: FaseDelArrastre,
+}
+
+/// Seguimiento del arrastre: empieza con una selección reenviada a la capa y termina al soltar el botón
+/// principal. Mientras dura, el punto se reenvía aunque salga del widget: soltar fuera de las columnas deja la
+/// tarjeta donde estaba (HE-06-HU06-ET05).
+#[derive(Debug, Default)]
+pub struct Arrastre {
+    ultimo: Option<(i64, i64)>,
+}
+
+impl Arrastre {
+    pub const fn nuevo() -> Self {
+        Self { ultimo: None }
+    }
+
+    /// Una selección reenviada (EV-18) empieza un arrastre en su punto.
+    pub fn empezar(&mut self, seleccion: &EventMapPointerForwarded) {
+        self.ultimo = Some((seleccion.x, seleccion.y));
+    }
+
+    /// ¿Hay un arrastre en curso? Sin él, el movimiento del mouse no se mira.
+    pub fn en_curso(&self) -> bool {
+        self.ultimo.is_some()
+    }
+
+    /// Una selección que no se reenvía (cae en un ícono, fuera de los widgets o en otra ventana) termina
+    /// cualquier arrastre anterior sin avisar a la capa.
+    pub fn cancelar(&mut self) {
+        self.ultimo = None;
+    }
+
+    /// Cada entrada del mouse mientras dura el arrastre. Devuelve lo que se reenvía: `up` al soltar el botón
+    /// principal, y `move` solo si el punto cambió en la capa (para no repetir el mismo punto). Sin arrastre en
+    /// curso no se reenvía nada.
+    pub fn seguir(
+        &mut self,
+        geometria: &GeometriaDeLaCapa,
+        (x, y): (i32, i32),
+        soltado: bool,
+    ) -> Option<ArrastreReenviado> {
+        let anterior = self.ultimo?;
+        let (cx, cy) = en_la_capa(geometria, x, y);
+        let punto = (cx.round() as i64, cy.round() as i64);
+        let phase = if soltado {
+            self.ultimo = None;
+            FaseDelArrastre::Up
+        } else if punto == anterior {
+            return None;
+        } else {
+            self.ultimo = Some(punto);
+            FaseDelArrastre::Move
+        };
+        Some(ArrastreReenviado {
+            x: punto.0,
+            y: punto.1,
+            phase,
+        })
+    }
 }
 
 /// El punto físico en píxeles CSS de la capa.
@@ -324,5 +419,80 @@ mod pruebas {
             sin_icono,
         );
         assert_eq!(evento, None);
+    }
+
+    /// Una selección reenviada sobre el widget Kanban por defecto.
+    fn seleccion_en_kanban() -> EventMapPointerForwarded {
+        decidir(
+            &por_defecto(),
+            &monitores(),
+            (800, 100),
+            BajoElCursor::Escritorio,
+            sin_icono,
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn ca_he_06_hu06_ca01() {
+        // HE-06-HU06-CA01 · Mover una tarjeta a otra columna (ET01): tras la selección reenviada, la capa recibe el
+        // movimiento en sus coordenadas, sin repetir un punto, y el lugar donde se suelta el botón principal.
+        let geometria = GeometriaDeLaCapa {
+            origen: (-1920, 0),
+            escala: 1.0,
+            ..por_defecto()
+        };
+        let mut arrastre = Arrastre::nuevo();
+        arrastre.empezar(&seleccion_en_kanban());
+        let mover = |a: &mut Arrastre, x, soltado| a.seguir(&geometria, (x, 100), soltado);
+        assert_eq!(
+            mover(&mut arrastre, -1000, false),
+            Some(ArrastreReenviado {
+                x: 920,
+                y: 100,
+                phase: FaseDelArrastre::Move
+            })
+        );
+        assert_eq!(mover(&mut arrastre, -1000, false), None);
+        assert_eq!(
+            mover(&mut arrastre, -900, true),
+            Some(ArrastreReenviado {
+                x: 1020,
+                y: 100,
+                phase: FaseDelArrastre::Up
+            })
+        );
+        // Soltado el botón, el arrastre terminó: el movimiento siguiente ya no va a la capa.
+        assert_eq!(mover(&mut arrastre, -800, false), None);
+        // El botón principal se suelta con su bandera, también con los botones intercambiados.
+        assert!(se_solto_el_boton_principal(BOTON_IZQUIERDO_ARRIBA, false));
+        assert!(!se_solto_el_boton_principal(BOTON_DERECHO_ARRIBA, false));
+        assert!(se_solto_el_boton_principal(BOTON_DERECHO_ARRIBA, true));
+        assert!(!se_solto_el_boton_principal(BOTON_IZQUIERDO_ABAJO, false));
+    }
+
+    #[test]
+    fn ca_he_06_hu06_ca04() {
+        // HE-06-HU06-CA04 · Soltar una tarjeta fuera de una columna (ET05): el punto sigue llegando a la capa
+        // aunque salga del widget, para que la capa sepa que se soltó fuera y deje la tarjeta donde estaba. Sin una
+        // selección reenviada (o tras una que no se reenvió) no hay arrastre.
+        let geometria = por_defecto();
+        let mut arrastre = Arrastre::nuevo();
+        assert_eq!(arrastre.seguir(&geometria, (1600, 900), true), None);
+        arrastre.empezar(&seleccion_en_kanban());
+        assert_eq!(
+            arrastre.seguir(&geometria, (1600, 900), true),
+            Some(ArrastreReenviado {
+                x: 1600,
+                y: 900,
+                phase: FaseDelArrastre::Up
+            })
+        );
+        assert!(!arrastre.en_curso());
+        arrastre.empezar(&seleccion_en_kanban());
+        assert!(arrastre.en_curso());
+        arrastre.cancelar();
+        assert!(!arrastre.en_curso());
+        assert_eq!(arrastre.seguir(&geometria, (900, 100), false), None);
     }
 }

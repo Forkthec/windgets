@@ -11,6 +11,8 @@ import type {
   WindiMessage,
 } from '@/types';
 import textos from '@/types/messages.es.json';
+import { diaDelCalendario, mesDelCalendario, semanaDelCalendario } from './calendarioSimulado';
+import { fechaIso } from '@/screens/tarjeta/fechas';
 
 // Núcleo simulado para `pnpm --filter desktop dev`: «solo las vistas en el navegador, con IPC simulado»
 // (convenciones.md, «Ejecutar en desarrollo»). Cada HU (historia de usuario) define aquí la respuesta de su
@@ -192,6 +194,8 @@ const respuestas: Respuestas = {
   // HE-14-HU03: fuera de Tauri Windi no responde, así que no hay propuestas que confirmar o rechazar.
   windi_confirm_proposal: () => error({ code: 'proposal.discarded', message: '' }),
   windi_reject_proposal: () => error({ code: 'proposal.discarded', message: '' }),
+  // HE-06-HU08: fuera de Tauri no hay ventana que mostrar ni EV-23 (IPC-DESK-03).
+  app_open_screen: () => ({ ok: true, value: null }),
   // HE-17-HU03: fuera de Tauri no hay programa que cerrar.
   app_exit: () => ({ ok: true, value: null }),
   autostart_get: () => ({ ok: true, value: { enabled: inicioAutomaticoSimulado } }),
@@ -276,6 +280,32 @@ const respuestas: Respuestas = {
   },
   // HE-09-HU01: el tablero con las columnas por defecto y las tarjetas creadas.
   card_list_board: () => ({ ok: true, value: { columns: tableroSimulado() } }),
+  // HE-06-HU05: el widget Kanban, con hasta 5 títulos por columna (IPC-CARD-15).
+  kanban_widget_get: () => ({
+    ok: true,
+    value: {
+      columns: tableroSimulado().map(({ column, cards }) => ({
+        column,
+        titles: cards.slice(0, 5).map((t) => ({ card_id: t.id, title: t.title })),
+        extra_count: Math.max(cards.length - 5, 0),
+      })),
+    },
+  }),
+  // HE-10-HU01: los días del mes con sus tarjetas (IPC-CARD-12).
+  calendar_get_month: ({ year, month }) => ({
+    ok: true,
+    value: mesDelCalendario(tarjetasSimuladas, year, month, fechaIso(new Date())),
+  }),
+  // HE-10-HU02: los 7 días de la semana con sus tarjetas (IPC-CARD-13).
+  calendar_get_week: ({ week_start }) => ({
+    ok: true,
+    value: semanaDelCalendario(tarjetasSimuladas, week_start, fechaIso(new Date())),
+  }),
+  // HE-10-HU03: las tarjetas del Panel del día (IPC-CARD-14).
+  calendar_get_day: ({ date }) => ({
+    ok: true,
+    value: diaDelCalendario(tarjetasSimuladas, COLUMNAS_SIMULADAS, date, fechaIso(new Date())),
+  }),
   column_list: () => ({ ok: true, value: tableroSimulado().map((c) => c.column) }),
   // HE-09-HU05: el orden completo de las columnas.
   column_reorder: ({ column_ids }) => {
@@ -372,6 +402,18 @@ const respuestas: Respuestas = {
       `${dos((hour + 1) % 24)}:00`,
     );
     return { ok: true, value: t, result_message: { code: 'card_assign_time_block', message } };
+  },
+  // HE-11-HU03: quita la tarjeta de su bloque sin eliminarla (IPC-CARD-11).
+  card_unassign_time_block: ({ card_id }) => {
+    const t = tarjetasSimuladas.find((c) => c.id === card_id);
+    if (!t) return error({ code: 'card.not_found', message: textos.TARJETA_NO_EXISTE });
+    t.scheduled_date = null;
+    t.scheduled_hour = null;
+    return {
+      ok: true,
+      value: t,
+      result_message: { code: 'card_unassign_time_block', message: textos.TARJETA_QUITADA_DEL_HORARIO },
+    };
   },
   // HE-09-HU02: mueve la tarjeta, con las reglas de la columna Hecho.
   card_move: ({ card_id, column_id, placement }) => {

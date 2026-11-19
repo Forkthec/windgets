@@ -4,12 +4,16 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type { ComponentType } from 'react';
 import { vi } from 'vitest';
 import type { Escuchar } from '@/ipc/eventos';
+import { diaDelCalendario, mesDelCalendario, semanaDelCalendario } from '@/ipc/calendarioSimulado';
 import type {
   AgendaDay,
   BoardColumn,
   Card,
   CardCreateParams,
   CardDetail,
+  CalendarDayParams,
+  CalendarMonthParams,
+  CalendarWeekParams,
   CardMoveParams,
   CardSetCompletedParams,
   CardUpdateParams,
@@ -105,6 +109,8 @@ export interface NucleoDelPlanificador {
    * `card_move` y emite `cards_changed`, y la pantalla vuelve a leer el tablero.
    */
   responderYMover: (movimiento: CardMoveParams) => Promise<void>;
+  /** El mismo cliente IPC que usa la pantalla, para leer lo que vería otra vista (por ejemplo, HE-11-HU03-CA02). */
+  invocar: Invoke;
 }
 
 export function llamadasA(nucleo: NucleoDelPlanificador, comando: CommandName) {
@@ -124,6 +130,8 @@ export function crearNucleo(tarjetas: Card[] = []): {
     llamadas: [],
     responder: (comando, respuesta) => respuestas.set(comando, respuesta as Respuesta),
     emitir: (evento, carga) => act(() => (oyentes.get(evento) ?? []).forEach((o) => o(carga))),
+    // Se reemplaza por el cliente de abajo, que necesita este objeto.
+    invocar: (() => Promise.reject(new Error('sin cliente'))) as unknown as Invoke,
     responderYMover: async (movimiento) => {
       await invocar('card_move', movimiento);
       (oyentes.get('cards_changed') ?? []).forEach((o) =>
@@ -144,6 +152,8 @@ export function crearNucleo(tarjetas: Card[] = []): {
       () => ({ ok: true, value: { state: 'signed_in', alias: 'Prueba', token: 'valid' } }),
     ],
     ['label_list', () => ({ ok: true, value: [...nucleo.etiquetas] })],
+    // HE-06-HU08: IPC-DESK-03; el Núcleo muestra la ventana y emite EV-23 (las pruebas lo emiten aparte).
+    ['app_open_screen', () => ({ ok: true, value: null })],
     // HE-13-HU02: una cuenta con tarjetas, desde antes del rango, y la gráfica de «Últimos 30 días».
     [
       'report_get_meta',
@@ -220,6 +230,44 @@ export function crearNucleo(tarjetas: Card[] = []): {
       },
     ],
     ['card_list_board', () => ({ ok: true, value: { columns: tablero() } })],
+    // HE-06-HU05: hasta 5 títulos por columna y el resto en «+N más» (IPC-CARD-15).
+    [
+      'kanban_widget_get',
+      () => ({
+        ok: true,
+        value: {
+          columns: tablero().map(({ column, cards }) => ({
+            column,
+            titles: cards.slice(0, 5).map((t) => ({ card_id: t.id, title: t.title })),
+            extra_count: Math.max(cards.length - 5, 0),
+          })),
+        },
+      }),
+    ],
+    // HE-10-HU01: los días del mes con hasta 3 títulos por día (IPC-CARD-12).
+    [
+      'calendar_get_month',
+      (params) => {
+        const { year, month } = params as CalendarMonthParams;
+        return { ok: true, value: mesDelCalendario(nucleo.tarjetas, year, month, HOY) };
+      },
+    ],
+    // HE-10-HU02: los 7 días de la semana con todas sus tarjetas (IPC-CARD-13).
+    [
+      'calendar_get_week',
+      (params) => {
+        const { week_start } = params as CalendarWeekParams;
+        return { ok: true, value: semanaDelCalendario(nucleo.tarjetas, week_start, HOY) };
+      },
+    ],
+    // HE-10-HU03: las tarjetas del Panel del día (IPC-CARD-14).
+    [
+      'calendar_get_day',
+      (params) => {
+        const { date } = params as CalendarDayParams;
+        return { ok: true, value: diaDelCalendario(nucleo.tarjetas, nucleo.columnas, date, HOY) };
+      },
+    ],
     ['column_list', () => ({ ok: true, value: tablero().map((c) => c.column) })],
     [
       'column_update',
@@ -322,6 +370,22 @@ export function crearNucleo(tarjetas: Card[] = []): {
           unscheduled: nucleo.tarjetas.filter((t) => t.scheduled_date === null && !hecho(t)),
         };
         return { ok: true, value: agenda };
+      },
+    ],
+    // HE-11-HU03: quita la tarjeta de su bloque sin eliminarla (IPC-CARD-11).
+    [
+      'card_unassign_time_block',
+      (params) => {
+        const { card_id } = params as { card_id: string };
+        const t = nucleo.tarjetas.find((c) => c.id === card_id);
+        if (!t)
+          return { ok: false, error: { code: 'card.not_found', message: 'Esta tarjeta ya no existe.' } };
+        Object.assign(t, { scheduled_date: null, scheduled_hour: null });
+        return {
+          ok: true,
+          value: t,
+          result_message: { code: 'card_unassign_time_block', message: 'Tarjeta quitada del horario.' },
+        };
       },
     ],
     [
@@ -450,6 +514,7 @@ export function crearNucleo(tarjetas: Card[] = []): {
       r ? r(params) : { ok: false, error: { code: 'internal.unexpected', message: '' } },
     );
   }) as unknown as Invoke;
+  nucleo.invocar = invocar;
   const escuchar = ((evento: string, alRecibir: (c: unknown) => void) => {
     const lista = oyentes.get(evento) ?? [];
     lista.push(alRecibir);

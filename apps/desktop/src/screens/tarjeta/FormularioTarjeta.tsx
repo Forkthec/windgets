@@ -113,12 +113,22 @@ export interface FormularioTarjetaProps {
   alCancelar: () => void;
   /** La tarjeta que se edita ya no existe (HE-07-HU04-CA11). */
   alNoExistir?: (mensaje: string) => void;
+  /** Fecha límite ya diligenciada al crear desde un día del calendario, AAAA-MM-DD (HE-10-HU04-ET02). */
+  fechaLimite?: string;
 }
 
-export function FormularioTarjeta({ tarjeta, alGuardar, alCancelar, alNoExistir }: FormularioTarjetaProps) {
+export function FormularioTarjeta({
+  tarjeta,
+  alGuardar,
+  alCancelar,
+  alNoExistir,
+  fechaLimite,
+}: FormularioTarjetaProps) {
   const { invocar } = useNucleo();
   const idFormulario = useId();
-  const [valores, setValores] = useState<Valores>(() => (tarjeta ? valoresDe(tarjeta) : VACIO));
+  const [valores, setValores] = useState<Valores>(() =>
+    tarjeta ? valoresDe(tarjeta) : { ...VACIO, due_date: fechaLimite ? fechaVisible(fechaLimite) : '' },
+  );
   const [etiquetas, setEtiquetas] = useState<Label[]>([]);
   const [listaAbierta, setListaAbierta] = useState(false);
   const [creandoEtiqueta, setCreandoEtiqueta] = useState(false);

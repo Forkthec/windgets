@@ -212,3 +212,73 @@ fn ca_he_11_hu02_ca05() {
     );
     assert!(asignar(&servicio, &id, "2026-11-21", 10).is_ok());
 }
+
+fn quitar(
+    servicio: &ServicioDelPlanificador<CalendarioDePrueba>,
+    id: &str,
+) -> Result<ConMensaje<Card>, AppError> {
+    bloquear(servicio.quitar_bloque(
+        USUARIO,
+        CardUnassignTimeBlockParams {
+            card_id: Uuid(id.into()),
+        },
+    ))
+}
+
+#[test]
+fn ca_he_11_hu03_ca01() {
+    // HE-11-HU03-CA01 · Quitar «Estudiar redes» del bloque «10:00 – 11:00»: sale del bloque, vuelve al panel
+    // Tarjetas sin horario, no se elimina (ET02) y responde «Tarjeta quitada del horario.» (ET03). El cambio
+    // queda en la cola de sincronización.
+    let servicio = con_semilla();
+    let id = tarjeta_en(&servicio, POR_HACER, "Estudiar redes", "2026-11-20", 1024.0);
+    con_bloque(&servicio, &id, "2026-11-14", 10);
+    let r = quitar(&servicio, &id).unwrap();
+    assert_eq!(r.mensaje.message, "Tarjeta quitada del horario.");
+    assert_eq!(
+        (r.valor.scheduled_date, r.valor.scheduled_hour),
+        (None, None)
+    );
+    let dia = agenda(&servicio, "2026-11-14");
+    assert!(titulos_del_bloque(&dia, 10).is_empty());
+    assert_eq!(
+        dia.unscheduled
+            .iter()
+            .map(|t| t.title.as_str())
+            .collect::<Vec<_>>(),
+        ["Estudiar redes"]
+    );
+    assert_eq!(contar(&servicio, "SELECT count(*) FROM card"), 1);
+    let pendiente: i64 = contar(
+        &servicio,
+        "SELECT count(*) FROM pending_change WHERE entity_kind = 'card' \
+         AND json_type(fields, '$.scheduled_hour.value') = 'null'",
+    );
+    assert_eq!(pendiente, 1);
+    // Una tarjeta que ya no existe (DP-04).
+    let e = quitar(&servicio, "00000000-0000-4000-8000-0000000000ff").unwrap_err();
+    assert_eq!(
+        (e.code, e.message.as_str()),
+        (ErrorCode::CardNotFound, "Esta tarjeta ya no existe.")
+    );
+}
+
+#[test]
+fn ca_he_11_hu03_ca02() {
+    // HE-11-HU03-CA02 · «Estudiar redes», con fecha límite mañana y en el bloque de las 10 de hoy, sale del
+    // planificador diario (y del widget Tareas del día, que lo lee) al quitarla del bloque (ET04, ET05).
+    let servicio = con_semilla();
+    let id = tarjeta_en(&servicio, POR_HACER, "Estudiar redes", "2026-11-15", 1024.0);
+    con_bloque(&servicio, &id, "2026-11-14", 10);
+    let titulos = |s: &ServicioDelPlanificador<CalendarioDePrueba>| -> Vec<String> {
+        bloquear(s.planificador_de_hoy(USUARIO))
+            .unwrap()
+            .items
+            .into_iter()
+            .map(|i| i.card.title)
+            .collect()
+    };
+    assert_eq!(titulos(&servicio), ["Estudiar redes"]);
+    quitar(&servicio, &id).unwrap();
+    assert!(titulos(&servicio).is_empty());
+}

@@ -375,6 +375,44 @@ body {
 .wg-columna__cantidad {
   margin-left: auto;
 }
+/* Widget Kanban de la capa (HE-06-HU05): columnas que se reparten el ancho del widget. */
+.wg-tablero--widget {
+  padding-block: 0;
+  gap: calc(var(--wg-unidad) * 2);
+}
+.wg-columna--widget {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: calc(var(--wg-unidad) * 2);
+}
+.wg-columna--widget .wg-tarjeta__titulo {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wg-columna__mas {
+  margin: calc(var(--wg-unidad) * 2) 0 0;
+}
+/* Widget Calendario de la capa (HE-06-HU07): el mes actual; el día actual va resaltado (ET01). */
+.wg-calendario-widget {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+}
+.wg-calendario-widget caption {
+  margin-bottom: calc(var(--wg-unidad) * 2);
+  font-weight: 600;
+}
+.wg-calendario-widget td,
+.wg-calendario-widget th {
+  padding: var(--wg-unidad);
+}
+.wg-calendario-widget__hoy {
+  border-radius: 50%;
+  background: var(--wg-accion);
+  color: var(--wg-sobre-accion);
+  font-weight: 700;
+}
 .wg-columna__tarjetas {
   display: flex;
   flex-direction: column;
@@ -703,4 +741,84 @@ button.wg-tarjeta__titulo:focus-visible {
   width: 100%;
   min-height: calc(var(--wg-unidad) * 20);
   box-sizing: border-box;
+}
+/* Calendario (P-CAL-01, HE-10-HU01): la vista mensual, de lunes a domingo; el día actual va resaltado (ET02). */
+.wg-calendario {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+.wg-calendario th,
+.wg-calendario td {
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  padding: calc(var(--wg-unidad) * 2);
+  vertical-align: top;
+}
+.wg-calendario__dia--hoy {
+  outline: calc(var(--wg-borde-ancho) * 2) solid var(--wg-accion);
+  outline-offset: calc(var(--wg-borde-ancho) * -2);
+}
+.wg-calendario__dia--hoy .wg-calendario__numero {
+  font-weight: 700;
+}
+.wg-calendario__tarjetas {
+  margin: var(--wg-unidad) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.wg-calendario__tarjeta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Vista semanal (HE-10-HU02): los 7 días, de lunes a domingo, uno al lado del otro. */
+.wg-calendario-semana {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: calc(var(--wg-unidad) * 2);
+}
+.wg-calendario-semana .wg-calendario__dia {
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  padding: calc(var(--wg-unidad) * 2);
+}
+.wg-calendario-semana .wg-calendario__numero {
+  margin: 0;
+  font-size: inherit;
+}
+/* HE-06-HU08: el nombre del mes y los días del widget Calendario se seleccionan, sin parecer botones. */
+.wg-calendario-widget__mes,
+.wg-calendario-widget__dia {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+/* Días con vencidas o pendientes (HE-10-HU05-ET11, ET12, ET16): relleno con la mezcla del color de estado con la
+   superficie y borde del color de estado completo, en las vistas mensual y semanal (ET08). */
+.wg-calendario .wg-calendario__dia--vencida,
+.wg-calendario-semana .wg-calendario__dia--vencida {
+  background: var(--wg-relleno-vencida);
+  border: calc(var(--wg-borde-ancho) * 2) solid var(--wg-estado-vencida);
+}
+.wg-calendario .wg-calendario__dia--pendiente,
+.wg-calendario-semana .wg-calendario__dia--pendiente {
+  background: var(--wg-relleno-pendiente);
+  border: calc(var(--wg-borde-ancho) * 2) solid var(--wg-estado-pendiente);
+}
+.wg-calendario__encabezado,
+.wg-calendario__vencidas {
+  gap: var(--wg-unidad);
+}
+.wg-calendario__numero {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.wg-icono {
+  flex: none;
 }
