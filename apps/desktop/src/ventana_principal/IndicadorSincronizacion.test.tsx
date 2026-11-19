@@ -139,3 +139,56 @@ describe('HE-15-HU03 · Sincronizar al volver la conexión', () => {
     expect(screen.queryByText(/cambios más recientes de otro computador/)).toBeNull();
   });
 });
+
+// HE-16-HU01 · El indicador en la pantalla Configuración (ET01, ET08: junto al menú principal en todas las pantallas
+// que lo muestran, D-203). El Núcleo calcula el estado (motor_de_sincronizacion.rs, pruebas ca_he_15_hu01_*).
+function Configuracion() {
+  return <main aria-label="Configuración">Configuración</main>;
+}
+
+async function enConfiguracion(sincronizacion: SyncStatus) {
+  const n = nucleo(CON_SESION, sincronizacion);
+  render(
+    <VentanaPrincipal
+      invocar={n.invocar}
+      escuchar={n.escuchar}
+      pantallas={{ planner_daily: PlanificadorDiario, settings: Configuracion }}
+    />,
+  );
+  const [opcion] = await screen.findAllByRole('button', { name: 'Configuración' });
+  act(() => (opcion as HTMLElement).click());
+  await screen.findByRole('main', { name: 'Configuración' });
+  return { ...n, indicador: screen.getByRole('status', { name: 'Indicador de sincronización' }) };
+}
+
+describe('HE-16-HU01 · Indicador de sincronización en Configuración', () => {
+  it('HE-16-HU01-CA01 · Indicador Sincronizado', async () => {
+    const { indicador } = await enConfiguracion(estado('synced'));
+    expect(within(indicador).getByText('Sincronizado')).toBeTruthy();
+    expect(within(indicador).queryByText(/pendiente/)).toBeNull();
+  });
+
+  it('HE-16-HU01-CA02 · Indicador Sincronizando', async () => {
+    const { indicador, emitir } = await enConfiguracion(estado('synced'));
+    emitir('sync_status_changed', estado('syncing', 2));
+    expect(within(indicador).getByText('Sincronizando…')).toBeTruthy();
+  });
+
+  it('HE-16-HU01-CA03 · Indicador Sin conexión con cambios pendientes', async () => {
+    const { indicador } = await enConfiguracion(estado('offline', 4));
+    expect(within(indicador).getByText('Sin conexión')).toBeTruthy();
+    expect(within(indicador).getByText('4 cambios pendientes de sincronizar')).toBeTruthy();
+  });
+
+  it('HE-16-HU01-CA04 · Indicador Sin conexión con un solo cambio pendiente', async () => {
+    const { indicador } = await enConfiguracion(estado('offline', 1));
+    expect(within(indicador).getByText('1 cambio pendiente de sincronizar')).toBeTruthy();
+  });
+
+  it('HE-16-HU01-CA05 · Indicador Error de sincronización', async () => {
+    const { indicador } = await enConfiguracion(estado('error', 1));
+    expect(
+      within(indicador).getByText('Error de sincronización. Reintentaremos automáticamente.'),
+    ).toBeTruthy();
+  });
+});
