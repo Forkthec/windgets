@@ -7,6 +7,13 @@ import { Reloj } from './Reloj';
 import { TareasDelDia } from './TareasDelDia';
 import { WidgetCalendario } from './WidgetCalendario';
 import { WidgetKanban } from './WidgetKanban';
+import { WidgetClima } from './WidgetClima';
+import { WidgetNoticias } from './WidgetNoticias';
+import { WidgetImagen } from './WidgetImagen';
+import { WidgetCarrusel } from './WidgetCarrusel';
+import { WidgetAnimacion } from './WidgetAnimacion';
+import { WidgetTexto } from './WidgetTexto';
+import { WidgetReproductor } from './WidgetReproductor';
 import { tokensDelTema } from '@/ui/tema/temaAplicado';
 import { aplicarTokens } from '@/ui/tema/tokens';
 import type {
@@ -166,6 +173,23 @@ export function Capa({
             <WidgetKanban invocar={invocar} escuchar={escuchar} escucharArrastre={escucharArrastre} />
           )}
           {w.type === 'calendar' && <WidgetCalendario invocar={invocar} escuchar={escuchar} />}
+          {w.type === 'weather' && (
+            <WidgetClima widgetId={w.widget_id} invocar={invocar} escuchar={escuchar} />
+          )}
+          {w.type === 'news' && (
+            <WidgetNoticias widgetId={w.widget_id} invocar={invocar} escuchar={escuchar} />
+          )}
+          {w.type === 'static_image' && (
+            <WidgetImagen widgetId={w.widget_id} invocar={invocar} escuchar={escuchar} />
+          )}
+          {w.type === 'image_carousel' && (
+            <WidgetCarrusel widgetId={w.widget_id} invocar={invocar} escuchar={escuchar} />
+          )}
+          {w.type === 'animation' && (
+            <WidgetAnimacion widgetId={w.widget_id} invocar={invocar} escuchar={escuchar} />
+          )}
+          {w.type === 'text' && <WidgetTexto widgetId={w.widget_id} invocar={invocar} escuchar={escuchar} />}
+          {w.type === 'music_player' && <WidgetReproductor invocar={invocar} escuchar={escuchar} />}
         </section>
       ))}
     </main>

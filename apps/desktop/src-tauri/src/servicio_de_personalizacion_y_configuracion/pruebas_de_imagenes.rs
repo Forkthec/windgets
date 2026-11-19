@@ -11,7 +11,7 @@ use crate::tipos::{ImportPurpose, ThemeDraftPatchBackground};
 const AHORA_MS: i64 = 1_793_600_000_000;
 
 /// Un PNG mínimo y completo de 3 × 2.
-fn png(ancho: u32, alto: u32) -> Vec<u8> {
+pub(super) fn png(ancho: u32, alto: u32) -> Vec<u8> {
     let mut bytes = FIRMA_PNG.to_vec();
     bytes.extend_from_slice(&[0, 0, 0, 13]);
     bytes.extend_from_slice(b"IHDR");
@@ -23,7 +23,7 @@ fn png(ancho: u32, alto: u32) -> Vec<u8> {
 }
 
 /// Un JPEG mínimo y completo de 3 × 2.
-fn jpeg() -> Vec<u8> {
+pub(super) fn jpeg() -> Vec<u8> {
     vec![
         0xFF, 0xD8, 0xFF, 0xC0, 0x00, 0x0B, 0x08, 0x00, 0x02, 0x00, 0x03, 0x01, 0x01, 0x11, 0x00,
         0xFF, 0xD9,
@@ -31,13 +31,13 @@ fn jpeg() -> Vec<u8> {
 }
 
 /// Una carpeta nueva y vacía para el archivo de origen y para la carpeta de archivos de la aplicación.
-fn carpeta() -> PathBuf {
+pub(super) fn carpeta() -> PathBuf {
     let ruta = std::env::temp_dir().join(format!("windgets-pruebas-{}", uuid::Uuid::new_v4()));
     std::fs::create_dir_all(&ruta).unwrap();
     ruta
 }
 
-fn archivo(carpeta: &std::path::Path, nombre: &str, contenido: &[u8]) -> String {
+pub(super) fn archivo(carpeta: &std::path::Path, nombre: &str, contenido: &[u8]) -> String {
     let ruta = carpeta.join(nombre);
     std::fs::write(&ruta, contenido).unwrap();
     ruta.to_string_lossy().into_owned()

@@ -222,9 +222,10 @@ impl ServicioDePersonalizacion {
             can_configure: configurable,
             // Los widgets por defecto no se eliminan (`widget.default_not_deletable`, HE-04-HU13).
             can_delete: !es_por_defecto,
-            // DUDA: HE-04-HU01 la pausa por carga (`paused_by_load`) llega con las reglas de animación (P21).
-            // Valor neutro: false.
-            paused_by_load: false,
+            // HE-04-HU09-ET07: la Animación en pausa por alto consumo de recursos.
+            paused_by_load: tipo == WidgetType::Animation
+                && crate::integracion_con_el_sistema::carga::EN_PAUSA
+                    .load(std::sync::atomic::Ordering::Relaxed),
             r#type: tipo,
             config,
         })

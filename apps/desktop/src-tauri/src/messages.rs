@@ -233,6 +233,16 @@ pub const TEMA_GUARDADO: &str = "Tema “<nombre del tema>” guardado.";
 pub const NOMBRE_DE_TEMA_MUY_LARGO: &str = "El nombre no puede superar los 40 caracteres.";
 /// `name.duplicate` (HE-03-HU02-CA04): mensaje en el campo Nombre.
 pub const TEMA_DUPLICADO: &str = "Ya existe un tema con ese nombre. Elige otro.";
+/// IPC-THEME-13 `theme_rename` (HE-03-HU04-CA01, CA06): mensaje de resultado.
+pub const TEMA_RENOMBRADO: &str = "Tema renombrado.";
+/// M-06 (HE-03-HU05-ET01): confirmación de eliminar un tema.
+pub const CONFIRMAR_ELIMINAR_TEMA: &str =
+    "¿Deseas eliminar el tema “<nombre del tema>”? Esta acción no se puede deshacer.";
+/// IPC-THEME-14 `theme_delete` (HE-03-HU05-CA01): mensaje de resultado.
+pub const TEMA_ELIMINADO: &str = "Tema eliminado.";
+/// `theme.applied_not_deletable` (HE-03-HU05-CA02, ET04): texto de la opción «Eliminar» deshabilitada.
+pub const TEMA_APLICADO_NO_SE_ELIMINA: &str =
+    "No puedes eliminar el tema aplicado. Aplica otro tema primero.";
 /// `theme.limit_reached` (HE-03-HU02-CA05): texto de la opción «Guardar como tema» deshabilitada.
 pub const MAXIMO_DE_TEMAS: &str =
     "Alcanzaste el máximo de 10 temas. Elimina uno para guardar otro.";
@@ -264,6 +274,39 @@ pub const DISTRIBUCION_NO_GUARDADA: &str = "No se guardaron cambios.";
 /// Opción deshabilitada del catálogo de widgets: Noticias o Reproductor de música ya agregados (HE-04-HU04-CA02,
 /// RT-04).
 pub const WIDGET_YA_AGREGADO: &str = "Ya agregaste este widget.";
+
+// HE-04-HU05 · Agregar el widget Clima (IPC-WID-04, IPC-WID-07; INT-04).
+/// `city.not_found` (CA04).
+pub const CIUDAD_NO_ENCONTRADA: &str =
+    "No encontramos esa ciudad. Revisa el nombre e intenta de nuevo.";
+/// `city.duplicate` (CA05).
+pub const CIUDAD_DUPLICADA: &str = "Ya tienes un widget Clima para esa ciudad.";
+/// `city.too_long` (CA09, ET11).
+pub const CIUDAD_MUY_LARGA: &str = "La ciudad no puede superar los 100 caracteres.";
+/// `net.offline` al validar la ciudad (IPC-WID-05; DP-07).
+pub const CIUDAD_SIN_CONEXION: &str =
+    "No hay conexión a internet. Conéctate para validar la ciudad.";
+/// Aviso del widget cuando el servicio de clima no responde (CA07, ET07).
+pub const CLIMA_NO_DISPONIBLE: &str = "No pudimos cargar el clima. Intenta de nuevo más tarde.";
+/// Aviso del widget cuando el servicio de noticias no responde (HE-04-HU06-CA03, ET05).
+// HE-04-HU08 · Agregar el widget Carrusel de imágenes (IPC-WID-04).
+/// `carousel.too_few` (CA03, ET07): texto de «Agregar» deshabilitada.
+pub const CARRUSEL_POCAS_IMAGENES: &str = "Selecciona al menos 2 imágenes para el carrusel.";
+/// `carousel.too_many` (CA04, ET06): texto de «Subir imagen» y «Catálogo de imágenes» deshabilitadas.
+pub const CARRUSEL_DEMASIADAS_IMAGENES: &str = "Puedes agregar máximo 10 imágenes al carrusel.";
+/// `interval.out_of_range` (CA07).
+pub const INTERVALO_FUERA_DE_RANGO: &str = "El intervalo debe estar entre 3 y 60 segundos.";
+/// HE-04-HU09-CA04, ET07: junto a la Animación en pausa, en la pantalla Widgets.
+pub const ANIMACION_EN_PAUSA: &str = "En pausa por alto consumo de recursos.";
+/// `text.too_long` (HE-04-HU10-CA03, ET05).
+pub const TEXTO_MUY_LARGO: &str = "El texto no puede superar los 200 caracteres.";
+/// HE-04-HU11-CA03, ET07: el widget Reproductor de música sin sesión; también `media.no_session` (IPC-MED-02).
+pub const SIN_MUSICA: &str = "No hay música en reproducción.";
+pub const NOTICIAS_NO_DISPONIBLES: &str =
+    "No pudimos cargar las noticias. Intenta de nuevo más tarde.";
+/// Aviso de un widget externo sin conexión (CA08, ET08; HE-15-HU02-CA06).
+pub const WIDGET_EXTERNO_SIN_CONEXION: &str =
+    "Sin conexión. El widget se actualizará al reconectarte.";
 
 // HE-16-HU03 · Cerrar sesión desde la pantalla Configuración (IPC-AUTH-13, IPC-AUTH-14).
 
@@ -447,6 +490,10 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("CONFIRMAR_APLICAR_TEMA", CONFIRMAR_APLICAR_TEMA),
     ("NOMBRE_DE_TEMA_MUY_LARGO", NOMBRE_DE_TEMA_MUY_LARGO),
     ("TEMA_DUPLICADO", TEMA_DUPLICADO),
+    ("TEMA_RENOMBRADO", TEMA_RENOMBRADO),
+    ("CONFIRMAR_ELIMINAR_TEMA", CONFIRMAR_ELIMINAR_TEMA),
+    ("TEMA_ELIMINADO", TEMA_ELIMINADO),
+    ("TEMA_APLICADO_NO_SE_ELIMINA", TEMA_APLICADO_NO_SE_ELIMINA),
     ("MAXIMO_DE_TEMAS", MAXIMO_DE_TEMAS),
     (
         "CAMBIOS_APLICADOS_SIN_GUARDAR_AL_SALIR",
@@ -460,6 +507,19 @@ pub const TEXTOS: &[(&str, &str)] = &[
         BLOQUE_DESPUES_DE_FECHA_LIMITE,
     ),
     ("WIDGET_YA_AGREGADO", WIDGET_YA_AGREGADO),
+    ("CIUDAD_NO_ENCONTRADA", CIUDAD_NO_ENCONTRADA),
+    ("CIUDAD_DUPLICADA", CIUDAD_DUPLICADA),
+    ("CIUDAD_MUY_LARGA", CIUDAD_MUY_LARGA),
+    ("CIUDAD_SIN_CONEXION", CIUDAD_SIN_CONEXION),
+    ("CLIMA_NO_DISPONIBLE", CLIMA_NO_DISPONIBLE),
+    ("NOTICIAS_NO_DISPONIBLES", NOTICIAS_NO_DISPONIBLES),
+    ("SIN_MUSICA", SIN_MUSICA),
+    ("TEXTO_MUY_LARGO", TEXTO_MUY_LARGO),
+    ("ANIMACION_EN_PAUSA", ANIMACION_EN_PAUSA),
+    ("CARRUSEL_POCAS_IMAGENES", CARRUSEL_POCAS_IMAGENES),
+    ("CARRUSEL_DEMASIADAS_IMAGENES", CARRUSEL_DEMASIADAS_IMAGENES),
+    ("INTERVALO_FUERA_DE_RANGO", INTERVALO_FUERA_DE_RANGO),
+    ("WIDGET_EXTERNO_SIN_CONEXION", WIDGET_EXTERNO_SIN_CONEXION),
     ("SESION_CERRADA", SESION_CERRADA),
     ("DESEAS_CERRAR_SESION", DESEAS_CERRAR_SESION),
     (

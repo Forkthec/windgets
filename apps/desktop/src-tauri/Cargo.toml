@@ -38,6 +38,8 @@ tauri-plugin-dialog = "=2.8.4"
 # API de Windows para el Host del wallpaper (INT-07, contratos.md): la misma versión que ya trae Tauri.
 [target.'cfg(windows)'.dependencies]
 windows = { version = "=0.62.2", features = [
+  "Foundation",
+  "Media_Control",
   "Win32_Foundation",
   "Win32_Graphics_Gdi",
   "Win32_Security",

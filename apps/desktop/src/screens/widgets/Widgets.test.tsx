@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Capa } from '@/capa/Capa';
 import type { Escuchar } from '@/ipc/eventos';
 import type {
+  ErrorCode,
   Invoke,
   LayerInitialState,
   WidgetCatalog,
@@ -488,5 +489,241 @@ describe('HE-05 · Pantalla de edición desde Widgets', () => {
     await abrir(POR_DEFECTO);
     // ET03: sin cambios el Núcleo no manda mensaje; la pantalla Widgets no muestra ninguno.
     expect(screen.queryByRole('status')).toBeNull();
+  });
+});
+
+describe('HE-04-HU05 · Agregar el widget Clima', () => {
+  /** Abre la subpantalla Clima desde el catálogo. */
+  async function abrirClima(responder?: (n: NucleoDelPlanificador) => void) {
+    const nucleo = await abrir([...POR_DEFECTO]);
+    nucleo.responder('widget_catalog_get', () => ({ ok: true, value: catalogo() }));
+    responder?.(nucleo);
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar widget' }));
+    const enCatalogo = await screen.findByRole('main', { name: 'Agregar widget' });
+    fireEvent.click(await within(enCatalogo).findByRole('button', { name: /Clima/ }));
+    const sub = await screen.findByRole('main', { name: 'Clima' });
+    const campo = within(sub).getByLabelText('Ciudad') as HTMLInputElement;
+    const agregar = within(sub).getByRole('button', { name: 'Agregar' }) as HTMLButtonElement;
+    return { nucleo, sub, campo, agregar };
+  }
+
+  const rechazo = (code: ErrorCode, message: string) => () => ({
+    ok: false as const,
+    error: { code, message, field: 'city' },
+  });
+  const agregado = (ciudad: string) => () => ({
+    ok: true as const,
+    value: widget({
+      widget_id: `w-${ciudad}`,
+      type: 'weather',
+      display_name: 'Clima',
+      distinguishing_value: ciudad,
+    }),
+  });
+
+  it('HE-04-HU05-CA01 · Agregar el widget Clima', async () => {
+    const { nucleo, sub, campo, agregar } = await abrirClima((n) =>
+      n.responder('widget_add', agregado('Popayán')),
+    );
+    // ET01, ET16: miga de pan, el campo Ciudad vacío, «Agregar» y «Regresar».
+    expect(within(sub).getByRole('navigation', { name: 'Miga de pan' }).textContent).toBe(
+      'Widgets>Agregar widget>Clima',
+    );
+    expect(within(sub).getByRole('button', { name: 'Regresar' })).toBeTruthy();
+    expect(campo.value).toBe('');
+    fireEvent.change(campo, { target: { value: ' Popayán ' } });
+    fireEvent.click(agregar);
+    // Regresa a la pantalla Widgets.
+    expect(await screen.findByRole('main', { name: 'Widgets' })).toBeTruthy();
+    expect(llamadasA(nucleo, 'widget_add')).toEqual([{ type: 'weather', config: { city: 'Popayán' } }]);
+  });
+
+  it('HE-04-HU05-CA02 · Agregar el clima de otra ciudad', async () => {
+    // ET04: Clima sigue habilitado en el catálogo aunque ya haya uno; cada ciudad es un widget aparte.
+    const { nucleo, campo, agregar } = await abrirClima((n) => n.responder('widget_add', agregado('Cali')));
+    fireEvent.change(campo, { target: { value: 'Cali' } });
+    fireEvent.click(agregar);
+    await screen.findByRole('main', { name: 'Widgets' });
+    expect(llamadasA(nucleo, 'widget_add')).toEqual([{ type: 'weather', config: { city: 'Cali' } }]);
+  });
+
+  it('HE-04-HU05-CA03 · Ciudad vacía', async () => {
+    const { nucleo, campo, agregar } = await abrirClima();
+    expect(agregar.disabled).toBe(true);
+    fireEvent.change(campo, { target: { value: '   ' } });
+    expect(agregar.disabled).toBe(true);
+    expect(llamadasA(nucleo, 'widget_add')).toEqual([]);
+  });
+
+  it('HE-04-HU05-CA04 · Ciudad no encontrada', async () => {
+    const texto = 'No encontramos esa ciudad. Revisa el nombre e intenta de nuevo.';
+    const { sub, campo, agregar } = await abrirClima((n) =>
+      n.responder('widget_add', rechazo('city.not_found', texto)),
+    );
+    fireEvent.change(campo, { target: { value: 'Xyzzy' } });
+    fireEvent.click(agregar);
+    expect(await within(sub).findByText(texto)).toBeTruthy();
+  });
+
+  it('HE-04-HU05-CA05 · Ciudad que ya tiene un widget Clima', async () => {
+    const texto = 'Ya tienes un widget Clima para esa ciudad.';
+    const { sub, campo, agregar } = await abrirClima((n) =>
+      n.responder('widget_add', rechazo('city.duplicate', texto)),
+    );
+    fireEvent.change(campo, { target: { value: 'Popayán' } });
+    fireEvent.click(agregar);
+    expect(await within(sub).findByText(texto)).toBeTruthy();
+  });
+
+  it('HE-04-HU05-CA09 · Ciudad de más de 100 caracteres', async () => {
+    const { nucleo, sub, campo, agregar } = await abrirClima();
+    fireEvent.change(campo, { target: { value: 'a'.repeat(101) } });
+    expect(within(sub).getByText('La ciudad no puede superar los 100 caracteres.')).toBeTruthy();
+    fireEvent.click(agregar);
+    expect(llamadasA(nucleo, 'widget_add')).toEqual([]);
+  });
+});
+
+describe('HE-04-HU06 · Agregar el widget Noticias', () => {
+  it('HE-04-HU06-CA01 · Agregar el widget Noticias', async () => {
+    const nucleo = await abrir([...POR_DEFECTO]);
+    nucleo.responder('widget_catalog_get', () => ({ ok: true, value: catalogo() }));
+    nucleo.responder('widget_add', () => ({
+      ok: true,
+      value: widget({ widget_id: 'w-noticias', type: 'news', display_name: 'Noticias' }),
+    }));
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar widget' }));
+    const enCatalogo = await screen.findByRole('main', { name: 'Agregar widget' });
+    fireEvent.click(await within(enCatalogo).findByRole('button', { name: /Noticias/ }));
+    const sub = await screen.findByRole('main', { name: 'Noticias' });
+    // ET01: miga de pan, la descripción del widget, «Agregar» y «Regresar».
+    expect(within(sub).getByRole('navigation', { name: 'Miga de pan' }).textContent).toBe(
+      'Widgets>Agregar widget>Noticias',
+    );
+    expect(within(sub).getByText('Descripción de Noticias.')).toBeTruthy();
+    expect(within(sub).getByRole('button', { name: 'Regresar' })).toBeTruthy();
+    fireEvent.click(within(sub).getByRole('button', { name: 'Agregar' }));
+    // Regresa a la pantalla Widgets.
+    expect(await screen.findByRole('main', { name: 'Widgets' })).toBeTruthy();
+    expect(llamadasA(nucleo, 'widget_add')).toEqual([{ type: 'news', config: {} }]);
+  });
+});
+
+describe('HE-04-HU11 · Agregar el widget Reproductor de música', () => {
+  it('HE-04-HU11-CA01 · la subpantalla tiene la descripción, «Agregar» y «Regresar»', async () => {
+    const nucleo = await abrir([...POR_DEFECTO]);
+    nucleo.responder('widget_catalog_get', () => ({ ok: true, value: catalogo() }));
+    nucleo.responder('widget_add', () => ({
+      ok: true,
+      value: widget({ widget_id: 'w-m', type: 'music_player', display_name: 'Reproductor de música' }),
+    }));
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar widget' }));
+    const enCatalogo = await screen.findByRole('main', { name: 'Agregar widget' });
+    fireEvent.click(await within(enCatalogo).findByRole('button', { name: /Reproductor de música/ }));
+    const sub = await screen.findByRole('main', { name: 'Reproductor de música' });
+    // ET01
+    expect(within(sub).getByRole('navigation', { name: 'Miga de pan' }).textContent).toBe(
+      'Widgets>Agregar widget>Reproductor de música',
+    );
+    expect(within(sub).getByText('Descripción de Reproductor de música.')).toBeTruthy();
+    fireEvent.click(within(sub).getByRole('button', { name: 'Agregar' }));
+    expect(await screen.findByRole('main', { name: 'Widgets' })).toBeTruthy();
+    expect(llamadasA(nucleo, 'widget_add')).toEqual([{ type: 'music_player', config: {} }]);
+  });
+});
+
+describe('HE-04-HU12 · Configurar un widget agregado', () => {
+  const clima = (ciudad: string, id = 'w-clima') =>
+    widget({
+      widget_id: id,
+      type: 'weather',
+      display_name: 'Clima',
+      distinguishing_value: ciudad,
+      can_configure: true,
+      config: { city: ciudad },
+    });
+  const texto = widget({
+    widget_id: 'w-texto',
+    type: 'text',
+    display_name: 'Texto',
+    distinguishing_value: 'Estudiar',
+    can_configure: true,
+    config: { text: 'Estudiar' },
+  });
+
+  /** Abre Widgets con la lista dada y selecciona «Configurar» en el widget indicado. */
+  async function configurar(lista: WidgetItem[], id: string, preparar?: (n: NucleoDelPlanificador) => void) {
+    const nucleo = await abrir(lista);
+    preparar?.(nucleo);
+    const f = fila(lista.findIndex((w) => w.widget_id === id));
+    fireEvent.click(within(f).getByRole('button', { name: 'Configurar' }));
+    const ventana = await screen.findByRole('dialog', { name: 'Configurar' });
+    return { nucleo, ventana };
+  }
+  const rechazo = (code: ErrorCode, message: string) => () => ({
+    ok: false as const,
+    error: { code, message, field: 'city' },
+  });
+
+  it('HE-04-HU12-CA01 · Cambiar la ciudad del widget Clima', async () => {
+    const { nucleo, ventana } = await configurar([...POR_DEFECTO, clima('Popayán')], 'w-clima', (n) =>
+      n.responder('widget_configure', () => ({ ok: true, value: clima('Cali') })),
+    );
+    // ET05: el campo Ciudad precargado, «Guardar» y «Cancelar».
+    const campo = within(ventana).getByLabelText('Ciudad') as HTMLInputElement;
+    expect(campo.value).toBe('Popayán');
+    expect(within(ventana).getByRole('button', { name: 'Cancelar' })).toBeTruthy();
+    fireEvent.change(campo, { target: { value: 'Cali' } });
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Guardar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Configurar' })).toBeNull());
+    expect(llamadasA(nucleo, 'widget_configure')).toEqual([
+      { widget_id: 'w-clima', config: { city: 'Cali' } },
+    ]);
+  });
+
+  it('HE-04-HU12-CA02 · Cambiar el texto del widget Texto', async () => {
+    const { nucleo, ventana } = await configurar([...POR_DEFECTO, texto], 'w-texto', (n) =>
+      n.responder('widget_configure', () => ({ ok: true, value: texto })),
+    );
+    const campo = within(ventana).getByLabelText('Texto') as HTMLTextAreaElement;
+    expect(campo.value).toBe('Estudiar');
+    fireEvent.change(campo, { target: { value: 'Repasar simulación' } });
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Guardar' }));
+    await waitFor(() =>
+      expect(llamadasA(nucleo, 'widget_configure')).toEqual([
+        { widget_id: 'w-texto', config: { text: 'Repasar simulación' } },
+      ]),
+    );
+  });
+
+  it('HE-04-HU12-CA03 · Ciudad vacía al cambiar la ciudad', async () => {
+    const { nucleo, ventana } = await configurar([...POR_DEFECTO, clima('Popayán')], 'w-clima');
+    fireEvent.change(within(ventana).getByLabelText('Ciudad'), { target: { value: '   ' } });
+    expect((within(ventana).getByRole('button', { name: 'Guardar' }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    expect(llamadasA(nucleo, 'widget_configure')).toEqual([]);
+  });
+
+  it('HE-04-HU12-CA04 · Ciudad no encontrada al cambiar la ciudad', async () => {
+    const t = 'No encontramos esa ciudad. Revisa el nombre e intenta de nuevo.';
+    const { ventana } = await configurar([...POR_DEFECTO, clima('Popayán')], 'w-clima', (n) =>
+      n.responder('widget_configure', rechazo('city.not_found', t)),
+    );
+    fireEvent.change(within(ventana).getByLabelText('Ciudad'), { target: { value: 'Xyzzy' } });
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Guardar' }));
+    expect(await within(ventana).findByText(t)).toBeTruthy();
+  });
+
+  it('HE-04-HU12-CA05 · Ciudad que ya tiene un widget Clima al cambiar la ciudad', async () => {
+    const t = 'Ya tienes un widget Clima para esa ciudad.';
+    const { ventana } = await configurar(
+      [...POR_DEFECTO, clima('Popayán', 'w-p'), clima('Cali')],
+      'w-clima',
+      (n) => n.responder('widget_configure', rechazo('city.duplicate', t)),
+    );
+    fireEvent.change(within(ventana).getByLabelText('Ciudad'), { target: { value: 'Popayán' } });
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Guardar' }));
+    expect(await within(ventana).findByText(t)).toBeTruthy();
   });
 });

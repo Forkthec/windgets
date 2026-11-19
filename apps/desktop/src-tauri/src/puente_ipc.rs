@@ -613,8 +613,7 @@ pub async fn label_create(
     Ok(con_mensaje(r))
 }
 
-/// IPC-CAT-01 `catalog_list`. Por ahora solo el catálogo de colores (HE-08-HU02-ET05). DUDA: HE-08-HU02 los
-/// demás catálogos llegan con los pasos del wallpaper y los temas; mientras tanto responden una lista vacía.
+/// IPC-CAT-01 `catalog_list`: los catálogos de colores, plantillas, imágenes, tipografías, paletas y animaciones.
 #[tauri::command]
 pub async fn catalog_list(
     nucleo: State<'_, Nucleo>,
@@ -646,7 +645,12 @@ pub async fn catalog_list(
                 .paletas(nucleo.planificador.base())
                 .await
         }
-        _ => Ok(Vec::new()),
+        CatalogKind::Animation => {
+            nucleo
+                .personalizacion
+                .animaciones(nucleo.planificador.base())
+                .await
+        }
     }))
 }
 
@@ -710,6 +714,498 @@ pub async fn theme_draft_save_as(
         );
     }
     Ok(con_mensaje(r))
+}
+
+/// IPC-THEME-13 `theme_rename` (HE-03-HU04): renombra un tema guardado y avisa con EV-10 `themes_changed`.
+#[tauri::command]
+pub async fn theme_rename(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::ThemeRenameParams,
+) -> Result<IpcResult<crate::tipos::ThemeSummary>, ()> {
+    let ahora = RelojDelSistema.ahora_ms();
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .renombrar_tema(
+                    nucleo.planificador.base(),
+                    &user_id,
+                    &params.theme_id.0,
+                    &params.name,
+                    ahora,
+                )
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if let Ok(tema) = &r {
+        let _ = app.emit(
+            "themes_changed",
+            EntityChange {
+                ids: vec![tema.valor.id.clone()],
+                op: ChangeOp::Upsert,
+                origin: OriginKind::Local,
+            },
+        );
+    }
+    Ok(con_mensaje(r))
+}
+
+/// IPC-THEME-14 `theme_delete` (HE-03-HU05): elimina un tema que no es el aplicado y avisa con EV-10.
+#[tauri::command]
+pub async fn theme_delete(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::ThemeDeleteParams,
+) -> Result<IpcResult<()>, ()> {
+    let ahora = RelojDelSistema.ahora_ms();
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .eliminar_tema(
+                    nucleo.planificador.base(),
+                    &user_id,
+                    &params.theme_id.0,
+                    ahora,
+                )
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if r.is_ok() {
+        let _ = app.emit(
+            "themes_changed",
+            EntityChange {
+                ids: vec![params.theme_id.clone()],
+                op: ChangeOp::Delete,
+                origin: OriginKind::Local,
+            },
+        );
+    }
+    Ok(con_mensaje(r))
+}
+
+/// IPC-WID-04 `widget_add` (HE-04-HU05 a HU11). El Clima valida la ciudad con `weather-geocode` (ET06), avisa con
+/// EV-12 y consulta el clima de inmediato (EV-20). Los demás tipos llegan con HE-04-HU06 a HU11.
+#[tauri::command]
+pub async fn widget_add(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::WidgetAddParams,
+) -> Result<IpcResult<crate::tipos::WidgetItem>, ()> {
+    let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+        return Ok(leido(Err(crate::servicio_del_planificador::inesperado())));
+    };
+    let user_id = sesion.user_id.to_lowercase();
+    let cliente = nucleo.sesion.auth();
+    let base = nucleo.planificador.base();
+    let r = match (&params.r#type, &params.config) {
+        (
+            crate::tipos::AddableWidgetType::Weather,
+            crate::tipos::WidgetConfig::WeatherConfig(config),
+        ) => {
+            match crate::servicio_de_clima_y_noticias::resolver_ciudad(
+                cliente,
+                &sesion.access_token,
+                &config.city,
+            )
+            .await
+            {
+                Ok(ciudad) => {
+                    nucleo
+                        .personalizacion
+                        .agregar_clima(base, &user_id, &ciudad, RelojDelSistema.ahora_ms())
+                        .await
+                }
+                Err(e) => Err(e),
+            }
+        }
+        (
+            crate::tipos::AddableWidgetType::StaticImage,
+            crate::tipos::WidgetConfig::StaticImageConfig(config),
+        ) => {
+            nucleo
+                .personalizacion
+                .agregar_imagen_estatica(
+                    base,
+                    &user_id,
+                    &config.base_image_ref,
+                    RelojDelSistema.ahora_ms(),
+                )
+                .await
+        }
+        (
+            crate::tipos::AddableWidgetType::ImageCarousel,
+            crate::tipos::WidgetConfig::CarouselConfig(config),
+        ) => {
+            nucleo
+                .personalizacion
+                .agregar_carrusel(
+                    base,
+                    &user_id,
+                    &config.items,
+                    config.interval_seconds,
+                    RelojDelSistema.ahora_ms(),
+                )
+                .await
+        }
+        (
+            crate::tipos::AddableWidgetType::Animation,
+            crate::tipos::WidgetConfig::AnimationConfig(config),
+        ) => {
+            nucleo
+                .personalizacion
+                .agregar_animacion(
+                    base,
+                    &user_id,
+                    &config.animation_id,
+                    RelojDelSistema.ahora_ms(),
+                )
+                .await
+        }
+        (crate::tipos::AddableWidgetType::Text, crate::tipos::WidgetConfig::TextConfig(config)) => {
+            nucleo
+                .personalizacion
+                .agregar_texto(base, &user_id, &config.text, RelojDelSistema.ahora_ms())
+                .await
+        }
+        (crate::tipos::AddableWidgetType::MusicPlayer, _) => {
+            nucleo
+                .personalizacion
+                .agregar_reproductor(base, &user_id, RelojDelSistema.ahora_ms())
+                .await
+        }
+        (crate::tipos::AddableWidgetType::News, _) => {
+            nucleo
+                .personalizacion
+                .agregar_noticias(base, &user_id, RelojDelSistema.ahora_ms())
+                .await
+        }
+        _ => Err(crate::servicio_del_planificador::inesperado()),
+    };
+    if let Ok(widget) = &r {
+        let _ = app.emit(
+            "widgets_changed",
+            crate::tipos::EventMapWidgetsChanged {
+                widget_ids: vec![widget.widget_id.clone()],
+                op: ChangeOp::Upsert,
+                origin: OriginKind::Local,
+            },
+        );
+        let manejador = app.clone();
+        tauri::async_runtime::spawn(async move {
+            actualizar_widgets_de_clima(&manejador).await;
+            actualizar_widgets_de_noticias(&manejador).await;
+        });
+    }
+    Ok(leido(r))
+}
+
+/// IPC-WID-05 `widget_configure` (HE-04-HU12): cambia la ciudad del Clima (validada con `weather-geocode`) o el
+/// texto del Texto, avisa con EV-12 para que la capa lo muestre en 5 s o menos (ET03) y consulta el clima nuevo.
+#[tauri::command]
+pub async fn widget_configure(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::WidgetConfigureParams,
+) -> Result<IpcResult<crate::tipos::WidgetItem>, ()> {
+    use crate::servicio_de_personalizacion_y_configuracion::agregar::Configuracion;
+    let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+        return Ok(leido(Err(crate::servicio_del_planificador::inesperado())));
+    };
+    let user_id = sesion.user_id.to_lowercase();
+    let base = nucleo.planificador.base();
+    let ahora = RelojDelSistema.ahora_ms();
+    let r = match &params.config {
+        crate::tipos::WidgetConfigureParamsConfig::WeatherConfig(c) => {
+            match crate::servicio_de_clima_y_noticias::resolver_ciudad(
+                nucleo.sesion.auth(),
+                &sesion.access_token,
+                &c.city,
+            )
+            .await
+            {
+                Ok(ciudad) => {
+                    nucleo
+                        .personalizacion
+                        .configurar_widget(
+                            base,
+                            &user_id,
+                            &params.widget_id.0,
+                            Configuracion::Ciudad(&ciudad),
+                            ahora,
+                        )
+                        .await
+                }
+                Err(e) => Err(e),
+            }
+        }
+        crate::tipos::WidgetConfigureParamsConfig::TextConfig(c) => {
+            nucleo
+                .personalizacion
+                .configurar_widget(
+                    base,
+                    &user_id,
+                    &params.widget_id.0,
+                    Configuracion::Texto(&c.text),
+                    ahora,
+                )
+                .await
+        }
+    };
+    if let Ok(widget) = &r {
+        let _ = app.emit(
+            "widgets_changed",
+            crate::tipos::EventMapWidgetsChanged {
+                widget_ids: vec![widget.widget_id.clone()],
+                op: ChangeOp::Upsert,
+                origin: OriginKind::Local,
+            },
+        );
+        let manejador = app.clone();
+        tauri::async_runtime::spawn(async move { actualizar_widgets_de_clima(&manejador).await });
+    }
+    Ok(leido(r))
+}
+
+/// IPC-WID-07 `widget_get_data`: el último dato de un widget externo desde la caché local.
+#[tauri::command]
+pub async fn widget_get_data(
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::WidgetDataParams,
+) -> Result<IpcResult<crate::tipos::WidgetData>, ()> {
+    Ok(leido(
+        crate::servicio_de_clima_y_noticias::datos(nucleo.planificador.base(), &params.widget_id.0)
+            .await,
+    ))
+}
+
+/// HE-04-HU05-ET05 a ET08: consulta el clima de los widgets que lo necesitan (cada 30 min, o al volver la
+/// conexión) y avisa a la capa con EV-20. La falla de un widget no toca a los demás (RNF-13).
+pub async fn actualizar_widgets_de_clima(app: &AppHandle) {
+    let nucleo = app.state::<Nucleo>();
+    let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+        return;
+    };
+    let user_id = sesion.user_id.to_lowercase();
+    let base = nucleo.planificador.base();
+    let cliente = nucleo.sesion.auth();
+    let Ok(widgets) = crate::servicio_de_clima_y_noticias::widgets_de_clima(base, &user_id).await
+    else {
+        return;
+    };
+    for widget in &widgets {
+        let ultima = crate::servicio_de_clima_y_noticias::ultima_consulta(base, &widget.0)
+            .await
+            .ok()
+            .flatten();
+        let ahora = RelojDelSistema.ahora_ms();
+        if !crate::servicio_de_clima_y_noticias::toca_actualizar(
+            ultima.as_ref().map(|(f, e)| (f.as_str(), e)),
+            cliente.en_linea(),
+            ahora,
+        ) {
+            continue;
+        }
+        let Ok(datos) = crate::servicio_de_clima_y_noticias::actualizar_clima(
+            base,
+            cliente,
+            &sesion.access_token,
+            widget,
+            ahora,
+        )
+        .await
+        else {
+            continue;
+        };
+        let payload = datos.payload.and_then(|p| match p {
+            crate::tipos::WidgetDataPayload::WeatherData(d) => Some(
+                crate::tipos::EventMapWidgetDataChangedPayload::WeatherData(d),
+            ),
+            crate::tipos::WidgetDataPayload::NewsData(_) => None,
+        });
+        let _ = app.emit(
+            "widget_data_changed",
+            crate::tipos::EventMapWidgetDataChanged {
+                widget_id: crate::tipos::Uuid(widget.0.clone()),
+                status: datos.status,
+                payload,
+            },
+        );
+    }
+}
+
+/// HE-04-HU06-ET03, ET05, ET06: consulta los titulares cada 60 min, o al volver la conexión, y avisa con EV-20.
+pub async fn actualizar_widgets_de_noticias(app: &AppHandle) {
+    let nucleo = app.state::<Nucleo>();
+    let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+        return;
+    };
+    let user_id = sesion.user_id.to_lowercase();
+    let base = nucleo.planificador.base();
+    let cliente = nucleo.sesion.auth();
+    let Ok(widgets) =
+        crate::servicio_de_clima_y_noticias::widgets_de_noticias(base, &user_id).await
+    else {
+        return;
+    };
+    for id in &widgets {
+        let ultima = crate::servicio_de_clima_y_noticias::ultima_consulta(base, id)
+            .await
+            .ok()
+            .flatten();
+        let ahora = RelojDelSistema.ahora_ms();
+        if !crate::servicio_de_clima_y_noticias::toca_actualizar_cada(
+            ultima.as_ref().map(|(f, e)| (f.as_str(), e)),
+            cliente.en_linea(),
+            ahora,
+            crate::servicio_de_clima_y_noticias::ACTUALIZACION_DE_NOTICIAS_MS,
+        ) {
+            continue;
+        }
+        let Ok(datos) = crate::servicio_de_clima_y_noticias::actualizar_noticias(
+            base,
+            cliente,
+            &sesion.access_token,
+            id,
+            ahora,
+        )
+        .await
+        else {
+            continue;
+        };
+        let payload = datos.payload.and_then(|p| match p {
+            crate::tipos::WidgetDataPayload::NewsData(d) => {
+                Some(crate::tipos::EventMapWidgetDataChangedPayload::NewsData(d))
+            }
+            crate::tipos::WidgetDataPayload::WeatherData(_) => None,
+        });
+        let _ = app.emit(
+            "widget_data_changed",
+            crate::tipos::EventMapWidgetDataChanged {
+                widget_id: crate::tipos::Uuid(id.clone()),
+                status: datos.status,
+                payload,
+            },
+        );
+    }
+}
+
+/// HE-04-HU09-CA04, CA05 (RNF-06): mide el uso de CPU cada segundo y pausa o reanuda las animaciones con EV-21
+/// `animation_pause_changed`. Solo en Windows: en otros sistemas no hay lectura y las animaciones no se pausan.
+pub fn vigilar_carga(app: AppHandle) {
+    #[cfg(windows)]
+    std::thread::spawn(move || {
+        use crate::integracion_con_el_sistema::{carga, uso_de_cpu};
+        let mut vigilante = carga::VigilanteDeCarga::default();
+        let mut antes = uso_de_cpu::tiempos();
+        loop {
+            std::thread::sleep(Duration::from_secs(1));
+            let ahora = uso_de_cpu::tiempos();
+            let (Some(a), Some(d)) = (antes, ahora) else {
+                antes = ahora;
+                continue;
+            };
+            antes = ahora;
+            let Some(en_pausa) =
+                vigilante.muestra(uso_de_cpu::uso(a, d), None, RelojDelSistema.ahora_ms())
+            else {
+                continue;
+            };
+            carga::EN_PAUSA.store(en_pausa, std::sync::atomic::Ordering::Relaxed);
+            let nucleo = app.state::<Nucleo>();
+            let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+                continue;
+            };
+            let user_id = sesion.user_id.to_lowercase();
+            let ids = tauri::async_runtime::block_on(
+                nucleo
+                    .personalizacion
+                    .widgets(nucleo.planificador.base(), &user_id),
+            )
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|w| w.r#type == crate::tipos::WidgetType::Animation)
+            .map(|w| w.widget_id)
+            .collect();
+            let _ = app.emit(
+                "animation_pause_changed",
+                crate::tipos::EventMapAnimationPauseChanged {
+                    widget_ids: ids,
+                    paused: en_pausa,
+                },
+            );
+        }
+    });
+    #[cfg(not(windows))]
+    let _ = app;
+}
+
+/// IPC-MED-01 `media_get_session` (HE-04-HU11): la sesión multimedia actual de Windows.
+#[tauri::command]
+pub fn media_get_session(params: NoParams) -> IpcResult<crate::tipos::MediaSession> {
+    let _ = params;
+    correcto(crate::controlador_multimedia::sesion_actual())
+}
+
+fn accion_multimedia(accion: crate::controlador_multimedia::Accion) -> IpcResult<()> {
+    match crate::controlador_multimedia::ejecutar(accion) {
+        Ok(()) => correcto(()),
+        Err(error) => IpcResult::Err(IpcErr {
+            ok: false.into(),
+            error,
+        }),
+    }
+}
+
+/// IPC-MED-02 `media_toggle_play_pause`.
+#[tauri::command]
+pub fn media_toggle_play_pause(params: NoParams) -> IpcResult<()> {
+    let _ = params;
+    accion_multimedia(crate::controlador_multimedia::Accion::ReproducirOPausar)
+}
+
+/// IPC-MED-03 `media_skip_next`.
+#[tauri::command]
+pub fn media_skip_next(params: NoParams) -> IpcResult<()> {
+    let _ = params;
+    accion_multimedia(crate::controlador_multimedia::Accion::Siguiente)
+}
+
+/// IPC-MED-04 `media_skip_previous`.
+#[tauri::command]
+pub fn media_skip_previous(params: NoParams) -> IpcResult<()> {
+    let _ = params;
+    accion_multimedia(crate::controlador_multimedia::Accion::Anterior)
+}
+
+/// HE-04-HU11-ET06, ET08: revisa la sesión multimedia cada segundo y avisa con EV-19 `media_session_changed` al
+/// cambiar la sesión actual, la canción o el estado, en menos de 5 s (RNF-01).
+pub fn vigilar_multimedia(app: AppHandle) {
+    std::thread::spawn(move || {
+        let mut anterior = None;
+        loop {
+            std::thread::sleep(Duration::from_secs(1));
+            let actual = crate::controlador_multimedia::sesion_actual();
+            if anterior.as_ref() != Some(&actual) {
+                let _ = app.emit("media_session_changed", actual.clone());
+                anterior = Some(actual);
+            }
+        }
+    });
+}
+
+/// Revisa cada minuto qué widgets externos toca actualizar (HE-04-HU05-ET05, ET08).
+pub fn vigilar_widgets_externos(app: AppHandle) {
+    std::thread::spawn(move || {
+        loop {
+            tauri::async_runtime::block_on(actualizar_widgets_de_clima(&app));
+            tauri::async_runtime::block_on(actualizar_widgets_de_noticias(&app));
+            std::thread::sleep(Duration::from_secs(60));
+        }
+    });
 }
 
 /// IPC-THEME-12 `theme_apply` (HE-03-HU03): aplica un tema guardado. Avisa con EV-11 `applied_theme_changed`,
