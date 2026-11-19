@@ -114,6 +114,18 @@ export function Personalization() {
   // Los temas guardados cambian al guardar, crear o eliminar uno (EV-12 `themes_changed`).
   useEffect(() => escuchar('themes_changed', () => void leerTemas()), [escuchar, leerTemas]);
 
+  // HE-15-HU04-CA08 (ET11, ET12): llega una personalización más reciente de otro computador con cambios sin guardar
+  // en la vista previa: el escritorio la aplica, la vista previa conserva los cambios y se muestra el aviso.
+  useEffect(
+    () =>
+      escuchar('applied_theme_changed', (carga) => {
+        if (carga.origin === 'remote' && carga.has_unsaved_draft) {
+          mostrarResultado(textos.PERSONALIZACION_REMOTA_CON_CAMBIOS);
+        }
+      }),
+    [escuchar, mostrarResultado],
+  );
+
   const seleccionar = async (id: string, descartar = false) => {
     const r = await invocar('theme_draft_select', {
       theme_id: id,

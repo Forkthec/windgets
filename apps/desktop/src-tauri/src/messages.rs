@@ -12,6 +12,9 @@ pub const SERVICIO_NO_DISPONIBLE: &str =
 
 /// `*.required` de todo campo obligatorio (HE-01-HU01-CA02, CA05).
 pub const CAMPO_OBLIGATORIO: &str = "Este campo es obligatorio.";
+
+/// HE-15-HU04-CA08, ET11: aviso al recibir una personalización más reciente con cambios sin guardar.
+pub const PERSONALIZACION_REMOTA_CON_CAMBIOS: &str = "Se aplicó una personalización más reciente desde otro computador. Tus cambios sin guardar se conservan.";
 /// `alias.too_long` (HE-01-HU01-CA03).
 pub const ALIAS_MUY_LARGO: &str = "El alias no puede superar los 30 caracteres.";
 /// `email.invalid` (HE-01-HU01-CA06).
@@ -349,6 +352,10 @@ pub const WINDI_TARJETA_CAMBIO: &str = "«<título>» tiene otro valor en <campo
 pub const TEXTOS: &[(&str, &str)] = &[
     ("SERVICIO_NO_DISPONIBLE", SERVICIO_NO_DISPONIBLE),
     ("CAMPO_OBLIGATORIO", CAMPO_OBLIGATORIO),
+    (
+        "PERSONALIZACION_REMOTA_CON_CAMBIOS",
+        PERSONALIZACION_REMOTA_CON_CAMBIOS,
+    ),
     ("ALIAS_MUY_LARGO", ALIAS_MUY_LARGO),
     ("CORREO_INVALIDO", CORREO_INVALIDO),
     ("CORREO_MUY_LARGO", CORREO_MUY_LARGO),

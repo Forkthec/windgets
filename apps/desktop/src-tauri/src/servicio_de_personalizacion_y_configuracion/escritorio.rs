@@ -174,7 +174,7 @@ impl ServicioDePersonalizacion {
         Ok(LayerInitialState {
             applied,
             // Los widgets activos del tema aplicado encima del wallpaper (HE-04-HU01-CA01, CA03).
-            widgets: Self::rectangulos_activos(base, user_id).await?,
+            widgets: Self::rectangulos_ajustados(base, user_id, &monitores).await?,
             monitors: monitores,
             wallpaper_state,
         })
