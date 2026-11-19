@@ -260,8 +260,8 @@ describe('EF-01 windi-chat · HE-14-HU05 (editar tarjetas)', () => {
   it('HE-14-HU05-CA04 · varias coinciden: ve el título y la fecha límite de cada una y pregunta', () => {
     const texto = instruccionDelSistema(conTarjetas);
     expect(texto).toContain('preguntas a cuál se refiere');
-    expect(texto).toContain('Pagar la luz (id t1, fecha límite 2026-11-20)');
-    expect(texto).toContain('Pagar el agua (id t2, fecha límite 2026-11-25, completada)');
+    expect(texto).toContain('Pagar la luz (id t1, fecha límite 2026-11-20, pendiente');
+    expect(texto).toContain('Pagar el agua (id t2, fecha límite 2026-11-25, completada el 2026-11-10');
   });
 
   it('HE-14-HU05-CA05 · la fecha límite no puede ser anterior a hoy', () => {
@@ -356,5 +356,95 @@ describe('EF-01 windi-chat · HE-14-HU07 (eliminar tarjetas)', () => {
     expect(instruccionDelSistema(CONTEXTO)).toContain(
       'preguntas a cuál se refiere antes de proponer la eliminación',
     );
+  });
+});
+
+describe('EF-01 windi-chat · HE-14-HU08 (cómo funciona la aplicación)', () => {
+  it('HE-14-HU08-CA01 · pasos numerados (máximo 6) con las pantallas y opciones de la guía', () => {
+    const texto = instruccionDelSistema(CONTEXTO);
+    expect(texto).toContain('lista numerada de máximo 6 pasos');
+    // ET02: la guía usa los nombres de la aplicación.
+    for (const nombre of [
+      'Tablero Kanban',
+      '«Nueva tarjeta»',
+      '«Guardar como tema»',
+      '«Agregar widget»',
+      '«Cerrar sesión»',
+    ]) {
+      expect(texto).toContain(nombre);
+    }
+  });
+
+  it('HE-14-HU08-CA02 · una función que no existe: lo dice, no inventa pasos y sugiere una parecida', () => {
+    const texto = instruccionDelSistema(CONTEXTO);
+    expect(texto).toContain('no inventas pantallas, opciones ni');
+    expect(texto).toContain('dices que no está disponible en la aplicación, no das pasos');
+    expect(texto).toContain('una función parecida de la guía');
+  });
+});
+
+describe('EF-01 windi-chat · HE-14-HU09 (preguntas por las tarjetas)', () => {
+  const conTarjetas: Contexto = {
+    ...CONTEXTO,
+    labels: [{ id: 'l1', name: 'Trabajo' }],
+    cards: [
+      {
+        id: 't1',
+        title: 'Informe',
+        due_date: '2026-11-10',
+        completed_on: null,
+        column_id: 'c1',
+        priority: 'high',
+        label_ids: ['l1'],
+      },
+      {
+        id: 't2',
+        title: 'Pan',
+        due_date: '2026-11-20',
+        completed_on: null,
+        column_id: 'c1',
+        priority: null,
+        label_ids: [],
+      },
+      {
+        id: 't3',
+        title: 'Cita',
+        due_date: '2026-11-05',
+        completed_on: '2026-11-04',
+        column_id: 'c1',
+        priority: 'low',
+        label_ids: [],
+      },
+    ],
+  };
+
+  it('HE-14-HU09-CA01 · cada tarjeta con su estado, fecha, columna, prioridad y etiquetas', () => {
+    const texto = instruccionDelSistema(conTarjetas);
+    expect(texto).toContain(
+      'Informe (id t1, fecha límite 2026-11-10, vencida, columna Por hacer, prioridad alta, etiquetas Trabajo)',
+    );
+    expect(texto).toContain('Pan (id t2, fecha límite 2026-11-20, pendiente, columna Por hacer)');
+    expect(texto).toContain('con su título y su fecha límite en DD/MM/AAAA');
+  });
+
+  it('HE-14-HU09-CA02 · las completadas en un rango se cuentan como en Reportes', () => {
+    const texto = instruccionDelSistema(conTarjetas);
+    expect(texto).toContain('Cita (id t3, fecha límite 2026-11-05, completada el 2026-11-04');
+    expect(texto).toContain('igual que');
+    expect(texto).toContain('la sección Tarjetas completadas de Reportes');
+  });
+
+  it('HE-14-HU09-CA03 · sin resultados lo dice; sin vencidas, lo celebra', () => {
+    const texto = instruccionDelSistema(CONTEXTO);
+    expect(texto).toContain('dices que no encuentras tarjetas que coincidan');
+    expect(texto).toContain('celebrando que no tiene ninguna');
+  });
+
+  it('HE-14-HU09-CA04 · una consulta no llama ninguna función ni cambia tarjetas', () => {
+    expect(instruccionDelSistema(CONTEXTO)).toContain(
+      'nunca crea, edita, mueve ni elimina tarjetas: no llamas ninguna función',
+    );
+    const r = leerGemini({ candidates: [{ content: { parts: [{ text: 'Tienes 2 tarjetas vencidas.' }] } }] });
+    expect(r).toEqual({ reply: 'Tienes 2 tarjetas vencidas.', intent: 'answer', proposal: null });
   });
 });
