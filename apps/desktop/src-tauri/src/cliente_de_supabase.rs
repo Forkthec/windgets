@@ -234,6 +234,50 @@ impl ClienteDeSupabase {
     }
 }
 
+/// EF-01 `windi-chat` (HE-14-HU01): el mensaje, el historial y el contexto, con el JWT de la sesión. Espera como
+/// máximo 15 s (RNF-11; D-172); sin red es `SinConexion` y cualquier otra falla (tiempo agotado, 4xx, 5xx o una
+/// respuesta que no se entiende) es `NoDisponible` (HE-14-HU01-CA08).
+impl crate::servicio_de_windi::AgenteEnLaNube for ClienteDeSupabase {
+    async fn conversar(
+        &self,
+        token: &str,
+        peticion: &crate::tipos::WindiChatRequest,
+    ) -> Result<crate::tipos::WindiChatResponse, crate::servicio_de_windi::FallaDeWindi> {
+        use crate::servicio_de_windi::{ESPERA_MAXIMA, FallaDeWindi};
+        let Some(http) = self.http.as_ref().filter(|_| !self.url.is_empty()) else {
+            return Err(FallaDeWindi::NoDisponible);
+        };
+        let respuesta = http
+            .post(format!("{}/functions/v1/windi-chat", self.url))
+            .header("apikey", &self.anon)
+            .bearer_auth(token)
+            .timeout(ESPERA_MAXIMA)
+            .json(peticion)
+            .send()
+            .await;
+        let respuesta = match respuesta {
+            Ok(respuesta) => respuesta,
+            Err(error) => {
+                let sin_red = error.is_connect();
+                self.en_linea.store(!sin_red, Ordering::Relaxed);
+                return Err(if sin_red {
+                    FallaDeWindi::SinConexion
+                } else {
+                    FallaDeWindi::NoDisponible
+                });
+            }
+        };
+        self.en_linea.store(true, Ordering::Relaxed);
+        if !respuesta.status().is_success() {
+            return Err(FallaDeWindi::NoDisponible);
+        }
+        respuesta
+            .json::<crate::tipos::WindiChatResponse>()
+            .await
+            .map_err(|_| FallaDeWindi::NoDisponible)
+    }
+}
+
 impl AuthDeSupabase for ClienteDeSupabase {
     async fn correo_registrado(&self, correo: &str) -> Result<bool, FallaDeAuth> {
         let cuerpo = serde_json::json!({ "p_email": correo });
