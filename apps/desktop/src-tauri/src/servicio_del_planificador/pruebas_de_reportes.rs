@@ -513,3 +513,108 @@ fn ca_he_13_hu04_ca05() {
         (0.0, 40.0, 60.0)
     );
 }
+
+// HE-13-HU05 · Filtrar los reportes por etiqueta.
+
+fn con_etiqueta(
+    servicio: &ServicioDelPlanificador<CalendarioDePrueba>,
+    tarjeta: &str,
+    etiqueta: &str,
+) {
+    bloquear(async {
+        sqlx::query("INSERT INTO card_label (id, user_id, created_at, card_id, label_id) VALUES (?, ?, ?, ?, ?)")
+            .bind(uuid::Uuid::new_v4().to_string())
+            .bind(USUARIO)
+            .bind("2026-11-01T00:00:00.000Z")
+            .bind(tarjeta)
+            .bind(etiqueta)
+            .execute(servicio.base().pool().await.unwrap())
+            .await
+            .unwrap();
+    });
+}
+
+/// El desglose por estados con el filtro de etiquetas dado (Últimos 30 días).
+fn estados_con(
+    servicio: &ServicioDelPlanificador<CalendarioDePrueba>,
+    etiquetas: &[&str],
+) -> crate::tipos::StatusBreakdown {
+    let mut f = filtro(predefinido(RangeInputVariant1Kind::Last30));
+    f.filter.label_ids = etiquetas.iter().map(|e| Uuid((*e).into())).collect();
+    bloquear(servicio.estados_del_reporte(USUARIO, &f)).unwrap()
+}
+
+/// Una tarjeta pendiente con la etiqueta, otra completada con la etiqueta y una sin etiquetas, por etiqueta.
+fn con_tres_etiquetas() -> (
+    ServicioDelPlanificador<CalendarioDePrueba>,
+    String,
+    String,
+    String,
+) {
+    let servicio = con_semilla();
+    let trabajo = etiqueta(&servicio, "Trabajo");
+    let casa = etiqueta(&servicio, "Casa");
+    let estudio = etiqueta(&servicio, "Estudio");
+    let t = tarjeta_del_reporte(&servicio, "task", "2026-10-01", "2026-11-14", None);
+    con_etiqueta(&servicio, &t, &trabajo);
+    let c = tarjeta_del_reporte(
+        &servicio,
+        "task",
+        "2026-10-01",
+        "2026-11-05",
+        Some("2026-11-07"),
+    );
+    con_etiqueta(&servicio, &c, &casa);
+    tarjeta_del_reporte(&servicio, "task", "2026-10-01", "2026-11-14", None);
+    (servicio, trabajo, casa, estudio)
+}
+
+#[test]
+fn ca_he_13_hu05_ca01() {
+    // HE-13-HU05-CA01 · Solo las tarjetas con «Trabajo» (ET03, ET04: el mismo filtro en cada sección).
+    let (servicio, trabajo, _, _) = con_tres_etiquetas();
+    let r = estados_con(&servicio, &[&trabajo]);
+    assert_eq!((r.total, r.pending, r.completed), (1, 1, 0));
+}
+
+#[test]
+fn ca_he_13_hu05_ca02() {
+    // HE-13-HU05-CA02 · Con «Trabajo» y «Casa», las que tienen al menos una de las dos (ET02, ET03).
+    let (servicio, trabajo, casa, _) = con_tres_etiquetas();
+    let r = estados_con(&servicio, &[&trabajo, &casa]);
+    assert_eq!((r.total, r.pending, r.completed), (2, 1, 1));
+}
+
+#[test]
+fn ca_he_13_hu05_ca03() {
+    // HE-13-HU05-CA03 · «Todas las etiquetas» (sin etiquetas elegidas): todas las tarjetas (ET05).
+    let (servicio, _, _, _) = con_tres_etiquetas();
+    assert_eq!(estados_con(&servicio, &[]).total, 3);
+}
+
+#[test]
+fn ca_he_13_hu05_ca04() {
+    // HE-13-HU05-CA04 · «Estudio» sin tarjetas en el rango: secciones vacías (la vista muestra el texto de
+    // HE-13-HU02-CA07).
+    let (servicio, _, _, estudio) = con_tres_etiquetas();
+    let r = estados_con(&servicio, &[&estudio]);
+    assert!(r.is_empty);
+    assert_eq!(r.total, 0);
+}
+
+#[test]
+fn ca_he_13_hu05_ca05() {
+    // HE-13-HU05-CA05 · Sin etiquetas creadas, `has_labels` es falso (la vista deshabilita el filtro, ET06).
+    let servicio = con_semilla();
+    assert!(
+        !bloquear(servicio.meta_del_reporte(USUARIO))
+            .unwrap()
+            .has_labels
+    );
+    etiqueta(&servicio, "Trabajo");
+    assert!(
+        bloquear(servicio.meta_del_reporte(USUARIO))
+            .unwrap()
+            .has_labels
+    );
+}
