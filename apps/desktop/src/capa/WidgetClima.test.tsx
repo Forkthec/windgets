@@ -76,3 +76,26 @@ describe('HE-04-HU05 · Widget Clima', () => {
     expect(within(widget).queryByRole('status')).toBeNull();
   });
 });
+
+describe('HE-15-HU02 · Widgets externos offline', () => {
+  it('HE-15-HU02-CA05 · Funciones que requieren conexión (widget externo)', async () => {
+    const { widget } = await pintar({ status: 'offline', payload: POPAYAN, fetched_at: null });
+    // ET08: el widget externo muestra el aviso de falta de conexión de su widget.
+    expect(within(widget).getByText('Sin conexión. El widget se actualizará al reconectarte.')).toBeTruthy();
+  });
+
+  it('HE-15-HU02-CA06 · Widgets externos offline', async () => {
+    const { widget, nucleo } = await pintar({ status: 'ok', payload: POPAYAN, fetched_at: null });
+    // ET09: al perder la conexión, el aviso; ET10: al volver, el Núcleo consulta (toca_actualizar) y el widget se
+    // actualiza solo con EV-20.
+    nucleo.emitir('widget_data_changed', { widget_id: 'w-clima', status: 'offline' });
+    expect(within(widget).getByText('Sin conexión. El widget se actualizará al reconectarte.')).toBeTruthy();
+    nucleo.emitir('widget_data_changed', {
+      widget_id: 'w-clima',
+      status: 'ok',
+      payload: { ...POPAYAN, temperature_c: 25, condition_text: 'Despejado' },
+    });
+    expect(within(widget).queryByRole('status')).toBeNull();
+    expect(within(widget).getByText('25 °C')).toBeTruthy();
+  });
+});

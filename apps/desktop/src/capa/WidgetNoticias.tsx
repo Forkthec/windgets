@@ -5,7 +5,7 @@ import textos from '@/types/messages.es.json';
 
 // Widget Noticias en la capa (HE-04-HU06-ET02): los 5 titulares más recientes con su fuente. El dato lo trae el
 // Núcleo de la caché local (IPC-WID-07) y lo actualiza con EV-20 cada 60 min, al volver la conexión o al fallar
-// (ET03, ET05, ET06). Abrir un titular en el navegador llega con HE-06-HU10 (P22).
+// (ET03, ET05, ET06). Seleccionar un titular lo abre en el navegador predeterminado (HE-06-HU10).
 
 export interface WidgetNoticiasProps {
   widgetId: string;
@@ -47,7 +47,13 @@ export function WidgetNoticias({ widgetId, invocar, escuchar }: WidgetNoticiasPr
       <ul aria-label="Titulares">
         {titulares.slice(0, 5).map((t) => (
           <li key={t.url}>
-            <span>{t.title}</span> <span>{t.source}</span>
+            <button
+              type="button"
+              className="wg-widget-noticias__titular"
+              onClick={() => void invocar('system_open_url', { url: t.url })}
+            >
+              <span>{t.title}</span> <span>{t.source}</span>
+            </button>
           </li>
         ))}
       </ul>

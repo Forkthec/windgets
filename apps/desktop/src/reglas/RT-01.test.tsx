@@ -249,7 +249,6 @@ describe('RT-01 · Menú principal y pantalla principal', () => {
     // Deshabilitar el agente de IA y los widgets externos dentro de su pantalla es de HE-15-HU02-CA06.
   });
 
-  // La pantalla de edición es la ventana C-03 (interfaz.md), aparte de la ventana principal; se crea con
-  // HE-05-HU01 (abrir la pantalla de edición), que es la que prueba este CA.
-  it.todo('RT-01-CA12 · Pantalla de edición sin menú principal (se prueba con HE-05-HU01)');
+  // RT-01-CA12: la pantalla de edición es la ventana C-03 (interfaz.md), aparte de la ventana principal; su prueba
+  // está en edicion/Edicion.test.tsx.
 });

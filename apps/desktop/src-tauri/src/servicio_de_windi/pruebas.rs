@@ -359,8 +359,8 @@ fn ca_he_14_hu01_ca09() {
 
 #[test]
 fn contexto_minimo() {
-    // D-193, HE-14-HU01-ET17: el contexto lleva alias, hoy, columnas, etiquetas y totales; las tarjetas solo
-    // cuando la pregunta las necesita.
+    // D-193, HE-14-HU01-ET17: el contexto lleva alias, hoy, columnas, etiquetas y totales; desde HE-14-HU09 también
+    // las tarjetas (hasta 200), para responder preguntas por estado, fecha, columna, etiqueta o prioridad.
     let servicio = con_semilla();
     tarjeta_en(&servicio, POR_HACER, "Pagar la luz", "2026-11-10", 1024.0);
     tarjeta_en(
@@ -387,7 +387,7 @@ fn contexto_minimo() {
         ),
         (2, 1, 1, 0)
     );
-    assert!(c.cards.is_empty());
+    assert_eq!(c.cards.len(), 2);
 }
 
 /// Emojis de un texto (los caracteres fuera del plano básico, como 🎉).
@@ -1047,9 +1047,11 @@ fn ca_he_14_hu05_ca04() {
         "Cambia la fecha de la tarjeta de pagar",
     ))
     .unwrap();
+    // Las relacionadas con el mensaje van primero (desde HE-14-HU09 el contexto lleva también las demás).
     let mut vistas: Vec<(String, String)> = c
         .cards
         .iter()
+        .take(2)
         .map(|t| (t.title.clone(), t.due_date.0.clone()))
         .collect();
     vistas.sort();
@@ -1528,4 +1530,105 @@ fn ca_he_14_hu07_ca06() {
                 .to_string()
         ]
     );
+}
+
+// HE-14-HU09 · Preguntar al agente de IA por las tarjetas. Las cuentas las hace Gemini con el contexto; el Núcleo
+// le manda las tarjetas con sus datos y nunca cambia nada al responder una consulta.
+
+#[test]
+fn ca_he_14_hu09_ca01() {
+    // HE-14-HU09-CA01 · El contexto lleva todas las tarjetas, las relacionadas con el mensaje primero, con su
+    // estado, fecha, columna, etiquetas y prioridad (ET01, ET02).
+    let planificador = con_semilla();
+    tarjeta_en(
+        &planificador,
+        POR_HACER,
+        "Pagar la luz",
+        "2026-11-10",
+        1024.0,
+    );
+    tarjeta_en(&planificador, EN_PROGRESO, "Informe", "2026-11-20", 1024.0);
+    let c = bloquear(contexto(
+        &planificador,
+        USUARIO,
+        "Prueba",
+        planificador.hoy(),
+        12,
+        "¿Qué informe tengo?",
+    ))
+    .unwrap();
+    let titulos: Vec<_> = c.cards.iter().map(|t| t.title.as_str()).collect();
+    assert_eq!(titulos, ["Informe", "Pagar la luz"]);
+}
+
+#[test]
+fn ca_he_14_hu09_ca02() {
+    // HE-14-HU09-CA02 · La fecha de completado va en el contexto, para contar como la sección Tarjetas completadas
+    // de Reportes (ET03).
+    let planificador = con_semilla();
+    let id = tarjeta_en(&planificador, POR_HACER, "Informe", "2026-11-20", 1024.0);
+    bloquear(planificador.marcar_completada(
+        USUARIO,
+        crate::tipos::CardSetCompletedParams {
+            card_id: Uuid(id),
+            completed: true,
+        },
+    ))
+    .unwrap();
+    let c = bloquear(contexto(
+        &planificador,
+        USUARIO,
+        "Prueba",
+        planificador.hoy(),
+        12,
+        "¿Cuántas completé?",
+    ))
+    .unwrap();
+    assert_eq!(
+        c.cards[0].completed_on.as_ref().map(|f| f.0.as_str()),
+        Some("2026-11-14")
+    );
+}
+
+#[test]
+fn ca_he_14_hu09_ca03() {
+    // HE-14-HU09-CA03 · Sin tarjetas que coincidan, Windi responde texto (lo escribe Gemini) y no hay propuesta.
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    let nube = WindiSimulado::responde(vec![Ok(respuesta(
+        "¡No tienes tarjetas vencidas! 🎉",
+        WindiChatResponseIntent::Answer,
+    ))]);
+    let r = enviar_con(
+        &windi,
+        &nube,
+        &manejador_de(&planificador),
+        "¿Tengo vencidas?",
+        true,
+    )
+    .unwrap();
+    assert!(r.proposal.is_none());
+    assert_eq!(r.reply.text, "¡No tienes tarjetas vencidas! 🎉");
+}
+
+#[test]
+fn ca_he_14_hu09_ca04() {
+    // HE-14-HU09-CA04 · Una consulta no crea, edita, mueve ni elimina tarjetas (ET04).
+    let planificador = con_semilla();
+    tarjeta_en(&planificador, POR_HACER, "Informe", "2026-11-20", 1024.0);
+    let antes = bloquear(planificador.tablero(USUARIO)).unwrap();
+    let windi = ServicioDeWindi::nuevo();
+    let nube = WindiSimulado::responde(vec![Ok(respuesta(
+        "Tienes 1 tarjeta pendiente.",
+        WindiChatResponseIntent::Answer,
+    ))]);
+    enviar_con(
+        &windi,
+        &nube,
+        &manejador_de(&planificador),
+        "¿Cuántas pendientes tengo?",
+        true,
+    )
+    .unwrap();
+    assert_eq!(bloquear(planificador.tablero(USUARIO)).unwrap(), antes);
 }

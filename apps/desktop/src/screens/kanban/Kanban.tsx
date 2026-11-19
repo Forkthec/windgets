@@ -9,8 +9,17 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import type { BoardColumn, Card, CardMoveParams, Column, ScreenParams } from '@/types';
+import type {
+  BoardColumn,
+  Card,
+  CardMoveParams,
+  Column,
+  Label,
+  PreferenceBoardCardView,
+  ScreenParams,
+} from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
+import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import textos from '@/types/messages.es.json';
@@ -30,7 +39,13 @@ interface AccionesDelTablero {
   columnas: readonly Column[];
   alAbrir: (id: string) => void;
   alMover: (movimiento: CardMoveParams) => void;
+  /** HE-09-HU07: la vista de las tarjetas y las etiquetas para mostrar sus nombres en la vista expandida. */
+  vista: PreferenceBoardCardView;
+  etiquetas: readonly Label[];
 }
+
+/** HE-09-HU07-ET04: los primeros 200 caracteres de la descripción. */
+const DESCRIPCION_VISIBLE = 200;
 
 const ContextoDelTablero = createContext<AccionesDelTablero | null>(null);
 
@@ -45,7 +60,8 @@ function useTablero(): AccionesDelTablero {
  * Se arrastra a otra columna o a otra posición (HE-09-HU02-ET01) y tiene «Mover a» (ET10).
  */
 function Tarjeta({ tarjeta }: { tarjeta: Card }) {
-  const { columnas, alAbrir, alMover } = useTablero();
+  const { columnas, alAbrir, alMover, vista, etiquetas } = useTablero();
+  const expandida = vista === 'expanded';
   const arrastre = useDraggable({ id: tarjeta.id });
   const lugar: LugarDeSoltar = { columna: tarjeta.column_id, tarjeta: tarjeta.id };
   const soltar = useDroppable({ id: `tarjeta:${tarjeta.id}`, data: lugar });
@@ -72,7 +88,21 @@ function Tarjeta({ tarjeta }: { tarjeta: Card }) {
         {/* HE-09-HU01-ET06, ET07: «Vencida» solo fuera de la columna Hecho. */}
         {tarjeta.is_overdue && <span className="wg-indicador">Vencida</span>}
       </span>
+      {/* HE-09-HU07-ET04: en la vista expandida, la descripción (200 caracteres) y las etiquetas. */}
+      {expandida && tarjeta.description && (
+        <p className="wg-tarjeta__descripcion">
+          {[...tarjeta.description].slice(0, DESCRIPCION_VISIBLE).join('')}
+        </p>
+      )}
       {tarjeta.priority && <span>{NOMBRE_DE_PRIORIDAD[tarjeta.priority]}</span>}
+      {expandida && tarjeta.label_ids.length > 0 && (
+        <ul className="wg-fila wg-tarjeta__etiquetas" aria-label="Etiquetas">
+          {tarjeta.label_ids.map((id) => {
+            const e = etiquetas.find((x) => x.id === id);
+            return e ? <li key={id}>{e.name}</li> : null;
+          })}
+        </ul>
+      )}
       <MoverA
         columnas={columnas}
         actual={tarjeta.column_id}
@@ -85,7 +115,15 @@ function Tarjeta({ tarjeta }: { tarjeta: Card }) {
 }
 
 /** Una columna con su nombre, su color y su cantidad de tarjetas (HE-09-HU01-ET01); se suelta al final. */
-function Columna({ columna, alEditar }: { columna: BoardColumn; alEditar: (columna: Column) => void }) {
+function Columna({
+  columna,
+  alEditar,
+  alEliminar,
+}: {
+  columna: BoardColumn;
+  alEditar: (columna: Column) => void;
+  alEliminar: (columna: Column) => void;
+}) {
   const { column, cards } = columna;
   const lugar: LugarDeSoltar = { columna: column.id };
   const soltar = useDroppable({ id: `columna:${column.id}`, data: lugar });
@@ -106,6 +144,14 @@ function Columna({ columna, alEditar }: { columna: BoardColumn; alEditar: (colum
         <span className="wg-columna__cantidad">{column.card_count}</span>
         {/* HE-09-HU04-ET01: cada columna tiene «Editar». */}
         <Boton onClick={() => alEditar(column)}>Editar</Boton>
+        {/* HE-09-HU06-ET01, ET02: «Eliminar» en cada columna; en las por defecto, deshabilitada con su texto. */}
+        <Boton
+          disabled={column.is_default}
+          motivo={textos.COLUMNA_POR_DEFECTO_NO_ELIMINABLE}
+          onClick={() => alEliminar(column)}
+        >
+          Eliminar
+        </Boton>
       </h2>
       {cards.length === 0 ? (
         // HE-09-HU01-ET04: estado vacío de la columna (RT-04).
@@ -127,11 +173,64 @@ export function Kanban() {
   const [columnas, setColumnas] = useState<BoardColumn[] | null>(null);
   // Formulario de columna abierto: `null` para crear (HE-09-HU03) o la columna que se edita (HE-09-HU04).
   const [formularioColumna, setFormularioColumna] = useState<{ columna: Column | null } | null>(null);
+  // HE-09-HU06: la columna que se va a eliminar con el texto de su confirmación (M-09 o M-13).
+  const [porEliminar, setPorEliminar] = useState<{ columna: Column; texto: string } | null>(null);
 
   const leer = useCallback(async () => {
     const r = await invocar('card_list_board', {});
     if (r.ok) setColumnas(r.value.columns);
   }, [invocar]);
+
+  // HE-09-HU07: la vista guardada (compacta por defecto, ET02) y las etiquetas para la vista expandida.
+  const [vista, setVista] = useState<PreferenceBoardCardView>('compact');
+  const [etiquetas, setEtiquetas] = useState<Label[]>([]);
+  useEffect(() => {
+    let vigente = true;
+    void invocar('preference_get', {}).then((r) => {
+      if (vigente && r.ok) setVista(r.value.board_card_view);
+    });
+    const leerEtiquetas = () =>
+      void invocar('label_list', {}).then((r) => {
+        if (vigente && r.ok) setEtiquetas(r.value);
+      });
+    leerEtiquetas();
+    const dejarEtiquetas = escuchar('labels_changed', leerEtiquetas);
+    const dejarVista = escuchar('preference_changed', (c) => setVista(c.board_card_view));
+    return () => {
+      vigente = false;
+      dejarEtiquetas();
+      dejarVista();
+    };
+  }, [escuchar, invocar]);
+
+  // HE-09-HU07-CA01 a CA03: cambia de vista y la guarda.
+  const alternarVista = async () => {
+    const nueva: PreferenceBoardCardView = vista === 'compact' ? 'expanded' : 'compact';
+    setVista(nueva);
+    await invocar('preference_set', { board_card_view: nueva });
+  };
+
+  // HE-09-HU06-CA01, CA03, CA07: M-09 sin tarjetas o M-13 con la cantidad y el nombre actual de Por hacer.
+  const preguntarEliminar = async (columna: Column) => {
+    const r = await invocar('column_get_delete_info', { id: columna.id });
+    if (!r.ok) return;
+    const { name, card_count, destination_name } = r.value;
+    const texto =
+      card_count === 0
+        ? textos.CONFIRMAR_ELIMINAR_COLUMNA.replace('<nombre de la columna>', name)
+        : textos.CONFIRMAR_ELIMINAR_COLUMNA_CON_TARJETAS.replace('<nombre de la columna>', name)
+            .replace('<cantidad>', String(card_count))
+            .replace('<nombre de la columna destino>', destination_name);
+    setPorEliminar({ columna, texto });
+  };
+
+  // HE-09-HU06-CA02, CA04: las tarjetas pasan al final de Por hacer y la columna se quita.
+  const eliminarColumna = async (columna: Column) => {
+    setPorEliminar(null);
+    const r = await invocar('column_delete', { id: columna.id });
+    mostrarResultado(r.ok ? (r.result_message?.message ?? textos.COLUMNA_ELIMINADA) : r.error.message);
+    void leer();
+  };
 
   useEffect(() => {
     void leer();
@@ -200,8 +299,10 @@ export function Kanban() {
       columnas: columnas?.map((c) => c.column) ?? [],
       alAbrir: abrirDetalle,
       alMover: (m) => void mover(m),
+      vista,
+      etiquetas,
     }),
-    [abrirDetalle, columnas, mover],
+    [abrirDetalle, columnas, etiquetas, mover, vista],
   );
 
   /** Columnas del tablero, contadas las tres por defecto (HE-09-HU03-ET07, D-167). */
@@ -222,7 +323,10 @@ export function Kanban() {
         >
           Nueva columna
         </Boton>
-        <Boton>Vista expandida</Boton>
+        {/* HE-09-HU07-ET01: el nombre de la vista a la que cambia. */}
+        <Boton onClick={() => void alternarVista()}>
+          {vista === 'compact' ? 'Vista expandida' : 'Vista compacta'}
+        </Boton>
       </div>
       {columnas && (
         <ContextoDelTablero.Provider value={acciones}>
@@ -234,6 +338,7 @@ export function Kanban() {
                   key={c.column.id}
                   columna={c}
                   alEditar={(columna) => setFormularioColumna({ columna })}
+                  alEliminar={(columna) => void preguntarEliminar(columna)}
                 />
               ))}
             </div>
@@ -241,6 +346,16 @@ export function Kanban() {
         </ContextoDelTablero.Provider>
       )}
       {tarjetas.ventanas}
+      {porEliminar && (
+        // M-09 o M-13. DUDA: HE-09-HU06 las ventanas no definen título. Valor usado: «Eliminar».
+        <Confirmacion
+          titulo="Eliminar"
+          texto={porEliminar.texto}
+          opcionPrincipal="Eliminar"
+          alConfirmar={() => void eliminarColumna(porEliminar.columna)}
+          alCancelar={() => setPorEliminar(null)}
+        />
+      )}
       {formularioColumna && (
         <FormularioColumna
           columna={formularioColumna.columna ?? undefined}

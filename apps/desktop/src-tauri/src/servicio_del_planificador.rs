@@ -2034,6 +2034,9 @@ fn tarjeta_de_fila(
     })
 }
 
+mod columnas;
+mod etiquetas;
+mod preferencias;
 mod reportes;
 pub use reportes::{agrupacion, resolver_rango};
 

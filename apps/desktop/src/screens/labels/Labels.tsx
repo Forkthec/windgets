@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import type { Label } from '@/types';
 import textos from '@/types/messages.es.json';
 import { Boton } from '@/ui/Boton/Boton';
@@ -18,6 +19,9 @@ export function Labels() {
   const mostrarResultado = useMensajeDeResultado();
   const [etiquetas, setEtiquetas] = useState<Label[] | null>(null);
   const [creando, setCreando] = useState(false);
+  // HE-08-HU03: la etiqueta que se edita; HE-08-HU04: la que se va a eliminar con su texto de confirmación.
+  const [editando, setEditando] = useState<Label | null>(null);
+  const [porEliminar, setPorEliminar] = useState<{ etiqueta: Label; texto: string } | null>(null);
 
   const leer = useCallback(async () => {
     const r = await invocar('label_list', {});
@@ -42,6 +46,28 @@ export function Labels() {
     </Boton>
   );
 
+  // HE-08-HU04-CA01, CA03, CA04: el texto de la confirmación según en cuántas tarjetas está (M-10 o M-14).
+  const preguntarEliminar = async (e: Label) => {
+    const r = await invocar('label_get_delete_info', { id: e.id });
+    if (!r.ok) return;
+    const { name, card_count } = r.value;
+    const plantilla =
+      card_count === 0
+        ? textos.CONFIRMAR_ELIMINAR_ETIQUETA
+        : card_count === 1
+          ? textos.CONFIRMAR_ELIMINAR_ETIQUETA_EN_UNA_TARJETA
+          : textos.CONFIRMAR_ELIMINAR_ETIQUETA_EN_TARJETAS.replace('<cantidad>', String(card_count));
+    setPorEliminar({ etiqueta: e, texto: plantilla.replace('<nombre de la etiqueta>', name) });
+  };
+
+  // HE-08-HU04-CA02, CA05: la elimina y la quita de las tarjetas, sin eliminarlas.
+  const eliminar = async (e: Label) => {
+    setPorEliminar(null);
+    const r = await invocar('label_delete', { id: e.id });
+    mostrarResultado(r.ok ? (r.result_message?.message ?? textos.ETIQUETA_ELIMINADA) : r.error.message);
+    void leer();
+  };
+
   return (
     <main aria-label="Etiquetas" aria-busy={etiquetas === null}>
       {etiquetas &&
@@ -60,13 +86,35 @@ export function Labels() {
                 <li key={e.id} className="wg-fila wg-lista__elemento">
                   <span className="wg-muestra-color" style={{ background: e.color_hex }} aria-hidden="true" />
                   <span className="wg-lista__nombre">{e.name}</span>
-                  <Boton>Editar</Boton>
-                  <Boton>Eliminar</Boton>
+                  <Boton onClick={() => setEditando(e)}>Editar</Boton>
+                  <Boton onClick={() => void preguntarEliminar(e)}>Eliminar</Boton>
                 </li>
               ))}
             </ul>
           </>
         ))}
+      {editando && (
+        <FormularioEtiqueta
+          etiqueta={editando}
+          alCancelar={() => setEditando(null)}
+          alGuardar={(_, mensaje) => {
+            // HE-08-HU03-CA01: cierra el formulario y muestra «Etiqueta actualizada.» (RT-04).
+            setEditando(null);
+            mostrarResultado(mensaje);
+            void leer();
+          }}
+        />
+      )}
+      {porEliminar && (
+        // M-10 o M-14. DUDA: HE-08-HU04 las ventanas no definen título. Valor usado: «Eliminar».
+        <Confirmacion
+          titulo="Eliminar"
+          texto={porEliminar.texto}
+          opcionPrincipal="Eliminar"
+          alConfirmar={() => void eliminar(porEliminar.etiqueta)}
+          alCancelar={() => setPorEliminar(null)}
+        />
+      )}
       {creando && (
         <FormularioEtiqueta
           alCancelar={() => setCreando(false)}

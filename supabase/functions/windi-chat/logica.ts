@@ -86,6 +86,49 @@ export function leerPeticion(cuerpo: unknown): PeticionWindi | null {
 }
 
 /**
+ * HE-14-HU08-ET02, ET03: las pantallas y opciones de la aplicación, con los nombres que se ven en ella. DUDA:
+ * HE-14-HU08 no define el texto de la guía; se arma con el menú principal y las opciones de cada pantalla.
+ */
+export const GUIA = [
+  'Menú principal > Planificador: Planificador diario (tus tarjetas de hoy y el resumen de avance), Tablero Kanban',
+  '(«Nueva tarjeta», «Nueva columna», «Vista expandida» o «Vista compacta», en cada columna «Editar» y «Eliminar», en',
+  'cada tarjeta «Mover a»; se arrastran tarjetas y columnas), Calendario (vista mensual y semanal, Panel del día),',
+  'Agenda diaria (bloques horarios), Reportes (rango de fechas, filtro Etiquetas, Tarjetas completadas, Tasa de',
+  'cumplimiento y estados), Agente de IA y Etiquetas («Nueva etiqueta», «Editar», «Eliminar»).',
+  'Menú principal > Personalización: Personalización del wallpaper (plantilla, imagen de fondo con «Subir imagen» o',
+  '«Catálogo de imágenes», colores, paleta, tipografía; «Guardar», «Guardar como tema», «Aplicar», «Cancelar»), Temas',
+  '(«Aplicar», «Renombrar», «Eliminar») y Widgets (activar o desactivar, «Agregar widget», «Configurar», «Eliminar»,',
+  '«Editar escritorio» para mover y cambiar el tamaño de los widgets).',
+  'Menú principal > Configuración: indicador de sincronización, inicio automático con Windows y «Cerrar sesión».',
+  'Para abrir el detalle de una tarjeta se selecciona su título; desde el detalle se edita, se elimina o se marca',
+  'como completada.',
+].join(' ');
+
+/** Una tarjeta del contexto con su estado, fechas, columna, prioridad y etiquetas (HE-14-HU09-ET01). */
+function lineaDeTarjeta(t: Record<string, unknown>, contexto: Contexto): string {
+  const completada = typeof t.completed_on === 'string' && t.completed_on;
+  const estado = completada
+    ? `completada el ${String(t.completed_on)}`
+    : String(t.due_date) < contexto.today
+      ? 'vencida'
+      : 'pendiente';
+  const columna = contexto.columns.find((c) => c.id === t.column_id)?.name;
+  const etiquetas = Array.isArray(t.label_ids)
+    ? t.label_ids.map((id) => contexto.labels.find((e) => e.id === id)?.name).filter(Boolean)
+    : [];
+  const prioridad = typeof t.priority === 'string' ? { high: 'alta', medium: 'media', low: 'baja' }[t.priority] : null;
+  const datos = [
+    `id ${String(t.id)}`,
+    `fecha límite ${String(t.due_date)}`,
+    estado,
+    columna ? `columna ${columna}` : null,
+    prioridad ? `prioridad ${prioridad}` : null,
+    etiquetas.length ? `etiquetas ${etiquetas.join(', ')}` : null,
+  ].filter(Boolean);
+  return `${String(t.title)} (${datos.join(', ')})`;
+}
+
+/**
  * La instrucción del sistema de Windi (INT-03). Alcance de HE-14-HU01: solo las tarjetas del usuario y el
  * funcionamiento de la aplicación (ET23); si no entiende, hace una sola pregunta concreta (ET21); si no puede
  * hacer algo, lo dice y ofrece una alternativa (ET22).
@@ -151,12 +194,24 @@ export function instruccionDelSistema(contexto: Contexto): string {
     'Si varias tarjetas coinciden con el nombre que menciona, muestras el título y la fecha límite de cada una y',
     'preguntas a cuál se refiere antes de proponer la eliminación.',
     `Columnas del tablero en su orden: ${contexto.columns.map((c) => `${c.name} (id ${c.id}, función ${c.role})`).join(', ')}.`,
-    `Tarjetas relacionadas con el mensaje: ${
-      contexto.cards.length
-        ? contexto.cards
-            .map((t) => `${String(t.title)} (id ${String(t.id)}, fecha límite ${String(t.due_date)}${((n) => (n ? `, columna ${n}` : ''))(contexto.columns.find((c) => c.id === t.column_id)?.name)}${t.completed_on ? ', completada' : ''})`)
-            .join('; ')
-        : 'ninguna'
+    // HE-14-HU08: preguntas sobre cómo funciona la aplicación.
+    'Si preguntan cómo hacer algo en la aplicación, respondes con una lista numerada de máximo 6 pasos que nombra',
+    'las pantallas y las opciones exactamente como aparecen en esta guía; no inventas pantallas, opciones ni',
+    'funciones. Si la función no existe, dices que no está disponible en la aplicación, no das pasos y mencionas',
+    'una función parecida de la guía si la hay.',
+    `Guía de la aplicación: ${GUIA}`,
+    // HE-14-HU09: preguntas por las tarjetas.
+    'Si preguntan por sus tarjetas según su estado, fecha, columna, etiqueta o prioridad, cuentas y listas solo las',
+    'tarjetas de abajo que cumplen el criterio, con su título y su fecha límite en DD/MM/AAAA; nunca inventas',
+    'tarjetas. Una tarjeta está completada si tiene fecha de completado, vencida si no está completada y su fecha',
+    'límite es anterior a hoy, y pendiente en los demás casos.',
+    'Las tarjetas completadas en un rango de fechas se cuentan por su fecha de completado dentro del rango, igual que',
+    'la sección Tarjetas completadas de Reportes.',
+    'Si ninguna tarjeta cumple el criterio, dices que no encuentras tarjetas que coincidan; si preguntaban por',
+    'vencidas, lo dices celebrando que no tiene ninguna.',
+    'Responder una consulta nunca crea, edita, mueve ni elimina tarjetas: no llamas ninguna función.',
+    `Tarjetas (las relacionadas con el mensaje primero): ${
+      contexto.cards.length ? contexto.cards.map((t) => lineaDeTarjeta(t, contexto)).join('; ') : 'ninguna'
     }.`,
     `Etiquetas disponibles: ${
       contexto.labels.length ? contexto.labels.map((e) => `${e.name} (id ${e.id})`).join(', ') : 'ninguna'

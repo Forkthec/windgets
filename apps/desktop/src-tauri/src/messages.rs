@@ -120,6 +120,17 @@ pub const TARJETA_QUITADA_DEL_HORARIO: &str = "Tarjeta quitada del horario.";
 
 /// Resultado de `label_create` (HE-08-HU02-CA01, CA08; ET09).
 pub const ETIQUETA_CREADA: &str = "Etiqueta creada.";
+/// Resultado de `label_update` (HE-08-HU03-CA01, ET06).
+pub const ETIQUETA_ACTUALIZADA: &str = "Etiqueta actualizada.";
+/// M-10 (HE-08-HU04-CA01): eliminar una etiqueta sin tarjetas.
+pub const CONFIRMAR_ELIMINAR_ETIQUETA: &str =
+    "¿Deseas eliminar la etiqueta “<nombre de la etiqueta>”? Esta acción no se puede deshacer.";
+/// M-14 (HE-08-HU04-CA03): eliminar una etiqueta asignada a varias tarjetas.
+pub const CONFIRMAR_ELIMINAR_ETIQUETA_EN_TARJETAS: &str = "La etiqueta “<nombre de la etiqueta>” está asignada a <cantidad> tarjetas. Se quitará de ellas, pero las tarjetas no se eliminarán. ¿Deseas continuar?";
+/// M-14 en singular (HE-08-HU04-CA04).
+pub const CONFIRMAR_ELIMINAR_ETIQUETA_EN_UNA_TARJETA: &str = "La etiqueta “<nombre de la etiqueta>” está asignada a 1 tarjeta. Se quitará de ella, pero la tarjeta no se eliminará. ¿Deseas continuar?";
+/// Resultado de `label_delete` (HE-08-HU04-CA02, CA05; ET08).
+pub const ETIQUETA_ELIMINADA: &str = "Etiqueta eliminada.";
 /// `name.too_long` (HE-08-HU02-CA03; ET11).
 pub const NOMBRE_DE_ETIQUETA_MUY_LARGO: &str =
     "El nombre de la etiqueta no puede superar los 30 caracteres.";
@@ -146,6 +157,16 @@ pub const MAXIMO_DE_COLUMNAS: &str =
 
 /// Resultado de `column_update` (HE-09-HU04-CA01, CA02).
 pub const COLUMNA_ACTUALIZADA: &str = "Columna actualizada.";
+/// M-09 (HE-09-HU06-CA01, ET03): eliminar una columna sin tarjetas.
+pub const CONFIRMAR_ELIMINAR_COLUMNA: &str =
+    "¿Deseas eliminar la columna “<nombre de la columna>”? Esta acción no se puede deshacer.";
+/// M-13 (HE-09-HU06-CA03, CA07; ET04, ET06): con el nombre actual de Por hacer como destino.
+pub const CONFIRMAR_ELIMINAR_COLUMNA_CON_TARJETAS: &str = "La columna “<nombre de la columna>” tiene <cantidad> tarjetas. Se moverán a “<nombre de la columna destino>”. ¿Deseas continuar?";
+/// Resultado de `column_delete` (HE-09-HU06-CA02, CA04).
+pub const COLUMNA_ELIMINADA: &str = "Columna eliminada.";
+/// `column.default_not_deletable` (HE-09-HU06-CA05, ET02): texto de «Eliminar» deshabilitada.
+pub const COLUMNA_POR_DEFECTO_NO_ELIMINABLE: &str =
+    "Las columnas por defecto no se pueden eliminar.";
 
 // HE-13-HU01 · Seleccionar el rango de fechas de los reportes (IPC-REP-01 report_resolve_range).
 
@@ -427,9 +448,30 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("COLUMNA_DUPLICADA", COLUMNA_DUPLICADA),
     ("MAXIMO_DE_COLUMNAS", MAXIMO_DE_COLUMNAS),
     ("COLUMNA_ACTUALIZADA", COLUMNA_ACTUALIZADA),
+    ("CONFIRMAR_ELIMINAR_COLUMNA", CONFIRMAR_ELIMINAR_COLUMNA),
+    (
+        "CONFIRMAR_ELIMINAR_COLUMNA_CON_TARJETAS",
+        CONFIRMAR_ELIMINAR_COLUMNA_CON_TARJETAS,
+    ),
+    ("COLUMNA_ELIMINADA", COLUMNA_ELIMINADA),
+    (
+        "COLUMNA_POR_DEFECTO_NO_ELIMINABLE",
+        COLUMNA_POR_DEFECTO_NO_ELIMINABLE,
+    ),
     ("INICIO_POSTERIOR_AL_FIN", INICIO_POSTERIOR_AL_FIN),
     ("RANGO_MUY_LARGO", RANGO_MUY_LARGO),
     ("ETIQUETA_CREADA", ETIQUETA_CREADA),
+    ("ETIQUETA_ACTUALIZADA", ETIQUETA_ACTUALIZADA),
+    ("CONFIRMAR_ELIMINAR_ETIQUETA", CONFIRMAR_ELIMINAR_ETIQUETA),
+    (
+        "CONFIRMAR_ELIMINAR_ETIQUETA_EN_TARJETAS",
+        CONFIRMAR_ELIMINAR_ETIQUETA_EN_TARJETAS,
+    ),
+    (
+        "CONFIRMAR_ELIMINAR_ETIQUETA_EN_UNA_TARJETA",
+        CONFIRMAR_ELIMINAR_ETIQUETA_EN_UNA_TARJETA,
+    ),
+    ("ETIQUETA_ELIMINADA", ETIQUETA_ELIMINADA),
     ("NOMBRE_DE_ETIQUETA_MUY_LARGO", NOMBRE_DE_ETIQUETA_MUY_LARGO),
     ("ETIQUETA_DUPLICADA", ETIQUETA_DUPLICADA),
     ("MAXIMO_DE_ETIQUETAS_CREADAS", MAXIMO_DE_ETIQUETAS_CREADAS),

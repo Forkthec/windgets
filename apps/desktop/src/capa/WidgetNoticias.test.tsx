@@ -98,3 +98,21 @@ describe('HE-04-HU06 · Widget Noticias', () => {
     expect(within(widget).queryByRole('status')).toBeNull();
   });
 });
+
+describe('HE-06-HU10 · Abrir una noticia en el navegador', () => {
+  it('HE-06-HU10-CA01 · Abrir una noticia', async () => {
+    const { widget, nucleo } = await pintar({
+      status: 'ok',
+      payload: { headlines: titulares('Titular') },
+      fetched_at: null,
+    });
+    // ET02: el widget es interactivo y cada titular se selecciona; ET01: el Núcleo lo abre en el navegador.
+    expect(widget.getAttribute('data-interactivo')).toBe('true');
+    within(widget)
+      .getByRole('button', { name: /Titular 3/ })
+      .click();
+    expect(nucleo.llamadas.filter((l) => l.comando === 'system_open_url').map((l) => l.params)).toEqual([
+      { url: 'https://example.com/Titular/3' },
+    ]);
+  });
+});

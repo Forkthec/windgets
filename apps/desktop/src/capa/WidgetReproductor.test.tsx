@@ -99,3 +99,27 @@ describe('HE-04-HU11 · Widget Reproductor de música', () => {
     expect(boton(widget, 'Pausar').disabled).toBe(false);
   });
 });
+
+describe('HE-06-HU09 · Controlar la reproducción desde el widget', () => {
+  it('HE-06-HU09-CA01 · Controlar la reproducción', async () => {
+    const { widget, nucleo } = await pintar(SONANDO);
+    // El widget es interactivo: la capa le reenvía las selecciones (HE-06-HU01).
+    expect(widget.getAttribute('data-interactivo')).toBe('true');
+    nucleo.responder('media_toggle_play_pause', () => ({ ok: true, value: null }));
+    boton(widget, 'Pausar').click();
+    boton(widget, 'Siguiente').click();
+    boton(widget, 'Anterior').click();
+    // ET03: cada control envía su acción a la sesión actual de Windows (SMTC).
+    expect(
+      nucleo.llamadas
+        .map((l) => l.comando)
+        .filter((c) => c.startsWith('media_') && c !== 'media_get_session'),
+    ).toEqual(['media_toggle_play_pause', 'media_skip_next', 'media_skip_previous']);
+    // ET02: tras la acción, EV-19 trae el estado nuevo y el botón dice «Reproducir».
+    nucleo.emitir('media_session_changed', { ...SONANDO, status: 'paused' });
+    expect(boton(widget, 'Reproducir')).toBeTruthy();
+    // ET04: si la aplicación no admite «Anterior», ese control queda deshabilitado.
+    nucleo.emitir('media_session_changed', { ...SONANDO, can_previous: false });
+    expect(boton(widget, 'Anterior').disabled).toBe(true);
+  });
+});
