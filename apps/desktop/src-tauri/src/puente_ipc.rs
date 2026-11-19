@@ -626,6 +626,42 @@ pub async fn theme_draft_save_as(
     Ok(con_mensaje(r))
 }
 
+/// IPC-THEME-13 `theme_rename` (HE-03-HU04): renombra un tema guardado y avisa con EV-10 `themes_changed`.
+#[tauri::command]
+pub async fn theme_rename(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::ThemeRenameParams,
+) -> Result<IpcResult<crate::tipos::ThemeSummary>, ()> {
+    let ahora = RelojDelSistema.ahora_ms();
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .renombrar_tema(
+                    nucleo.planificador.base(),
+                    &user_id,
+                    &params.theme_id.0,
+                    &params.name,
+                    ahora,
+                )
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if let Ok(tema) = &r {
+        let _ = app.emit(
+            "themes_changed",
+            EntityChange {
+                ids: vec![tema.valor.id.clone()],
+                op: ChangeOp::Upsert,
+                origin: OriginKind::Local,
+            },
+        );
+    }
+    Ok(con_mensaje(r))
+}
+
 /// IPC-THEME-12 `theme_apply` (HE-03-HU03): aplica un tema guardado. Avisa con EV-11 `applied_theme_changed`,
 /// EV-10 `themes_changed` y EV-16 para que la capa y la aplicación lo muestren en 5 s o menos (ET03; RNF-01).
 #[tauri::command]

@@ -828,6 +828,7 @@ mod guardado;
 pub mod guardar_como;
 mod imagenes;
 pub(crate) mod legibilidad;
+mod renombrar;
 pub mod ultima_pantalla;
 mod widgets;
 
@@ -853,6 +854,8 @@ mod pruebas_de_guardar_como;
 mod pruebas_de_imagenes;
 #[cfg(test)]
 mod pruebas_de_plantillas;
+#[cfg(test)]
+mod pruebas_de_renombrar;
 #[cfg(test)]
 mod pruebas_de_restablecer;
 #[cfg(test)]

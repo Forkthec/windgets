@@ -6,6 +6,7 @@ import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { escribirFecha } from '../tarjeta/fechas';
+import { RenombrarTema } from './RenombrarTema';
 
 // P-TEM-01 Temas (Menú principal > Personalización > Temas; HE-03-HU01): la colección de temas guardados. Es la
 // entrada de «Aplicar» (HE-03-HU03), «Renombrar» (HE-03-HU04) y «Eliminar» (HE-03-HU05) (ET06; D-065).
@@ -22,6 +23,8 @@ export function Themes() {
   // HE-03-HU03: el tema que se va a aplicar (M-05) y el aviso de cambios sin guardar en la vista previa (M-15).
   const [porAplicar, setPorAplicar] = useState<ThemeSummary | null>(null);
   const [sinGuardar, setSinGuardar] = useState<{ tema: ThemeSummary; mensaje: string } | null>(null);
+  // HE-03-HU04: el tema que se está renombrando.
+  const [porRenombrar, setPorRenombrar] = useState<ThemeSummary | null>(null);
 
   const leer = useCallback(async () => {
     const r = await invocar('theme_list', {});
@@ -92,7 +95,7 @@ export function Themes() {
                 >
                   Aplicar
                 </Boton>
-                <Boton>Renombrar</Boton>
+                <Boton onClick={() => setPorRenombrar(t)}>Renombrar</Boton>
                 <Boton>Eliminar</Boton>
               </li>
             ))}
@@ -112,6 +115,17 @@ export function Themes() {
           opcionPrincipal="Aplicar"
           alConfirmar={() => void aplicar(porAplicar)}
           alCancelar={() => setPorAplicar(null)}
+        />
+      )}
+      {porRenombrar && (
+        <RenombrarTema
+          tema={porRenombrar}
+          alGuardar={(mensaje) => {
+            setPorRenombrar(null);
+            mostrarResultado(mensaje);
+            void leer();
+          }}
+          alCancelar={() => setPorRenombrar(null)}
         />
       )}
       {sinGuardar && (

@@ -211,3 +211,94 @@ describe('HE-03-HU03 · Aplicar un tema guardado', () => {
     expect(llamadasA(nucleo, 'theme_apply')).toEqual([]);
   });
 });
+
+describe('HE-03-HU04 · Renombrar un tema', () => {
+  const TEMAS = [tema('t2', 'Verano'), tema('t1', 'Mi tema', { is_applied: true })];
+
+  async function abrirRenombrar(preparar?: (n: NucleoDelPlanificador) => void) {
+    const n = await abrirTemas(TEMAS, preparar);
+    const fila = within(screen.getByRole('list', { name: 'Lista de temas' })).getAllByRole(
+      'listitem',
+    )[1] as HTMLElement;
+    fireEvent.click(within(fila).getByRole('button', { name: 'Renombrar' }));
+    const ventana = await screen.findByRole('dialog', { name: 'Renombrar tema' });
+    return { n, ventana, campo: within(ventana).getByLabelText('Nombre') as HTMLInputElement };
+  }
+
+  it('HE-03-HU04-CA07 · Abrir la ventana Renombrar tema', async () => {
+    const { ventana, campo } = await abrirRenombrar();
+    expect(campo.value).toBe('Mi tema');
+    expect(within(ventana).getByRole('button', { name: 'Guardar' })).toBeTruthy();
+    expect(within(ventana).getByRole('button', { name: 'Cancelar' })).toBeTruthy();
+  });
+
+  it('HE-03-HU04-CA01 · Renombrar un tema', async () => {
+    const { n, ventana, campo } = await abrirRenombrar((n) =>
+      n.responder('theme_rename', () => ({
+        ok: true,
+        value: tema('t1', 'Mi escritorio', { is_applied: true }),
+        result_message: { code: 'theme_rename', message: 'Tema renombrado.' },
+      })),
+    );
+    fireEvent.change(campo, { target: { value: ' Mi escritorio ' } });
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Guardar' }));
+    expect(await screen.findByText('Tema renombrado.')).toBeTruthy();
+    expect(llamadasA(n, 'theme_rename')).toEqual([{ theme_id: 't1', name: 'Mi escritorio' }]);
+    expect(screen.queryByRole('dialog', { name: 'Renombrar tema' })).toBeNull();
+  });
+
+  it('HE-03-HU04-CA02 · Nombre vacío', async () => {
+    const { n, ventana, campo } = await abrirRenombrar();
+    fireEvent.change(campo, { target: { value: '   ' } });
+    expect((within(ventana).getByRole('button', { name: 'Guardar' }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    expect(llamadasA(n, 'theme_rename')).toEqual([]);
+  });
+
+  it('HE-03-HU04-CA03 · Nombre de más de 40 caracteres', async () => {
+    const { n, ventana, campo } = await abrirRenombrar();
+    fireEvent.change(campo, { target: { value: 'a'.repeat(41) } });
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Guardar' }));
+    expect(within(ventana).getByText('El nombre no puede superar los 40 caracteres.')).toBeTruthy();
+    expect(llamadasA(n, 'theme_rename')).toEqual([]);
+  });
+
+  it('HE-03-HU04-CA04 · Nombre duplicado', async () => {
+    const { ventana, campo } = await abrirRenombrar((n) =>
+      n.responder('theme_rename', () => ({
+        ok: false,
+        error: {
+          code: 'name.duplicate',
+          message: 'Ya existe un tema con ese nombre. Elige otro.',
+          field: 'name',
+        },
+      })),
+    );
+    fireEvent.change(campo, { target: { value: 'VERANO' } });
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Guardar' }));
+    expect(await within(ventana).findByText('Ya existe un tema con ese nombre. Elige otro.')).toBeTruthy();
+  });
+
+  it('HE-03-HU04-CA05 · Cancelar el renombrado', async () => {
+    const { n, ventana, campo } = await abrirRenombrar();
+    fireEvent.change(campo, { target: { value: 'Otro' } });
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Renombrar tema' })).toBeNull());
+    expect(llamadasA(n, 'theme_rename')).toEqual([]);
+    expect(screen.getByText('Mi tema')).toBeTruthy();
+  });
+
+  it('HE-03-HU04-CA06 · Cambiar solo mayúsculas o minúsculas', async () => {
+    const { ventana, campo } = await abrirRenombrar((n) =>
+      n.responder('theme_rename', () => ({
+        ok: true,
+        value: tema('t1', 'MI TEMA', { is_applied: true }),
+        result_message: { code: 'theme_rename', message: 'Tema renombrado.' },
+      })),
+    );
+    fireEvent.change(campo, { target: { value: 'MI TEMA' } });
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Guardar' }));
+    expect(await screen.findByText('Tema renombrado.')).toBeTruthy();
+  });
+});

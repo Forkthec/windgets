@@ -230,6 +230,8 @@ pub const TEMA_GUARDADO: &str = "Tema “<nombre del tema>” guardado.";
 pub const NOMBRE_DE_TEMA_MUY_LARGO: &str = "El nombre no puede superar los 40 caracteres.";
 /// `name.duplicate` (HE-03-HU02-CA04): mensaje en el campo Nombre.
 pub const TEMA_DUPLICADO: &str = "Ya existe un tema con ese nombre. Elige otro.";
+/// IPC-THEME-13 `theme_rename` (HE-03-HU04-CA01, CA06): mensaje de resultado.
+pub const TEMA_RENOMBRADO: &str = "Tema renombrado.";
 /// `theme.limit_reached` (HE-03-HU02-CA05): texto de la opción «Guardar como tema» deshabilitada.
 pub const MAXIMO_DE_TEMAS: &str =
     "Alcanzaste el máximo de 10 temas. Elimina uno para guardar otro.";
@@ -382,6 +384,7 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("CONFIRMAR_APLICAR_TEMA", CONFIRMAR_APLICAR_TEMA),
     ("NOMBRE_DE_TEMA_MUY_LARGO", NOMBRE_DE_TEMA_MUY_LARGO),
     ("TEMA_DUPLICADO", TEMA_DUPLICADO),
+    ("TEMA_RENOMBRADO", TEMA_RENOMBRADO),
     ("MAXIMO_DE_TEMAS", MAXIMO_DE_TEMAS),
     (
         "CAMBIOS_APLICADOS_SIN_GUARDAR_AL_SALIR",

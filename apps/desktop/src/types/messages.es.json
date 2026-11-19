@@ -77,6 +77,7 @@
   "TEMA_DUPLICADO": "Ya existe un tema con ese nombre. Elige otro.",
   "TEMA_GUARDADO": "Tema “<nombre del tema>” guardado.",
   "TEMA_GUARDADO_Y_APLICADO": "Tema “<nombre del tema>” guardado y aplicado.",
+  "TEMA_RENOMBRADO": "Tema renombrado.",
   "TEMA_YA_APLICADO": "Este tema ya está aplicado.",
   "TITULO_MUY_LARGO": "El título no puede superar los 100 caracteres.",
   "WIDGET_ELIMINADO": "Widget eliminado.",
