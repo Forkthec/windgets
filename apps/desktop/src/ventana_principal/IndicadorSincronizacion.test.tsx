@@ -90,11 +90,8 @@ describe('HE-15-HU02 · Trabajar offline', () => {
     expect(within(indicador).queryByText(/pendiente/)).toBeNull();
   });
 
-  // ET08: el agente de IA (HE-14, P19) y los widgets externos (HE-04-HU05, HU06) aún no existen; su aviso de
-  // falta de conexión se prueba con sus HU.
-  it.todo('HE-15-HU02-CA05 · Funciones que requieren conexión (se prueba con HE-14-HU01 y HE-04-HU05)');
-  // ET09, ET10: los widgets externos dependen del spike P01.
-  it.todo('HE-15-HU02-CA06 · Widgets externos offline (se prueba con HE-04-HU05 y HE-04-HU06)');
+  // CA05 y CA06 (ET08 a ET10) se prueban con el agente de IA y los widgets externos: screens/windi/Windi.test.tsx
+  // y capa/WidgetClima.test.tsx.
 });
 
 describe('HE-15-HU03 · Sincronizar al volver la conexión', () => {

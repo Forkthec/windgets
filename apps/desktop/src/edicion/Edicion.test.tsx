@@ -337,3 +337,12 @@ describe('HE-05-HU05 · Cancelar los cambios de la distribución', () => {
     await waitFor(() => expect(n.de('layout_edit_cancel')).toHaveLength(2));
   });
 });
+
+describe('RT-01 · Pantalla de edición', () => {
+  it('RT-01-CA12 · Pantalla de edición sin menú principal', async () => {
+    const pantalla = await abrir(nucleo([RELOJ]));
+    // ET08: ocupa todo el escritorio (ventana C-03) y no muestra el menú principal.
+    expect(pantalla).toBeTruthy();
+    expect(screen.queryByRole('navigation', { name: 'Menú principal' })).toBeNull();
+  });
+});

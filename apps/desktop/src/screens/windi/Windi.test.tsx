@@ -503,3 +503,17 @@ describe('HE-14-HU07 · Eliminar tarjetas con el agente de IA', () => {
     expect(within(p).getByText(texto)).toBeTruthy();
   });
 });
+
+describe('HE-15-HU02 · Funciones que requieren conexión', () => {
+  it('HE-15-HU02-CA05 · Funciones que requieren conexión (agente de IA)', async () => {
+    await abrir(responde(''), { online: false });
+    // ET08: el agente de IA deshabilitado con el aviso de falta de conexión de su pantalla (HE-14-HU01).
+    expect(
+      screen.getByText(
+        'El agente de IA necesita conexión a internet. Podrás conversar con él cuando te reconectes.',
+      ),
+    ).toBeTruthy();
+    expect(campo().disabled).toBe(true);
+    expect(enviar().disabled).toBe(true);
+  });
+});
