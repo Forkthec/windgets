@@ -1184,3 +1184,26 @@ describe('HE-02-HU12 · Aplicar al escritorio los cambios de la vista previa', (
     await aplicarSinGuardarTrasCambiar();
   });
 });
+
+describe('HE-15-HU04 · Personalización desde otro computador', () => {
+  it('HE-15-HU04-CA08 · Cambios sin guardar al recibir otra personalización', async () => {
+    const nucleo = await abrir(true);
+    // ET11, ET12: el escritorio aplica la recibida (EV-11 remoto) y la vista previa conserva sus cambios.
+    nucleo.emitir('applied_theme_changed', { theme_id: 't1', origin: 'remote', has_unsaved_draft: true });
+    expect(
+      await screen.findByText(
+        'Se aplicó una personalización más reciente desde otro computador. Tus cambios sin guardar se conservan.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('sin cambios sin guardar no muestra el aviso', async () => {
+    const nucleo = await abrir();
+    nucleo.emitir('applied_theme_changed', { theme_id: 't1', origin: 'remote', has_unsaved_draft: false });
+    expect(
+      screen.queryByText(
+        'Se aplicó una personalización más reciente desde otro computador. Tus cambios sin guardar se conservan.',
+      ),
+    ).toBeNull();
+  });
+});

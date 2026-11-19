@@ -61,6 +61,8 @@ pub struct Nucleo {
     pub ciclo: tokio::sync::Mutex<()>,
     /// El registro de Windows para el inicio automático (INT-08).
     pub arranque: Box<dyn crate::integracion_con_el_sistema::inicio_automatico::RegistroDeArranque>,
+    /// La conversación con Windi, en memoria mientras la aplicación está abierta (HE-14-HU01-ET14).
+    pub windi: crate::servicio_de_windi::ServicioDeWindi,
 }
 
 impl Nucleo {
@@ -80,6 +82,7 @@ impl Nucleo {
             ciclo: tokio::sync::Mutex::new(()),
             arranque:
                 crate::integracion_con_el_sistema::inicio_automatico::registro_de_la_aplicacion(),
+            windi: crate::servicio_de_windi::ServicioDeWindi::nuevo(),
         }
     }
 }
@@ -162,6 +165,7 @@ pub fn sincronizar(app: AppHandle) {
         // `None` al abrir la aplicación: cuenta como reconexión para la primera consulta (datos.md, Modelo · 6).
         let mut en_linea_antes: Option<bool> = None;
         let mut ultima_consulta = 0_i64;
+        let mut vuelta_anterior: Option<i64> = None;
         loop {
             std::thread::sleep(REVISION_DE_LA_COLA);
             let nucleo = app.state::<Nucleo>();
@@ -176,6 +180,11 @@ pub fn sincronizar(app: AppHandle) {
             let base = nucleo.planificador.base();
             let cliente = nucleo.sesion.auth();
             let ahora = chrono::Utc::now().timestamp_millis();
+            // CA07: al reanudar, una sola consulta inmediata.
+            if se_reanudo(vuelta_anterior, ahora) {
+                ultima_consulta = 0;
+            }
+            vuelta_anterior = Some(ahora);
             let user_id = sesion.user_id.to_lowercase();
             let credenciales = motor_de_sincronizacion::Credenciales {
                 user_id: &user_id,
@@ -240,6 +249,7 @@ pub fn sincronizar(app: AppHandle) {
                     ultima_consulta = ahora;
                 }
                 avisar_ciclo(&app, &envio, &descarga, reconectado && hubo_pendientes);
+                avisar_personalizacion(&app, &descarga);
             }
             if let Ok(estado) =
                 tauri::async_runtime::block_on(motor_de_sincronizacion::estado(base))
@@ -254,6 +264,82 @@ pub fn sincronizar(app: AppHandle) {
 
 /// Consulta los cambios de otros computadores cada 60 s (datos.md, Modelo · 6).
 const CONSULTA_PERIODICA_MS: i64 = 60_000;
+
+/// HE-15-HU04-CA06, CA07: el ciclo de sincronización da una vuelta por segundo. Si entre dos vueltas pasaron más de
+/// 30 s, el computador estuvo suspendido (los hilos no corren mientras tanto, así que no se consultó la nube) y al
+/// reanudar se hace una sola consulta inmediata (ET07, ET08). DUDA: HE-15-HU04 la sesión de Windows bloqueada no se
+/// detecta sin registrarse a las notificaciones de sesión; se trata como en uso.
+pub const REPOSO_MS: i64 = 30_000;
+
+/// ¿Se reanudó el computador entre la vuelta anterior y esta?
+pub fn se_reanudo(vuelta_anterior: Option<i64>, ahora: i64) -> bool {
+    vuelta_anterior.is_some_and(|a| ahora - a > REPOSO_MS)
+}
+
+/// HE-15-HU04-ET01, ET02: tras descargar cambios de personalización de otro computador, avisa a la capa y a las
+/// pantallas: EV-10 (temas), EV-11 (tema aplicado, con `has_unsaved_draft` para el aviso de CA08), EV-12 y EV-13
+/// (widgets y su distribución). La capa vuelve a pintarse en el siguiente ciclo, dentro del minuto (ET01).
+fn avisar_personalizacion(app: &AppHandle, descarga: &motor_de_sincronizacion::Ciclo) {
+    let de = |tipo: &str| -> Vec<crate::tipos::Uuid> {
+        descarga
+            .cambiadas
+            .iter()
+            .filter(|(t, _, _)| t == tipo)
+            .map(|(_, id, _)| crate::tipos::Uuid(id.clone()))
+            .collect()
+    };
+    let temas = de("theme");
+    if !temas.is_empty() {
+        let _ = app.emit(
+            "themes_changed",
+            EntityChange {
+                ids: temas,
+                op: ChangeOp::Upsert,
+                origin: OriginKind::Remote,
+            },
+        );
+    }
+    let nucleo = app.state::<Nucleo>();
+    let user_id = usuario(&nucleo).unwrap_or_default();
+    let tema_aplicado = tauri::async_runtime::block_on(
+        crate::servicio_de_personalizacion_y_configuracion::ServicioDePersonalizacion::id_del_tema(
+            nucleo.planificador.base(),
+            &user_id,
+        ),
+    )
+    .ok()
+    .flatten()
+    .map_or_else(|| crate::tipos::Uuid(String::new()), crate::tipos::Uuid);
+    if !de("applied_theme").is_empty() {
+        let _ = app.emit(
+            "applied_theme_changed",
+            crate::tipos::EventMapAppliedThemeChanged {
+                theme_id: tema_aplicado.clone(),
+                origin: OriginKind::Remote,
+                has_unsaved_draft: nucleo.personalizacion.hay_cambios_sin_guardar(),
+            },
+        );
+    }
+    let widgets: Vec<crate::tipos::Uuid> =
+        de("widget").into_iter().chain(de("theme_widget")).collect();
+    if !widgets.is_empty() {
+        let _ = app.emit(
+            "widgets_changed",
+            crate::tipos::EventMapWidgetsChanged {
+                widget_ids: widgets,
+                op: ChangeOp::Upsert,
+                origin: OriginKind::Remote,
+            },
+        );
+        let _ = app.emit(
+            "layout_changed",
+            crate::tipos::EventMapLayoutChanged {
+                theme_id: tema_aplicado,
+                origin: OriginKind::Remote,
+            },
+        );
+    }
+}
 
 /// EV-05 `sync_completed`, EV-06 `sync_conflicts_resolved` y los cambios de entidades que recibió el computador
 /// (EV-07 a EV-09, `origin: 'remote'`), para que las pantallas vuelvan a leer.
@@ -2040,6 +2126,7 @@ pub async fn auth_sign_out(
             .await
     };
     nucleo.personalizacion.olvidar_borrador();
+    nucleo.windi.olvidar();
     avisar_wallpaper(&app).await;
     let _ = app.emit(
         "session_changed",
@@ -2279,6 +2366,137 @@ pub async fn layout_edit_cancel(
     }))
 }
 
+/// IPC-WIN-01 `windi_get_conversation` (HE-14-HU01): el historial de la sesión, con el saludo la primera vez
+/// (ET07, ET08), y si hay conexión para conversar (ET12).
+#[tauri::command]
+pub fn windi_get_conversation(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> IpcResult<crate::tipos::WindiConversation> {
+    let _ = params;
+    let alias = nucleo
+        .sesion
+        .sesion_guardada()
+        .map(|s| s.alias)
+        .unwrap_or_default();
+    let ahora = chrono::Utc::now().timestamp_millis();
+    correcto(
+        nucleo
+            .windi
+            .conversacion(&alias, nucleo.sesion.auth().en_linea(), ahora),
+    )
+}
+
+/// IPC-WIN-02 `windi_send_message` (HE-14-HU01): envía el mensaje a `windi-chat` (EF-01) con el contexto mínimo y
+/// espera la respuesta como máximo 15 s (RNF-11).
+#[tauri::command]
+pub async fn windi_send_message(
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::WindiSendMessageParams,
+) -> Result<IpcResult<crate::tipos::WindiSendMessageResult>, ()> {
+    let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+        return Ok(leido(Err(crate::servicio_del_planificador::inesperado())));
+    };
+    let user_id = sesion.user_id.to_lowercase();
+    let ahora = chrono::Local::now();
+    let contexto = match crate::servicio_de_windi::contexto(
+        &nucleo.planificador,
+        &user_id,
+        &sesion.alias,
+        ahora.date_naive(),
+        u8::try_from(chrono::Timelike::hour(&ahora)).unwrap_or(0),
+        &params.message,
+    )
+    .await
+    {
+        Ok(contexto) => contexto,
+        Err(e) => return Ok(leido(Err(e))),
+    };
+    let cliente = nucleo.sesion.auth();
+    let manejador = crate::servicio_de_windi::manejador::ManejadorDelPlanificador {
+        planificador: &nucleo.planificador,
+        user_id: &user_id,
+        alias: &sesion.alias,
+    };
+    Ok(leido(
+        nucleo
+            .windi
+            .enviar(
+                cliente,
+                &manejador,
+                &sesion.access_token,
+                &params.message,
+                contexto,
+                cliente.en_linea(),
+                chrono::Utc::now().timestamp_millis(),
+            )
+            .await,
+    ))
+}
+
+/// IPC-WIN-03 `windi_confirm_proposal` (HE-14-HU03): antes de aplicar, una consulta inmediata a la nube trae los
+/// cambios de otros computadores (ET05; D-047); sin conexión no aplica nada (ET07). Avisa con EV-07 si aplicó.
+#[tauri::command]
+pub async fn windi_confirm_proposal(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::WindiConfirmProposalParams,
+) -> Result<IpcResult<crate::tipos::WindiConfirmProposalResult>, ()> {
+    let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+        return Ok(leido(Err(crate::servicio_del_planificador::inesperado())));
+    };
+    let user_id = sesion.user_id.to_lowercase();
+    let cliente = nucleo.sesion.auth();
+    let en_linea = {
+        let _ciclo = nucleo.ciclo.lock().await;
+        let credenciales = motor_de_sincronizacion::Credenciales {
+            user_id: &user_id,
+            token: &sesion.access_token,
+        };
+        let _ =
+            motor_de_sincronizacion::descargar(nucleo.planificador.base(), cliente, &credenciales)
+                .await;
+        cliente.comprobar_conexion().await
+    };
+    let manejador = crate::servicio_de_windi::manejador::ManejadorDelPlanificador {
+        planificador: &nucleo.planificador,
+        user_id: &user_id,
+        alias: &sesion.alias,
+    };
+    let r = nucleo
+        .windi
+        .confirmar(
+            &manejador,
+            &params.proposal_id,
+            en_linea,
+            chrono::Utc::now().timestamp_millis(),
+        )
+        .await;
+    if matches!(&r, Ok(c) if c.outcome == crate::tipos::WindiConfirmProposalResultOutcome::Applied)
+    {
+        avisar_tarjetas(&app, Vec::new(), ChangeOp::Upsert);
+    }
+    Ok(leido(r))
+}
+
+/// IPC-WIN-04 `windi_reject_proposal` (HE-14-HU03): no aplica cambios.
+#[tauri::command]
+pub fn windi_reject_proposal(
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::WindiRejectProposalParams,
+) -> IpcResult<crate::tipos::WindiRejectProposalResult> {
+    match nucleo
+        .windi
+        .rechazar(&params.proposal_id, chrono::Utc::now().timestamp_millis())
+    {
+        Ok(r) => correcto(r),
+        Err(error) => IpcResult::Err(IpcErr {
+            ok: false.into(),
+            error,
+        }),
+    }
+}
+
 /// IPC-CARD-12 `calendar_get_month` (HE-10-HU01): los días del mes con los títulos de sus tarjetas.
 #[tauri::command]
 pub async fn calendar_get_month(
@@ -2357,4 +2575,23 @@ pub async fn card_unassign_time_block(
         avisar_tarjetas(&app, vec![quitada.valor.id.clone()], ChangeOp::Upsert);
     }
     Ok(con_mensaje(r))
+}
+
+#[cfg(test)]
+mod pruebas_de_la_personalizacion_sincronizada {
+    use super::*;
+
+    #[test]
+    fn ca_he_15_hu04_ca06() {
+        // HE-15-HU04-CA06 · Entre vueltas seguidas (1 s) no hay reposo: la consulta sigue cada 60 s (ET05, ET07).
+        assert!(!se_reanudo(None, 1_000));
+        assert!(!se_reanudo(Some(1_000), 2_000));
+        assert!(!se_reanudo(Some(1_000), 1_000 + REPOSO_MS));
+    }
+
+    #[test]
+    fn ca_he_15_hu04_ca07() {
+        // HE-15-HU04-CA07 · Tras más de 30 s sin vueltas (suspendido), una consulta inmediata (ET08).
+        assert!(se_reanudo(Some(1_000), 1_001 + REPOSO_MS));
+    }
 }

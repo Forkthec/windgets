@@ -857,6 +857,7 @@ impl ServicioDePersonalizacion {
 }
 
 pub mod agregar;
+pub mod ajuste;
 mod aplicar;
 pub mod distribucion;
 mod eliminar_tema;
@@ -895,6 +896,8 @@ mod pruebas_de_guardado;
 mod pruebas_de_guardar_como;
 #[cfg(test)]
 mod pruebas_de_imagenes;
+#[cfg(test)]
+mod pruebas_de_personalizacion_sincronizada;
 #[cfg(test)]
 mod pruebas_de_plantillas;
 #[cfg(test)]
