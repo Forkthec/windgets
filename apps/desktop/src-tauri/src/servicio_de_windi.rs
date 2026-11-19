@@ -480,13 +480,18 @@ pub async fn contexto<C: Calendario>(
                 name: e.name,
             })
             .collect(),
-        // DUDA: HE-14-HU05 EF-01 dice «solo las necesarias para la pregunta» sin definir cuáles. Valor usado: las
-        // tarjetas cuyo título comparte una palabra de 3 letras o más con el mensaje, hasta 50 (docs/DUDAS.md).
+        // DUDA: HE-14-HU05 EF-01 dice «solo las necesarias para la pregunta» sin definir cuáles; HE-14-HU09 pide
+        // contar tarjetas por estado, fecha, columna, etiqueta o prioridad igual que las vistas. Valor usado:
+        // primero las tarjetas cuyo título comparte una palabra de 3 letras o más con el mensaje y después las demás,
+        // hasta 200 (docs/DUDAS.md).
         cards: {
             let buscadas = palabras(mensaje);
+            let relacionada =
+                |t: &&&crate::tipos::Card| palabras(&t.title).iter().any(|p| buscadas.contains(p));
             tarjetas
                 .iter()
-                .filter(|t| palabras(&t.title).iter().any(|p| buscadas.contains(p)))
+                .filter(relacionada)
+                .chain(tarjetas.iter().filter(|t| !relacionada(t)))
                 .take(TARJETAS_EN_EL_CONTEXTO)
                 .map(|t| crate::tipos::WindiChatContextCard {
                     id: t.id.clone(),
@@ -508,7 +513,7 @@ pub async fn contexto<C: Calendario>(
 }
 
 /// Cuántas tarjetas van como máximo en el contexto de `windi-chat`.
-const TARJETAS_EN_EL_CONTEXTO: usize = 50;
+const TARJETAS_EN_EL_CONTEXTO: usize = 200;
 
 /// Las palabras de 3 letras o más de un texto, en minúsculas y sin tildes, para buscar tarjetas por su título.
 fn palabras(texto: &str) -> Vec<String> {
