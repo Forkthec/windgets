@@ -19,6 +19,8 @@ pub const CARRUSEL_MAX: usize = 10;
 pub const INTERVALO_MIN: i64 = 3;
 pub const INTERVALO_MAX: i64 = 60;
 pub const INTERVALO_POR_DEFECTO: i64 = 5;
+/// HE-04-HU10-ET02: el texto del widget Texto tiene de 1 a 200 caracteres.
+pub const TEXTO_MAX: usize = 200;
 /// Paso con que se recorre el escritorio para buscar una posición libre.
 const PASO: i64 = 20;
 
@@ -383,6 +385,47 @@ impl ServicioDePersonalizacion {
             user_id,
             "animation",
             &[("animation_id", Value::from(animation_id))],
+            ahora_ms,
+        )
+        .await
+    }
+
+    /// HE-04-HU10-ET02, ET03, ET05: el texto, sin espacios al inicio ni al final, de 1 a 200 caracteres.
+    pub fn validar_texto(texto: &str) -> Result<String, AppError> {
+        let texto = texto.trim();
+        if texto.chars().count() > TEXTO_MAX {
+            return Err(error(
+                ErrorCode::TextTooLong,
+                messages::TEXTO_MUY_LARGO,
+                Some("text"),
+            ));
+        }
+        if texto.is_empty() {
+            // La vista deshabilita «Agregar» con el texto vacío (CA02).
+            return Err(error(
+                ErrorCode::NameRequired,
+                messages::CAMPO_OBLIGATORIO,
+                Some("text"),
+            ));
+        }
+        Ok(texto.to_string())
+    }
+
+    /// HE-04-HU10: agrega el widget Texto, de 320 × 160 en la primera posición libre (ET06). No tiene fuente ni
+    /// tamaño propios: usa la tipografía y el color del texto del tema (ET04; D-041).
+    pub async fn agregar_texto(
+        &self,
+        base: &BaseLocal,
+        user_id: &str,
+        texto: &str,
+        ahora_ms: i64,
+    ) -> Result<WidgetItem, AppError> {
+        let texto = Self::validar_texto(texto)?;
+        self.insertar_widget(
+            base,
+            user_id,
+            "text",
+            &[("text_content", Value::from(texto))],
             ahora_ms,
         )
         .await

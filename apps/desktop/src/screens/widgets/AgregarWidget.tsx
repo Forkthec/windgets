@@ -4,6 +4,7 @@ import { AgregarAnimacion } from './AgregarAnimacion';
 import { AgregarCarrusel } from './AgregarCarrusel';
 import { AgregarImagenEstatica } from './AgregarImagenEstatica';
 import { AgregarSinDatos } from './AgregarSinDatos';
+import { AgregarTexto } from './AgregarTexto';
 import { EncabezadoDeRuta } from '@/reglas/ruta';
 import type { AddableWidgetType, WidgetCatalog, WidgetCatalogEntry } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
@@ -69,6 +70,9 @@ export function AgregarWidget({ alRegresar }: AgregarWidgetProps) {
 
   if (elegido === 'weather') {
     return <AgregarClima alRegresar={() => setElegido(null)} alIrAWidgets={alRegresar} />;
+  }
+  if (elegido === 'text') {
+    return <AgregarTexto alRegresar={() => setElegido(null)} alIrAWidgets={alRegresar} />;
   }
   if (elegido === 'animation') {
     return <AgregarAnimacion alRegresar={() => setElegido(null)} alIrAWidgets={alRegresar} />;

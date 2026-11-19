@@ -292,3 +292,48 @@ fn ca_he_04_hu09_ca01() {
     assert_eq!(rectangulo(&base, &w.widget_id.0), (1400, 0, 320, 180));
     assert!(bloquear(servicio.agregar_animacion(&base, USUARIO, "no-existe", AHORA_MS)).is_err());
 }
+
+// HE-04-HU10 · Agregar el widget Texto.
+
+#[test]
+fn ca_he_04_hu10_ca01() {
+    // HE-04-HU10-CA01 · «Estudiar redes a las 6»: activo, 320 × 160 en la primera posición libre (ET02, ET06), sin
+    // fuente ni tamaño propios (ET04: la configuración solo trae el texto).
+    let (base, servicio) = con_catalogo();
+    let w = bloquear(servicio.agregar_texto(&base, USUARIO, " Estudiar redes a las 6 ", AHORA_MS))
+        .unwrap();
+    assert!(w.is_active);
+    assert_eq!(
+        w.distinguishing_value.as_deref(),
+        Some("Estudiar redes a las 6")
+    );
+    assert_eq!(
+        w.config,
+        WidgetConfig::TextConfig(crate::tipos::TextConfig {
+            text: "Estudiar redes a las 6".into()
+        })
+    );
+    assert_eq!(rectangulo(&base, &w.widget_id.0), (1400, 0, 320, 160));
+}
+
+#[test]
+fn ca_he_04_hu10_ca02() {
+    // HE-04-HU10-CA02 · Vacío o con solo espacios: no se agrega (la vista deshabilita «Agregar», ET03).
+    let (base, servicio) = con_catalogo();
+    for texto in ["", "   "] {
+        assert!(bloquear(servicio.agregar_texto(&base, USUARIO, texto, AHORA_MS)).is_err());
+    }
+    assert_eq!(lista(&base, &servicio).len(), 4);
+}
+
+#[test]
+fn ca_he_04_hu10_ca03() {
+    // HE-04-HU10-CA03 · 201 caracteres: mensaje en el campo Texto (ET05); 200 sí.
+    let (base, servicio) = con_catalogo();
+    let e =
+        bloquear(servicio.agregar_texto(&base, USUARIO, &"a".repeat(201), AHORA_MS)).unwrap_err();
+    assert_eq!(e.code, ErrorCode::TextTooLong);
+    assert_eq!(e.message, "El texto no puede superar los 200 caracteres.");
+    assert_eq!(e.field.as_deref(), Some("text"));
+    assert!(bloquear(servicio.agregar_texto(&base, USUARIO, &"a".repeat(200), AHORA_MS)).is_ok());
+}

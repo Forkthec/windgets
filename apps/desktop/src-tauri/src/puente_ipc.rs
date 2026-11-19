@@ -779,6 +779,12 @@ pub async fn widget_add(
                 )
                 .await
         }
+        (crate::tipos::AddableWidgetType::Text, crate::tipos::WidgetConfig::TextConfig(config)) => {
+            nucleo
+                .personalizacion
+                .agregar_texto(base, &user_id, &config.text, RelojDelSistema.ahora_ms())
+                .await
+        }
         (crate::tipos::AddableWidgetType::News, _) => {
             nucleo
                 .personalizacion

@@ -295,6 +295,8 @@ pub const CARRUSEL_DEMASIADAS_IMAGENES: &str = "Puedes agregar máximo 10 imáge
 pub const INTERVALO_FUERA_DE_RANGO: &str = "El intervalo debe estar entre 3 y 60 segundos.";
 /// HE-04-HU09-CA04, ET07: junto a la Animación en pausa, en la pantalla Widgets.
 pub const ANIMACION_EN_PAUSA: &str = "En pausa por alto consumo de recursos.";
+/// `text.too_long` (HE-04-HU10-CA03, ET05).
+pub const TEXTO_MUY_LARGO: &str = "El texto no puede superar los 200 caracteres.";
 pub const NOTICIAS_NO_DISPONIBLES: &str =
     "No pudimos cargar las noticias. Intenta de nuevo más tarde.";
 /// Aviso de un widget externo sin conexión (CA08, ET08; HE-15-HU02-CA06).
@@ -444,6 +446,7 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("CIUDAD_SIN_CONEXION", CIUDAD_SIN_CONEXION),
     ("CLIMA_NO_DISPONIBLE", CLIMA_NO_DISPONIBLE),
     ("NOTICIAS_NO_DISPONIBLES", NOTICIAS_NO_DISPONIBLES),
+    ("TEXTO_MUY_LARGO", TEXTO_MUY_LARGO),
     ("ANIMACION_EN_PAUSA", ANIMACION_EN_PAUSA),
     ("CARRUSEL_POCAS_IMAGENES", CARRUSEL_POCAS_IMAGENES),
     ("CARRUSEL_DEMASIADAS_IMAGENES", CARRUSEL_DEMASIADAS_IMAGENES),
