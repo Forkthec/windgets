@@ -817,6 +817,73 @@ pub async fn widget_add(
     Ok(leido(r))
 }
 
+/// IPC-WID-05 `widget_configure` (HE-04-HU12): cambia la ciudad del Clima (validada con `weather-geocode`) o el
+/// texto del Texto, avisa con EV-12 para que la capa lo muestre en 5 s o menos (ET03) y consulta el clima nuevo.
+#[tauri::command]
+pub async fn widget_configure(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::WidgetConfigureParams,
+) -> Result<IpcResult<crate::tipos::WidgetItem>, ()> {
+    use crate::servicio_de_personalizacion_y_configuracion::agregar::Configuracion;
+    let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+        return Ok(leido(Err(crate::servicio_del_planificador::inesperado())));
+    };
+    let user_id = sesion.user_id.to_lowercase();
+    let base = nucleo.planificador.base();
+    let ahora = RelojDelSistema.ahora_ms();
+    let r = match &params.config {
+        crate::tipos::WidgetConfigureParamsConfig::WeatherConfig(c) => {
+            match crate::servicio_de_clima_y_noticias::resolver_ciudad(
+                nucleo.sesion.auth(),
+                &sesion.access_token,
+                &c.city,
+            )
+            .await
+            {
+                Ok(ciudad) => {
+                    nucleo
+                        .personalizacion
+                        .configurar_widget(
+                            base,
+                            &user_id,
+                            &params.widget_id.0,
+                            Configuracion::Ciudad(&ciudad),
+                            ahora,
+                        )
+                        .await
+                }
+                Err(e) => Err(e),
+            }
+        }
+        crate::tipos::WidgetConfigureParamsConfig::TextConfig(c) => {
+            nucleo
+                .personalizacion
+                .configurar_widget(
+                    base,
+                    &user_id,
+                    &params.widget_id.0,
+                    Configuracion::Texto(&c.text),
+                    ahora,
+                )
+                .await
+        }
+    };
+    if let Ok(widget) = &r {
+        let _ = app.emit(
+            "widgets_changed",
+            crate::tipos::EventMapWidgetsChanged {
+                widget_ids: vec![widget.widget_id.clone()],
+                op: ChangeOp::Upsert,
+                origin: OriginKind::Local,
+            },
+        );
+        let manejador = app.clone();
+        tauri::async_runtime::spawn(async move { actualizar_widgets_de_clima(&manejador).await });
+    }
+    Ok(leido(r))
+}
+
 /// IPC-WID-07 `widget_get_data`: el último dato de un widget externo desde la caché local.
 #[tauri::command]
 pub async fn widget_get_data(

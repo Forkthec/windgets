@@ -12,6 +12,13 @@ use crate::tipos::{GeocodeResult, ImageRef, ImageSource, WidgetItem};
 
 /// El escritorio de referencia de las posiciones guardadas (píxeles lógicos, como la semilla).
 pub const REFERENCIA: (i64, i64) = (1920, 1080);
+/// El dato nuevo de un widget que se configura (HE-04-HU12).
+pub enum Configuracion<'a> {
+    /// La ciudad que reconoció el servicio de clima.
+    Ciudad(&'a GeocodeResult),
+    Texto(&'a str),
+}
+
 /// HE-04-HU08-ET02, ET05 (D-040): de 2 a 10 imágenes por carrusel.
 pub const CARRUSEL_MIN: usize = 2;
 pub const CARRUSEL_MAX: usize = 10;
@@ -456,6 +463,98 @@ impl ServicioDePersonalizacion {
         }
         self.insertar_widget(base, user_id, "music_player", &[], ahora_ms)
             .await
+    }
+
+    /// IPC-WID-05 `widget_configure` (HE-04-HU12): cambia la ciudad del Clima o el texto del Texto con las mismas
+    /// reglas que al agregarlos (ET02, ET04). La ciudad no se repite en otro Clima (CA05); el propio no cuenta.
+    pub async fn configurar_widget(
+        &self,
+        base: &BaseLocal,
+        user_id: &str,
+        widget_id: &str,
+        cambio: Configuracion<'_>,
+        ahora_ms: i64,
+    ) -> Result<WidgetItem, AppError> {
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let tipo: String =
+            sqlx::query_scalar("SELECT type FROM widget WHERE id = ? AND user_id = ?")
+                .bind(widget_id)
+                .bind(user_id)
+                .fetch_optional(pool)
+                .await
+                .map_err(de_sqlx)?
+                .ok_or_else(|| error(ErrorCode::WidgetNotFound, "", None))?;
+        let valores: Vec<(&str, Value)> = match (tipo.as_str(), cambio) {
+            ("weather", Configuracion::Ciudad(ciudad)) => {
+                let otros: Vec<(String, String)> = sqlx::query_as(
+                    "SELECT weather_geo_id, weather_city FROM widget \
+                     WHERE user_id = ? AND type = 'weather' AND id <> ?",
+                )
+                .bind(user_id)
+                .bind(widget_id)
+                .fetch_all(pool)
+                .await
+                .map_err(de_sqlx)?;
+                let nombre = ciudad.name.trim();
+                if otros.iter().any(|(geo, n)| {
+                    *geo == ciudad.geo_id || n.trim().to_lowercase() == nombre.to_lowercase()
+                }) {
+                    return Err(error(
+                        ErrorCode::CityDuplicate,
+                        messages::CIUDAD_DUPLICADA,
+                        Some("city"),
+                    ));
+                }
+                vec![
+                    ("weather_city", Value::from(nombre)),
+                    ("weather_geo_id", Value::from(ciudad.geo_id.as_str())),
+                    ("weather_latitude", Value::from(ciudad.latitude)),
+                    ("weather_longitude", Value::from(ciudad.longitude)),
+                ]
+            }
+            ("text", Configuracion::Texto(texto)) => {
+                vec![("text_content", Value::from(Self::validar_texto(texto)?))]
+            }
+            // Solo Clima y Texto tienen «Configurar» (ET01, `can_configure`).
+            _ => return Err(inesperado()),
+        };
+        let ahora = instante(ahora_ms).0;
+        let (fields, mods) = campos(&valores, &ahora);
+        let asignaciones: Vec<String> = valores.iter().map(|(c, _)| format!("{c} = ?")).collect();
+        let sql = format!(
+            "UPDATE widget SET {}, field_mods = json_patch(field_mods, ?) WHERE id = ? AND user_id = ?",
+            asignaciones.join(", ")
+        );
+        let mut tx = pool.begin().await.map_err(de_sqlx)?;
+        let mut consulta = sqlx::query(&sql);
+        for (_, valor) in &valores {
+            consulta = match valor {
+                Value::Number(n) => consulta.bind(n.as_f64()),
+                otro => consulta.bind(otro.as_str().map(str::to_string)),
+            };
+        }
+        consulta
+            .bind(mods.to_string())
+            .bind(widget_id)
+            .bind(user_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(de_sqlx)?;
+        // El clima guardado era de la ciudad anterior: se consulta de nuevo (CA01).
+        sqlx::query("DELETE FROM external_widget_cache WHERE widget_id = ?")
+            .bind(widget_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(de_sqlx)?;
+        encolar_cambio(&mut tx, "widget", widget_id, "upsert", &fields, &ahora)
+            .await
+            .map_err(de_sqlx)?;
+        tx.commit().await.map_err(de_sqlx)?;
+        self.widgets(base, user_id)
+            .await?
+            .into_iter()
+            .find(|w| w.widget_id.0 == widget_id)
+            .ok_or_else(inesperado)
     }
 
     /// HE-04-HU05: agrega un widget Clima para la ciudad que reconoció el servicio de clima. Un widget por ciudad

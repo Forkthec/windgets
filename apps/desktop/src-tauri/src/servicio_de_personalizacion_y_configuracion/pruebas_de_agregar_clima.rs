@@ -483,3 +483,118 @@ fn ca_he_04_hu06_ca04() {
         cada
     ));
 }
+
+// HE-04-HU12 · Configurar un widget agregado (Clima y Texto).
+
+fn configurar_ciudad(
+    base: &BaseLocal,
+    servicio: &ServicioDePersonalizacion,
+    nube: &ClimaSimulado,
+    widget_id: &str,
+    nombre: &str,
+) -> Result<crate::tipos::WidgetItem, AppError> {
+    bloquear(async {
+        let c = resolver_ciudad(nube, "jwt", nombre).await?;
+        servicio
+            .configurar_widget(
+                base,
+                USUARIO,
+                widget_id,
+                super::agregar::Configuracion::Ciudad(&c),
+                AHORA_MS,
+            )
+            .await
+    })
+}
+
+#[test]
+fn ca_he_04_hu12_ca01() {
+    // HE-04-HU12-CA01 · Cambiar la ciudad: la lista dice «Cali» y el clima guardado de «Popayán» se descarta para
+    // consultar el de «Cali» (ET01, ET02).
+    let (base, servicio) = con_widgets_por_defecto();
+    let nube = ClimaSimulado::nuevo();
+    let w = agregar(&base, &servicio, &nube, "Popayán").unwrap();
+    assert!(w.can_configure);
+    bloquear(actualizar_clima(
+        &base,
+        &nube,
+        "jwt",
+        &de_clima(&base, &w.widget_id.0),
+        AHORA_MS,
+    ))
+    .unwrap();
+    let c = configurar_ciudad(&base, &servicio, &nube, &w.widget_id.0, "Cali").unwrap();
+    assert_eq!(c.distinguishing_value.as_deref(), Some("Cali"));
+    assert_eq!(de_clima(&base, &w.widget_id.0).2, "3687925");
+    assert!(
+        bloquear(clima::datos(&base, &w.widget_id.0))
+            .unwrap()
+            .payload
+            .is_none()
+    );
+}
+
+#[test]
+fn ca_he_04_hu12_ca02() {
+    // HE-04-HU12-CA02 · Cambiar el texto (ET04: de 1 a 200 caracteres).
+    let (base, servicio) = con_widgets_por_defecto();
+    let w = bloquear(servicio.agregar_texto(&base, USUARIO, "Estudiar", AHORA_MS)).unwrap();
+    let c = bloquear(servicio.configurar_widget(
+        &base,
+        USUARIO,
+        &w.widget_id.0,
+        super::agregar::Configuracion::Texto(" Repasar simulación "),
+        AHORA_MS,
+    ))
+    .unwrap();
+    assert_eq!(
+        c.distinguishing_value.as_deref(),
+        Some("Repasar simulación")
+    );
+    let largo = bloquear(servicio.configurar_widget(
+        &base,
+        USUARIO,
+        &w.widget_id.0,
+        super::agregar::Configuracion::Texto(&"a".repeat(201)),
+        AHORA_MS,
+    ))
+    .unwrap_err();
+    assert_eq!(largo.code, ErrorCode::TextTooLong);
+}
+
+#[test]
+fn ca_he_04_hu12_ca03() {
+    // HE-04-HU12-CA03 · Ciudad vacía: no cambia el widget (la vista deshabilita «Guardar»).
+    let (base, servicio) = con_widgets_por_defecto();
+    let nube = ClimaSimulado::nuevo();
+    let w = agregar(&base, &servicio, &nube, "Popayán").unwrap();
+    assert!(configurar_ciudad(&base, &servicio, &nube, &w.widget_id.0, "  ").is_err());
+    assert_eq!(de_clima(&base, &w.widget_id.0).1, "Popayán");
+}
+
+#[test]
+fn ca_he_04_hu12_ca04() {
+    // HE-04-HU12-CA04 · Ciudad no encontrada: mensaje en el campo Ciudad y no cambia.
+    let (base, servicio) = con_widgets_por_defecto();
+    let nube = ClimaSimulado::nuevo();
+    let w = agregar(&base, &servicio, &nube, "Popayán").unwrap();
+    let e = configurar_ciudad(&base, &servicio, &nube, &w.widget_id.0, "Xyzzy").unwrap_err();
+    assert_eq!(
+        e.message,
+        "No encontramos esa ciudad. Revisa el nombre e intenta de nuevo."
+    );
+    assert_eq!(de_clima(&base, &w.widget_id.0).1, "Popayán");
+}
+
+#[test]
+fn ca_he_04_hu12_ca05() {
+    // HE-04-HU12-CA05 · La ciudad de otro Clima: duplicada; la del propio widget no cuenta.
+    let (base, servicio) = con_widgets_por_defecto();
+    let nube = ClimaSimulado::nuevo();
+    agregar(&base, &servicio, &nube, "Popayán").unwrap();
+    let cali = agregar(&base, &servicio, &nube, "Cali").unwrap();
+    let e = configurar_ciudad(&base, &servicio, &nube, &cali.widget_id.0, "Popayán").unwrap_err();
+    assert_eq!(e.code, ErrorCode::CityDuplicate);
+    assert_eq!(e.message, "Ya tienes un widget Clima para esa ciudad.");
+    assert!(configurar_ciudad(&base, &servicio, &nube, &cali.widget_id.0, "Cali").is_ok());
+}

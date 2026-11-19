@@ -631,3 +631,99 @@ describe('HE-04-HU11 · Agregar el widget Reproductor de música', () => {
     expect(llamadasA(nucleo, 'widget_add')).toEqual([{ type: 'music_player', config: {} }]);
   });
 });
+
+describe('HE-04-HU12 · Configurar un widget agregado', () => {
+  const clima = (ciudad: string, id = 'w-clima') =>
+    widget({
+      widget_id: id,
+      type: 'weather',
+      display_name: 'Clima',
+      distinguishing_value: ciudad,
+      can_configure: true,
+      config: { city: ciudad },
+    });
+  const texto = widget({
+    widget_id: 'w-texto',
+    type: 'text',
+    display_name: 'Texto',
+    distinguishing_value: 'Estudiar',
+    can_configure: true,
+    config: { text: 'Estudiar' },
+  });
+
+  /** Abre Widgets con la lista dada y selecciona «Configurar» en el widget indicado. */
+  async function configurar(lista: WidgetItem[], id: string, preparar?: (n: NucleoDelPlanificador) => void) {
+    const nucleo = await abrir(lista);
+    preparar?.(nucleo);
+    const f = fila(lista.findIndex((w) => w.widget_id === id));
+    fireEvent.click(within(f).getByRole('button', { name: 'Configurar' }));
+    const ventana = await screen.findByRole('dialog', { name: 'Configurar' });
+    return { nucleo, ventana };
+  }
+  const rechazo = (code: ErrorCode, message: string) => () => ({
+    ok: false as const,
+    error: { code, message, field: 'city' },
+  });
+
+  it('HE-04-HU12-CA01 · Cambiar la ciudad del widget Clima', async () => {
+    const { nucleo, ventana } = await configurar([...POR_DEFECTO, clima('Popayán')], 'w-clima', (n) =>
+      n.responder('widget_configure', () => ({ ok: true, value: clima('Cali') })),
+    );
+    // ET05: el campo Ciudad precargado, «Guardar» y «Cancelar».
+    const campo = within(ventana).getByLabelText('Ciudad') as HTMLInputElement;
+    expect(campo.value).toBe('Popayán');
+    expect(within(ventana).getByRole('button', { name: 'Cancelar' })).toBeTruthy();
+    fireEvent.change(campo, { target: { value: 'Cali' } });
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Guardar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Configurar' })).toBeNull());
+    expect(llamadasA(nucleo, 'widget_configure')).toEqual([
+      { widget_id: 'w-clima', config: { city: 'Cali' } },
+    ]);
+  });
+
+  it('HE-04-HU12-CA02 · Cambiar el texto del widget Texto', async () => {
+    const { nucleo, ventana } = await configurar([...POR_DEFECTO, texto], 'w-texto', (n) =>
+      n.responder('widget_configure', () => ({ ok: true, value: texto })),
+    );
+    const campo = within(ventana).getByLabelText('Texto') as HTMLTextAreaElement;
+    expect(campo.value).toBe('Estudiar');
+    fireEvent.change(campo, { target: { value: 'Repasar simulación' } });
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Guardar' }));
+    await waitFor(() =>
+      expect(llamadasA(nucleo, 'widget_configure')).toEqual([
+        { widget_id: 'w-texto', config: { text: 'Repasar simulación' } },
+      ]),
+    );
+  });
+
+  it('HE-04-HU12-CA03 · Ciudad vacía al cambiar la ciudad', async () => {
+    const { nucleo, ventana } = await configurar([...POR_DEFECTO, clima('Popayán')], 'w-clima');
+    fireEvent.change(within(ventana).getByLabelText('Ciudad'), { target: { value: '   ' } });
+    expect((within(ventana).getByRole('button', { name: 'Guardar' }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    expect(llamadasA(nucleo, 'widget_configure')).toEqual([]);
+  });
+
+  it('HE-04-HU12-CA04 · Ciudad no encontrada al cambiar la ciudad', async () => {
+    const t = 'No encontramos esa ciudad. Revisa el nombre e intenta de nuevo.';
+    const { ventana } = await configurar([...POR_DEFECTO, clima('Popayán')], 'w-clima', (n) =>
+      n.responder('widget_configure', rechazo('city.not_found', t)),
+    );
+    fireEvent.change(within(ventana).getByLabelText('Ciudad'), { target: { value: 'Xyzzy' } });
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Guardar' }));
+    expect(await within(ventana).findByText(t)).toBeTruthy();
+  });
+
+  it('HE-04-HU12-CA05 · Ciudad que ya tiene un widget Clima al cambiar la ciudad', async () => {
+    const t = 'Ya tienes un widget Clima para esa ciudad.';
+    const { ventana } = await configurar(
+      [...POR_DEFECTO, clima('Popayán', 'w-p'), clima('Cali')],
+      'w-clima',
+      (n) => n.responder('widget_configure', rechazo('city.duplicate', t)),
+    );
+    fireEvent.change(within(ventana).getByLabelText('Ciudad'), { target: { value: 'Popayán' } });
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Guardar' }));
+    expect(await within(ventana).findByText(t)).toBeTruthy();
+  });
+});

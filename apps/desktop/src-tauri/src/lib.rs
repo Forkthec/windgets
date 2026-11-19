@@ -81,6 +81,7 @@ pub fn run() {
             puente_ipc::theme_delete,
             puente_ipc::widget_add,
             puente_ipc::widget_get_data,
+            puente_ipc::widget_configure,
             puente_ipc::media_get_session,
             puente_ipc::media_toggle_play_pause,
             puente_ipc::media_skip_next,
