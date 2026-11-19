@@ -527,6 +527,78 @@ pub async fn label_create(
     Ok(con_mensaje(r))
 }
 
+/// IPC-LABEL-03 `label_update` (HE-08-HU03): edita el nombre y el color y avisa con EV-08 y EV-07 para que la
+/// lista y las tarjetas que la tienen muestren el cambio (ET05).
+#[tauri::command]
+pub async fn label_update(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::LabelUpdateParams,
+) -> Result<IpcResult<Label>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .actualizar_etiqueta(&user_id, params)
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if let Ok(editada) = &r {
+        avisar_etiquetas(&app, vec![editada.valor.id.clone()], ChangeOp::Upsert);
+        avisar_tarjetas(&app, Vec::new(), ChangeOp::Upsert);
+    }
+    Ok(con_mensaje(r))
+}
+
+/// IPC-LABEL-04 `label_get_delete_info` (HE-08-HU04).
+#[tauri::command]
+pub async fn label_get_delete_info(
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::CardIdParams,
+) -> Result<IpcResult<crate::tipos::LabelDeleteInfo>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .info_para_eliminar_etiqueta(&user_id, &params.id.0)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-LABEL-05 `label_delete` (HE-08-HU04): avisa con EV-08 (Reportes la quita del filtro) y EV-07 (las tarjetas
+/// que la tenían).
+#[tauri::command]
+pub async fn label_delete(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::CardIdParams,
+) -> Result<IpcResult<()>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .eliminar_etiqueta(&user_id, &params.id.0)
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    let r = match r {
+        Ok(hecho) => {
+            avisar_etiquetas(&app, vec![params.id.clone()], ChangeOp::Delete);
+            avisar_tarjetas(&app, hecho.valor, ChangeOp::Upsert);
+            Ok(crate::servicio_de_sesion::ConMensaje {
+                valor: (),
+                mensaje: hecho.mensaje,
+            })
+        }
+        Err(e) => Err(e),
+    };
+    Ok(con_mensaje(r))
+}
+
 /// IPC-CAT-01 `catalog_list`: los catálogos de colores, plantillas, imágenes, tipografías, paletas y animaciones.
 #[tauri::command]
 pub async fn catalog_list(

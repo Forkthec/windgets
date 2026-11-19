@@ -2029,6 +2029,7 @@ fn tarjeta_de_fila(
     })
 }
 
+mod etiquetas;
 mod reportes;
 pub use reportes::{agrupacion, resolver_rango};
 
