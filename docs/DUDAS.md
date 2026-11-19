@@ -198,3 +198,4 @@ Datos «NO DEFINIDO» y contradicciones encontradas al construir (AGENTS.md, «C
 - **HE-04-HU12** · La ventana emergente Formulario de widget no tiene título definido. Valor usado: «Configurar». Al guardar no hay mensaje de resultado definido: la ventana se cierra y la lista se actualiza (`FormularioDeWidget.tsx`).
 - **HE-08-HU04** · M-10 y M-14 no definen el título de la ventana. Valor usado: «Eliminar» (`Labels.tsx`).
 - **HE-09-HU06** · M-09 y M-13 no definen el título de la ventana. Valor usado: «Eliminar». Al eliminar una columna, las tarjetas que la recordaban como columna anterior (al pasar a Hecho) la olvidan (`previous_column_id` vacío) (`servicio_del_planificador/columnas.rs`).
+- **HE-09-HU07** · ET03 dice que la vista compacta muestra título, fecha límite y prioridad, y HE-07-HU01-ET15 pide mostrar el tipo en las tarjetas. Valor usado: el tipo se muestra en las dos vistas (`Kanban.tsx`).

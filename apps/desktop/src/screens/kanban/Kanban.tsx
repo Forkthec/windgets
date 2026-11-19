@@ -9,7 +9,15 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import type { BoardColumn, Card, CardMoveParams, Column, ScreenParams } from '@/types';
+import type {
+  BoardColumn,
+  Card,
+  CardMoveParams,
+  Column,
+  Label,
+  PreferenceBoardCardView,
+  ScreenParams,
+} from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
@@ -31,7 +39,13 @@ interface AccionesDelTablero {
   columnas: readonly Column[];
   alAbrir: (id: string) => void;
   alMover: (movimiento: CardMoveParams) => void;
+  /** HE-09-HU07: la vista de las tarjetas y las etiquetas para mostrar sus nombres en la vista expandida. */
+  vista: PreferenceBoardCardView;
+  etiquetas: readonly Label[];
 }
+
+/** HE-09-HU07-ET04: los primeros 200 caracteres de la descripción. */
+const DESCRIPCION_VISIBLE = 200;
 
 const ContextoDelTablero = createContext<AccionesDelTablero | null>(null);
 
@@ -46,7 +60,8 @@ function useTablero(): AccionesDelTablero {
  * Se arrastra a otra columna o a otra posición (HE-09-HU02-ET01) y tiene «Mover a» (ET10).
  */
 function Tarjeta({ tarjeta }: { tarjeta: Card }) {
-  const { columnas, alAbrir, alMover } = useTablero();
+  const { columnas, alAbrir, alMover, vista, etiquetas } = useTablero();
+  const expandida = vista === 'expanded';
   const arrastre = useDraggable({ id: tarjeta.id });
   const lugar: LugarDeSoltar = { columna: tarjeta.column_id, tarjeta: tarjeta.id };
   const soltar = useDroppable({ id: `tarjeta:${tarjeta.id}`, data: lugar });
@@ -73,7 +88,21 @@ function Tarjeta({ tarjeta }: { tarjeta: Card }) {
         {/* HE-09-HU01-ET06, ET07: «Vencida» solo fuera de la columna Hecho. */}
         {tarjeta.is_overdue && <span className="wg-indicador">Vencida</span>}
       </span>
+      {/* HE-09-HU07-ET04: en la vista expandida, la descripción (200 caracteres) y las etiquetas. */}
+      {expandida && tarjeta.description && (
+        <p className="wg-tarjeta__descripcion">
+          {[...tarjeta.description].slice(0, DESCRIPCION_VISIBLE).join('')}
+        </p>
+      )}
       {tarjeta.priority && <span>{NOMBRE_DE_PRIORIDAD[tarjeta.priority]}</span>}
+      {expandida && tarjeta.label_ids.length > 0 && (
+        <ul className="wg-fila wg-tarjeta__etiquetas" aria-label="Etiquetas">
+          {tarjeta.label_ids.map((id) => {
+            const e = etiquetas.find((x) => x.id === id);
+            return e ? <li key={id}>{e.name}</li> : null;
+          })}
+        </ul>
+      )}
       <MoverA
         columnas={columnas}
         actual={tarjeta.column_id}
@@ -151,6 +180,35 @@ export function Kanban() {
     const r = await invocar('card_list_board', {});
     if (r.ok) setColumnas(r.value.columns);
   }, [invocar]);
+
+  // HE-09-HU07: la vista guardada (compacta por defecto, ET02) y las etiquetas para la vista expandida.
+  const [vista, setVista] = useState<PreferenceBoardCardView>('compact');
+  const [etiquetas, setEtiquetas] = useState<Label[]>([]);
+  useEffect(() => {
+    let vigente = true;
+    void invocar('preference_get', {}).then((r) => {
+      if (vigente && r.ok) setVista(r.value.board_card_view);
+    });
+    const leerEtiquetas = () =>
+      void invocar('label_list', {}).then((r) => {
+        if (vigente && r.ok) setEtiquetas(r.value);
+      });
+    leerEtiquetas();
+    const dejarEtiquetas = escuchar('labels_changed', leerEtiquetas);
+    const dejarVista = escuchar('preference_changed', (c) => setVista(c.board_card_view));
+    return () => {
+      vigente = false;
+      dejarEtiquetas();
+      dejarVista();
+    };
+  }, [escuchar, invocar]);
+
+  // HE-09-HU07-CA01 a CA03: cambia de vista y la guarda.
+  const alternarVista = async () => {
+    const nueva: PreferenceBoardCardView = vista === 'compact' ? 'expanded' : 'compact';
+    setVista(nueva);
+    await invocar('preference_set', { board_card_view: nueva });
+  };
 
   // HE-09-HU06-CA01, CA03, CA07: M-09 sin tarjetas o M-13 con la cantidad y el nombre actual de Por hacer.
   const preguntarEliminar = async (columna: Column) => {
@@ -241,8 +299,10 @@ export function Kanban() {
       columnas: columnas?.map((c) => c.column) ?? [],
       alAbrir: abrirDetalle,
       alMover: (m) => void mover(m),
+      vista,
+      etiquetas,
     }),
-    [abrirDetalle, columnas, mover],
+    [abrirDetalle, columnas, etiquetas, mover, vista],
   );
 
   /** Columnas del tablero, contadas las tres por defecto (HE-09-HU03-ET07, D-167). */
@@ -263,7 +323,10 @@ export function Kanban() {
         >
           Nueva columna
         </Boton>
-        <Boton>Vista expandida</Boton>
+        {/* HE-09-HU07-ET01: el nombre de la vista a la que cambia. */}
+        <Boton onClick={() => void alternarVista()}>
+          {vista === 'compact' ? 'Vista expandida' : 'Vista compacta'}
+        </Boton>
       </div>
       {columnas && (
         <ContextoDelTablero.Provider value={acciones}>

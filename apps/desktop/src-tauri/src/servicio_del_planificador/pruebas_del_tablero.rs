@@ -653,3 +653,62 @@ fn ca_he_09_hu06_ca07() {
     let info = bloquear(servicio.info_para_eliminar_columna(USUARIO, &id)).unwrap();
     assert_eq!(info.destination_name, "Prioridades");
 }
+
+// HE-09-HU07 · Alternar entre la vista compacta y la vista expandida.
+
+#[test]
+fn ca_he_09_hu07_ca01() {
+    // HE-09-HU07-CA01 · Sin elegir, la vista es la compacta (ET02); al elegir la expandida se guarda.
+    use crate::tipos::PreferenceBoardCardView as Vista;
+    let servicio = con_semilla();
+    assert_eq!(
+        bloquear(servicio.preferencias(USUARIO))
+            .unwrap()
+            .board_card_view,
+        Vista::Compact
+    );
+    bloquear(servicio.guardar_vista(USUARIO, &Vista::Expanded)).unwrap();
+    assert_eq!(
+        bloquear(servicio.preferencias(USUARIO))
+            .unwrap()
+            .board_card_view,
+        Vista::Expanded
+    );
+}
+
+#[test]
+fn ca_he_09_hu07_ca02() {
+    // HE-09-HU07-CA02 · Volver a la compacta.
+    use crate::tipos::PreferenceBoardCardView as Vista;
+    let servicio = con_semilla();
+    bloquear(servicio.guardar_vista(USUARIO, &Vista::Expanded)).unwrap();
+    bloquear(servicio.guardar_vista(USUARIO, &Vista::Compact)).unwrap();
+    assert_eq!(
+        bloquear(servicio.preferencias(USUARIO))
+            .unwrap()
+            .board_card_view,
+        Vista::Compact
+    );
+}
+
+#[test]
+fn ca_he_09_hu07_ca03() {
+    // HE-09-HU07-CA03 · Se guarda en la base local (sobrevive al cierre) y se encola para sincronizar (ET05).
+    use crate::tipos::PreferenceBoardCardView as Vista;
+    let servicio = con_semilla();
+    bloquear(servicio.guardar_vista(USUARIO, &Vista::Expanded)).unwrap();
+    assert_eq!(
+        contar(
+            &servicio,
+            "SELECT COUNT(*) FROM user_preference WHERE board_card_view = 'expanded'"
+        ),
+        1
+    );
+    assert_eq!(
+        contar(
+            &servicio,
+            "SELECT COUNT(*) FROM pending_change WHERE entity_kind = 'user_preference'"
+        ),
+        1
+    );
+}

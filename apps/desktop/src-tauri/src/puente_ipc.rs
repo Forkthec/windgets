@@ -1141,6 +1141,54 @@ pub fn system_open_url(params: crate::tipos::SystemOpenUrlParams) -> IpcResult<(
     }
 }
 
+/// IPC-DESK-12 `preference_get` (HE-09-HU07): la vista de las tarjetas del tablero.
+#[tauri::command]
+pub async fn preference_get(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<crate::tipos::Preference>, ()> {
+    let _ = params;
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => nucleo.planificador.preferencias(&user_id).await,
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-DESK-13 `preference_set` (HE-09-HU07-CA03): guarda la vista y avisa con EV-26 `preference_changed`.
+#[tauri::command]
+pub async fn preference_set(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::Preference,
+) -> Result<IpcResult<()>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .guardar_vista(&user_id, &params.board_card_view)
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if r.is_ok() {
+        let _ = app.emit(
+            "preference_changed",
+            crate::tipos::EventMapPreferenceChanged {
+                board_card_view: match params.board_card_view {
+                    crate::tipos::PreferenceBoardCardView::Compact => {
+                        crate::tipos::EventMapPreferenceChangedBoardCardView::Compact
+                    }
+                    crate::tipos::PreferenceBoardCardView::Expanded => {
+                        crate::tipos::EventMapPreferenceChangedBoardCardView::Expanded
+                    }
+                },
+                origin: OriginKind::Local,
+            },
+        );
+    }
+    Ok(leido(r))
+}
+
 /// IPC-MED-01 `media_get_session` (HE-04-HU11): la sesión multimedia actual de Windows.
 #[tauri::command]
 pub fn media_get_session(params: NoParams) -> IpcResult<crate::tipos::MediaSession> {

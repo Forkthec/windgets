@@ -89,6 +89,8 @@ pub fn run() {
             puente_ipc::widget_configure,
             puente_ipc::media_get_session,
             puente_ipc::system_open_url,
+            puente_ipc::preference_get,
+            puente_ipc::preference_set,
             puente_ipc::media_toggle_play_pause,
             puente_ipc::media_skip_next,
             puente_ipc::media_skip_previous,
