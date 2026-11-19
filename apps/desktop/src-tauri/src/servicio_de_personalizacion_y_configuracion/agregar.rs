@@ -12,6 +12,13 @@ use crate::tipos::{GeocodeResult, ImageRef, ImageSource, WidgetItem};
 
 /// El escritorio de referencia de las posiciones guardadas (píxeles lógicos, como la semilla).
 pub const REFERENCIA: (i64, i64) = (1920, 1080);
+/// HE-04-HU08-ET02, ET05 (D-040): de 2 a 10 imágenes por carrusel.
+pub const CARRUSEL_MIN: usize = 2;
+pub const CARRUSEL_MAX: usize = 10;
+/// HE-04-HU08-ET04: el intervalo va de 3 a 60 segundos, 5 por defecto.
+pub const INTERVALO_MIN: i64 = 3;
+pub const INTERVALO_MAX: i64 = 60;
+pub const INTERVALO_POR_DEFECTO: i64 = 5;
 /// Paso con que se recorre el escritorio para buscar una posición libre.
 const PASO: i64 = 20;
 
@@ -245,6 +252,109 @@ impl ServicioDePersonalizacion {
         let columnas = Self::columnas_de_imagen(base, user_id, imagen).await?;
         self.insertar_widget(base, user_id, "static_image", &columnas, ahora_ms)
             .await
+    }
+
+    /// HE-04-HU08: agrega el Carrusel de imágenes con 2 a 10 imágenes, propias o del catálogo, en el orden elegido
+    /// (ET02, ET05), y un intervalo de 3 a 60 s, 5 por defecto (ET04). Mide 480 × 270 (ET08).
+    /// DUDA: HE-04-HU08 `interval_seconds` es opcional en IPC-WID-04 (5 por defecto), así que el Núcleo no
+    /// distingue el campo vacío (CA08, `interval.required`): lo valida la vista.
+    pub async fn agregar_carrusel(
+        &self,
+        base: &BaseLocal,
+        user_id: &str,
+        imagenes: &[ImageRef],
+        intervalo: Option<i64>,
+        ahora_ms: i64,
+    ) -> Result<WidgetItem, AppError> {
+        if imagenes.len() < CARRUSEL_MIN {
+            return Err(error(
+                ErrorCode::CarouselTooFew,
+                messages::CARRUSEL_POCAS_IMAGENES,
+                None,
+            ));
+        }
+        if imagenes.len() > CARRUSEL_MAX {
+            return Err(error(
+                ErrorCode::CarouselTooMany,
+                messages::CARRUSEL_DEMASIADAS_IMAGENES,
+                None,
+            ));
+        }
+        let intervalo = intervalo.unwrap_or(INTERVALO_POR_DEFECTO);
+        if !(INTERVALO_MIN..=INTERVALO_MAX).contains(&intervalo) {
+            return Err(error(
+                ErrorCode::IntervalOutOfRange,
+                messages::INTERVALO_FUERA_DE_RANGO,
+                Some("interval_seconds"),
+            ));
+        }
+        let mut elementos = Vec::with_capacity(imagenes.len());
+        for imagen in imagenes {
+            elementos.push(Self::columnas_de_imagen(base, user_id, imagen).await?);
+        }
+        let widget = self
+            .insertar_widget(
+                base,
+                user_id,
+                "image_carousel",
+                &[("carousel_interval_seconds", Value::from(intervalo))],
+                ahora_ms,
+            )
+            .await?;
+        let ahora = instante(ahora_ms).0;
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let mut tx = pool.begin().await.map_err(de_sqlx)?;
+        for (i, columnas) in elementos.iter().enumerate() {
+            let id = uuid::Uuid::new_v4().to_string();
+            // Las columnas de la imagen del widget, sin el prefijo `static_`.
+            let mut valores: Vec<(&str, Value)> = vec![
+                ("widget_id", Value::from(widget.widget_id.0.as_str())),
+                ("position", Value::from((i as f64 + 1.0) * 1024.0)),
+            ];
+            for (columna, valor) in columnas {
+                let columna = match *columna {
+                    "static_image_source" => "source",
+                    "static_catalog_image_id" => "catalog_image_id",
+                    _ => "uploaded_image_id",
+                };
+                valores.push((columna, valor.clone()));
+            }
+            let (fields, mods) = campos(&valores, &ahora);
+            let nombres: Vec<&str> = valores.iter().map(|(c, _)| *c).collect();
+            let sql = format!(
+                "INSERT INTO widget_carousel_item (id, user_id, created_at, field_mods, {}) VALUES (?, ?, ?, ?, {})",
+                nombres.join(", "),
+                vec!["?"; nombres.len()].join(", ")
+            );
+            let mut consulta = sqlx::query(&sql)
+                .bind(&id)
+                .bind(user_id)
+                .bind(&ahora)
+                .bind(mods.to_string());
+            for (_, valor) in &valores {
+                consulta = match valor {
+                    Value::Number(n) => consulta.bind(n.as_f64()),
+                    otro => consulta.bind(otro.as_str().map(str::to_string)),
+                };
+            }
+            consulta.execute(&mut *tx).await.map_err(de_sqlx)?;
+            encolar_cambio(
+                &mut tx,
+                "widget_carousel_item",
+                &id,
+                "upsert",
+                &fields,
+                &ahora,
+            )
+            .await
+            .map_err(de_sqlx)?;
+        }
+        tx.commit().await.map_err(de_sqlx)?;
+        self.widgets(base, user_id)
+            .await?
+            .into_iter()
+            .find(|w| w.widget_id == widget.widget_id)
+            .ok_or_else(inesperado)
     }
 
     /// HE-04-HU05: agrega un widget Clima para la ciudad que reconoció el servicio de clima. Un widget por ciudad

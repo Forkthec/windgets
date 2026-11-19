@@ -286,6 +286,13 @@ pub const CIUDAD_SIN_CONEXION: &str =
 /// Aviso del widget cuando el servicio de clima no responde (CA07, ET07).
 pub const CLIMA_NO_DISPONIBLE: &str = "No pudimos cargar el clima. Intenta de nuevo más tarde.";
 /// Aviso del widget cuando el servicio de noticias no responde (HE-04-HU06-CA03, ET05).
+// HE-04-HU08 · Agregar el widget Carrusel de imágenes (IPC-WID-04).
+/// `carousel.too_few` (CA03, ET07): texto de «Agregar» deshabilitada.
+pub const CARRUSEL_POCAS_IMAGENES: &str = "Selecciona al menos 2 imágenes para el carrusel.";
+/// `carousel.too_many` (CA04, ET06): texto de «Subir imagen» y «Catálogo de imágenes» deshabilitadas.
+pub const CARRUSEL_DEMASIADAS_IMAGENES: &str = "Puedes agregar máximo 10 imágenes al carrusel.";
+/// `interval.out_of_range` (CA07).
+pub const INTERVALO_FUERA_DE_RANGO: &str = "El intervalo debe estar entre 3 y 60 segundos.";
 pub const NOTICIAS_NO_DISPONIBLES: &str =
     "No pudimos cargar las noticias. Intenta de nuevo más tarde.";
 /// Aviso de un widget externo sin conexión (CA08, ET08; HE-15-HU02-CA06).
@@ -435,6 +442,9 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("CIUDAD_SIN_CONEXION", CIUDAD_SIN_CONEXION),
     ("CLIMA_NO_DISPONIBLE", CLIMA_NO_DISPONIBLE),
     ("NOTICIAS_NO_DISPONIBLES", NOTICIAS_NO_DISPONIBLES),
+    ("CARRUSEL_POCAS_IMAGENES", CARRUSEL_POCAS_IMAGENES),
+    ("CARRUSEL_DEMASIADAS_IMAGENES", CARRUSEL_DEMASIADAS_IMAGENES),
+    ("INTERVALO_FUERA_DE_RANGO", INTERVALO_FUERA_DE_RANGO),
     ("WIDGET_EXTERNO_SIN_CONEXION", WIDGET_EXTERNO_SIN_CONEXION),
     ("SESION_CERRADA", SESION_CERRADA),
     ("DESEAS_CERRAR_SESION", DESEAS_CERRAR_SESION),

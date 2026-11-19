@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AgregarClima } from './AgregarClima';
+import { AgregarCarrusel } from './AgregarCarrusel';
 import { AgregarImagenEstatica } from './AgregarImagenEstatica';
 import { AgregarSinDatos } from './AgregarSinDatos';
 import { EncabezadoDeRuta } from '@/reglas/ruta';
@@ -67,6 +68,9 @@ export function AgregarWidget({ alRegresar }: AgregarWidgetProps) {
 
   if (elegido === 'weather') {
     return <AgregarClima alRegresar={() => setElegido(null)} alIrAWidgets={alRegresar} />;
+  }
+  if (elegido === 'image_carousel') {
+    return <AgregarCarrusel alRegresar={() => setElegido(null)} alIrAWidgets={alRegresar} />;
   }
   if (elegido === 'static_image') {
     return <AgregarImagenEstatica alRegresar={() => setElegido(null)} alIrAWidgets={alRegresar} />;

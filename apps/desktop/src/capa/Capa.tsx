@@ -10,6 +10,7 @@ import { WidgetKanban } from './WidgetKanban';
 import { WidgetClima } from './WidgetClima';
 import { WidgetNoticias } from './WidgetNoticias';
 import { WidgetImagen } from './WidgetImagen';
+import { WidgetCarrusel } from './WidgetCarrusel';
 import { tokensDelTema } from '@/ui/tema/temaAplicado';
 import { aplicarTokens } from '@/ui/tema/tokens';
 import type {
@@ -177,6 +178,9 @@ export function Capa({
           )}
           {w.type === 'static_image' && (
             <WidgetImagen widgetId={w.widget_id} invocar={invocar} escuchar={escuchar} />
+          )}
+          {w.type === 'image_carousel' && (
+            <WidgetCarrusel widgetId={w.widget_id} invocar={invocar} escuchar={escuchar} />
           )}
         </section>
       ))}

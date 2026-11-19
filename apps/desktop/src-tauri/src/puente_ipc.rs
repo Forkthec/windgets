@@ -746,6 +746,21 @@ pub async fn widget_add(
                 )
                 .await
         }
+        (
+            crate::tipos::AddableWidgetType::ImageCarousel,
+            crate::tipos::WidgetConfig::CarouselConfig(config),
+        ) => {
+            nucleo
+                .personalizacion
+                .agregar_carrusel(
+                    base,
+                    &user_id,
+                    &config.items,
+                    config.interval_seconds,
+                    RelojDelSistema.ahora_ms(),
+                )
+                .await
+        }
         (crate::tipos::AddableWidgetType::News, _) => {
             nucleo
                 .personalizacion
