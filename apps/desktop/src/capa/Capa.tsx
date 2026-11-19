@@ -11,6 +11,7 @@ import { WidgetClima } from './WidgetClima';
 import { WidgetNoticias } from './WidgetNoticias';
 import { WidgetImagen } from './WidgetImagen';
 import { WidgetCarrusel } from './WidgetCarrusel';
+import { WidgetAnimacion } from './WidgetAnimacion';
 import { tokensDelTema } from '@/ui/tema/temaAplicado';
 import { aplicarTokens } from '@/ui/tema/tokens';
 import type {
@@ -181,6 +182,9 @@ export function Capa({
           )}
           {w.type === 'image_carousel' && (
             <WidgetCarrusel widgetId={w.widget_id} invocar={invocar} escuchar={escuchar} />
+          )}
+          {w.type === 'animation' && (
+            <WidgetAnimacion widgetId={w.widget_id} invocar={invocar} escuchar={escuchar} />
           )}
         </section>
       ))}

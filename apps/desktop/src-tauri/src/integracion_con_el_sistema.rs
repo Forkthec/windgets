@@ -3,7 +3,10 @@
 //! enlaces en el navegador.»
 
 pub mod area_de_notificacion;
+pub mod carga;
 pub mod inicio_automatico;
 #[cfg(windows)]
 mod registro;
+#[cfg(windows)]
+pub mod uso_de_cpu;
 pub mod ventana_de_edicion;

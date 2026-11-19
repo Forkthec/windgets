@@ -527,8 +527,7 @@ pub async fn label_create(
     Ok(con_mensaje(r))
 }
 
-/// IPC-CAT-01 `catalog_list`. Por ahora solo el catálogo de colores (HE-08-HU02-ET05). DUDA: HE-08-HU02 los
-/// demás catálogos llegan con los pasos del wallpaper y los temas; mientras tanto responden una lista vacía.
+/// IPC-CAT-01 `catalog_list`: los catálogos de colores, plantillas, imágenes, tipografías, paletas y animaciones.
 #[tauri::command]
 pub async fn catalog_list(
     nucleo: State<'_, Nucleo>,
@@ -560,7 +559,12 @@ pub async fn catalog_list(
                 .paletas(nucleo.planificador.base())
                 .await
         }
-        _ => Ok(Vec::new()),
+        CatalogKind::Animation => {
+            nucleo
+                .personalizacion
+                .animaciones(nucleo.planificador.base())
+                .await
+        }
     }))
 }
 
@@ -761,6 +765,20 @@ pub async fn widget_add(
                 )
                 .await
         }
+        (
+            crate::tipos::AddableWidgetType::Animation,
+            crate::tipos::WidgetConfig::AnimationConfig(config),
+        ) => {
+            nucleo
+                .personalizacion
+                .agregar_animacion(
+                    base,
+                    &user_id,
+                    &config.animation_id,
+                    RelojDelSistema.ahora_ms(),
+                )
+                .await
+        }
         (crate::tipos::AddableWidgetType::News, _) => {
             nucleo
                 .personalizacion
@@ -908,6 +926,56 @@ pub async fn actualizar_widgets_de_noticias(app: &AppHandle) {
             },
         );
     }
+}
+
+/// HE-04-HU09-CA04, CA05 (RNF-06): mide el uso de CPU cada segundo y pausa o reanuda las animaciones con EV-21
+/// `animation_pause_changed`. Solo en Windows: en otros sistemas no hay lectura y las animaciones no se pausan.
+pub fn vigilar_carga(app: AppHandle) {
+    #[cfg(windows)]
+    std::thread::spawn(move || {
+        use crate::integracion_con_el_sistema::{carga, uso_de_cpu};
+        let mut vigilante = carga::VigilanteDeCarga::default();
+        let mut antes = uso_de_cpu::tiempos();
+        loop {
+            std::thread::sleep(Duration::from_secs(1));
+            let ahora = uso_de_cpu::tiempos();
+            let (Some(a), Some(d)) = (antes, ahora) else {
+                antes = ahora;
+                continue;
+            };
+            antes = ahora;
+            let Some(en_pausa) =
+                vigilante.muestra(uso_de_cpu::uso(a, d), None, RelojDelSistema.ahora_ms())
+            else {
+                continue;
+            };
+            carga::EN_PAUSA.store(en_pausa, std::sync::atomic::Ordering::Relaxed);
+            let nucleo = app.state::<Nucleo>();
+            let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+                continue;
+            };
+            let user_id = sesion.user_id.to_lowercase();
+            let ids = tauri::async_runtime::block_on(
+                nucleo
+                    .personalizacion
+                    .widgets(nucleo.planificador.base(), &user_id),
+            )
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|w| w.r#type == crate::tipos::WidgetType::Animation)
+            .map(|w| w.widget_id)
+            .collect();
+            let _ = app.emit(
+                "animation_pause_changed",
+                crate::tipos::EventMapAnimationPauseChanged {
+                    widget_ids: ids,
+                    paused: en_pausa,
+                },
+            );
+        }
+    });
+    #[cfg(not(windows))]
+    let _ = app;
 }
 
 /// Revisa cada minuto qué widgets externos toca actualizar (HE-04-HU05-ET05, ET08).

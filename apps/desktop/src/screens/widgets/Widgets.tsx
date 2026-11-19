@@ -56,7 +56,13 @@ export function Widgets() {
   useEffect(() => {
     void leer();
     // EV-12: al activar, desactivar, agregar, configurar o eliminar un widget la lista vuelve a leer.
-    return escuchar('widgets_changed', () => void leer());
+    const dejarWidgets = escuchar('widgets_changed', () => void leer());
+    // HE-04-HU09-ET07: al pausar o reanudar una animación por alto consumo de recursos (EV-21).
+    const dejarPausa = escuchar('animation_pause_changed', () => void leer());
+    return () => {
+      dejarWidgets();
+      dejarPausa();
+    };
   }, [escuchar, leer]);
 
   // HE-05-HU04, HU05: al cerrar la pantalla de edición, el Núcleo vuelve a esta pantalla con «Cambios guardados.»
@@ -90,6 +96,7 @@ export function Widgets() {
               <span className="wg-lista__nombre">{w.display_name}</span>
               {w.distinguishing_value && <span>{w.distinguishing_value}</span>}
               <span>{tipoDeWidget(w)}</span>
+              {w.paused_by_load && <span>{textos.ANIMACION_EN_PAUSA}</span>}
               <Interruptor
                 etiqueta={w.is_active ? 'Activo' : 'Inactivo'}
                 activo={w.is_active}

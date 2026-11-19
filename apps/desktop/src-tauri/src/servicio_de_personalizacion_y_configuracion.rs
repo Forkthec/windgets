@@ -810,6 +810,41 @@ impl ServicioDePersonalizacion {
             .map_err(de_sqlx)
     }
 
+    /// IPC-CAT-01 `catalog_list` con `kind: 'animation'`: las animaciones activas del catálogo, con su miniatura,
+    /// su nombre y su formato (HE-04-HU09-ET01, ET02).
+    pub async fn animaciones(&self, base: &BaseLocal) -> Result<Vec<CatalogItem>, AppError> {
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let filas = sqlx::query(
+            "SELECT id, name, thumbnail_path, format FROM catalog_animation WHERE is_active = 1 \
+             ORDER BY sort_order, name",
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        filas
+            .iter()
+            .map(|f| {
+                let formato: String = f.try_get("format")?;
+                Ok(CatalogItem {
+                    id: f.try_get("id")?,
+                    name: f.try_get("name")?,
+                    thumbnail_url: f.try_get("thumbnail_path")?,
+                    is_cached: true,
+                    hex: None,
+                    color_primary: None,
+                    color_secondary: None,
+                    color_text: None,
+                    format: Some(if formato == "lottie" {
+                        crate::tipos::CatalogItemFormat::Lottie
+                    } else {
+                        crate::tipos::CatalogItemFormat::Webm
+                    }),
+                })
+            })
+            .collect::<Result<Vec<_>, sqlx::Error>>()
+            .map_err(de_sqlx)
+    }
+
     /// Solo para las pruebas y para las HU que editan: el contenido del borrador.
     #[cfg(test)]
     fn edicion_de_prueba(&self, cambio: impl FnOnce(&mut ThemeContent)) {

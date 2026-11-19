@@ -357,6 +357,37 @@ impl ServicioDePersonalizacion {
             .ok_or_else(inesperado)
     }
 
+    /// HE-04-HU09: agrega el widget Animación con una animación del catálogo (ET02), de 320 × 180 en la primera
+    /// posición libre (ET09). DUDA: HE-04-HU09 no define el error de una animación que no está en el catálogo
+    /// (la vista solo ofrece las del catálogo). Valor usado: `asset.unavailable` sin texto.
+    pub async fn agregar_animacion(
+        &self,
+        base: &BaseLocal,
+        user_id: &str,
+        animation_id: &str,
+        ahora_ms: i64,
+    ) -> Result<WidgetItem, AppError> {
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let hay: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM catalog_animation WHERE id = ? AND is_active = 1",
+        )
+        .bind(animation_id)
+        .fetch_one(pool)
+        .await
+        .map_err(de_sqlx)?;
+        if hay == 0 {
+            return Err(error(ErrorCode::AssetUnavailable, "", None));
+        }
+        self.insertar_widget(
+            base,
+            user_id,
+            "animation",
+            &[("animation_id", Value::from(animation_id))],
+            ahora_ms,
+        )
+        .await
+    }
+
     /// HE-04-HU05: agrega un widget Clima para la ciudad que reconoció el servicio de clima. Un widget por ciudad
     /// (ET04; D-038): si ya hay uno para esa ciudad, `city.duplicate` (CA05).
     pub async fn agregar_clima(

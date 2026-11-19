@@ -107,6 +107,7 @@ pub fn run() {
             puente_ipc::vigilar_dia(app.handle().clone());
             puente_ipc::sincronizar(app.handle().clone());
             puente_ipc::vigilar_widgets_externos(app.handle().clone());
+            puente_ipc::vigilar_carga(app.handle().clone());
             #[cfg(all(windows, feature = "spike"))]
             host_del_wallpaper::spike::iniciar(app.handle())?;
             // HE-02-HU01: la capa se ancla a WorkerW al abrir la aplicación y se muestra si hay sesión guardada

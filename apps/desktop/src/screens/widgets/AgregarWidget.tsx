@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AgregarClima } from './AgregarClima';
+import { AgregarAnimacion } from './AgregarAnimacion';
 import { AgregarCarrusel } from './AgregarCarrusel';
 import { AgregarImagenEstatica } from './AgregarImagenEstatica';
 import { AgregarSinDatos } from './AgregarSinDatos';
@@ -68,6 +69,9 @@ export function AgregarWidget({ alRegresar }: AgregarWidgetProps) {
 
   if (elegido === 'weather') {
     return <AgregarClima alRegresar={() => setElegido(null)} alIrAWidgets={alRegresar} />;
+  }
+  if (elegido === 'animation') {
+    return <AgregarAnimacion alRegresar={() => setElegido(null)} alIrAWidgets={alRegresar} />;
   }
   if (elegido === 'image_carousel') {
     return <AgregarCarrusel alRegresar={() => setElegido(null)} alIrAWidgets={alRegresar} />;

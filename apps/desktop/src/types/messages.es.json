@@ -1,5 +1,6 @@
 {
   "ALIAS_MUY_LARGO": "El alias no puede superar los 30 caracteres.",
+  "ANIMACION_EN_PAUSA": "En pausa por alto consumo de recursos.",
   "BIENVENIDA": "¡Bienvenido, <alias>! Tu cuenta fue creada correctamente.",
   "BLOQUE_DESPUES_DE_FECHA_LIMITE": "No puedes programar la tarjeta después de su fecha límite.",
   "BLOQUE_YA_PASO": "No puedes asignar tarjetas a un bloque horario que ya pasó.",

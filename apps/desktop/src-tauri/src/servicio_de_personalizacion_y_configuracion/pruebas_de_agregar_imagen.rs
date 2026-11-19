@@ -249,3 +249,46 @@ fn ca_he_04_hu08_ca07() {
         assert!(carrusel(&servicio, &base, &tres, Some(dentro)).is_ok());
     }
 }
+
+// HE-04-HU09 · Agregar el widget Animación.
+
+fn con_animaciones() -> (BaseLocal, ServicioDePersonalizacion) {
+    let (base, servicio) = con_catalogo();
+    bloquear(async {
+        sqlx::query(
+            "INSERT INTO catalog_animation (id, name, storage_path, thumbnail_path, format, sort_order, fetched_at) \
+             VALUES ('olas', 'Olas', 'a/olas.webm', 'a/olas-t.jpg', 'webm', 1, ?)",
+        )
+        .bind(T)
+        .execute(base.pool().await.unwrap())
+        .await
+        .unwrap();
+    });
+    (base, servicio)
+}
+
+#[test]
+fn ca_he_04_hu09_ca01() {
+    // HE-04-HU09-CA01 · Con una animación del catálogo (ET02): activa, 320 × 180 en la primera posición libre
+    // (ET09). El catálogo trae la miniatura, el nombre y el formato (ET01).
+    let (base, servicio) = con_animaciones();
+    let catalogo = bloquear(servicio.animaciones(&base)).unwrap();
+    assert_eq!(
+        catalogo.iter().map(|a| a.name.as_str()).collect::<Vec<_>>(),
+        ["Olas"]
+    );
+    assert_eq!(
+        catalogo[0].format,
+        Some(crate::tipos::CatalogItemFormat::Webm)
+    );
+    let w = bloquear(servicio.agregar_animacion(&base, USUARIO, "olas", AHORA_MS)).unwrap();
+    assert!(w.is_active);
+    assert_eq!(
+        w.config,
+        WidgetConfig::AnimationConfig(crate::tipos::AnimationConfig {
+            animation_id: "olas".into()
+        })
+    );
+    assert_eq!(rectangulo(&base, &w.widget_id.0), (1400, 0, 320, 180));
+    assert!(bloquear(servicio.agregar_animacion(&base, USUARIO, "no-existe", AHORA_MS)).is_err());
+}
