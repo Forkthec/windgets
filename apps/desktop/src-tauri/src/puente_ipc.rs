@@ -1670,6 +1670,61 @@ pub async fn column_update(
 }
 
 /// IPC-COL-04 `column_reorder` (HE-09-HU05). Sin mensaje de resultado (DP-05). Emite `columns_changed` para que
+/// IPC-COL-05 `column_get_delete_info` (HE-09-HU06).
+#[tauri::command]
+pub async fn column_get_delete_info(
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::CardIdParams,
+) -> Result<IpcResult<crate::tipos::ColumnDeleteInfo>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .info_para_eliminar_columna(&user_id, &params.id.0)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-COL-06 `column_delete` (HE-09-HU06): avisa con `columns_changed` y EV-07 para que el tablero y el widget
+/// Kanban la quiten en 5 s o menos (ET07, ET08).
+#[tauri::command]
+pub async fn column_delete(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::CardIdParams,
+) -> Result<IpcResult<()>, ()> {
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .eliminar_columna(&user_id, &params.id.0)
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    let r = match r {
+        Ok(hecho) => {
+            let _ = app.emit(
+                "columns_changed",
+                EntityChange {
+                    ids: vec![params.id.clone()],
+                    op: ChangeOp::Delete,
+                    origin: OriginKind::Local,
+                },
+            );
+            avisar_tarjetas(&app, hecho.valor, ChangeOp::Upsert);
+            Ok(crate::servicio_de_sesion::ConMensaje {
+                valor: (),
+                mensaje: hecho.mensaje,
+            })
+        }
+        Err(e) => Err(e),
+    };
+    Ok(con_mensaje(r))
+}
+
 /// el tablero y el widget Kanban muestren el orden nuevo (ET03).
 #[tauri::command]
 pub async fn column_reorder(

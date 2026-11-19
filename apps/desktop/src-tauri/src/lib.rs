@@ -49,6 +49,8 @@ pub fn run() {
             puente_ipc::catalog_list,
             puente_ipc::column_create,
             puente_ipc::column_update,
+            puente_ipc::column_get_delete_info,
+            puente_ipc::column_delete,
             puente_ipc::column_reorder,
             puente_ipc::report_resolve_range,
             puente_ipc::report_get_meta,

@@ -11,6 +11,7 @@ import {
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { BoardColumn, Card, CardMoveParams, Column, ScreenParams } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
+import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import textos from '@/types/messages.es.json';
@@ -85,7 +86,15 @@ function Tarjeta({ tarjeta }: { tarjeta: Card }) {
 }
 
 /** Una columna con su nombre, su color y su cantidad de tarjetas (HE-09-HU01-ET01); se suelta al final. */
-function Columna({ columna, alEditar }: { columna: BoardColumn; alEditar: (columna: Column) => void }) {
+function Columna({
+  columna,
+  alEditar,
+  alEliminar,
+}: {
+  columna: BoardColumn;
+  alEditar: (columna: Column) => void;
+  alEliminar: (columna: Column) => void;
+}) {
   const { column, cards } = columna;
   const lugar: LugarDeSoltar = { columna: column.id };
   const soltar = useDroppable({ id: `columna:${column.id}`, data: lugar });
@@ -106,6 +115,14 @@ function Columna({ columna, alEditar }: { columna: BoardColumn; alEditar: (colum
         <span className="wg-columna__cantidad">{column.card_count}</span>
         {/* HE-09-HU04-ET01: cada columna tiene «Editar». */}
         <Boton onClick={() => alEditar(column)}>Editar</Boton>
+        {/* HE-09-HU06-ET01, ET02: «Eliminar» en cada columna; en las por defecto, deshabilitada con su texto. */}
+        <Boton
+          disabled={column.is_default}
+          motivo={textos.COLUMNA_POR_DEFECTO_NO_ELIMINABLE}
+          onClick={() => alEliminar(column)}
+        >
+          Eliminar
+        </Boton>
       </h2>
       {cards.length === 0 ? (
         // HE-09-HU01-ET04: estado vacío de la columna (RT-04).
@@ -127,11 +144,35 @@ export function Kanban() {
   const [columnas, setColumnas] = useState<BoardColumn[] | null>(null);
   // Formulario de columna abierto: `null` para crear (HE-09-HU03) o la columna que se edita (HE-09-HU04).
   const [formularioColumna, setFormularioColumna] = useState<{ columna: Column | null } | null>(null);
+  // HE-09-HU06: la columna que se va a eliminar con el texto de su confirmación (M-09 o M-13).
+  const [porEliminar, setPorEliminar] = useState<{ columna: Column; texto: string } | null>(null);
 
   const leer = useCallback(async () => {
     const r = await invocar('card_list_board', {});
     if (r.ok) setColumnas(r.value.columns);
   }, [invocar]);
+
+  // HE-09-HU06-CA01, CA03, CA07: M-09 sin tarjetas o M-13 con la cantidad y el nombre actual de Por hacer.
+  const preguntarEliminar = async (columna: Column) => {
+    const r = await invocar('column_get_delete_info', { id: columna.id });
+    if (!r.ok) return;
+    const { name, card_count, destination_name } = r.value;
+    const texto =
+      card_count === 0
+        ? textos.CONFIRMAR_ELIMINAR_COLUMNA.replace('<nombre de la columna>', name)
+        : textos.CONFIRMAR_ELIMINAR_COLUMNA_CON_TARJETAS.replace('<nombre de la columna>', name)
+            .replace('<cantidad>', String(card_count))
+            .replace('<nombre de la columna destino>', destination_name);
+    setPorEliminar({ columna, texto });
+  };
+
+  // HE-09-HU06-CA02, CA04: las tarjetas pasan al final de Por hacer y la columna se quita.
+  const eliminarColumna = async (columna: Column) => {
+    setPorEliminar(null);
+    const r = await invocar('column_delete', { id: columna.id });
+    mostrarResultado(r.ok ? (r.result_message?.message ?? textos.COLUMNA_ELIMINADA) : r.error.message);
+    void leer();
+  };
 
   useEffect(() => {
     void leer();
@@ -234,6 +275,7 @@ export function Kanban() {
                   key={c.column.id}
                   columna={c}
                   alEditar={(columna) => setFormularioColumna({ columna })}
+                  alEliminar={(columna) => void preguntarEliminar(columna)}
                 />
               ))}
             </div>
@@ -241,6 +283,16 @@ export function Kanban() {
         </ContextoDelTablero.Provider>
       )}
       {tarjetas.ventanas}
+      {porEliminar && (
+        // M-09 o M-13. DUDA: HE-09-HU06 las ventanas no definen título. Valor usado: «Eliminar».
+        <Confirmacion
+          titulo="Eliminar"
+          texto={porEliminar.texto}
+          opcionPrincipal="Eliminar"
+          alConfirmar={() => void eliminarColumna(porEliminar.columna)}
+          alCancelar={() => setPorEliminar(null)}
+        />
+      )}
       {formularioColumna && (
         <FormularioColumna
           columna={formularioColumna.columna ?? undefined}

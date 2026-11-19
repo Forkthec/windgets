@@ -554,3 +554,102 @@ fn ca_he_09_hu05_ca02() {
     );
     assert_eq!(contar(&servicio, "SELECT count(*) FROM pending_change"), 0);
 }
+
+// HE-09-HU06 · Eliminar las columnas creadas.
+
+/// Las tarjetas de una columna, en su orden: (título, posición).
+fn tarjetas_de(
+    servicio: &ServicioDelPlanificador<CalendarioDePrueba>,
+    columna: &str,
+) -> Vec<String> {
+    let tablero = bloquear(servicio.tablero(USUARIO)).unwrap();
+    tablero
+        .columns
+        .iter()
+        .filter(|c| c.column.id.0 == columna)
+        .flat_map(|c| c.cards.iter().map(|t| t.title.clone()))
+        .collect()
+}
+
+#[test]
+fn ca_he_09_hu06_ca01() {
+    // HE-09-HU06-CA01 · Sin tarjetas: 0 tarjetas (la vista abre M-09) y la columna sigue en el tablero (ET03).
+    let servicio = con_semilla();
+    let id = crear_revision(&servicio);
+    let info = bloquear(servicio.info_para_eliminar_columna(USUARIO, &id)).unwrap();
+    assert_eq!((info.name.as_str(), info.card_count), ("Revisión", 0));
+    assert!(nombres_de_columnas(&servicio).contains(&"Revisión".to_string()));
+}
+
+#[test]
+fn ca_he_09_hu06_ca02() {
+    // HE-09-HU06-CA02 · La elimina del tablero (ET07) y queda en la cola como eliminación.
+    let servicio = con_semilla();
+    let id = crear_revision(&servicio);
+    let r = bloquear(servicio.eliminar_columna(USUARIO, &id)).unwrap();
+    assert_eq!(r.mensaje.message, "Columna eliminada.");
+    assert!(!nombres_de_columnas(&servicio).contains(&"Revisión".to_string()));
+    assert_eq!(
+        contar(
+            &servicio,
+            &format!(
+                "SELECT COUNT(*) FROM pending_change WHERE entity_id = '{id}' AND op = 'delete'"
+            )
+        ),
+        1
+    );
+}
+
+#[test]
+fn ca_he_09_hu06_ca03() {
+    // HE-09-HU06-CA03 · Con 3 tarjetas: la cantidad y el destino «Por hacer» para M-13 (ET04).
+    let servicio = con_semilla();
+    let id = crear_revision(&servicio);
+    for (i, t) in ["A", "B", "C"].iter().enumerate() {
+        tarjeta_en(&servicio, &id, t, "2026-11-20", (i as f64 + 1.0) * 1024.0);
+    }
+    let info = bloquear(servicio.info_para_eliminar_columna(USUARIO, &id)).unwrap();
+    assert_eq!(
+        (info.card_count, info.destination_name.as_str()),
+        (3, "Por hacer")
+    );
+}
+
+#[test]
+fn ca_he_09_hu06_ca04() {
+    // HE-09-HU06-CA04 · Las 3 tarjetas pasan al final de Por hacer, en su orden (ET05, ET09).
+    let servicio = con_semilla();
+    tarjeta_en(&servicio, POR_HACER, "Ya estaba", "2026-11-20", 1024.0);
+    let id = crear_revision(&servicio);
+    for (i, t) in ["A", "B", "C"].iter().enumerate() {
+        tarjeta_en(&servicio, &id, t, "2026-11-20", (i as f64 + 1.0) * 1024.0);
+    }
+    let r = bloquear(servicio.eliminar_columna(USUARIO, &id)).unwrap();
+    assert_eq!(r.valor.len(), 3);
+    assert_eq!(
+        tarjetas_de(&servicio, POR_HACER),
+        ["Ya estaba", "A", "B", "C"]
+    );
+}
+
+#[test]
+fn ca_he_09_hu06_ca05() {
+    // HE-09-HU06-CA05 · Las columnas por defecto no se eliminan (ET02).
+    let servicio = con_semilla();
+    for columna in [POR_HACER, EN_PROGRESO, HECHO] {
+        let e = bloquear(servicio.eliminar_columna(USUARIO, columna)).unwrap_err();
+        assert_eq!(e.code, ErrorCode::ColumnDefaultNotDeletable);
+        assert_eq!(e.message, "Las columnas por defecto no se pueden eliminar.");
+    }
+}
+
+#[test]
+fn ca_he_09_hu06_ca07() {
+    // HE-09-HU06-CA07 · Con Por hacer renombrada, el destino es su nombre actual (ET06).
+    let servicio = con_semilla();
+    editar_columna(&servicio, POR_HACER, Some("Prioridades"), None).unwrap();
+    let id = crear_revision(&servicio);
+    tarjeta_en(&servicio, &id, "A", "2026-11-20", 1024.0);
+    let info = bloquear(servicio.info_para_eliminar_columna(USUARIO, &id)).unwrap();
+    assert_eq!(info.destination_name, "Prioridades");
+}
