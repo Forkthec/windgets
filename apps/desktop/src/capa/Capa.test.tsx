@@ -1,6 +1,6 @@
 // HE-02-HU01 · Consultar el wallpaper como fondo real de Windows. Pruebas de la capa (C-02); el Núcleo tiene sus
 // pruebas ca_he_02_hu01_* en pruebas_de_escritorio.rs y el anclaje a WorkerW se verifica a mano (CA06).
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { Escuchar } from '@/ipc/eventos';
 import type { AssetResolveParams, Invoke, LayerInitialState, ThemeContent, WallpaperState } from '@/types';
@@ -119,5 +119,46 @@ describe('HE-02-HU01 · Capa del wallpaper', () => {
         background: { source: 'own', catalog_image_id: null, uploaded_image_id: 'img-1' },
       }),
     ).toEqual({ kind: 'uploaded_image', id: 'img-1' });
+  });
+});
+
+describe('HE-15-HU04 · Personalización desde otro computador en la capa', () => {
+  it('HE-15-HU04-CA01 · Cambio aplicado en otro computador', async () => {
+    const n = nucleo(capa(POR_DEFECTO, 'ok'), {
+      'catalog_template:default': 'C:/fondo/default.jpg',
+      'catalog_image:mar': 'C:/fondo/mar.jpg',
+    });
+    render(<Capa invocar={n.invocar} escuchar={n.escuchar} />);
+    const wallpaper = await screen.findByRole('main', { name: 'Wallpaper' });
+    // ET01, ET02: llega el tema aplicado del computador A (EV-11 remoto) y la capa se vuelve a pintar.
+    await n.cambiar(capa(DEL_CATALOGO, 'ok'), 'applied_theme_changed');
+    await waitFor(() => expect(wallpaper.style.backgroundImage).toContain('C:/fondo/mar.jpg'));
+  });
+
+  it('HE-15-HU04-CA03 · Abrir la aplicación en un computador desactualizado', async () => {
+    // ET03: el primer pintado sale de lo guardado en el computador (IPC-DESK-01), sin esperar a la nube.
+    const n = nucleo(capa(DEL_CATALOGO, 'ok'), { 'catalog_image:mar': 'C:/fondo/mar.jpg' });
+    render(<Capa invocar={n.invocar} escuchar={n.escuchar} />);
+    const wallpaper = await screen.findByRole('main', { name: 'Wallpaper' });
+    expect(wallpaper.style.backgroundImage).toContain('C:/fondo/mar.jpg');
+  });
+
+  it('HE-15-HU04-CA04 · Widgets sincronizados', async () => {
+    const reloj = {
+      widget_id: 'r',
+      type: 'clock' as const,
+      x: 40,
+      y: 40,
+      width: 320,
+      height: 160,
+      is_active: true,
+    };
+    const n = nucleo({ ...capa(POR_DEFECTO, 'ok'), widgets: [reloj] }, {});
+    render(<Capa invocar={n.invocar} escuchar={n.escuchar} />);
+    const widget = await screen.findByRole('region', { name: 'Reloj' });
+    expect(widget.style.left).toBe('40px');
+    // ET04, ET05: llega la distribución guardada en el computador A (EV-13 remoto) y la capa la muestra.
+    await n.cambiar({ ...capa(POR_DEFECTO, 'ok'), widgets: [{ ...reloj, x: 500 }] }, 'layout_changed');
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Reloj' }).style.left).toBe('500px'));
   });
 });
