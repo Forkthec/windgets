@@ -104,8 +104,8 @@ function nucleo(
   return { invocar, de };
 }
 
-async function abrir(n: ReturnType<typeof nucleo>) {
-  render(<Edicion invocar={n.invocar} />);
+async function abrir(n: ReturnType<typeof nucleo>, escuchar?: Escuchar) {
+  render(<Edicion invocar={n.invocar} {...(escuchar ? { escuchar } : {})} />);
   return screen.findByRole('main', { name: 'Pantalla de edición' });
 }
 
@@ -344,5 +344,27 @@ describe('RT-01 · Pantalla de edición', () => {
     // ET08: ocupa todo el escritorio (ventana C-03) y no muestra el menú principal.
     expect(pantalla).toBeTruthy();
     expect(screen.queryByRole('navigation', { name: 'Menú principal' })).toBeNull();
+  });
+});
+
+describe('HE-15-HU04 · Distribución desde otro computador', () => {
+  it('HE-15-HU04-CA08 · la pantalla de edición conserva los cambios y avisa', async () => {
+    const oyentes: Array<(c: unknown) => void> = [];
+    const escuchar = ((evento: string, alRecibir: (c: unknown) => void) => {
+      if (evento === 'layout_changed') oyentes.push(alRecibir);
+      return () => undefined;
+    }) as unknown as Escuchar;
+    const n = nucleo([RELOJ]);
+    const pantalla = await abrir(n, escuchar);
+    // Un movimiento deja cambios sin guardar.
+    await act(async () => {
+      await n.invocar('layout_edit_move', { widget_id: RELOJ.widget_id, x: 100, y: 100 });
+    });
+    act(() => oyentes.forEach((o) => o({ theme_id: 't1', origin: 'remote' })));
+    expect(
+      await within(pantalla).findByText(
+        'Se aplicó una personalización más reciente desde otro computador. Tus cambios sin guardar se conservan.',
+      ),
+    ).toBeTruthy();
   });
 });

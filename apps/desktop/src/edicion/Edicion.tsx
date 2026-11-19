@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type PointerEvent as EventoDe
 import { NOMBRE_DEL_WIDGET, recursoDelFondo } from '@/capa/Capa';
 import { urlDeArchivo } from '@/ipc/archivos';
 import { invocar as invocarNucleo } from '@/ipc/cliente';
+import { escuchar as escucharNucleo, type Escuchar } from '@/ipc/eventos';
 import type { Invoke, LayerInitialState, Monitor, WidgetRect } from '@/types';
 import textos from '@/types/messages.es.json';
 import { Boton } from '@/ui/Boton/Boton';
@@ -33,9 +34,10 @@ interface Arrastre {
 
 export interface EdicionProps {
   invocar?: Invoke;
+  escuchar?: Escuchar;
 }
 
-export function Edicion({ invocar = invocarNucleo }: EdicionProps) {
+export function Edicion({ invocar = invocarNucleo, escuchar = escucharNucleo }: EdicionProps) {
   const [estado, setEstado] = useState<{ monitor: Monitor; imagen: string | null; fondo: string } | null>(
     null,
   );
@@ -43,6 +45,18 @@ export function Edicion({ invocar = invocarNucleo }: EdicionProps) {
   // HE-05-HU02-ET04, HE-05-HU03-CA04: los widgets que se superponen mientras se mueve o se redimensiona.
   const [choques, setChoques] = useState<string[]>([]);
   const [salida, setSalida] = useState(false);
+  // HE-15-HU04-CA08: aviso al recibir una distribución más reciente de otro computador con cambios sin guardar.
+  const [avisoRemoto, setAvisoRemoto] = useState(false);
+  useEffect(
+    () =>
+      escuchar('layout_changed', (carga) => {
+        if (carga.origin !== 'remote') return;
+        void invocar('layout_edit_get_status', {}).then((r) => {
+          if (r.ok && r.value.dirty) setAvisoRemoto(true);
+        });
+      }),
+    [escuchar, invocar],
+  );
   const arrastre = useRef<Arrastre | null>(null);
 
   useEffect(() => {
@@ -147,6 +161,11 @@ export function Edicion({ invocar = invocarNucleo }: EdicionProps) {
       onPointerMove={(e) => void seguir(e)}
       onPointerUp={soltar}
     >
+      {avisoRemoto && (
+        <p role="status" className="wg-edicion__aviso">
+          {textos.PERSONALIZACION_REMOTA_CON_CAMBIOS}
+        </p>
+      )}
       {/* ET04: la barra superior con el texto y las opciones «Guardar» y «Cancelar». */}
       <div className="wg-edicion__barra wg-fila" role="toolbar" aria-label="Barra de edición">
         <span>{textos.INSTRUCCION_DE_EDICION}</span>

@@ -12,8 +12,8 @@ import { useNavegacion, useNucleo } from '@/ventana_principal/VentanaPrincipal';
 // - HE-16-HU02 (inicio automático): el interruptor muestra siempre el estado que tiene Windows (ET06) y al
 //   alternarlo muestra el resultado o el aviso de CA05.
 // - HE-16-HU03 (cerrar sesión): el botón «Cerrar sesión» abre M-11 o, con cambios sin sincronizar, M-12 (ET01, ET02,
-//   ET05). El indicador de sincronización de la pantalla
-// llega con HE-16-HU01 (P20).
+//   ET05).
+// - HE-16-HU01 (indicador de sincronización): es el de la ventana principal, junto al menú (D-203).
 
 /** La confirmación abierta: M-11 sin cambios pendientes, M-12 con cambios pendientes. */
 type Confirmar = 'M-11' | 'M-12' | null;

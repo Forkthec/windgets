@@ -309,6 +309,48 @@ impl ServicioDePersonalizacion {
             .collect()
     }
 
+    /// El tema aplicado de la cuenta (para los avisos de la sincronización, HE-15-HU04).
+    pub async fn id_del_tema(base: &BaseLocal, user_id: &str) -> Result<Option<String>, AppError> {
+        Self::id_del_tema_aplicado(base, user_id).await
+    }
+
+    /// HE-15-HU04-CA05: los widgets activos ajustados a la pantalla principal (el primer monitor) desde el
+    /// escritorio de referencia con que se guardó cada uno. Sin monitores, tal como se guardaron.
+    /// DUDA: HE-15-HU04 con varios monitores no se define en cuál se ajusta. Valor usado: el primero.
+    pub async fn rectangulos_ajustados(
+        base: &BaseLocal,
+        user_id: &str,
+        monitores: &[crate::tipos::Monitor],
+    ) -> Result<Vec<WidgetRect>, AppError> {
+        let rects = Self::rectangulos_activos(base, user_id).await?;
+        let Some(pantalla) = monitores.first().map(|m| (m.width, m.height)) else {
+            return Ok(rects);
+        };
+        let Some(tema) = Self::id_del_tema_aplicado(base, user_id).await? else {
+            return Ok(rects);
+        };
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let referencias: Vec<(String, i64, i64)> = sqlx::query_as(
+            "SELECT widget_id, ref_width, ref_height FROM theme_widget WHERE user_id = ? AND theme_id = ?",
+        )
+        .bind(user_id)
+        .bind(&tema)
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        let con_referencia: Vec<_> = rects
+            .into_iter()
+            .map(|r| {
+                let referencia = referencias
+                    .iter()
+                    .find(|(id, _, _)| *id == r.widget_id.0)
+                    .map_or(pantalla, |(_, w, h)| (*w, *h));
+                (r, referencia)
+            })
+            .collect();
+        Ok(super::ajuste::ajustar(&con_referencia, pantalla))
+    }
+
     /// IPC-WID-03 `widget_set_active`: activa o desactiva el widget en el tema aplicado sin eliminarlo ni tocar
     /// los demás (HE-04-HU02-ET02). Solo cambia `is_active`: al activarlo vuelve con su última posición y su
     /// último tamaño (ET03). El cambio se encola para sincronizarlo (D-189) y el puente avisa a la capa con
