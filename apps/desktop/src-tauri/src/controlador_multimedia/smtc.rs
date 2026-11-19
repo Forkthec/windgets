@@ -19,12 +19,12 @@ fn texto(t: windows::core::HSTRING) -> Option<String> {
 }
 
 pub fn leer() -> windows::core::Result<MediaSession> {
-    let gestor = Gestor::RequestAsync()?.get()?;
+    let gestor = Gestor::RequestAsync()?.join()?;
     // Sin sesión actual, Windows devuelve un error o una sesión vacía.
     let Ok(sesion) = gestor.GetCurrentSession() else {
         return Ok(sin_sesion());
     };
-    let propiedades = sesion.TryGetMediaPropertiesAsync()?.get()?;
+    let propiedades = sesion.TryGetMediaPropertiesAsync()?.join()?;
     let info = sesion.GetPlaybackInfo()?;
     let controles = info.Controls()?;
     let status = match info.PlaybackStatus()? {
@@ -45,12 +45,12 @@ pub fn leer() -> windows::core::Result<MediaSession> {
 }
 
 pub fn ejecutar(accion: Accion) -> windows::core::Result<()> {
-    let gestor = Gestor::RequestAsync()?.get()?;
+    let gestor = Gestor::RequestAsync()?.join()?;
     let sesion = gestor.GetCurrentSession()?;
     let hecho = match accion {
-        Accion::ReproducirOPausar => sesion.TryTogglePlayPauseAsync()?.get()?,
-        Accion::Siguiente => sesion.TrySkipNextAsync()?.get()?,
-        Accion::Anterior => sesion.TrySkipPreviousAsync()?.get()?,
+        Accion::ReproducirOPausar => sesion.TryTogglePlayPauseAsync()?.join()?,
+        Accion::Siguiente => sesion.TrySkipNextAsync()?.join()?,
+        Accion::Anterior => sesion.TrySkipPreviousAsync()?.join()?,
     };
     if hecho {
         Ok(())
