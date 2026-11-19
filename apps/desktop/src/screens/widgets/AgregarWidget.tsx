@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AgregarClima } from './AgregarClima';
+import { AgregarImagenEstatica } from './AgregarImagenEstatica';
 import { AgregarSinDatos } from './AgregarSinDatos';
 import { EncabezadoDeRuta } from '@/reglas/ruta';
 import type { AddableWidgetType, WidgetCatalog, WidgetCatalogEntry } from '@/types';
@@ -66,6 +67,9 @@ export function AgregarWidget({ alRegresar }: AgregarWidgetProps) {
 
   if (elegido === 'weather') {
     return <AgregarClima alRegresar={() => setElegido(null)} alIrAWidgets={alRegresar} />;
+  }
+  if (elegido === 'static_image') {
+    return <AgregarImagenEstatica alRegresar={() => setElegido(null)} alIrAWidgets={alRegresar} />;
   }
   const entrada = [...(catalogo?.external ?? []), ...(catalogo?.local ?? [])].find((e) => e.type === elegido);
   if (entrada && elegido === 'news') {

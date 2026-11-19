@@ -9,6 +9,7 @@ import { WidgetCalendario } from './WidgetCalendario';
 import { WidgetKanban } from './WidgetKanban';
 import { WidgetClima } from './WidgetClima';
 import { WidgetNoticias } from './WidgetNoticias';
+import { WidgetImagen } from './WidgetImagen';
 import { tokensDelTema } from '@/ui/tema/temaAplicado';
 import { aplicarTokens } from '@/ui/tema/tokens';
 import type {
@@ -173,6 +174,9 @@ export function Capa({
           )}
           {w.type === 'news' && (
             <WidgetNoticias widgetId={w.widget_id} invocar={invocar} escuchar={escuchar} />
+          )}
+          {w.type === 'static_image' && (
+            <WidgetImagen widgetId={w.widget_id} invocar={invocar} escuchar={escuchar} />
           )}
         </section>
       ))}

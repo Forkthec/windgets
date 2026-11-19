@@ -732,6 +732,20 @@ pub async fn widget_add(
                 Err(e) => Err(e),
             }
         }
+        (
+            crate::tipos::AddableWidgetType::StaticImage,
+            crate::tipos::WidgetConfig::StaticImageConfig(config),
+        ) => {
+            nucleo
+                .personalizacion
+                .agregar_imagen_estatica(
+                    base,
+                    &user_id,
+                    &config.base_image_ref,
+                    RelojDelSistema.ahora_ms(),
+                )
+                .await
+        }
         (crate::tipos::AddableWidgetType::News, _) => {
             nucleo
                 .personalizacion

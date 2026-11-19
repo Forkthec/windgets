@@ -8,7 +8,7 @@ use super::*;
 use crate::repositorios_y_archivos_locales::encolar_cambio;
 use crate::servicio_de_sesion::instante;
 use crate::servicio_del_planificador::campos;
-use crate::tipos::{GeocodeResult, WidgetItem};
+use crate::tipos::{GeocodeResult, ImageRef, ImageSource, WidgetItem};
 
 /// El escritorio de referencia de las posiciones guardadas (píxeles lógicos, como la semilla).
 pub const REFERENCIA: (i64, i64) = (1920, 1080);
@@ -178,6 +178,72 @@ impl ServicioDePersonalizacion {
             ));
         }
         self.insertar_widget(base, user_id, "news", &[], ahora_ms)
+            .await
+    }
+
+    /// La imagen elegida existe: una imagen propia del usuario o una del catálogo de imágenes (HE-04-HU07-ET02,
+    /// ET03). Devuelve las columnas del widget con la imagen.
+    async fn columnas_de_imagen(
+        base: &BaseLocal,
+        user_id: &str,
+        imagen: &ImageRef,
+    ) -> Result<Vec<(&'static str, Value)>, AppError> {
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let no_existe = || error(ErrorCode::ImageNotFound, "", None);
+        match imagen.source {
+            ImageSource::Own => {
+                let id = imagen
+                    .uploaded_image_id
+                    .as_ref()
+                    .ok_or_else(no_existe)?
+                    .0
+                    .to_lowercase();
+                let hay: i64 = sqlx::query_scalar(
+                    "SELECT COUNT(*) FROM uploaded_image WHERE id = ? AND user_id = ?",
+                )
+                .bind(&id)
+                .bind(user_id)
+                .fetch_one(pool)
+                .await
+                .map_err(de_sqlx)?;
+                if hay == 0 {
+                    return Err(no_existe());
+                }
+                Ok(vec![
+                    ("static_image_source", Value::from("own")),
+                    ("static_uploaded_image_id", Value::from(id)),
+                ])
+            }
+            ImageSource::Catalog => {
+                let id = imagen.catalog_image_id.clone().ok_or_else(no_existe)?;
+                let hay: i64 =
+                    sqlx::query_scalar("SELECT COUNT(*) FROM catalog_image WHERE id = ?")
+                        .bind(&id)
+                        .fetch_one(pool)
+                        .await
+                        .map_err(de_sqlx)?;
+                if hay == 0 {
+                    return Err(no_existe());
+                }
+                Ok(vec![
+                    ("static_image_source", Value::from("catalog")),
+                    ("static_catalog_image_id", Value::from(id)),
+                ])
+            }
+        }
+    }
+
+    /// HE-04-HU07: agrega el widget Imagen estática con una imagen propia o del catálogo de imágenes, de 320 × 180
+    /// en la primera posición libre (ET06). Se puede agregar varias veces (D-038).
+    pub async fn agregar_imagen_estatica(
+        &self,
+        base: &BaseLocal,
+        user_id: &str,
+        imagen: &ImageRef,
+        ahora_ms: i64,
+    ) -> Result<WidgetItem, AppError> {
+        let columnas = Self::columnas_de_imagen(base, user_id, imagen).await?;
+        self.insertar_widget(base, user_id, "static_image", &columnas, ahora_ms)
             .await
     }
 

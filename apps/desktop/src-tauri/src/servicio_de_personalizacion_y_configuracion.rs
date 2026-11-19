@@ -837,6 +837,8 @@ mod widgets;
 #[cfg(test)]
 mod pruebas_de_agregar_clima;
 #[cfg(test)]
+mod pruebas_de_agregar_imagen;
+#[cfg(test)]
 mod pruebas_de_aplicar;
 #[cfg(test)]
 mod pruebas_de_aplicar_un_tema;
