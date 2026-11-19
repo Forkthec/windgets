@@ -337,3 +337,23 @@ fn ca_he_04_hu10_ca03() {
     assert_eq!(e.field.as_deref(), Some("text"));
     assert!(bloquear(servicio.agregar_texto(&base, USUARIO, &"a".repeat(200), AHORA_MS)).is_ok());
 }
+
+// HE-04-HU11 · Agregar el widget Reproductor de música. La lectura de la sesión de Windows (SMTC) se prueba a mano
+// en Windows 11 (ET09); la regla de los controles, en controlador_multimedia.rs.
+
+#[test]
+fn ca_he_04_hu11_ca01_agregar() {
+    // HE-04-HU11-CA01 · Agrega y activa el Reproductor de música, de 320 × 160 en la primera posición libre (ET10);
+    // va una sola vez (ET04).
+    let (base, servicio) = con_catalogo();
+    let w = bloquear(servicio.agregar_reproductor(&base, USUARIO, AHORA_MS)).unwrap();
+    assert!(w.is_active);
+    assert_eq!(w.display_name, "Reproductor de música");
+    assert_eq!(rectangulo(&base, &w.widget_id.0), (1400, 0, 320, 160));
+    assert_eq!(
+        bloquear(servicio.agregar_reproductor(&base, USUARIO, AHORA_MS))
+            .unwrap_err()
+            .code,
+        ErrorCode::WidgetAlreadyAdded
+    );
+}

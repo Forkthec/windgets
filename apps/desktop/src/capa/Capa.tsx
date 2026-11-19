@@ -13,6 +13,7 @@ import { WidgetImagen } from './WidgetImagen';
 import { WidgetCarrusel } from './WidgetCarrusel';
 import { WidgetAnimacion } from './WidgetAnimacion';
 import { WidgetTexto } from './WidgetTexto';
+import { WidgetReproductor } from './WidgetReproductor';
 import { tokensDelTema } from '@/ui/tema/temaAplicado';
 import { aplicarTokens } from '@/ui/tema/tokens';
 import type {
@@ -188,6 +189,7 @@ export function Capa({
             <WidgetAnimacion widgetId={w.widget_id} invocar={invocar} escuchar={escuchar} />
           )}
           {w.type === 'text' && <WidgetTexto widgetId={w.widget_id} invocar={invocar} escuchar={escuchar} />}
+          {w.type === 'music_player' && <WidgetReproductor invocar={invocar} escuchar={escuchar} />}
         </section>
       ))}
     </main>

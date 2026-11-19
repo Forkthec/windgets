@@ -431,6 +431,33 @@ impl ServicioDePersonalizacion {
         .await
     }
 
+    /// HE-04-HU11: agrega el Reproductor de música (uno solo, ET04; D-038), de 320 × 160 en la primera posición
+    /// libre (ET10). No necesita conexión ni cuentas de música (ET05).
+    pub async fn agregar_reproductor(
+        &self,
+        base: &BaseLocal,
+        user_id: &str,
+        ahora_ms: i64,
+    ) -> Result<WidgetItem, AppError> {
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let ya: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM widget WHERE user_id = ? AND type = 'music_player'",
+        )
+        .bind(user_id)
+        .fetch_one(pool)
+        .await
+        .map_err(de_sqlx)?;
+        if ya > 0 {
+            return Err(error(
+                ErrorCode::WidgetAlreadyAdded,
+                messages::WIDGET_YA_AGREGADO,
+                None,
+            ));
+        }
+        self.insertar_widget(base, user_id, "music_player", &[], ahora_ms)
+            .await
+    }
+
     /// HE-04-HU05: agrega un widget Clima para la ciudad que reconoció el servicio de clima. Un widget por ciudad
     /// (ET04; D-038): si ya hay uno para esa ciudad, `city.duplicate` (CA05).
     pub async fn agregar_clima(

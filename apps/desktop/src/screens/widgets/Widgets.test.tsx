@@ -608,3 +608,26 @@ describe('HE-04-HU06 · Agregar el widget Noticias', () => {
     expect(llamadasA(nucleo, 'widget_add')).toEqual([{ type: 'news', config: {} }]);
   });
 });
+
+describe('HE-04-HU11 · Agregar el widget Reproductor de música', () => {
+  it('HE-04-HU11-CA01 · la subpantalla tiene la descripción, «Agregar» y «Regresar»', async () => {
+    const nucleo = await abrir([...POR_DEFECTO]);
+    nucleo.responder('widget_catalog_get', () => ({ ok: true, value: catalogo() }));
+    nucleo.responder('widget_add', () => ({
+      ok: true,
+      value: widget({ widget_id: 'w-m', type: 'music_player', display_name: 'Reproductor de música' }),
+    }));
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar widget' }));
+    const enCatalogo = await screen.findByRole('main', { name: 'Agregar widget' });
+    fireEvent.click(await within(enCatalogo).findByRole('button', { name: /Reproductor de música/ }));
+    const sub = await screen.findByRole('main', { name: 'Reproductor de música' });
+    // ET01
+    expect(within(sub).getByRole('navigation', { name: 'Miga de pan' }).textContent).toBe(
+      'Widgets>Agregar widget>Reproductor de música',
+    );
+    expect(within(sub).getByText('Descripción de Reproductor de música.')).toBeTruthy();
+    fireEvent.click(within(sub).getByRole('button', { name: 'Agregar' }));
+    expect(await screen.findByRole('main', { name: 'Widgets' })).toBeTruthy();
+    expect(llamadasA(nucleo, 'widget_add')).toEqual([{ type: 'music_player', config: {} }]);
+  });
+});

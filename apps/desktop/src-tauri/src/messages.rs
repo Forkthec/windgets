@@ -297,6 +297,8 @@ pub const INTERVALO_FUERA_DE_RANGO: &str = "El intervalo debe estar entre 3 y 60
 pub const ANIMACION_EN_PAUSA: &str = "En pausa por alto consumo de recursos.";
 /// `text.too_long` (HE-04-HU10-CA03, ET05).
 pub const TEXTO_MUY_LARGO: &str = "El texto no puede superar los 200 caracteres.";
+/// HE-04-HU11-CA03, ET07: el widget Reproductor de música sin sesión; también `media.no_session` (IPC-MED-02).
+pub const SIN_MUSICA: &str = "No hay música en reproducción.";
 pub const NOTICIAS_NO_DISPONIBLES: &str =
     "No pudimos cargar las noticias. Intenta de nuevo más tarde.";
 /// Aviso de un widget externo sin conexión (CA08, ET08; HE-15-HU02-CA06).
@@ -446,6 +448,7 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("CIUDAD_SIN_CONEXION", CIUDAD_SIN_CONEXION),
     ("CLIMA_NO_DISPONIBLE", CLIMA_NO_DISPONIBLE),
     ("NOTICIAS_NO_DISPONIBLES", NOTICIAS_NO_DISPONIBLES),
+    ("SIN_MUSICA", SIN_MUSICA),
     ("TEXTO_MUY_LARGO", TEXTO_MUY_LARGO),
     ("ANIMACION_EN_PAUSA", ANIMACION_EN_PAUSA),
     ("CARRUSEL_POCAS_IMAGENES", CARRUSEL_POCAS_IMAGENES),

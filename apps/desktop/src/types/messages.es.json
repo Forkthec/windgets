@@ -76,6 +76,7 @@
   "SIN_CAMBIOS_PARA_GUARDAR": "No hay cambios para guardar.",
   "SIN_CONEXION_INICIO": "No hay conexión a internet. Conéctate para iniciar sesión.",
   "SIN_CONEXION_REGISTRO": "No hay conexión a internet. Conéctate para crear tu cuenta.",
+  "SIN_MUSICA": "No hay música en reproducción.",
   "TARJETA_ACTUALIZADA": "Tarjeta actualizada.",
   "TARJETA_ACTUALIZADA_SIN_BLOQUE": "Tarjeta actualizada. Se quitó de su bloque horario porque quedó después de la nueva fecha límite.",
   "TARJETA_ASIGNADA_AL_BLOQUE": "Tarjeta asignada al bloque <hora de inicio> – <hora de fin>.",

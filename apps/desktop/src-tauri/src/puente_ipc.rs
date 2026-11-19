@@ -785,6 +785,12 @@ pub async fn widget_add(
                 .agregar_texto(base, &user_id, &config.text, RelojDelSistema.ahora_ms())
                 .await
         }
+        (crate::tipos::AddableWidgetType::MusicPlayer, _) => {
+            nucleo
+                .personalizacion
+                .agregar_reproductor(base, &user_id, RelojDelSistema.ahora_ms())
+                .await
+        }
         (crate::tipos::AddableWidgetType::News, _) => {
             nucleo
                 .personalizacion
@@ -982,6 +988,60 @@ pub fn vigilar_carga(app: AppHandle) {
     });
     #[cfg(not(windows))]
     let _ = app;
+}
+
+/// IPC-MED-01 `media_get_session` (HE-04-HU11): la sesión multimedia actual de Windows.
+#[tauri::command]
+pub fn media_get_session(params: NoParams) -> IpcResult<crate::tipos::MediaSession> {
+    let _ = params;
+    correcto(crate::controlador_multimedia::sesion_actual())
+}
+
+fn accion_multimedia(accion: crate::controlador_multimedia::Accion) -> IpcResult<()> {
+    match crate::controlador_multimedia::ejecutar(accion) {
+        Ok(()) => correcto(()),
+        Err(error) => IpcResult::Err(IpcErr {
+            ok: false.into(),
+            error,
+        }),
+    }
+}
+
+/// IPC-MED-02 `media_toggle_play_pause`.
+#[tauri::command]
+pub fn media_toggle_play_pause(params: NoParams) -> IpcResult<()> {
+    let _ = params;
+    accion_multimedia(crate::controlador_multimedia::Accion::ReproducirOPausar)
+}
+
+/// IPC-MED-03 `media_skip_next`.
+#[tauri::command]
+pub fn media_skip_next(params: NoParams) -> IpcResult<()> {
+    let _ = params;
+    accion_multimedia(crate::controlador_multimedia::Accion::Siguiente)
+}
+
+/// IPC-MED-04 `media_skip_previous`.
+#[tauri::command]
+pub fn media_skip_previous(params: NoParams) -> IpcResult<()> {
+    let _ = params;
+    accion_multimedia(crate::controlador_multimedia::Accion::Anterior)
+}
+
+/// HE-04-HU11-ET06, ET08: revisa la sesión multimedia cada segundo y avisa con EV-19 `media_session_changed` al
+/// cambiar la sesión actual, la canción o el estado, en menos de 5 s (RNF-01).
+pub fn vigilar_multimedia(app: AppHandle) {
+    std::thread::spawn(move || {
+        let mut anterior = None;
+        loop {
+            std::thread::sleep(Duration::from_secs(1));
+            let actual = crate::controlador_multimedia::sesion_actual();
+            if anterior.as_ref() != Some(&actual) {
+                let _ = app.emit("media_session_changed", actual.clone());
+                anterior = Some(actual);
+            }
+        }
+    });
 }
 
 /// Revisa cada minuto qué widgets externos toca actualizar (HE-04-HU05-ET05, ET08).

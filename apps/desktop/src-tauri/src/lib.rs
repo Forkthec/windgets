@@ -81,6 +81,10 @@ pub fn run() {
             puente_ipc::theme_delete,
             puente_ipc::widget_add,
             puente_ipc::widget_get_data,
+            puente_ipc::media_get_session,
+            puente_ipc::media_toggle_play_pause,
+            puente_ipc::media_skip_next,
+            puente_ipc::media_skip_previous,
             puente_ipc::image_import,
             puente_ipc::theme_draft_save,
             puente_ipc::theme_draft_apply,
@@ -108,6 +112,7 @@ pub fn run() {
             puente_ipc::sincronizar(app.handle().clone());
             puente_ipc::vigilar_widgets_externos(app.handle().clone());
             puente_ipc::vigilar_carga(app.handle().clone());
+            puente_ipc::vigilar_multimedia(app.handle().clone());
             #[cfg(all(windows, feature = "spike"))]
             host_del_wallpaper::spike::iniciar(app.handle())?;
             // HE-02-HU01: la capa se ancla a WorkerW al abrir la aplicación y se muestra si hay sesión guardada
