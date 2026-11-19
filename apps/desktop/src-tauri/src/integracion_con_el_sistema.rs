@@ -5,6 +5,7 @@
 pub mod area_de_notificacion;
 pub mod carga;
 pub mod inicio_automatico;
+pub mod navegador;
 #[cfg(windows)]
 mod registro;
 #[cfg(windows)]

@@ -1057,6 +1057,18 @@ pub fn vigilar_carga(app: AppHandle) {
     let _ = app;
 }
 
+/// IPC-DESK-09 `system_open_url` (HE-06-HU10): abre el enlace en el navegador predeterminado.
+#[tauri::command]
+pub fn system_open_url(params: crate::tipos::SystemOpenUrlParams) -> IpcResult<()> {
+    match crate::integracion_con_el_sistema::navegador::abrir(&params.url) {
+        Ok(()) => correcto(()),
+        Err(error) => IpcResult::Err(IpcErr {
+            ok: false.into(),
+            error,
+        }),
+    }
+}
+
 /// IPC-MED-01 `media_get_session` (HE-04-HU11): la sesión multimedia actual de Windows.
 #[tauri::command]
 pub fn media_get_session(params: NoParams) -> IpcResult<crate::tipos::MediaSession> {
