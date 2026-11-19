@@ -1110,6 +1110,27 @@ mod pruebas {
         assert_eq!((descripcion.as_deref(), cursor), (Some("Nueva"), 9));
     }
 
+    #[test]
+    fn ca_he_15_hu04_ca02() {
+        // HE-15-HU04-CA02 (ET14) · Al iniciar sesión en otro computador, `sync_pull` trae y aplica, en orden padre →
+        // hijo, las tarjetas, las etiquetas, las columnas, los temas, el tema aplicado y los widgets con su
+        // distribución (ET02): la misma descarga que prueban HE-15-HU01 y HU03 para cada fila.
+        for tipo in [
+            "card",
+            "label",
+            "kanban_column",
+            "theme",
+            "applied_theme",
+            "widget",
+            "theme_widget",
+        ] {
+            assert!(ORDEN.contains(&tipo), "{tipo}");
+        }
+        let posicion = |t: &str| ORDEN.iter().position(|o| *o == t).unwrap();
+        assert!(posicion("theme") < posicion("applied_theme"));
+        assert!(posicion("widget") < posicion("theme_widget"));
+    }
+
     // ---------------------------------------------------------------- RPC-04 catalog_pull (HE-02-HU01-CA01)
 
     fn catalogo(version: i64, con_minimal: bool) -> CatalogPullResultVariant2 {
