@@ -698,6 +698,50 @@ button.wg-tarjeta__titulo:focus-visible {
   border-radius: var(--wg-radio);
 }
 
+/* Texto solo para lectores de pantalla (la etiqueta del campo «Escribe un mensaje», HE-14-HU01). */
+.wg-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* Agente de IA (P-IA-01, HE-14-HU01): la conversación arriba y el campo para escribir abajo. */
+.wg-windi__conversacion {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--wg-unidad) * 3);
+  margin: 0;
+  padding: calc(var(--wg-unidad) * 4) 0;
+  list-style: none;
+}
+.wg-windi__mensaje {
+  max-width: 70%;
+  padding: calc(var(--wg-unidad) * 3);
+  border-radius: var(--wg-radio);
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+}
+.wg-windi__mensaje p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.wg-windi__mensaje--user {
+  align-self: flex-end;
+  background: var(--wg-superficie-alta);
+}
+.wg-windi__mensaje--assistant {
+  align-self: flex-start;
+  background: var(--wg-superficie);
+}
+.wg-windi__autor {
+  font-weight: 600;
+}
+.wg-windi__escribir textarea {
+  width: 100%;
+  min-height: calc(var(--wg-unidad) * 20);
+  box-sizing: border-box;
+}
 /* Calendario (P-CAL-01, HE-10-HU01): la vista mensual, de lunes a domingo; el día actual va resaltado (ET02). */
 .wg-calendario {
   width: 100%;

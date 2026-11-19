@@ -61,6 +61,8 @@ pub struct Nucleo {
     pub ciclo: tokio::sync::Mutex<()>,
     /// El registro de Windows para el inicio automático (INT-08).
     pub arranque: Box<dyn crate::integracion_con_el_sistema::inicio_automatico::RegistroDeArranque>,
+    /// La conversación con Windi, en memoria mientras la aplicación está abierta (HE-14-HU01-ET14).
+    pub windi: crate::servicio_de_windi::ServicioDeWindi,
 }
 
 impl Nucleo {
@@ -80,6 +82,7 @@ impl Nucleo {
             ciclo: tokio::sync::Mutex::new(()),
             arranque:
                 crate::integracion_con_el_sistema::inicio_automatico::registro_de_la_aplicacion(),
+            windi: crate::servicio_de_windi::ServicioDeWindi::nuevo(),
         }
     }
 }
@@ -2227,6 +2230,7 @@ pub async fn auth_sign_out(
             .await
     };
     nucleo.personalizacion.olvidar_borrador();
+    nucleo.windi.olvidar();
     avisar_wallpaper(&app).await;
     let _ = app.emit(
         "session_changed",
@@ -2464,6 +2468,137 @@ pub async fn layout_edit_cancel(
         value: (),
         result_message: mensaje,
     }))
+}
+
+/// IPC-WIN-01 `windi_get_conversation` (HE-14-HU01): el historial de la sesión, con el saludo la primera vez
+/// (ET07, ET08), y si hay conexión para conversar (ET12).
+#[tauri::command]
+pub fn windi_get_conversation(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> IpcResult<crate::tipos::WindiConversation> {
+    let _ = params;
+    let alias = nucleo
+        .sesion
+        .sesion_guardada()
+        .map(|s| s.alias)
+        .unwrap_or_default();
+    let ahora = chrono::Utc::now().timestamp_millis();
+    correcto(
+        nucleo
+            .windi
+            .conversacion(&alias, nucleo.sesion.auth().en_linea(), ahora),
+    )
+}
+
+/// IPC-WIN-02 `windi_send_message` (HE-14-HU01): envía el mensaje a `windi-chat` (EF-01) con el contexto mínimo y
+/// espera la respuesta como máximo 15 s (RNF-11).
+#[tauri::command]
+pub async fn windi_send_message(
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::WindiSendMessageParams,
+) -> Result<IpcResult<crate::tipos::WindiSendMessageResult>, ()> {
+    let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+        return Ok(leido(Err(crate::servicio_del_planificador::inesperado())));
+    };
+    let user_id = sesion.user_id.to_lowercase();
+    let ahora = chrono::Local::now();
+    let contexto = match crate::servicio_de_windi::contexto(
+        &nucleo.planificador,
+        &user_id,
+        &sesion.alias,
+        ahora.date_naive(),
+        u8::try_from(chrono::Timelike::hour(&ahora)).unwrap_or(0),
+        &params.message,
+    )
+    .await
+    {
+        Ok(contexto) => contexto,
+        Err(e) => return Ok(leido(Err(e))),
+    };
+    let cliente = nucleo.sesion.auth();
+    let manejador = crate::servicio_de_windi::manejador::ManejadorDelPlanificador {
+        planificador: &nucleo.planificador,
+        user_id: &user_id,
+        alias: &sesion.alias,
+    };
+    Ok(leido(
+        nucleo
+            .windi
+            .enviar(
+                cliente,
+                &manejador,
+                &sesion.access_token,
+                &params.message,
+                contexto,
+                cliente.en_linea(),
+                chrono::Utc::now().timestamp_millis(),
+            )
+            .await,
+    ))
+}
+
+/// IPC-WIN-03 `windi_confirm_proposal` (HE-14-HU03): antes de aplicar, una consulta inmediata a la nube trae los
+/// cambios de otros computadores (ET05; D-047); sin conexión no aplica nada (ET07). Avisa con EV-07 si aplicó.
+#[tauri::command]
+pub async fn windi_confirm_proposal(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::WindiConfirmProposalParams,
+) -> Result<IpcResult<crate::tipos::WindiConfirmProposalResult>, ()> {
+    let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+        return Ok(leido(Err(crate::servicio_del_planificador::inesperado())));
+    };
+    let user_id = sesion.user_id.to_lowercase();
+    let cliente = nucleo.sesion.auth();
+    let en_linea = {
+        let _ciclo = nucleo.ciclo.lock().await;
+        let credenciales = motor_de_sincronizacion::Credenciales {
+            user_id: &user_id,
+            token: &sesion.access_token,
+        };
+        let _ =
+            motor_de_sincronizacion::descargar(nucleo.planificador.base(), cliente, &credenciales)
+                .await;
+        cliente.comprobar_conexion().await
+    };
+    let manejador = crate::servicio_de_windi::manejador::ManejadorDelPlanificador {
+        planificador: &nucleo.planificador,
+        user_id: &user_id,
+        alias: &sesion.alias,
+    };
+    let r = nucleo
+        .windi
+        .confirmar(
+            &manejador,
+            &params.proposal_id,
+            en_linea,
+            chrono::Utc::now().timestamp_millis(),
+        )
+        .await;
+    if matches!(&r, Ok(c) if c.outcome == crate::tipos::WindiConfirmProposalResultOutcome::Applied)
+    {
+        avisar_tarjetas(&app, Vec::new(), ChangeOp::Upsert);
+    }
+    Ok(leido(r))
+}
+
+/// IPC-WIN-04 `windi_reject_proposal` (HE-14-HU03): no aplica cambios.
+#[tauri::command]
+pub fn windi_reject_proposal(
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::WindiRejectProposalParams,
+) -> IpcResult<crate::tipos::WindiRejectProposalResult> {
+    match nucleo
+        .windi
+        .rechazar(&params.proposal_id, chrono::Utc::now().timestamp_millis())
+    {
+        Ok(r) => correcto(r),
+        Err(error) => IpcResult::Err(IpcErr {
+            ok: false.into(),
+            error,
+        }),
+    }
 }
 
 /// IPC-CARD-12 `calendar_get_month` (HE-10-HU01): los días del mes con los títulos de sus tarjetas.

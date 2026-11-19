@@ -351,6 +351,64 @@ pub const NO_PUDIMOS_CAMBIAR_EL_INICIO_AUTOMATICO: &str =
 /// Confirmación al salir con cambios sin guardar en la vista previa (HE-17-HU03-CA02, ET06).
 pub const SALIR_SIN_GUARDAR: &str = "Tienes cambios sin guardar. ¿Deseas salir sin guardarlos?";
 
+// HE-14-HU01 · Conversar por chat de texto con el agente de IA (IPC-WIN-01, IPC-WIN-02).
+
+/// `message.too_long` (HE-14-HU01-CA05; ET04).
+pub const MENSAJE_MUY_LARGO: &str = "Tu mensaje no puede superar los 2000 caracteres.";
+/// `net.offline` y aviso de la pantalla Agente de IA sin conexión (HE-14-HU01-CA07; ET13).
+pub const WINDI_SIN_CONEXION: &str =
+    "El agente de IA necesita conexión a internet. Podrás conversar con él cuando te reconectes.";
+/// `windi.unavailable`: tiempo agotado, cuota o error del servicio (HE-14-HU01-CA08; ET16).
+pub const WINDI_NO_DISPONIBLE: &str = "No pude responder en este momento. Intenta de nuevo.";
+/// Saludo del agente de IA (HE-14-HU01-ET07 a ET10). DUDA: HE-14-HU01 el texto no es literal (ET09 da un
+/// ejemplo). Valor usado: alias, nombre «Windi» y oferta de ayuda, con la personalidad de HE-14-HU02.
+pub const WINDI_SALUDO: &str =
+    "¡Hola, <alias>! Soy Windi. ¿Qué organizamos hoy con tus tarjetas o con la aplicación?";
+/// Celebración al completar una tarjeta desde una propuesta (HE-14-HU02-CA02, ET03, ET08; HE-14-HU06-CA02).
+/// DUDA: HE-14-HU02 el texto no es literal. Valor usado: una frase breve con el alias y un solo emoji (ET07).
+pub const WINDI_CELEBRACION: &str = "¡Bien hecho, <alias>! 🎉 Ya está en Hecho.";
+
+// HE-14-HU03 · Confirmar una propuesta del agente de IA (IPC-WIN-03, IPC-WIN-04).
+
+/// `net.offline` al confirmar (HE-14-HU03-CA02, ET07; HE-14-HU04-CA07).
+pub const WINDI_SIN_CONEXION_AL_CONFIRMAR: &str =
+    "Se perdió la conexión. No se hizo ningún cambio.";
+/// Respuestas de Windi al confirmar o rechazar. DUDA: HE-14-HU03 los textos no son literales. Valor usado: frases
+/// breves con la personalidad de HE-14-HU02.
+pub const WINDI_CAMBIO_HECHO: &str = "Listo, ya hice el cambio.";
+pub const WINDI_PROPUESTA_RECHAZADA: &str =
+    "Entendido, no hice ningún cambio. ¿Quieres cambiar algo de la propuesta?";
+/// HE-14-HU03-CA03, ET06: qué cambió desde la propuesta.
+pub const WINDI_PROPUESTA_DESACTUALIZADA: &str =
+    "No hice ningún cambio porque tus tarjetas cambiaron desde que te lo propuse: <cambios>.";
+pub const WINDI_PROPUESTA_NUEVA: &str = "Esta es la propuesta con los datos actuales. ¿Confirmas?";
+// HE-14-HU04 · Crear tarjetas con el agente de IA. DUDA: HE-14-HU04 los textos no son literales («confirma la
+// creación mencionando el título», «confirma la cantidad de tarjetas creadas»).
+pub const WINDI_TARJETA_CREADA: &str = "Listo, creé la tarjeta «<título>».";
+pub const WINDI_TARJETAS_CREADAS: &str = "Listo, creé <cantidad> tarjetas.";
+// HE-14-HU05 · Editar tarjetas con el agente de IA.
+/// Aviso en la propuesta de editar una tarjeta completada (HE-14-HU05-CA06, ET05).
+pub const WINDI_EDITAR_COMPLETADA: &str =
+    "Esta tarjeta está completada. Editarla no cambia su columna.";
+/// DUDA: HE-14-HU05 el texto no es literal («confirma el cambio mencionando el título»).
+pub const WINDI_TARJETA_ACTUALIZADA: &str = "Listo, actualicé la tarjeta «<título>».";
+// HE-14-HU06 · Mover tarjetas con el agente de IA.
+/// Aviso en la propuesta de mover una tarjeta completada (HE-14-HU06-CA06, ET05).
+pub const WINDI_MOVER_COMPLETADA: &str = "Esta tarjeta está completada. Si la mueves, dejará de estar completada y se borrará su fecha de completado.";
+/// DUDA: HE-14-HU06 el texto no es literal («confirma el movimiento mencionando el título y la columna de destino»).
+pub const WINDI_TARJETA_MOVIDA: &str = "Listo, moví la tarjeta «<título>» a <columna>.";
+// HE-14-HU07 · Eliminar tarjetas con el agente de IA.
+/// Aviso en toda propuesta de eliminación (HE-14-HU07-CA01, ET01).
+pub const WINDI_ELIMINAR_SIN_DESHACER: &str = "Esta acción no se puede deshacer.";
+/// Texto si alguna tarjeta está completada (HE-14-HU07-CA06, ET04).
+pub const WINDI_ELIMINAR_COMPLETADA: &str =
+    "Esta tarjeta está completada. Si la eliminas, dejará de contar en tus reportes.";
+/// DUDA: HE-14-HU07 los textos no son literales («confirma la eliminación mencionando el título»).
+pub const WINDI_TARJETA_ELIMINADA: &str = "Listo, eliminé la tarjeta «<título>».";
+pub const WINDI_TARJETAS_ELIMINADAS: &str = "Listo, eliminé <cantidad> tarjetas.";
+pub const WINDI_TARJETA_YA_NO_EXISTE: &str = "«<título>» ya no existe";
+pub const WINDI_TARJETA_CAMBIO: &str = "«<título>» tiene otro valor en <campos>";
+
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
     ("SERVICIO_NO_DISPONIBLE", SERVICIO_NO_DISPONIBLE),
@@ -513,6 +571,24 @@ pub const TEXTOS: &[(&str, &str)] = &[
         NO_PUDIMOS_CAMBIAR_EL_INICIO_AUTOMATICO,
     ),
     ("SALIR_SIN_GUARDAR", SALIR_SIN_GUARDAR),
+    ("MENSAJE_MUY_LARGO", MENSAJE_MUY_LARGO),
+    ("WINDI_SIN_CONEXION", WINDI_SIN_CONEXION),
+    ("WINDI_NO_DISPONIBLE", WINDI_NO_DISPONIBLE),
+    ("WINDI_SALUDO", WINDI_SALUDO),
+    ("WINDI_CELEBRACION", WINDI_CELEBRACION),
+    (
+        "WINDI_SIN_CONEXION_AL_CONFIRMAR",
+        WINDI_SIN_CONEXION_AL_CONFIRMAR,
+    ),
+    ("WINDI_CAMBIO_HECHO", WINDI_CAMBIO_HECHO),
+    ("WINDI_PROPUESTA_RECHAZADA", WINDI_PROPUESTA_RECHAZADA),
+    (
+        "WINDI_PROPUESTA_DESACTUALIZADA",
+        WINDI_PROPUESTA_DESACTUALIZADA,
+    ),
+    ("WINDI_PROPUESTA_NUEVA", WINDI_PROPUESTA_NUEVA),
+    ("WINDI_TARJETA_YA_NO_EXISTE", WINDI_TARJETA_YA_NO_EXISTE),
+    ("WINDI_TARJETA_CAMBIO", WINDI_TARJETA_CAMBIO),
 ];
 
 #[cfg(test)]
