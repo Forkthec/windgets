@@ -25,6 +25,8 @@ export function Themes() {
   const [sinGuardar, setSinGuardar] = useState<{ tema: ThemeSummary; mensaje: string } | null>(null);
   // HE-03-HU04: el tema que se está renombrando.
   const [porRenombrar, setPorRenombrar] = useState<ThemeSummary | null>(null);
+  // HE-03-HU05: el tema que se va a eliminar (M-06).
+  const [porEliminar, setPorEliminar] = useState<ThemeSummary | null>(null);
 
   const leer = useCallback(async () => {
     const r = await invocar('theme_list', {});
@@ -56,6 +58,18 @@ export function Themes() {
       void leer();
     } else if (r.error.code === 'draft.unsaved_changes') {
       setSinGuardar({ tema, mensaje: r.error.message });
+    } else if (r.error.message) {
+      mostrarResultado(r.error.message);
+    }
+  };
+
+  // HE-03-HU05-CA01: elimina el tema; el escritorio no cambia (ET02).
+  const eliminar = async (tema: ThemeSummary) => {
+    setPorEliminar(null);
+    const r = await invocar('theme_delete', { theme_id: tema.id });
+    if (r.ok) {
+      mostrarResultado(r.result_message?.message ?? '');
+      void leer();
     } else if (r.error.message) {
       mostrarResultado(r.error.message);
     }
@@ -96,7 +110,14 @@ export function Themes() {
                   Aplicar
                 </Boton>
                 <Boton onClick={() => setPorRenombrar(t)}>Renombrar</Boton>
-                <Boton>Eliminar</Boton>
+                {/* HE-03-HU05-ET04: deshabilitada en el tema aplicado (D-037). */}
+                <Boton
+                  disabled={t.is_applied}
+                  motivo={textos.TEMA_APLICADO_NO_SE_ELIMINA}
+                  onClick={() => setPorEliminar(t)}
+                >
+                  Eliminar
+                </Boton>
               </li>
             ))}
           </ul>
@@ -126,6 +147,16 @@ export function Themes() {
             void leer();
           }}
           alCancelar={() => setPorRenombrar(null)}
+        />
+      )}
+      {porEliminar && (
+        // M-06 (HE-03-HU05-ET01). DUDA: HE-03-HU05 M-06 no define el título. Valor usado: «Eliminar».
+        <Confirmacion
+          titulo="Eliminar"
+          texto={textos.CONFIRMAR_ELIMINAR_TEMA.replace('<nombre del tema>', porEliminar.name)}
+          opcionPrincipal="Eliminar"
+          alConfirmar={() => void eliminar(porEliminar)}
+          alCancelar={() => setPorEliminar(null)}
         />
       )}
       {sinGuardar && (

@@ -662,6 +662,41 @@ pub async fn theme_rename(
     Ok(con_mensaje(r))
 }
 
+/// IPC-THEME-14 `theme_delete` (HE-03-HU05): elimina un tema que no es el aplicado y avisa con EV-10.
+#[tauri::command]
+pub async fn theme_delete(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::ThemeDeleteParams,
+) -> Result<IpcResult<()>, ()> {
+    let ahora = RelojDelSistema.ahora_ms();
+    let r = match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .personalizacion
+                .eliminar_tema(
+                    nucleo.planificador.base(),
+                    &user_id,
+                    &params.theme_id.0,
+                    ahora,
+                )
+                .await
+        }
+        Err(e) => Err(e),
+    };
+    if r.is_ok() {
+        let _ = app.emit(
+            "themes_changed",
+            EntityChange {
+                ids: vec![params.theme_id.clone()],
+                op: ChangeOp::Delete,
+                origin: OriginKind::Local,
+            },
+        );
+    }
+    Ok(con_mensaje(r))
+}
+
 /// IPC-THEME-12 `theme_apply` (HE-03-HU03): aplica un tema guardado. Avisa con EV-11 `applied_theme_changed`,
 /// EV-10 `themes_changed` y EV-16 para que la capa y la aplicación lo muestren en 5 s o menos (ET03; RNF-01).
 #[tauri::command]

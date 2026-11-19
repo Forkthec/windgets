@@ -302,3 +302,49 @@ describe('HE-03-HU04 · Renombrar un tema', () => {
     expect(await screen.findByText('Tema renombrado.')).toBeTruthy();
   });
 });
+
+describe('HE-03-HU05 · Eliminar un tema', () => {
+  const TEMAS = [tema('t2', 'Verano'), tema('t1', 'Mi tema', { is_applied: true })];
+  const fila = (i: number) =>
+    within(screen.getByRole('list', { name: 'Lista de temas' })).getAllByRole('listitem')[i] as HTMLElement;
+
+  async function abrirEliminar(preparar?: (n: NucleoDelPlanificador) => void) {
+    const n = await abrirTemas(TEMAS, preparar);
+    fireEvent.click(within(fila(0)).getByRole('button', { name: 'Eliminar' }));
+    const ventana = await screen.findByRole('dialog');
+    return { n, ventana };
+  }
+
+  it('HE-03-HU05-CA01 · Eliminar un tema con confirmación', async () => {
+    const { n, ventana } = await abrirEliminar((n) =>
+      n.responder('theme_delete', () => ({
+        ok: true,
+        value: null,
+        result_message: { code: 'theme_delete', message: 'Tema eliminado.' },
+      })),
+    );
+    // ET01: M-06 con «Eliminar» y «Cancelar».
+    expect(
+      within(ventana).getByText('¿Deseas eliminar el tema “Verano”? Esta acción no se puede deshacer.'),
+    ).toBeTruthy();
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Eliminar' }));
+    expect(await screen.findByText('Tema eliminado.')).toBeTruthy();
+    expect(llamadasA(n, 'theme_delete')).toEqual([{ theme_id: 't2' }]);
+  });
+
+  it('HE-03-HU05-CA02 · Intentar eliminar el tema aplicado', async () => {
+    await abrirTemas(TEMAS);
+    // ET04: deshabilitada con el texto (RT-04).
+    const boton = within(fila(1)).getByRole('button', { name: 'Eliminar' }) as HTMLButtonElement;
+    expect(boton.disabled).toBe(true);
+    expect(screen.getByText('No puedes eliminar el tema aplicado. Aplica otro tema primero.')).toBeTruthy();
+  });
+
+  it('HE-03-HU05-CA03 · Cancelar la eliminación', async () => {
+    const { n, ventana } = await abrirEliminar();
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(llamadasA(n, 'theme_delete')).toEqual([]);
+    expect(within(fila(0)).getByText('Verano')).toBeTruthy();
+  });
+});

@@ -78,6 +78,7 @@ pub fn run() {
             puente_ipc::theme_draft_save_as,
             puente_ipc::theme_apply,
             puente_ipc::theme_rename,
+            puente_ipc::theme_delete,
             puente_ipc::image_import,
             puente_ipc::theme_draft_save,
             puente_ipc::theme_draft_apply,

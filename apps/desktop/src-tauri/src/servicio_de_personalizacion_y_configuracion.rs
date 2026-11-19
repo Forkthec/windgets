@@ -823,6 +823,7 @@ impl ServicioDePersonalizacion {
 
 mod aplicar;
 pub mod distribucion;
+mod eliminar_tema;
 pub mod escritorio;
 mod guardado;
 pub mod guardar_como;
@@ -842,6 +843,8 @@ mod pruebas_de_cancelar;
 mod pruebas_de_colores;
 #[cfg(test)]
 mod pruebas_de_distribucion;
+#[cfg(test)]
+mod pruebas_de_eliminar_tema;
 #[cfg(test)]
 mod pruebas_de_eliminar_widget;
 #[cfg(test)]

@@ -232,6 +232,14 @@ pub const NOMBRE_DE_TEMA_MUY_LARGO: &str = "El nombre no puede superar los 40 ca
 pub const TEMA_DUPLICADO: &str = "Ya existe un tema con ese nombre. Elige otro.";
 /// IPC-THEME-13 `theme_rename` (HE-03-HU04-CA01, CA06): mensaje de resultado.
 pub const TEMA_RENOMBRADO: &str = "Tema renombrado.";
+/// M-06 (HE-03-HU05-ET01): confirmación de eliminar un tema.
+pub const CONFIRMAR_ELIMINAR_TEMA: &str =
+    "¿Deseas eliminar el tema “<nombre del tema>”? Esta acción no se puede deshacer.";
+/// IPC-THEME-14 `theme_delete` (HE-03-HU05-CA01): mensaje de resultado.
+pub const TEMA_ELIMINADO: &str = "Tema eliminado.";
+/// `theme.applied_not_deletable` (HE-03-HU05-CA02, ET04): texto de la opción «Eliminar» deshabilitada.
+pub const TEMA_APLICADO_NO_SE_ELIMINA: &str =
+    "No puedes eliminar el tema aplicado. Aplica otro tema primero.";
 /// `theme.limit_reached` (HE-03-HU02-CA05): texto de la opción «Guardar como tema» deshabilitada.
 pub const MAXIMO_DE_TEMAS: &str =
     "Alcanzaste el máximo de 10 temas. Elimina uno para guardar otro.";
@@ -385,6 +393,9 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("NOMBRE_DE_TEMA_MUY_LARGO", NOMBRE_DE_TEMA_MUY_LARGO),
     ("TEMA_DUPLICADO", TEMA_DUPLICADO),
     ("TEMA_RENOMBRADO", TEMA_RENOMBRADO),
+    ("CONFIRMAR_ELIMINAR_TEMA", CONFIRMAR_ELIMINAR_TEMA),
+    ("TEMA_ELIMINADO", TEMA_ELIMINADO),
+    ("TEMA_APLICADO_NO_SE_ELIMINA", TEMA_APLICADO_NO_SE_ELIMINA),
     ("MAXIMO_DE_TEMAS", MAXIMO_DE_TEMAS),
     (
         "CAMBIOS_APLICADOS_SIN_GUARDAR_AL_SALIR",
