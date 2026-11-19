@@ -1355,3 +1355,177 @@ fn ca_he_14_hu06_ca08() {
         ]
     );
 }
+
+// HE-14-HU07 · Eliminar tarjetas con el agente de IA.
+
+fn pedir_eliminacion(
+    planificador: &Planificador,
+    windi: &ServicioDeWindi,
+    ids: &[&str],
+) -> Option<WindiProposal> {
+    let respuesta = WindiChatResponse {
+        reply: "Esto es lo que voy a eliminar. ¿Confirmas?".into(),
+        intent: WindiChatResponseIntent::Propose,
+        proposal: Some(WindiChatProposal {
+            action: crate::tipos::ProposalAction::Delete,
+            items: ids
+                .iter()
+                .map(|id| WindiChatProposalItemsItem {
+                    card_id: Some(Uuid((*id).into())),
+                    changes: None,
+                })
+                .collect(),
+        }),
+    };
+    let nube = WindiSimulado::responde(vec![Ok(respuesta)]);
+    enviar_con(
+        windi,
+        &nube,
+        &manejador_de(planificador),
+        "Elimina la tarjeta",
+        true,
+    )
+    .unwrap()
+    .proposal
+}
+
+fn existe(planificador: &Planificador, id: &str) -> bool {
+    bloquear(planificador.tarjeta(USUARIO, id))
+        .unwrap()
+        .is_some()
+}
+
+#[test]
+fn ca_he_14_hu07_ca01() {
+    // HE-14-HU07-CA01 · La propuesta trae la tarjeta y el aviso (ET01); al confirmar se elimina con las reglas de
+    // HE-07-HU05 (ET05) y Windi menciona el título.
+    let planificador = con_semilla();
+    let id = tarjeta_en(&planificador, POR_HACER, "Informe", "2026-11-20", 1024.0);
+    let windi = ServicioDeWindi::nuevo();
+    let propuesta = pedir_eliminacion(&planificador, &windi, &[&id]).unwrap();
+    assert_eq!(propuesta.items[0].title, "Informe");
+    assert_eq!(
+        propuesta.warnings,
+        vec!["Esta acción no se puede deshacer.".to_string()]
+    );
+    let r = confirmar(&windi, &manejador_de(&planificador), &propuesta, true).unwrap();
+    assert_eq!(r.reply.text, "Listo, eliminé la tarjeta «Informe».");
+    assert!(!existe(&planificador, &id));
+}
+
+#[test]
+fn ca_he_14_hu07_ca02() {
+    // HE-14-HU07-CA02 · Varias tarjetas en una sola propuesta (ET02).
+    let planificador = con_semilla();
+    let a = tarjeta_en(
+        &planificador,
+        POR_HACER,
+        "Comprar pan",
+        "2026-11-20",
+        1024.0,
+    );
+    let b = tarjeta_en(
+        &planificador,
+        POR_HACER,
+        "Cita médica",
+        "2026-11-21",
+        2048.0,
+    );
+    let windi = ServicioDeWindi::nuevo();
+    let propuesta = pedir_eliminacion(&planificador, &windi, &[&a, &b]).unwrap();
+    assert_eq!(propuesta.items.len(), 2);
+    assert_eq!(propuesta.warnings[0], "Esta acción no se puede deshacer.");
+    let r = confirmar(&windi, &manejador_de(&planificador), &propuesta, true).unwrap();
+    assert_eq!(r.reply.text, "Listo, eliminé 2 tarjetas.");
+    assert!(!existe(&planificador, &a) && !existe(&planificador, &b));
+}
+
+#[test]
+fn ca_he_14_hu07_ca03() {
+    // HE-14-HU07-CA03 · «Rechazar» no elimina ninguna tarjeta.
+    let planificador = con_semilla();
+    let id = tarjeta_en(&planificador, POR_HACER, "Informe", "2026-11-20", 1024.0);
+    let windi = ServicioDeWindi::nuevo();
+    let propuesta = pedir_eliminacion(&planificador, &windi, &[&id]).unwrap();
+    let r = windi.rechazar(&propuesta.id, AHORA).unwrap();
+    assert!(
+        r.reply
+            .text
+            .starts_with("Entendido, no hice ningún cambio.")
+    );
+    assert!(existe(&planificador, &id));
+}
+
+#[test]
+fn ca_he_14_hu07_ca04() {
+    // HE-14-HU07-CA04 · Tarjeta inexistente: ninguna propuesta (ET06).
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    assert!(
+        pedir_eliminacion(
+            &planificador,
+            &windi,
+            &["00000000-0000-4000-8000-0000000000ee"]
+        )
+        .is_none()
+    );
+}
+
+#[test]
+fn ca_he_14_hu07_ca05() {
+    // HE-14-HU07-CA05 · Varias coinciden: Windi recibe el título y la fecha límite de cada una (ET03).
+    let planificador = con_semilla();
+    tarjeta_en(
+        &planificador,
+        POR_HACER,
+        "Pagar la luz",
+        "2026-11-20",
+        1024.0,
+    );
+    tarjeta_en(
+        &planificador,
+        POR_HACER,
+        "Pagar el agua",
+        "2026-11-25",
+        2048.0,
+    );
+    let c = bloquear(contexto(
+        &planificador,
+        USUARIO,
+        "Prueba",
+        planificador.hoy(),
+        12,
+        "Elimina la de pagar",
+    ))
+    .unwrap();
+    let mut vistas: Vec<_> = c
+        .cards
+        .iter()
+        .map(|t| (t.title.clone(), t.due_date.0.clone()))
+        .collect();
+    vistas.sort();
+    assert_eq!(
+        vistas,
+        vec![
+            ("Pagar el agua".into(), "2026-11-25".into()),
+            ("Pagar la luz".into(), "2026-11-20".into())
+        ]
+    );
+}
+
+#[test]
+fn ca_he_14_hu07_ca06() {
+    // HE-14-HU07-CA06 · Tarjeta completada: el aviso y el texto de ET04.
+    let planificador = con_semilla();
+    let id = completada(&planificador);
+    let windi = ServicioDeWindi::nuevo();
+    let propuesta = pedir_eliminacion(&planificador, &windi, &[&id]).unwrap();
+    assert_eq!(
+        propuesta.warnings,
+        vec![
+            "Esta acción no se puede deshacer.".to_string(),
+            "Esta tarjeta está completada. Si la eliminas, dejará de contar en tus reportes."
+                .to_string()
+        ]
+    );
+}

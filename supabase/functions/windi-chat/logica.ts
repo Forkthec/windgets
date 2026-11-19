@@ -145,6 +145,11 @@ export function instruccionDelSistema(contexto: Contexto): string {
     'Si la tarjeta ya está en la columna pedida, dices en qué columna está y no propones.',
     'Si varias tarjetas coinciden, muestras el título, la fecha límite y la columna de cada una y preguntas a cuál',
     'se refiere antes de proponer.',
+    // HE-14-HU07: eliminar tarjetas.
+    'Para eliminar tarjetas llamas a propose_delete_cards con sus ids; si pide eliminar todas las que cumplen una',
+    'condición, como estar en una columna, las incluyes todas en una sola llamada.',
+    'Si varias tarjetas coinciden con el nombre que menciona, muestras el título y la fecha límite de cada una y',
+    'preguntas a cuál se refiere antes de proponer la eliminación.',
     `Columnas del tablero en su orden: ${contexto.columns.map((c) => `${c.name} (id ${c.id}, función ${c.role})`).join(', ')}.`,
     `Tarjetas relacionadas con el mensaje: ${
       contexto.cards.length
@@ -222,6 +227,21 @@ export const FUNCIONES = [
       required: ['card_id', 'column_id'],
     },
   },
+  {
+    name: 'propose_delete_cards',
+    description: 'Propone eliminar una o varias tarjetas. La persona confirma antes de eliminarlas.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        card_ids: {
+          type: 'ARRAY',
+          items: { type: 'STRING' },
+          description: 'Los ids de tarjetas de las relacionadas con el mensaje.',
+        },
+      },
+      required: ['card_ids'],
+    },
+  },
 ];
 
 /** La acción de la propuesta según la función que llamó Gemini. */
@@ -229,6 +249,7 @@ const ACCION: Record<string, Propuesta['action']> = {
   propose_create_cards: 'create',
   propose_edit_card: 'edit',
   propose_move_card: 'move',
+  propose_delete_cards: 'delete',
 };
 
 /** Los elementos de la propuesta a partir de los argumentos de la función (INT-03 → EF-01). */
@@ -236,6 +257,10 @@ function elementos(nombre: string, args: Record<string, unknown>): Propuesta['it
   if (nombre === 'propose_edit_card') {
     const cambios = esObjeto(args.changes) ? args.changes : null;
     return typeof args.card_id === 'string' ? [{ card_id: args.card_id, changes: cambios }] : [];
+  }
+  if (nombre === 'propose_delete_cards') {
+    const ids = Array.isArray(args.card_ids) ? args.card_ids.filter((id) => typeof id === 'string') : [];
+    return ids.map((id) => ({ card_id: id, changes: null }));
   }
   if (nombre === 'propose_move_card') {
     return typeof args.card_id === 'string' && typeof args.column_id === 'string'

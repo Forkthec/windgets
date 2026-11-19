@@ -323,3 +323,38 @@ describe('EF-01 windi-chat · HE-14-HU06 (mover tarjetas)', () => {
     expect(instruccionDelSistema(CONTEXTO)).toContain('el título, la fecha límite y la columna de cada una');
   });
 });
+
+describe('EF-01 windi-chat · HE-14-HU07 (eliminar tarjetas)', () => {
+  it('HE-14-HU07-CA01 y CA02 · declara propose_delete_cards y convierte la llamada en una propuesta de eliminación', () => {
+    const gemini = {
+      candidates: [
+        {
+          content: {
+            parts: [{ functionCall: { name: 'propose_delete_cards', args: { card_ids: ['t1', 't2'] } } }],
+          },
+        },
+      ],
+    };
+    const r = leerGemini(gemini);
+    expect(typeof r === 'object' && r.proposal).toEqual({
+      action: 'delete',
+      items: [
+        { card_id: 't1', changes: null },
+        { card_id: 't2', changes: null },
+      ],
+    });
+    expect(instruccionDelSistema(CONTEXTO)).toContain('las incluyes todas en una sola llamada');
+  });
+
+  it('HE-14-HU07-CA04 · tarjeta inexistente: pide más detalles', () => {
+    expect(instruccionDelSistema(CONTEXTO)).toContain(
+      'Si no encuentras una tarjeta con el nombre que menciona',
+    );
+  });
+
+  it('HE-14-HU07-CA05 · varias coinciden: pregunta a cuál antes de proponer la eliminación', () => {
+    expect(instruccionDelSistema(CONTEXTO)).toContain(
+      'preguntas a cuál se refiere antes de proponer la eliminación',
+    );
+  });
+});

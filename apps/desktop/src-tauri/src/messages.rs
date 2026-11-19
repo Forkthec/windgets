@@ -326,6 +326,15 @@ pub const WINDI_TARJETA_ACTUALIZADA: &str = "Listo, actualicé la tarjeta «<tí
 pub const WINDI_MOVER_COMPLETADA: &str = "Esta tarjeta está completada. Si la mueves, dejará de estar completada y se borrará su fecha de completado.";
 /// DUDA: HE-14-HU06 el texto no es literal («confirma el movimiento mencionando el título y la columna de destino»).
 pub const WINDI_TARJETA_MOVIDA: &str = "Listo, moví la tarjeta «<título>» a <columna>.";
+// HE-14-HU07 · Eliminar tarjetas con el agente de IA.
+/// Aviso en toda propuesta de eliminación (HE-14-HU07-CA01, ET01).
+pub const WINDI_ELIMINAR_SIN_DESHACER: &str = "Esta acción no se puede deshacer.";
+/// Texto si alguna tarjeta está completada (HE-14-HU07-CA06, ET04).
+pub const WINDI_ELIMINAR_COMPLETADA: &str =
+    "Esta tarjeta está completada. Si la eliminas, dejará de contar en tus reportes.";
+/// DUDA: HE-14-HU07 los textos no son literales («confirma la eliminación mencionando el título»).
+pub const WINDI_TARJETA_ELIMINADA: &str = "Listo, eliminé la tarjeta «<título>».";
+pub const WINDI_TARJETAS_ELIMINADAS: &str = "Listo, eliminé <cantidad> tarjetas.";
 pub const WINDI_TARJETA_YA_NO_EXISTE: &str = "«<título>» ya no existe";
 pub const WINDI_TARJETA_CAMBIO: &str = "«<título>» tiene otro valor en <campos>";
 

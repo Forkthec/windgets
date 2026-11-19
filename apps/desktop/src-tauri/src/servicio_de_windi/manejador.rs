@@ -47,8 +47,7 @@ impl<C: Calendario> ManejadorDePropuestas for ManejadorDelPlanificador<'_, C> {
             ProposalAction::Create => self.preparar_creacion(propuesta).await,
             ProposalAction::Edit => self.preparar_edicion(propuesta).await,
             ProposalAction::Move => self.preparar_movimiento(propuesta).await,
-            // Eliminar llega con HE-14-HU07; sin ella no hay propuesta.
-            _ => Ok(None),
+            ProposalAction::Delete => self.preparar_eliminacion(propuesta).await,
         }
     }
 
@@ -65,7 +64,7 @@ impl<C: Calendario> ManejadorDePropuestas for ManejadorDelPlanificador<'_, C> {
             ProposalAction::Create => self.aplicar_creacion(propuesta).await,
             ProposalAction::Edit => self.aplicar_edicion(propuesta).await,
             ProposalAction::Move => self.aplicar_movimiento(propuesta).await,
-            _ => Err(crate::servicio_del_planificador::inesperado()),
+            ProposalAction::Delete => self.aplicar_eliminacion(propuesta).await,
         }
     }
 }
@@ -325,6 +324,73 @@ impl<C: Calendario> ManejadorDelPlanificador<'_, C> {
                     cambios["to_column"].as_str().unwrap_or_default(),
                 ),
         ))
+    }
+
+    /// HE-14-HU07: eliminar una o varias tarjetas (ET02). Si alguna no existe, no hay propuesta (ET06). Siempre lleva
+    /// el aviso de que no se puede deshacer (ET01) y, si alguna está completada, el texto de ET04.
+    async fn preparar_eliminacion(
+        &self,
+        propuesta: &WindiChatProposal,
+    ) -> Result<Option<WindiProposal>, AppError> {
+        let mut items: Vec<WindiProposalItem> = Vec::new();
+        let mut alguna_completada = false;
+        for item in &propuesta.items {
+            let Some(card_id) = &item.card_id else {
+                return Ok(None);
+            };
+            let Some(tarjeta) = self.planificador.tarjeta(self.user_id, &card_id.0).await? else {
+                return Ok(None);
+            };
+            if items
+                .iter()
+                .any(|i| i.card_id.as_ref() == Some(&tarjeta.id))
+            {
+                continue;
+            }
+            alguna_completada |= tarjeta.is_completed;
+            items.push(WindiProposalItem {
+                card_id: Some(tarjeta.id.clone()),
+                current: Some(json!({ "title": tarjeta.title })),
+                changes: None,
+                title: tarjeta.title.clone(),
+            });
+        }
+        if items.is_empty() {
+            return Ok(None);
+        }
+        let mut warnings = vec![messages::WINDI_ELIMINAR_SIN_DESHACER.to_string()];
+        if alguna_completada {
+            warnings.push(messages::WINDI_ELIMINAR_COMPLETADA.to_string());
+        }
+        Ok(Some(WindiProposal {
+            id: Uuid(uuid::Uuid::new_v4().to_string()),
+            action: ProposalAction::Delete,
+            items,
+            warnings,
+            state: ProposalState::Active,
+        }))
+    }
+
+    /// Elimina las tarjetas con `card_delete` (ET05) y confirma con el título o la cantidad (CA01).
+    async fn aplicar_eliminacion(
+        &self,
+        propuesta: &WindiProposal,
+    ) -> Result<Option<String>, AppError> {
+        for item in &propuesta.items {
+            let id = item
+                .card_id
+                .as_ref()
+                .ok_or_else(crate::servicio_del_planificador::inesperado)?;
+            self.planificador
+                .eliminar_tarjeta(self.user_id, &id.0)
+                .await?;
+        }
+        Ok(Some(match propuesta.items.as_slice() {
+            [item] => messages::WINDI_TARJETA_ELIMINADA.replace("<título>", &item.title),
+            varios => {
+                messages::WINDI_TARJETAS_ELIMINADAS.replace("<cantidad>", &varios.len().to_string())
+            }
+        }))
     }
 
     /// Actualiza la tarjeta con `card_update` (ET02, ET07) y confirma mencionando el título (CA01).

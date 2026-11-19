@@ -189,3 +189,6 @@ Datos «NO DEFINIDO» y contradicciones encontradas al construir (AGENTS.md, «C
 - **HE-14-HU06** · El texto con que Windi confirma el movimiento (CA01: «mencionando el título y la columna de destino») no es literal. Valor usado: «Listo, moví la tarjeta «<título>» a <columna>.»; al llegar a Hecho, la celebración de HE-14-HU02-CA02 (`messages.rs`).
 - **HE-14-HU06** · No se define en qué posición queda la tarjeta movida por Windi. Valor usado: al final de la columna de destino, como al marcarla completada (`servicio_de_windi/manejador.rs`).
 - **HE-14-HU06** · La propuesta muestra «la columna actual y la columna de destino» (ET01) sin formato literal. Valor usado: «Columna: <actual> → <destino>» (`Propuesta.tsx`).
+- **HE-14-HU07** · El texto con que Windi confirma la eliminación (CA01: «mencionando el título») no es literal. Valor usado: «Listo, eliminé la tarjeta «<título>».» y, para varias, «Listo, eliminé <cantidad> tarjetas.» (`messages.rs`).
+- **HE-14-HU07** · La cantidad de tarjetas de la propuesta (ET02) no tiene texto literal. Valor usado: «<cantidad> tarjetas» sobre los avisos, solo si hay más de una (`Propuesta.tsx`).
+- **HE-14-HU07** · CA03 pide que Windi «confirme que no hay tarjetas eliminadas». Valor usado: el texto común al rechazar, «Entendido, no hice ningún cambio. ¿Quieres cambiar algo de la propuesta?» (`messages.rs`).

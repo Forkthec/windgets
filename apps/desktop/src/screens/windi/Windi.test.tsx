@@ -466,3 +466,40 @@ describe('HE-14-HU06 · Mover tarjetas con el agente de IA', () => {
     expect(boton(p, 'Confirmar').disabled).toBe(false);
   });
 });
+
+describe('HE-14-HU07 · Eliminar tarjetas con el agente de IA', () => {
+  const SIN_DESHACER = 'Esta acción no se puede deshacer.';
+  const eliminar = (titulos: string[], warnings: string[]): WindiProposal => ({
+    id: 'p1',
+    action: 'delete',
+    items: titulos.map((t, i) => ({ card_id: `t${i}`, current: { title: t }, changes: null, title: t })),
+    warnings,
+    state: 'active',
+  });
+
+  it('HE-14-HU07-CA01 · Eliminar con confirmación', async () => {
+    await abrir(proponer(eliminar(['Informe'], [SIN_DESHACER])));
+    await pedir('Elimina el informe');
+    const p = propuestas()[0] as HTMLElement;
+    expect(within(p).getByText('Informe')).toBeTruthy();
+    expect(within(p).getByText(SIN_DESHACER)).toBeTruthy();
+    expect(boton(p, 'Confirmar').disabled).toBe(false);
+    expect(boton(p, 'Rechazar').disabled).toBe(false);
+  });
+
+  it('HE-14-HU07-CA02 · Eliminar varias tarjetas', async () => {
+    await abrir(proponer(eliminar(['Comprar pan', 'Llamar a mamá', 'Cita médica'], [SIN_DESHACER])));
+    await pedir('Elimina las de Por hacer');
+    const p = propuestas()[0] as HTMLElement;
+    expect(within(p).getByText('3 tarjetas')).toBeTruthy();
+    expect(within(p).getByText('Cita médica')).toBeTruthy();
+  });
+
+  it('HE-14-HU07-CA06 · Eliminar una tarjeta completada', async () => {
+    const texto = 'Esta tarjeta está completada. Si la eliminas, dejará de contar en tus reportes.';
+    await abrir(proponer(eliminar(['Informe'], [SIN_DESHACER, texto])));
+    await pedir('Elimina el informe');
+    const p = propuestas()[0] as HTMLElement;
+    expect(within(p).getByText(texto)).toBeTruthy();
+  });
+});

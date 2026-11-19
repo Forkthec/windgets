@@ -66,6 +66,10 @@ export function Propuesta({ propuesta, habilitada, alConfirmar, alRechazar }: Pr
           </li>
         ))}
       </ul>
+      {propuesta.action === 'delete' && propuesta.items.length > 1 && (
+        // DUDA: HE-14-HU07 la cantidad (ET02) no tiene texto literal.
+        <p>{`${propuesta.items.length} tarjetas`}</p>
+      )}
       {propuesta.warnings.map((w) => (
         <p key={w} className="wg-motivo">
           {w}
