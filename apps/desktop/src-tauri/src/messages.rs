@@ -272,6 +272,23 @@ pub const DISTRIBUCION_NO_GUARDADA: &str = "No se guardaron cambios.";
 /// RT-04).
 pub const WIDGET_YA_AGREGADO: &str = "Ya agregaste este widget.";
 
+// HE-04-HU05 · Agregar el widget Clima (IPC-WID-04, IPC-WID-07; INT-04).
+/// `city.not_found` (CA04).
+pub const CIUDAD_NO_ENCONTRADA: &str =
+    "No encontramos esa ciudad. Revisa el nombre e intenta de nuevo.";
+/// `city.duplicate` (CA05).
+pub const CIUDAD_DUPLICADA: &str = "Ya tienes un widget Clima para esa ciudad.";
+/// `city.too_long` (CA09, ET11).
+pub const CIUDAD_MUY_LARGA: &str = "La ciudad no puede superar los 100 caracteres.";
+/// `net.offline` al validar la ciudad (IPC-WID-05; DP-07).
+pub const CIUDAD_SIN_CONEXION: &str =
+    "No hay conexión a internet. Conéctate para validar la ciudad.";
+/// Aviso del widget cuando el servicio de clima no responde (CA07, ET07).
+pub const CLIMA_NO_DISPONIBLE: &str = "No pudimos cargar el clima. Intenta de nuevo más tarde.";
+/// Aviso de un widget externo sin conexión (CA08, ET08; HE-15-HU02-CA06).
+pub const WIDGET_EXTERNO_SIN_CONEXION: &str =
+    "Sin conexión. El widget se actualizará al reconectarte.";
+
 // HE-16-HU03 · Cerrar sesión desde la pantalla Configuración (IPC-AUTH-13, IPC-AUTH-14).
 
 /// Resultado de `auth_sign_out` (HE-16-HU03-CA01, CA04).
@@ -409,6 +426,12 @@ pub const TEXTOS: &[(&str, &str)] = &[
         BLOQUE_DESPUES_DE_FECHA_LIMITE,
     ),
     ("WIDGET_YA_AGREGADO", WIDGET_YA_AGREGADO),
+    ("CIUDAD_NO_ENCONTRADA", CIUDAD_NO_ENCONTRADA),
+    ("CIUDAD_DUPLICADA", CIUDAD_DUPLICADA),
+    ("CIUDAD_MUY_LARGA", CIUDAD_MUY_LARGA),
+    ("CIUDAD_SIN_CONEXION", CIUDAD_SIN_CONEXION),
+    ("CLIMA_NO_DISPONIBLE", CLIMA_NO_DISPONIBLE),
+    ("WIDGET_EXTERNO_SIN_CONEXION", WIDGET_EXTERNO_SIN_CONEXION),
     ("SESION_CERRADA", SESION_CERRADA),
     ("DESEAS_CERRAR_SESION", DESEAS_CERRAR_SESION),
     (

@@ -295,6 +295,46 @@ impl AuthDeSupabase for ClienteDeSupabase {
     }
 }
 
+impl ClienteDeSupabase {
+    /// Llama una Edge Function (`/functions/v1/<nombre>`) con el JWT de la sesión.
+    async fn funcion<T: serde::de::DeserializeOwned>(
+        &self,
+        nombre: &str,
+        token: &str,
+        cuerpo: &impl serde::Serialize,
+    ) -> Result<T, FallaDeAuth> {
+        let cuerpo = serde_json::to_value(cuerpo).map_err(|_| FallaDeAuth::SinRespuesta)?;
+        let texto = self
+            .enviar_como(
+                reqwest::Method::POST,
+                &format!("/functions/v1/{nombre}"),
+                Some(cuerpo),
+                Some(token),
+            )
+            .await?;
+        serde_json::from_str(&texto).map_err(|_| FallaDeAuth::SinRespuesta)
+    }
+}
+
+/// EF-02 `weather-geocode` y EF-03 `weather-current` (HE-04-HU05; INT-04).
+impl crate::servicio_de_clima_y_noticias::NubeDeClima for ClienteDeSupabase {
+    async fn geocodificar(
+        &self,
+        token: &str,
+        peticion: &crate::tipos::WeatherGeocodeRequest,
+    ) -> Result<crate::tipos::WeatherGeocodeResponse, FallaDeAuth> {
+        self.funcion("weather-geocode", token, peticion).await
+    }
+
+    async fn clima_actual(
+        &self,
+        token: &str,
+        peticion: &crate::tipos::WeatherCurrentRequest,
+    ) -> Result<crate::tipos::WeatherCurrentResponse, FallaDeAuth> {
+        self.funcion("weather-current", token, peticion).await
+    }
+}
+
 impl crate::motor_de_sincronizacion::NubeDeSincronizacion for ClienteDeSupabase {
     async fn sync_push(
         &self,

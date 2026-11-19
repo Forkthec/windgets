@@ -821,6 +821,7 @@ impl ServicioDePersonalizacion {
     }
 }
 
+pub mod agregar;
 mod aplicar;
 pub mod distribucion;
 mod eliminar_tema;
@@ -833,6 +834,8 @@ mod renombrar;
 pub mod ultima_pantalla;
 mod widgets;
 
+#[cfg(test)]
+mod pruebas_de_agregar_clima;
 #[cfg(test)]
 mod pruebas_de_aplicar;
 #[cfg(test)]
