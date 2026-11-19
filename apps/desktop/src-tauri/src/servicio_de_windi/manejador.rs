@@ -11,8 +11,9 @@ use crate::servicio_del_planificador::{
     validar_descripcion, validar_fecha_limite, validar_titulo,
 };
 use crate::tipos::{
-    AppError, Card, CardCreateParams, CardPatch, CardType, CardUpdateParams, ProposalAction,
-    ProposalState, Uuid, WindiChatProposal, WindiProposal, WindiProposalItem,
+    AppError, Card, CardCreateParams, CardMoveParams, CardPatch, CardType, CardUpdateParams,
+    ColumnRole, Placement, PlacementVariant1, PlacementVariant1Kind, ProposalAction, ProposalState,
+    Uuid, WindiChatProposal, WindiProposal, WindiProposalItem,
 };
 
 /// Los campos de una tarjeta que se comparan para saber si una propuesta quedó desactualizada (HE-14-HU03-ET05).
@@ -45,7 +46,8 @@ impl<C: Calendario> ManejadorDePropuestas for ManejadorDelPlanificador<'_, C> {
         match propuesta.action {
             ProposalAction::Create => self.preparar_creacion(propuesta).await,
             ProposalAction::Edit => self.preparar_edicion(propuesta).await,
-            // Las demás acciones llegan con HE-14-HU06 y HU07; sin ellas no hay propuesta.
+            ProposalAction::Move => self.preparar_movimiento(propuesta).await,
+            // Eliminar llega con HE-14-HU07; sin ella no hay propuesta.
             _ => Ok(None),
         }
     }
@@ -62,10 +64,8 @@ impl<C: Calendario> ManejadorDePropuestas for ManejadorDelPlanificador<'_, C> {
         match propuesta.action {
             ProposalAction::Create => self.aplicar_creacion(propuesta).await,
             ProposalAction::Edit => self.aplicar_edicion(propuesta).await,
-            _ => {
-                let _ = self.alias;
-                Err(crate::servicio_del_planificador::inesperado())
-            }
+            ProposalAction::Move => self.aplicar_movimiento(propuesta).await,
+            _ => Err(crate::servicio_del_planificador::inesperado()),
         }
     }
 }
@@ -214,6 +214,117 @@ impl<C: Calendario> ManejadorDelPlanificador<'_, C> {
             },
             state: ProposalState::Active,
         }))
+    }
+
+    /// HE-14-HU06: mover una tarjeta a otra columna. Sin propuesta si la tarjeta o la columna no existen (ET08,
+    /// ET10) o si ya está en esa columna (ET11). `current` guarda la columna de origen para detectar cambios
+    /// (HE-14-HU03-ET05) y los nombres de las columnas van en `changes` para mostrarlos (ET01).
+    async fn preparar_movimiento(
+        &self,
+        propuesta: &WindiChatProposal,
+    ) -> Result<Option<WindiProposal>, AppError> {
+        let [item] = propuesta.items.as_slice() else {
+            return Ok(None);
+        };
+        let Some(card_id) = &item.card_id else {
+            return Ok(None);
+        };
+        let Some(tarjeta) = self.planificador.tarjeta(self.user_id, &card_id.0).await? else {
+            return Ok(None);
+        };
+        let Some(destino) = item
+            .changes
+            .as_ref()
+            .and_then(|c| c.get("column_id"))
+            .and_then(Value::as_str)
+            .map(str::to_lowercase)
+        else {
+            return Ok(None);
+        };
+        let columnas = self.planificador.columnas(self.user_id).await?;
+        let buscar = |id: &str| columnas.iter().find(|c| c.id.0.to_lowercase() == id);
+        let (Some(origen), Some(llegada)) = (
+            buscar(&tarjeta.column_id.0.to_lowercase()),
+            buscar(&destino),
+        ) else {
+            return Ok(None);
+        };
+        if origen.id == llegada.id {
+            return Ok(None);
+        }
+        let sale_de_hecho = origen.role == ColumnRole::Done && llegada.role != ColumnRole::Done;
+        Ok(Some(WindiProposal {
+            id: Uuid(uuid::Uuid::new_v4().to_string()),
+            action: ProposalAction::Move,
+            items: vec![WindiProposalItem {
+                card_id: Some(tarjeta.id.clone()),
+                current: Some(json!({ "column_id": tarjeta.column_id })),
+                changes: Some(json!({
+                    "column_id": llegada.id,
+                    "from_column": origen.name,
+                    "to_column": llegada.name,
+                })),
+                title: tarjeta.title.clone(),
+            }],
+            warnings: if sale_de_hecho {
+                vec![messages::WINDI_MOVER_COMPLETADA.to_string()]
+            } else {
+                Vec::new()
+            },
+            state: ProposalState::Active,
+        }))
+    }
+
+    /// Mueve la tarjeta al final de la columna con `card_move` (ET09), que la completa al llegar a Hecho (ET02) y la
+    /// deja pendiente al salir (ET03). Al llegar a Hecho Windi celebra (CA02); si no, confirma el movimiento (CA01).
+    async fn aplicar_movimiento(
+        &self,
+        propuesta: &WindiProposal,
+    ) -> Result<Option<String>, AppError> {
+        let item = propuesta
+            .items
+            .first()
+            .ok_or_else(crate::servicio_del_planificador::inesperado)?;
+        let card_id = item
+            .card_id
+            .clone()
+            .ok_or_else(crate::servicio_del_planificador::inesperado)?;
+        let cambios = item
+            .changes
+            .as_ref()
+            .ok_or_else(crate::servicio_del_planificador::inesperado)?;
+        let destino = cambios["column_id"]
+            .as_str()
+            .ok_or_else(crate::servicio_del_planificador::inesperado)?;
+        let estaba_completada = self
+            .planificador
+            .tarjeta(self.user_id, &card_id.0)
+            .await?
+            .is_some_and(|t| t.is_completed);
+        let movida = self
+            .planificador
+            .mover_tarjeta(
+                self.user_id,
+                CardMoveParams {
+                    card_id,
+                    column_id: Uuid(destino.to_string()),
+                    placement: Placement::Variant1(PlacementVariant1 {
+                        kind: PlacementVariant1Kind::End,
+                    }),
+                },
+            )
+            .await?;
+        if movida.is_completed && !estaba_completada {
+            return Ok(Some(super::ServicioDeWindi::celebracion(self.alias)));
+        }
+        Ok(Some(
+            messages::WINDI_TARJETA_MOVIDA
+                .replace("<título>", &movida.title)
+                .replace(
+                    "<columna>",
+                    cambios["to_column"].as_str().unwrap_or_default(),
+                ),
+        ))
     }
 
     /// Actualiza la tarjeta con `card_update` (ET02, ET07) y confirma mencionando el título (CA01).

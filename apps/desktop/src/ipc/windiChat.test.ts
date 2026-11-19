@@ -274,3 +274,52 @@ describe('EF-01 windi-chat · HE-14-HU05 (editar tarjetas)', () => {
     expect(texto).toContain('Si el valor pedido es el que la tarjeta ya tiene, lo dices y no propones.');
   });
 });
+
+describe('EF-01 windi-chat · HE-14-HU06 (mover tarjetas)', () => {
+  it('HE-14-HU06-CA01 · declara propose_move_card y convierte la llamada en una propuesta de movimiento', () => {
+    const gemini = {
+      candidates: [
+        {
+          content: {
+            parts: [
+              { functionCall: { name: 'propose_move_card', args: { card_id: 't1', column_id: 'c3' } } },
+            ],
+          },
+        },
+      ],
+    };
+    const r = leerGemini(gemini);
+    expect(typeof r === 'object' && r.proposal).toEqual({
+      action: 'move',
+      items: [{ card_id: 't1', changes: { column_id: 'c3' } }],
+    });
+  });
+
+  it('HE-14-HU06-CA02 · decir que está completada es moverla a Hecho', () => {
+    expect(instruccionDelSistema(CONTEXTO)).toContain('eso es moverla a la columna con función done');
+  });
+
+  it('HE-14-HU06-CA04 · columna inexistente: menciona las columnas en su orden', () => {
+    const texto = instruccionDelSistema(CONTEXTO);
+    expect(texto).toContain('mencionas las columnas del tablero en su orden');
+    expect(texto).toContain('Columnas del tablero en su orden:');
+  });
+
+  it('HE-14-HU06-CA05 · tarjeta inexistente: pide más detalles', () => {
+    expect(instruccionDelSistema(CONTEXTO)).toContain(
+      'Si no encuentras una tarjeta con el nombre que menciona',
+    );
+  });
+
+  it('HE-14-HU06-CA06 · avisa que está completada antes de proponer', () => {
+    expect(instruccionDelSistema(CONTEXTO)).toContain('avisas que está completada antes de proponer');
+  });
+
+  it('HE-14-HU06-CA07 · ya está en esa columna: lo dice y no propone', () => {
+    expect(instruccionDelSistema(CONTEXTO)).toContain('dices en qué columna está y no propones');
+  });
+
+  it('HE-14-HU06-CA08 · varias coinciden: título, fecha límite y columna', () => {
+    expect(instruccionDelSistema(CONTEXTO)).toContain('el título, la fecha límite y la columna de cada una');
+  });
+});

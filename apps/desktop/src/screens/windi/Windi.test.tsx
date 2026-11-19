@@ -425,3 +425,44 @@ describe('HE-14-HU05 · Editar tarjetas con el agente de IA', () => {
     expect(boton(p, 'Confirmar').disabled).toBe(false);
   });
 });
+
+describe('HE-14-HU06 · Mover tarjetas con el agente de IA', () => {
+  const mover = (warnings: string[]): WindiProposal => ({
+    id: 'p1',
+    action: 'move',
+    items: [
+      {
+        card_id: 't1',
+        current: { column_id: 'c1' },
+        changes: {
+          column_id: 'c3',
+          from_column: 'Por hacer',
+          to_column: 'Hecho',
+        } as unknown as WindiProposal['items'][number]['changes'],
+        title: 'Informe',
+      },
+    ],
+    warnings,
+    state: 'active',
+  });
+
+  it('HE-14-HU06-CA01 · Mover con confirmación', async () => {
+    // ET01: la columna actual y la de destino, con «Confirmar» y «Rechazar».
+    await abrir(proponer(mover([])));
+    await pedir('Mueve el informe a Hecho');
+    const p = propuestas()[0] as HTMLElement;
+    expect(within(p).getByText('Columna: Por hacer → Hecho')).toBeTruthy();
+    expect(boton(p, 'Confirmar').disabled).toBe(false);
+    expect(boton(p, 'Rechazar').disabled).toBe(false);
+  });
+
+  it('HE-14-HU06-CA06 · Mover una tarjeta completada', async () => {
+    const aviso =
+      'Esta tarjeta está completada. Si la mueves, dejará de estar completada y se borrará su fecha de completado.';
+    await abrir(proponer(mover([aviso])));
+    await pedir('Devuelve el informe a Por hacer');
+    const p = propuestas()[0] as HTMLElement;
+    expect(within(p).getByText(aviso)).toBeTruthy();
+    expect(boton(p, 'Confirmar').disabled).toBe(false);
+  });
+});

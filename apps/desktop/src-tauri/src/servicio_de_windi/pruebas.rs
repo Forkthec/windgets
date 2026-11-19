@@ -5,7 +5,7 @@ use std::sync::Mutex;
 
 use super::*;
 use crate::servicio_del_planificador::pruebas::{
-    CalendarioDePrueba, POR_HACER, USUARIO, bloquear, con_semilla, tarjeta_en,
+    CalendarioDePrueba, EN_PROGRESO, HECHO, POR_HACER, USUARIO, bloquear, con_semilla, tarjeta_en,
 };
 use crate::tipos::{DateIso, Hour, WindiChatContextTotals, WindiChatResponseIntent};
 
@@ -1132,5 +1132,226 @@ fn ca_he_14_hu05_ca07() {
             serde_json::json!({ "due_date": "2026-11-20" })
         )
         .is_none()
+    );
+}
+
+// HE-14-HU06 · Mover tarjetas con el agente de IA. Lo que dice Windi (columna inexistente, varias coinciden) lo
+// produce `windi-chat`; el Núcleo vuelve a aplicar las reglas y sin un movimiento válido no muestra la propuesta.
+
+fn pedir_movimiento(
+    planificador: &Planificador,
+    windi: &ServicioDeWindi,
+    card_id: &str,
+    columna: &str,
+) -> Option<WindiProposal> {
+    let respuesta = WindiChatResponse {
+        reply: "Esto es lo que voy a mover. ¿Confirmas?".into(),
+        intent: WindiChatResponseIntent::Propose,
+        proposal: Some(WindiChatProposal {
+            action: crate::tipos::ProposalAction::Move,
+            items: vec![WindiChatProposalItemsItem {
+                card_id: Some(Uuid(card_id.into())),
+                changes: Some(serde_json::json!({ "column_id": columna })),
+            }],
+        }),
+    };
+    let nube = WindiSimulado::responde(vec![Ok(respuesta)]);
+    enviar_con(
+        windi,
+        &nube,
+        &manejador_de(planificador),
+        "Mueve la tarjeta",
+        true,
+    )
+    .unwrap()
+    .proposal
+}
+
+fn columna_de(planificador: &Planificador, id: &str) -> (String, bool) {
+    let t = bloquear(planificador.tarjeta(USUARIO, id))
+        .unwrap()
+        .unwrap();
+    (t.column_id.0.to_lowercase(), t.is_completed)
+}
+
+/// Una tarjeta en Hecho, completada con `card_move`.
+fn completada(planificador: &Planificador) -> String {
+    let id = tarjeta_en(planificador, POR_HACER, "Informe", "2026-11-20", 1024.0);
+    bloquear(planificador.mover_tarjeta(
+        USUARIO,
+        crate::tipos::CardMoveParams {
+            card_id: Uuid(id.clone()),
+            column_id: Uuid(HECHO.into()),
+            placement: crate::tipos::Placement::Variant1(crate::tipos::PlacementVariant1 {
+                kind: crate::tipos::PlacementVariant1Kind::End,
+            }),
+        },
+    ))
+    .unwrap();
+    id
+}
+
+#[test]
+fn ca_he_14_hu06_ca01() {
+    // HE-14-HU06-CA01 · La propuesta trae la columna actual y la de destino (ET01); al confirmar se mueve con las
+    // reglas de HE-09-HU02 (ET09) y Windi menciona el título y la columna.
+    let planificador = con_semilla();
+    let id = tarjeta_en(&planificador, POR_HACER, "Informe", "2026-11-20", 1024.0);
+    let windi = ServicioDeWindi::nuevo();
+    let propuesta = pedir_movimiento(&planificador, &windi, &id, EN_PROGRESO).unwrap();
+    let cambios = propuesta.items[0].changes.as_ref().unwrap();
+    assert_eq!(cambios["from_column"], "Por hacer");
+    assert_eq!(cambios["to_column"], "En progreso");
+    assert!(propuesta.warnings.is_empty());
+    let r = confirmar(&windi, &manejador_de(&planificador), &propuesta, true).unwrap();
+    assert_eq!(
+        r.reply.text,
+        "Listo, moví la tarjeta «Informe» a En progreso."
+    );
+    assert_eq!(columna_de(&planificador, &id), (EN_PROGRESO.into(), false));
+}
+
+#[test]
+fn ca_he_14_hu06_ca02() {
+    // HE-14-HU06-CA02 · A Hecho: queda completada con fecha (ET02) y Windi celebra (HE-14-HU02-CA02).
+    let planificador = con_semilla();
+    let id = tarjeta_en(&planificador, POR_HACER, "Informe", "2026-11-20", 1024.0);
+    let windi = ServicioDeWindi::nuevo();
+    let propuesta = pedir_movimiento(&planificador, &windi, &id, HECHO).unwrap();
+    let r = confirmar(&windi, &manejador_de(&planificador), &propuesta, true).unwrap();
+    assert_eq!(r.reply.text, ServicioDeWindi::celebracion("Prueba"));
+    let t = bloquear(planificador.tarjeta(USUARIO, &id))
+        .unwrap()
+        .unwrap();
+    assert!(t.is_completed);
+    assert_eq!(t.completed_on.map(|f| f.0), Some("2026-11-14".into()));
+}
+
+#[test]
+fn ca_he_14_hu06_ca03() {
+    // HE-14-HU06-CA03 · «Rechazar» no mueve la tarjeta.
+    let planificador = con_semilla();
+    let id = tarjeta_en(&planificador, POR_HACER, "Informe", "2026-11-20", 1024.0);
+    let windi = ServicioDeWindi::nuevo();
+    let propuesta = pedir_movimiento(&planificador, &windi, &id, EN_PROGRESO).unwrap();
+    let r = windi.rechazar(&propuesta.id, AHORA).unwrap();
+    assert!(
+        r.reply
+            .text
+            .starts_with("Entendido, no hice ningún cambio.")
+    );
+    assert_eq!(columna_de(&planificador, &id), (POR_HACER.into(), false));
+}
+
+#[test]
+fn ca_he_14_hu06_ca04() {
+    // HE-14-HU06-CA04 · Columna inexistente: ninguna propuesta (ET08).
+    let planificador = con_semilla();
+    let id = tarjeta_en(&planificador, POR_HACER, "Informe", "2026-11-20", 1024.0);
+    let windi = ServicioDeWindi::nuevo();
+    assert!(
+        pedir_movimiento(
+            &planificador,
+            &windi,
+            &id,
+            "00000000-0000-4000-8000-0000000000ff"
+        )
+        .is_none()
+    );
+}
+
+#[test]
+fn ca_he_14_hu06_ca05() {
+    // HE-14-HU06-CA05 · Tarjeta inexistente: ninguna propuesta (ET10).
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    assert!(
+        pedir_movimiento(
+            &planificador,
+            &windi,
+            "00000000-0000-4000-8000-0000000000ee",
+            HECHO
+        )
+        .is_none()
+    );
+}
+
+#[test]
+fn ca_he_14_hu06_ca06() {
+    // HE-14-HU06-CA06 · Sacar de Hecho: aviso literal (ET05) y al confirmar deja de estar completada (ET03).
+    let planificador = con_semilla();
+    let id = completada(&planificador);
+    let windi = ServicioDeWindi::nuevo();
+    let propuesta = pedir_movimiento(&planificador, &windi, &id, POR_HACER).unwrap();
+    assert_eq!(
+        propuesta.warnings,
+        vec!["Esta tarjeta está completada. Si la mueves, dejará de estar completada y se borrará su fecha de completado.".to_string()]
+    );
+    confirmar(&windi, &manejador_de(&planificador), &propuesta, true).unwrap();
+    let t = bloquear(planificador.tarjeta(USUARIO, &id))
+        .unwrap()
+        .unwrap();
+    assert!(!t.is_completed);
+    assert!(t.completed_on.is_none());
+}
+
+#[test]
+fn ca_he_14_hu06_ca07() {
+    // HE-14-HU06-CA07 · Ya está en esa columna: ninguna propuesta (ET11).
+    let planificador = con_semilla();
+    let id = tarjeta_en(&planificador, POR_HACER, "Informe", "2026-11-20", 1024.0);
+    let windi = ServicioDeWindi::nuevo();
+    assert!(pedir_movimiento(&planificador, &windi, &id, POR_HACER).is_none());
+}
+
+#[test]
+fn ca_he_14_hu06_ca08() {
+    // HE-14-HU06-CA08 · Varias coinciden: Windi recibe el título, la fecha límite y la columna de cada una (ET07).
+    let planificador = con_semilla();
+    tarjeta_en(
+        &planificador,
+        POR_HACER,
+        "Pagar la luz",
+        "2026-11-20",
+        1024.0,
+    );
+    tarjeta_en(
+        &planificador,
+        EN_PROGRESO,
+        "Pagar el agua",
+        "2026-11-25",
+        1024.0,
+    );
+    let c = bloquear(contexto(
+        &planificador,
+        USUARIO,
+        "Prueba",
+        planificador.hoy(),
+        12,
+        "Mueve la de pagar",
+    ))
+    .unwrap();
+    let mut vistas: Vec<_> = c
+        .cards
+        .iter()
+        .map(|t| {
+            (
+                t.title.clone(),
+                t.due_date.0.clone(),
+                t.column_id.0.to_lowercase(),
+            )
+        })
+        .collect();
+    vistas.sort();
+    assert_eq!(
+        vistas,
+        vec![
+            (
+                "Pagar el agua".into(),
+                "2026-11-25".into(),
+                EN_PROGRESO.into()
+            ),
+            ("Pagar la luz".into(), "2026-11-20".into(), POR_HACER.into()),
+        ]
     );
 }

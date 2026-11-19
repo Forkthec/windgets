@@ -135,10 +135,21 @@ export function instruccionDelSistema(contexto: Contexto): string {
     'Si el valor pedido es el que la tarjeta ya tiene, lo dices y no propones.',
     'Si la tarjeta está completada (tiene completed_on), avisas que está completada; si además pide que vuelva a',
     'estar pendiente, eso es mover la tarjeta, no editarla.',
+    // HE-14-HU06: mover tarjetas.
+    'Para mover una tarjeta a otra columna llamas a propose_move_card con su id y el id de la columna de destino.',
+    'Si dice que una tarjeta ya está completada o terminada, eso es moverla a la columna con función done (Hecho).',
+    'Si pide que una tarjeta completada vuelva a estar pendiente, eso es moverla a otra columna; avisas que está',
+    'completada antes de proponer.',
+    'Si la columna pedida no existe, dices que no la encuentras y mencionas las columnas del tablero en su orden,',
+    'sin proponer.',
+    'Si la tarjeta ya está en la columna pedida, dices en qué columna está y no propones.',
+    'Si varias tarjetas coinciden, muestras el título, la fecha límite y la columna de cada una y preguntas a cuál',
+    'se refiere antes de proponer.',
+    `Columnas del tablero en su orden: ${contexto.columns.map((c) => `${c.name} (id ${c.id}, función ${c.role})`).join(', ')}.`,
     `Tarjetas relacionadas con el mensaje: ${
       contexto.cards.length
         ? contexto.cards
-            .map((t) => `${String(t.title)} (id ${String(t.id)}, fecha límite ${String(t.due_date)}${t.completed_on ? ', completada' : ''})`)
+            .map((t) => `${String(t.title)} (id ${String(t.id)}, fecha límite ${String(t.due_date)}${((n) => (n ? `, columna ${n}` : ''))(contexto.columns.find((c) => c.id === t.column_id)?.name)}${t.completed_on ? ', completada' : ''})`)
             .join('; ')
         : 'ninguna'
     }.`,
@@ -199,12 +210,25 @@ export const FUNCIONES = [
       required: ['card_id', 'changes'],
     },
   },
+  {
+    name: 'propose_move_card',
+    description: 'Propone mover una tarjeta a otra columna. La persona confirma antes de moverla.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        card_id: { type: 'STRING', description: 'El id de una tarjeta de las relacionadas con el mensaje.' },
+        column_id: { type: 'STRING', description: 'El id de una columna del tablero.' },
+      },
+      required: ['card_id', 'column_id'],
+    },
+  },
 ];
 
 /** La acción de la propuesta según la función que llamó Gemini. */
 const ACCION: Record<string, Propuesta['action']> = {
   propose_create_cards: 'create',
   propose_edit_card: 'edit',
+  propose_move_card: 'move',
 };
 
 /** Los elementos de la propuesta a partir de los argumentos de la función (INT-03 → EF-01). */
@@ -212,6 +236,11 @@ function elementos(nombre: string, args: Record<string, unknown>): Propuesta['it
   if (nombre === 'propose_edit_card') {
     const cambios = esObjeto(args.changes) ? args.changes : null;
     return typeof args.card_id === 'string' ? [{ card_id: args.card_id, changes: cambios }] : [];
+  }
+  if (nombre === 'propose_move_card') {
+    return typeof args.card_id === 'string' && typeof args.column_id === 'string'
+      ? [{ card_id: args.card_id, changes: { column_id: args.column_id } }]
+      : [];
   }
   const tarjetas = Array.isArray(args.cards) ? args.cards.filter(esObjeto) : [];
   return tarjetas.map((t) => ({ card_id: null, changes: t }));

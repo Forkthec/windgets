@@ -60,6 +60,9 @@ export function Propuesta({ propuesta, habilitada, alConfirmar, alRechazar }: Pr
                 ))}
               </ul>
             )}
+            {propuesta.action === 'move' && item.changes && (
+              <p>{`Columna: ${String((item.changes as Record<string, unknown>).from_column)} → ${String((item.changes as Record<string, unknown>).to_column)}`}</p>
+            )}
           </li>
         ))}
       </ul>
