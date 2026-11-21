@@ -216,12 +216,32 @@ export function instruccionDelSistema(contexto: Contexto): string {
     `Etiquetas disponibles: ${
       contexto.labels.length ? contexto.labels.map((e) => `${e.name} (id ${e.id})`).join(', ') : 'ninguna'
     }.`,
+    // P23: en las pruebas manuales, Gemini anunciaba la propuesta («vamos a programar ese recordatorio») y se
+    // detenía sin llamar a la función; la persona tenía que insistir. Ahora responde siempre con funciones.
+    'Respondes siempre llamando funciones. El texto que ve la persona va en responder. Si ya tienes los datos para',
+    'crear, editar, mover o eliminar tarjetas, en la misma respuesta llamas a responder con una frase breve y a la',
+    'función de la propuesta: la persona solo ve la propuesta y el botón para confirmarla si llamas a esa función.',
+    'Nunca describes la propuesta solo con texto ni pides permiso para proponer.',
   ];
   return reglas.join(' ');
 }
 
-/** Las funciones que Windi puede llamar para proponer cambios (INT-03). HE-14-HU04: crear tarjetas. */
+/**
+ * Las funciones que Windi puede llamar (INT-03): `responder` lleva el texto de la respuesta y las demás proponen
+ * cambios. DUDA (P23): INT-03 no define `responder`; con `mode: 'AUTO'` Gemini a veces anunciaba la propuesta en
+ * texto y no llamaba a la función. Con `mode: 'ANY'` siempre responde con funciones (docs/DUDAS.md).
+ */
 export const FUNCIONES = [
+  {
+    name: 'responder',
+    description:
+      'Envía a la persona el texto de tu respuesta. Lo llamas siempre, solo o junto a una función de propuesta.',
+    parameters: {
+      type: 'OBJECT',
+      properties: { text: { type: 'STRING', description: 'El texto que ve la persona.' } },
+      required: ['text'],
+    },
+  },
   {
     name: 'propose_create_cards',
     description: 'Propone crear una o varias tarjetas. La persona confirma antes de crearlas.',
@@ -336,7 +356,7 @@ export function cuerpoParaGemini(peticion: PeticionWindi): Record<string, unknow
     systemInstruction: { parts: [{ text: instruccionDelSistema(peticion.context) }] },
     contents,
     tools: [{ functionDeclarations: FUNCIONES }],
-    toolConfig: { functionCallingConfig: { mode: 'AUTO' } },
+    toolConfig: { functionCallingConfig: { mode: 'ANY' } },
     generationConfig: { temperature: 0.4, maxOutputTokens: 600 },
   };
 }
@@ -356,13 +376,19 @@ export function leerGemini(respuesta: unknown): RespuestaWindi | CodigoDeError {
   const partes = esObjeto(respuesta) && Array.isArray(respuesta.candidates) ? respuesta.candidates[0] : null;
   const contenido = esObjeto(partes) && esObjeto(partes.content) ? partes.content : null;
   const lista = contenido && Array.isArray(contenido.parts) ? contenido.parts : [];
-  const reply = lista
-    .map((p: unknown) => (esObjeto(p) && typeof p.text === 'string' ? p.text : ''))
+  const llamadas = lista
+    .map((p: unknown) => (esObjeto(p) && esObjeto(p.functionCall) ? p.functionCall : null))
+    .filter((f) => f !== null);
+  // El texto llega en partes de texto o en los argumentos de `responder`.
+  const reply = [
+    ...lista.map((p: unknown) => (esObjeto(p) && typeof p.text === 'string' ? p.text : '')),
+    ...llamadas.map((f) =>
+      f.name === 'responder' && esObjeto(f.args) && typeof f.args.text === 'string' ? f.args.text : '',
+    ),
+  ]
     .join('')
     .trim();
-  const llamada = lista
-    .map((p: unknown) => (esObjeto(p) && esObjeto(p.functionCall) ? p.functionCall : null))
-    .find((f) => f !== null);
+  const llamada = llamadas.find((f) => typeof f.name === 'string' && f.name in ACCION);
   const accion = llamada && typeof llamada.name === 'string' ? ACCION[llamada.name] : undefined;
   if (llamada && accion) {
     const args = esObjeto(llamada.args) ? llamada.args : {};

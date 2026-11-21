@@ -604,8 +604,8 @@ No lo llama el Núcleo: es el SMTP propio de Supabase Auth. Configuración: host
 
 La llama solo la Edge Function `windi-chat` (EF-01).
 - Petición: `POST https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent` con cabecera `x-goog-api-key: {GEMINI_API_KEY}`. `GEMINI_MODEL` por defecto: un modelo Flash-Lite del nivel gratuito (por ejemplo `gemini-3.5-flash-lite`; el nombre exacto se fija al construir porque los modelos cambian, D-193).
-- Cuerpo: `systemInstruction` (personalidad de HE-14-HU02, alcance de HE-14-HU01-ET23: solo tarjetas y funcionamiento de la aplicación, trato de tú, español neutro, máximo 3 oraciones antes de una lista, lista numerada de máximo 6 pasos, máximo un emoji solo en saludos o celebraciones); `contents` (historial y mensaje); `tools` con cuatro funciones declaradas (`propose_create_cards`, `propose_edit_card`, `propose_move_card`, `propose_delete_cards`) y `toolConfig.functionCallingConfig.mode = AUTO`; `generationConfig { temperature: 0.4, maxOutputTokens: 600 }`.
-- Respuesta: texto del agente y, si pidió cambiar tarjetas, una llamada a función. La Edge Function la convierte en `proposal` (EF-01). Las reglas de validación (fecha límite no anterior a hoy, título 1 a 100, etiquetas existentes, no crear etiquetas) las vuelve a aplicar el Núcleo (HE-14-HU04-ET06, ET08; HE-14-HU05-ET04).
+- Cuerpo: `systemInstruction` (personalidad de HE-14-HU02, alcance de HE-14-HU01-ET23: solo tarjetas y funcionamiento de la aplicación, trato de tú, español neutro, máximo 3 oraciones antes de una lista, lista numerada de máximo 6 pasos, máximo un emoji solo en saludos o celebraciones); `contents` (historial y mensaje); `tools` con cinco funciones declaradas (`responder`, que lleva el texto que ve la persona, y `propose_create_cards`, `propose_edit_card`, `propose_move_card`, `propose_delete_cards`) y `toolConfig.functionCallingConfig.mode = ANY` (P23: con `AUTO` Gemini a veces anunciaba la propuesta sin llamar a la función; docs/DUDAS.md); `generationConfig { temperature: 0.4, maxOutputTokens: 600 }`.
+- Respuesta: la llamada a `responder` con el texto del agente (o partes de texto) y, si pidió cambiar tarjetas, la llamada a la función de la propuesta. La Edge Function la convierte en `proposal` (EF-01). Las reglas de validación (fecha límite no anterior a hoy, título 1 a 100, etiquetas existentes, no crear etiquetas) las vuelve a aplicar el Núcleo (HE-14-HU04-ET06, ET08; HE-14-HU05-ET04).
 - Límites: nivel gratuito con límites por minuto, por día y por tokens que se consultan en Google AI Studio (D-132, RI-13); el contenido enviado en el nivel gratuito puede usarse para mejorar los productos del proveedor (D-132). Espera máxima: la función corta a los 13 s y el Núcleo a los 15 s (RNF-11; D-172).
 - Fallas: HTTP 429 → `quota_exceeded`; 5xx o bloqueo de seguridad → `provider_error`; sin respuesta → `timeout`. Mensaje al usuario en todos los casos: «No pude responder en este momento. Intenta de nuevo.» con «Reintentar» (HE-14-HU01-CA08). No hay cuota por usuario (DP-12).
 
@@ -616,13 +616,13 @@ POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-li
 x-goog-api-key: <GEMINI_API_KEY>
 { "systemInstruction": { "parts": [ { "text": "Eres Windi, el agente de IA de Windgets… (personalidad de HE-14-HU02)" } ] },
   "contents": [ { "role": "user", "parts": [ { "text": "Crea una tarea para entregar el informe el viernes" } ] } ],
-  "tools": [ { "functionDeclarations": [ { "name": "propose_create_cards", "description": "Propone crear tarjetas", "parameters": { "type": "OBJECT", "properties": { "cards": { "type": "ARRAY", "items": { "type": "OBJECT" } } } } } ] } ],
-  "toolConfig": { "functionCallingConfig": { "mode": "AUTO" } },
+  "tools": [ { "functionDeclarations": [ { "name": "responder", "description": "Envía a la persona el texto de tu respuesta", "parameters": { "type": "OBJECT", "properties": { "text": { "type": "STRING" } } } }, { "name": "propose_create_cards", "description": "Propone crear tarjetas", "parameters": { "type": "OBJECT", "properties": { "cards": { "type": "ARRAY", "items": { "type": "OBJECT" } } } } } ] } ],
+  "toolConfig": { "functionCallingConfig": { "mode": "ANY" } },
   "generationConfig": { "temperature": 0.4, "maxOutputTokens": 600 } }
 200
 { "candidates": [ { "content": { "parts": [
-    { "text": "Esto es lo que voy a crear. ¿Confirmas?" },
-    { "functionCall": { "name": "propose_create_cards", "args": { "cards": [ { "title": "Entregar el informe", "due_date": "2026-11-13" } ] } } } ] } } ] }
+    { "functionCall": { "name": "propose_create_cards", "args": { "cards": [ { "title": "Entregar el informe", "due_date": "2026-11-13" } ] } } },
+    { "functionCall": { "name": "responder", "args": { "text": "Esto es lo que voy a crear. ¿Confirmas?" } } } ] } } ] }
 ```
 
 ### INT-04 Clima — D-139, RNF-09 (proveedor: Duda/propuesta DP-17)

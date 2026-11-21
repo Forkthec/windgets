@@ -138,7 +138,9 @@ describe('EF-01 windi-chat · HE-14-HU04 (crear tarjetas)', () => {
       toolConfig: unknown;
     };
     expect(cuerpo.tools[0]?.functionDeclarations.map((f) => f.name)).toContain('propose_create_cards');
-    expect(cuerpo.toolConfig).toEqual({ functionCallingConfig: { mode: 'AUTO' } });
+    // P23: con `AUTO` Gemini a veces anunciaba la propuesta sin llamar a la función; con `ANY` siempre llama.
+    expect(cuerpo.tools[0]?.functionDeclarations.map((f) => f.name)).toContain('responder');
+    expect(cuerpo.toolConfig).toEqual({ functionCallingConfig: { mode: 'ANY' } });
     const gemini = {
       candidates: [
         {
@@ -163,6 +165,48 @@ describe('EF-01 windi-chat · HE-14-HU04 (crear tarjetas)', () => {
         action: 'create',
         items: [{ card_id: null, changes: { title: 'Entregar el informe', due_date: '2026-11-20' } }],
       },
+    });
+  });
+
+  it('HE-14-HU04-CA01 · el texto llega en responder junto a la propuesta, o solo en responder', () => {
+    const propuesta = {
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                functionCall: {
+                  name: 'propose_create_cards',
+                  args: { cards: [{ title: 'Estudiar cálculo', due_date: '2026-11-27' }] },
+                },
+              },
+              { functionCall: { name: 'responder', args: { text: 'Te propongo crear esta tarea.' } } },
+            ],
+          },
+        },
+      ],
+    };
+    expect(leerGemini(propuesta)).toEqual({
+      reply: 'Te propongo crear esta tarea.',
+      intent: 'propose',
+      proposal: {
+        action: 'create',
+        items: [{ card_id: null, changes: { title: 'Estudiar cálculo', due_date: '2026-11-27' } }],
+      },
+    });
+    const respuesta = {
+      candidates: [
+        {
+          content: {
+            parts: [{ functionCall: { name: 'responder', args: { text: '¿Para qué día es la tarea?' } } }],
+          },
+        },
+      ],
+    };
+    expect(leerGemini(respuesta)).toEqual({
+      reply: '¿Para qué día es la tarea?',
+      intent: 'answer',
+      proposal: null,
     });
   });
 
