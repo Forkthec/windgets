@@ -250,6 +250,9 @@ const respuestas: Respuestas = {
     email.trim().toLowerCase() === CUENTA_SIMULADA.email && password === CONTRASENA_SIMULADA
       ? { ok: true, value: { user_id: 'simulado', alias: CUENTA_SIMULADA.alias } }
       : error({ code: 'auth.invalid_credentials', message: textos.CREDENCIALES_INCORRECTAS }),
+  // HE-01-HU05: fuera de Tauri no hay navegador ni regreso windgets://; la espera no recibe resultado.
+  auth_google_start: () => ({ ok: true, value: { expires_at: new Date(Date.now() + 300_000).toISOString() } }),
+  auth_google_cancel: () => ({ ok: true, value: null }),
   // HE-07-HU01: el simulado no tiene etiquetas y crea la tarjeta tal cual llega, al final de Por hacer.
   label_list: () => ({ ok: true, value: [] }),
   card_create: (p) => {

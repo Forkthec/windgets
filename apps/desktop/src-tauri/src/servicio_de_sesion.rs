@@ -11,6 +11,8 @@ use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::cliente_de_supabase::{AuthDeSupabase, FallaDeAuth, SesionDeAuth};
+
+pub mod google;
 use crate::messages;
 use crate::repositorios_y_archivos_locales::{
     AlmacenDeSesion, BaseLocal, SesionGuardada, borrar_archivos,
@@ -280,6 +282,8 @@ pub struct ServicioDeSesion<A, R> {
     reloj: R,
     almacen: Box<dyn AlmacenDeSesion>,
     pendiente: Mutex<Option<RegistroPendiente>>,
+    /// Inicio con Google en espera del regreso `windgets://auth/callback` (IPC-AUTH-06, IPC-AUTH-07).
+    google: Mutex<Option<google::EsperaDeGoogle>>,
     /// Una sola renovación a la vez: el refresh_token se usa una vez y las demás llamadas esperan su resultado.
     renovando: tokio::sync::Mutex<()>,
 }
@@ -299,6 +303,7 @@ impl<A: AuthDeSupabase, R: Reloj> ServicioDeSesion<A, R> {
             reloj,
             almacen,
             pendiente: Mutex::new(None),
+            google: Mutex::new(None),
             renovando: tokio::sync::Mutex::new(()),
         }
     }
@@ -654,6 +659,8 @@ pub(crate) mod pruebas {
         pub llamadas: Mutex<Vec<String>>,
         /// Códigos enviados, del primero al último.
         pub codigos: Mutex<Vec<String>>,
+        /// La cuenta de Google que entrega `grant_type=pkce`; sin ella, `invalid_grant`.
+        pub google: Mutex<Option<crate::cliente_de_supabase::SesionDeGoogle>>,
     }
 
     impl AuthDePrueba {
@@ -753,6 +760,31 @@ pub(crate) mod pruebas {
                 refresh_token: "renovacion-nueva".into(),
                 ..Self::sesion("")
             })
+        }
+
+        fn url_de_google(&self, desafio: &str, regreso: &str, permisos: &str) -> String {
+            crate::cliente_de_supabase::direccion_de_google(
+                "https://proyecto.supabase.co",
+                desafio,
+                regreso,
+                permisos,
+            )
+        }
+
+        async fn intercambiar_google(
+            &self,
+            codigo: &str,
+            verificador: &str,
+        ) -> Result<crate::cliente_de_supabase::SesionDeGoogle, FallaDeAuth> {
+            self.anotar(format!("pkce {codigo} {verificador}"))?;
+            self.google
+                .lock()
+                .unwrap()
+                .clone()
+                .ok_or(FallaDeAuth::Rechazo {
+                    estado: 400,
+                    codigo: "invalid_grant".into(),
+                })
         }
     }
 
@@ -1677,3 +1709,5 @@ pub(crate) mod pruebas {
 
 #[cfg(test)]
 mod pruebas_de_cierre;
+#[cfg(test)]
+mod pruebas_de_google;

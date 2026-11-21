@@ -7,6 +7,7 @@ import { Boton } from '@/ui/Boton/Boton';
 import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
 import { useNavegacion, useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { useConexion } from '../cuenta/conexion';
+import { useInicioConGoogle } from '../cuenta/google';
 import { Hipervinculo } from '../cuenta/Hipervinculo';
 import { MarcoDeCuenta } from '../cuenta/MarcoDeCuenta';
 import { TEXTOS } from '../cuenta/textos';
@@ -33,6 +34,7 @@ export function SignIn() {
   const [valores, setValores] = useState<Valores>({ email: correoDeCuenta, password: '' });
   const [aviso, setAviso] = useState<string | null>(null);
   const campos = useMensajesDeCampo(CAMPOS, VALIDADORES);
+  const google = useInicioConGoogle(sinConexion);
 
   const cambiar = (campo: Campo) => (valor: string) => {
     setValores((v) => ({ ...v, [campo]: valor }));
@@ -71,6 +73,7 @@ export function SignIn() {
         {/* ET09: sin conexión, el aviso va en la parte superior de la pantalla. */}
         {!enLinea && <Aviso texto={TEXTOS.SIN_CONEXION_INICIO} />}
         {aviso && enLinea && <Aviso texto={aviso} />}
+        {enLinea && google.aviso}
         <CampoTexto
           id={campos.ids.email}
           etiqueta="Correo electrónico"
@@ -97,8 +100,10 @@ export function SignIn() {
         <Boton principal type="submit" disabled={!enLinea || enCurso}>
           Iniciar sesión
         </Boton>
-        {/* El inicio con Google es HE-01-HU05 (P12, Cuentas: Google y recuperación). */}
-        <Boton disabled={!enLinea}>Continuar con Google</Boton>
+        {/* HE-01-HU05-ET10: sin conexión, deshabilitado y sin abrir la ventana de Google. */}
+        <Boton disabled={!enLinea || google.enCurso} onClick={() => void google.continuar()}>
+          Continuar con Google
+        </Boton>
         <p className="wg-cuenta__centro">
           ¿No tienes cuenta?{' '}
           <Hipervinculo alSeleccionar={() => abrirCuenta('register')}>Regístrate</Hipervinculo>
