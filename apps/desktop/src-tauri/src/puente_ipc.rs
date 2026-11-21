@@ -713,6 +713,7 @@ pub async fn label_delete(
 /// IPC-CAT-01 `catalog_list`: los catálogos de colores, plantillas, imágenes, tipografías, paletas y animaciones.
 #[tauri::command]
 pub async fn catalog_list(
+    app: AppHandle,
     nucleo: State<'_, Nucleo>,
     params: CatalogListParams,
 ) -> Result<IpcResult<Vec<CatalogItem>>, ()> {
@@ -721,7 +722,7 @@ pub async fn catalog_list(
         CatalogKind::Template => {
             nucleo
                 .personalizacion
-                .plantillas(nucleo.planificador.base())
+                .plantillas(nucleo.planificador.base(), &carpetas(&app).recursos)
                 .await
         }
         CatalogKind::Image => {

@@ -38,7 +38,13 @@ fn ca_he_02_hu02_ca01() {
     // HE-02-HU02-CA01 · El catálogo trae el id, el nombre y la miniatura de cada plantilla (ET01); solo el
     // catálogo del equipo (ET03, ET04): no hay comando para crear plantillas ni subir archivos (ET05).
     let (base, servicio) = con_otra_plantilla();
-    let plantillas = bloquear(servicio.plantillas(&base)).unwrap();
+    let recursos = std::path::Path::new("recursos");
+    let plantillas = bloquear(servicio.plantillas(&base, recursos)).unwrap();
+    // La miniatura de la plantilla por defecto es el archivo que trae el instalador.
+    let miniatura = recursos
+        .join("assets/templates/default/thumbnail.png")
+        .to_string_lossy()
+        .into_owned();
     let datos: Vec<_> = plantillas
         .iter()
         .map(|p| (p.id.as_str(), p.name.as_str(), p.thumbnail_url.as_str()))
@@ -46,7 +52,7 @@ fn ca_he_02_hu02_ca01() {
     assert_eq!(
         datos,
         [
-            ("default", "Windgets", "t"),
+            ("default", "Windgets", miniatura.as_str()),
             ("minimal", "Minimal", "templates/minimal/thumbnail.png"),
         ]
     );

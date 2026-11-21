@@ -323,7 +323,7 @@ export function Personalization() {
                           aria-pressed={elegida}
                           onClick={() => void cambiar({ template_id: p.id })}
                         >
-                          <img src={p.thumbnail_url} alt="" width={96} height={54} />
+                          <img src={urlDeArchivo(p.thumbnail_url)} alt="" width={96} height={54} />
                           <span>{p.name}</span>
                           {elegida && <span>Seleccionada</span>}
                         </button>
