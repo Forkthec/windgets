@@ -10,7 +10,7 @@ export const ESPERA_MS = 13_000;
 /** Turnos del historial que se aceptan (EF-01). */
 export const TURNOS = 20;
 /** Modelo por defecto si `GEMINI_MODEL` no está definido: un Flash-Lite del nivel gratuito (D-193). */
-export const MODELO_POR_DEFECTO = 'gemini-2.5-flash-lite';
+export const MODELO_POR_DEFECTO = 'gemini-3.5-flash-lite';
 
 export type Rol = 'user' | 'assistant';
 
