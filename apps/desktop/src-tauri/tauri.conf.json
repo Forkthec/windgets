@@ -41,7 +41,8 @@
       "nsis": {
         "installMode": "currentUser",
         "languages": ["Spanish"],
-        "template": "../../../installer/installer.nsi"
+        "template": "../../../installer/installer.nsi",
+          "headerImage": "../../../installer/cabecera.bmp"
       }
     }
   }

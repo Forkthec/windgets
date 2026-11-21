@@ -51,6 +51,7 @@ CRCCheck off
 !define INSTALLMODE "{{install_mode}}"
 !define INSTALLERICON "{{installer_icon}}"
 !define UNINSTALLERICON "{{uninstaller_icon}}"
+!define HEADERIMAGE "{{header_image}}"
 !define MAINBINARYNAME "{{main_binary_name}}"
 !define MAINBINARYSRCPATH "{{main_binary_path}}"
 !define BUNDLEID "{{bundle_id}}"
@@ -142,6 +143,16 @@ VIAddVersionKey "ProductVersion" "${VERSION}"
 !if "${UNINSTALLERICON}" != ""
   !define MUI_UNICON "${UNINSTALLERICON}"
 !endif
+; Cabecera de cada paso (P23): el logo a la derecha (tauri.conf.json, nsis.headerImage; se genera con
+; generar_activos.mjs) sobre el color de superficie del tema por defecto, con el texto del color del tema.
+!if "${HEADERIMAGE}" != ""
+  !define MUI_HEADERIMAGE
+  !define MUI_HEADERIMAGE_RIGHT
+  !define MUI_HEADERIMAGE_BITMAP "${HEADERIMAGE}"
+  !define MUI_HEADERIMAGE_UNBITMAP "${HEADERIMAGE}"
+!endif
+!define MUI_BGCOLOR "DCE3DA"
+!define MUI_TEXTCOLOR "14201C"
 
 ; ---------------------------------------------------------------------------------------------------------
 ; Mensajes con dos opciones propias (RT-04: confirmación y aviso). $R9 queda en 1 (primera opción) o 2
