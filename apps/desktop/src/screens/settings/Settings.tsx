@@ -76,7 +76,7 @@ export function Settings() {
   const { ejecutar } = useEnvioUnico(cerrar);
 
   return (
-    <main aria-label="Configuración" aria-busy={inicio === null}>
+    <main aria-label="Configuración" aria-busy={inicio === null} className="wg-configuracion">
       {aviso && <Aviso texto={aviso} />}
       {/* ET01 (HE-16-HU02): el interruptor «Inicio automático». */}
       {inicio !== null && (

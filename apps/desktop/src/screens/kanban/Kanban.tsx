@@ -144,10 +144,12 @@ function Columna({
         <span className="wg-columna__cantidad">{column.card_count}</span>
         {/* HE-09-HU04-ET01: cada columna tiene «Editar». */}
         <Boton onClick={() => alEditar(column)}>Editar</Boton>
-        {/* HE-09-HU06-ET01, ET02: «Eliminar» en cada columna; en las por defecto, deshabilitada con su texto. */}
+        {/* HE-09-HU06-ET01, ET02: «Eliminar» en cada columna; en las por defecto, deshabilitada con su texto. El
+            encabezado no tiene espacio para el texto: aparece al pasar el mouse (RT-04-ET11). */}
         <Boton
           disabled={column.is_default}
           motivo={textos.COLUMNA_POR_DEFECTO_NO_ELIMINABLE}
+          motivoAlPasar
           onClick={() => alEliminar(column)}
         >
           Eliminar

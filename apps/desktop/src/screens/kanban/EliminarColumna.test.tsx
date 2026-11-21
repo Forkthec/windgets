@@ -87,8 +87,9 @@ describe('HE-09-HU06 · Eliminar las columnas creadas', () => {
         name: 'Eliminar',
       }) as HTMLButtonElement;
       expect(boton.disabled).toBe(true);
+      // RT-04-ET11: el encabezado no tiene espacio; el motivo aparece al pasar el mouse.
+      expect(boton.title).toBe('Las columnas por defecto no se pueden eliminar.');
     }
-    expect(screen.getAllByText('Las columnas por defecto no se pueden eliminar.').length).toBeGreaterThan(0);
   });
 
   it('HE-09-HU06-CA06 · Cancelar la eliminación', async () => {
