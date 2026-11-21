@@ -94,8 +94,30 @@ async fn preparar(base: &BaseLocal, user_id: &str) -> Result<(), sqlx::Error> {
         .bind(uuid::Uuid::new_v4().to_string())
         .execute(pool)
         .await?;
+    // Antes de P23 las filas con booleanos (widget, theme_widget) no se aplicaban y el cursor ya las pasó: una
+    // sola vez por base se vuelve a descargar desde el principio. Aplicar una fila otra vez no cambia nada.
+    let hecha: Option<String> =
+        sqlx::query_scalar("SELECT value FROM device_setting WHERE key = ?")
+            .bind(REDESCARGA)
+            .fetch_optional(pool)
+            .await?;
+    if hecha.is_none() {
+        let mut tx = pool.begin().await?;
+        sqlx::query("UPDATE sync_state SET last_pulled_seq = 0 WHERE id = 1")
+            .execute(&mut *tx)
+            .await?;
+        sqlx::query("INSERT INTO device_setting (key, value, updated_at) VALUES (?, 'true', ?)")
+            .bind(REDESCARGA)
+            .bind(instante(chrono::Utc::now().timestamp_millis()))
+            .execute(&mut *tx)
+            .await?;
+        tx.commit().await?;
+    }
     Ok(())
 }
+
+/// Marca de `device_setting`: la base ya volvió a descargar todo tras corregir los booleanos (P23).
+const REDESCARGA: &str = "sync_full_pull_after_booleans";
 
 /// IPC-SYNC-01 `sync_get_status`: el estado del indicador y la cantidad de cambios pendientes.
 pub async fn estado(base: &BaseLocal) -> Result<SyncStatus, sqlx::Error> {
@@ -822,6 +844,39 @@ mod pruebas {
             .unwrap();
         });
         servicio
+    }
+
+    #[test]
+    fn redescarga_una_sola_vez_tras_corregir_los_booleanos() {
+        // Una base que ya sincronizó antes de P23 pasó las filas con booleanos sin aplicarlas: el cursor vuelve a
+        // 0 una sola vez para traerlas.
+        let base = BaseLocal::en_memoria();
+        let cursor = || -> i64 {
+            bloquear(async {
+                sqlx::query_scalar("SELECT last_pulled_seq FROM sync_state WHERE id = 1")
+                    .fetch_one(base.pool().await.unwrap())
+                    .await
+                    .unwrap()
+            })
+        };
+        bloquear(async {
+            let pool = base.pool().await.unwrap();
+            sqlx::query("INSERT INTO sync_state (id, user_id, device_id, last_pulled_seq) VALUES (1, ?, '00000000-0000-4000-8000-0000000000d1', 30)")
+                .bind(USUARIO)
+                .execute(pool)
+                .await
+                .unwrap();
+            preparar(&base, USUARIO).await.unwrap();
+        });
+        assert_eq!(cursor(), 0);
+        bloquear(async {
+            sqlx::query("UPDATE sync_state SET last_pulled_seq = 58 WHERE id = 1")
+                .execute(base.pool().await.unwrap())
+                .await
+                .unwrap();
+            preparar(&base, USUARIO).await.unwrap();
+        });
+        assert_eq!(cursor(), 58);
     }
 
     #[test]
