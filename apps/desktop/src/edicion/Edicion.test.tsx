@@ -171,6 +171,27 @@ describe('HE-05-HU02 · Mover un widget', () => {
     expect(n.de('layout_edit_save')).toEqual([]);
   });
 
+  it('HE-05-HU02-ET01 · Un arrastre rápido no acumula llamadas al Núcleo', async () => {
+    const n = nucleo([RELOJ, TAREAS], {
+      mover: ({ x, y }) => ({ rect: { ...RELOJ, x, y }, collided: false }),
+    });
+    await abrir(n);
+    const reloj = widget('Reloj');
+    // Cinco movimientos seguidos mientras el Núcleo responde el primero: solo viajan el primero y el último.
+    await act(async () => {
+      fireEvent.pointerDown(reloj, { clientX: 100, clientY: 100, pointerId: 1 });
+      for (const dy of [10, 20, 30, 40, 50]) {
+        fireEvent.pointerMove(reloj, { clientX: 100, clientY: 100 + dy, pointerId: 1 });
+      }
+    });
+    await soltar(reloj);
+    expect(n.de('layout_edit_move')).toEqual([
+      { widget_id: 'reloj', x: 40, y: 50 },
+      { widget_id: 'reloj', x: 40, y: 90 },
+    ]);
+    expect(widget('Reloj').style.top).toBe('90px');
+  });
+
   it('HE-05-HU02-CA02 · Mover un widget fuera del área visible', async () => {
     const n = nucleo([RELOJ], { mover: () => ({ rect: { ...RELOJ, x: 1600, y: 920 }, collided: false }) });
     await abrir(n);
