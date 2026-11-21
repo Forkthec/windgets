@@ -123,7 +123,10 @@ export function Edicion({ invocar = invocarNucleo, escuchar = escucharNucleo }: 
                 height: pedido.height,
               });
         if (!r.ok) continue;
-        setWidgets((ws) => ws.map((w) => (w.widget_id === a.widgetId ? r.value.rect : w)));
+        // Con un movimiento más nuevo esperando, el widget sigue al puntero; si no, queda donde lo dejó el Núcleo.
+        if (!siguiente.current) {
+          setWidgets((ws) => ws.map((w) => (w.widget_id === a.widgetId ? r.value.rect : w)));
+        }
         setChoques(
           r.value.collided && arrastre.current
             ? [
@@ -149,6 +152,9 @@ export function Edicion({ invocar = invocarNucleo, escuchar = escucharNucleo }: 
       a.modo === 'mover'
         ? { ...a.rect, x: a.rect.x + dx, y: a.rect.y + dy }
         : { ...a.rect, width: a.rect.width + dx, height: a.rect.height + dy };
+    // El widget se mueve con el puntero sin esperar al Núcleo; las reglas (área visible, sin superponerse, 100 ×
+    // 100) las aplica la respuesta del Núcleo.
+    setWidgets((ws) => ws.map((w) => (w.widget_id === a.widgetId ? pedido : w)));
     siguiente.current = { a, pedido };
     if (!enVuelo.current) void enviar();
   };
