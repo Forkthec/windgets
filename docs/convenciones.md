@@ -65,7 +65,7 @@ WINDGETS_SUPABASE_ANON_KEY=
 
 ```
 GEMINI_API_KEY=
-GEMINI_MODEL=gemini-2.5-flash-lite   # modelo Flash-Lite del nivel gratuito
+GEMINI_MODEL=gemini-3.5-flash-lite   # modelo Flash-Lite del nivel gratuito
 NEWS_API_KEY=
 # SUPABASE_SERVICE_ROLE_KEY: la entrega Supabase a las Edge Functions; nunca en el ejecutable ni en el repositorio
 ```
@@ -111,9 +111,9 @@ Configuración en `apps/desktop/src-tauri/tauri.conf.json`: `bundle.windows.nsis
 
 - **Zona horaria.** «Hoy», `due_date`, `completed_on` y `day_changed` usan la zona horaria del computador; las marcas de tiempo se guardan en UTC (`Instant`).
 - **Bibliotecas permitidas.** Gráficas: `recharts`; selector de fecha: `react-day-picker`; selector de colores: `react-colorful`; arrastrar y soltar de tarjetas: `@dnd-kit/core`; mover y redimensionar widgets: código propio sobre eventos del puntero. Versiones fijas en `package.json` (sin `^`).
-- **Activos que la carpeta no incluye** (se generan en P00 con `pnpm --filter desktop run assets`, script `apps/desktop/scripts/generar_activos.mjs`, y quedan versionados en `assets/`): `templates/default/background.jpg` (1920 × 1080, degradado diagonal de 18° del color principal al color secundario de la plantilla, generado con `sharp` desde un SVG) y `thumbnail.png` (320 × 180, el mismo fondo reducido); las cinco fuentes `.woff2` de `seed.sql` (paquetes `@fontsource/inter`, `@fontsource/merriweather`, `@fontsource/poppins`, `@fontsource/jetbrains-mono` y `@fontsource/nunito`, peso 400, subconjunto latín); 6 imágenes de catálogo (`catalog/images/01.jpg` a `06.jpg`, 1920 × 1080, degradados generados con el mismo script) y 3 animaciones de catálogo (`catalog/animations/01.webm` a `03.webm`, 320 × 180, 5 s en bucle, generadas con `ffmpeg` desde degradados animados), cada una con su fila en `seed.sql`; el `.ico` con `tauri icon` (sección «Marca e íconos»). Son los activos definitivos del catálogo; si el equipo los reemplaza más adelante, conserva los nombres y las filas.
+- **Activos que la carpeta no incluye** (se generan en P00 con `pnpm --filter desktop run assets`, script `apps/desktop/scripts/generar_activos.mjs`, y quedan versionados en `assets/`): `templates/default/background.jpg` (1920 × 1080, el paisaje «Amanecer» de la figura 11: cielo durazno, sol y colinas verdes, generado con `sharp` desde un SVG) y `thumbnail.png` (320 × 180, la distribución de los cuatro widgets por defecto sobre el color principal de la plantilla, como la miniatura de la figura 11); las cinco fuentes `.woff2` de `seed.sql` (paquetes `@fontsource/inter`, `@fontsource/merriweather`, `@fontsource/poppins`, `@fontsource/jetbrains-mono` y `@fontsource/nunito`, peso 400, subconjunto latín); 6 imágenes de catálogo (`catalog/images/01.jpg` a `06.jpg`, 1920 × 1080, degradados generados con el mismo script) y 3 animaciones de catálogo (`catalog/animations/01.webm` a `03.webm`, 320 × 180, 5 s en bucle, generadas con `ffmpeg` desde degradados animados), cada una con su fila en `seed.sql`; el `.ico` con `tauri icon` (sección «Marca e íconos»). Son los activos definitivos del catálogo; si el equipo los reemplaza más adelante, conserva los nombres y las filas.
 - **Plantilla NSIS.** `installer/installer.nsi` parte de la plantilla `installer.nsi` de `tauri-bundler` de la misma versión de Tauri 2 que fije `Cargo.lock` (se copia de su repositorio al etiquetar esa versión) y se le agregan el paso Opciones, la comprobación previa, reparar, reinstalar y cancelar de INT-13. `tauri.conf.json` apunta a ese archivo.
-- **Modelo de Gemini.** `GEMINI_MODEL=gemini-2.5-flash-lite` (configurable, D-193).
+- **Modelo de Gemini.** `GEMINI_MODEL=gemini-3.5-flash-lite` (configurable, D-193).
 - **Configuración de la landing.** `apps/landing/.env.example` contiene `WINDGETS_GITHUB_REPO=<organizacion>/windgets` (valor público, se lee en la compilación; en Vite se declara `envPrefix: ['VITE_', 'WINDGETS_']`). Mientras Estef no entregue la organización, el valor queda con el marcador `<organizacion>` y el botón muestra el aviso de CD-01-HU02-CA02.
 
 ## Cuentas y secretos que debe entregar una persona

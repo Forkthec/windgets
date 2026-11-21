@@ -101,7 +101,49 @@ export function Edicion({ invocar = invocarNucleo, escuchar = escucharNucleo }: 
     arrastre.current = { widgetId: w.widget_id, modo, inicioX: e.clientX, inicioY: e.clientY, rect: w };
   };
 
-  const seguir = async (e: EventoDePuntero<HTMLElement>) => {
+  // Una sola petición al Núcleo a la vez: mientras espera, solo se guarda el último movimiento del puntero. Sin
+  // esto cada `pointermove` hacía su propia llamada y se acumulaban (arrastre lento en las pruebas manuales, P23).
+  const enVuelo = useRef(false);
+  const siguiente = useRef<{ a: Arrastre; pedido: WidgetRect } | null>(null);
+
+  const enviar = async () => {
+    enVuelo.current = true;
+    try {
+      while (siguiente.current) {
+        const { a, pedido } = siguiente.current;
+        siguiente.current = null;
+        const r =
+          a.modo === 'mover'
+            ? await invocar('layout_edit_move', { widget_id: a.widgetId, x: pedido.x, y: pedido.y })
+            : await invocar('layout_edit_resize', {
+                widget_id: a.widgetId,
+                x: pedido.x,
+                y: pedido.y,
+                width: pedido.width,
+                height: pedido.height,
+              });
+        if (!r.ok) continue;
+        // Con un movimiento más nuevo esperando, el widget sigue al puntero; si no, queda donde lo dejó el Núcleo.
+        if (!siguiente.current) {
+          setWidgets((ws) => ws.map((w) => (w.widget_id === a.widgetId ? r.value.rect : w)));
+        }
+        setChoques(
+          r.value.collided && arrastre.current
+            ? [
+                a.widgetId,
+                ...widgets
+                  .filter((o) => o.widget_id !== a.widgetId && seSuperponen(pedido, o))
+                  .map((o) => o.widget_id),
+              ]
+            : [],
+        );
+      }
+    } finally {
+      enVuelo.current = false;
+    }
+  };
+
+  const seguir = (e: EventoDePuntero<HTMLElement>) => {
     const a = arrastre.current;
     if (!a) return;
     const dx = e.clientX - a.inicioX;
@@ -110,28 +152,11 @@ export function Edicion({ invocar = invocarNucleo, escuchar = escucharNucleo }: 
       a.modo === 'mover'
         ? { ...a.rect, x: a.rect.x + dx, y: a.rect.y + dy }
         : { ...a.rect, width: a.rect.width + dx, height: a.rect.height + dy };
-    const r =
-      a.modo === 'mover'
-        ? await invocar('layout_edit_move', { widget_id: a.widgetId, x: pedido.x, y: pedido.y })
-        : await invocar('layout_edit_resize', {
-            widget_id: a.widgetId,
-            x: pedido.x,
-            y: pedido.y,
-            width: pedido.width,
-            height: pedido.height,
-          });
-    if (!r.ok) return;
-    setWidgets((ws) => ws.map((w) => (w.widget_id === a.widgetId ? r.value.rect : w)));
-    setChoques(
-      r.value.collided
-        ? [
-            a.widgetId,
-            ...widgets
-              .filter((o) => o.widget_id !== a.widgetId && seSuperponen(pedido, o))
-              .map((o) => o.widget_id),
-          ]
-        : [],
-    );
+    // El widget se mueve con el puntero sin esperar al Núcleo; las reglas (área visible, sin superponerse, 100 ×
+    // 100) las aplica la respuesta del Núcleo.
+    setWidgets((ws) => ws.map((w) => (w.widget_id === a.widgetId ? pedido : w)));
+    siguiente.current = { a, pedido };
+    if (!enVuelo.current) void enviar();
   };
 
   // Al soltar, el widget queda donde lo dejó el Núcleo: su última posición libre (HE-05-HU02-ET03).
@@ -158,7 +183,7 @@ export function Edicion({ invocar = invocarNucleo, escuchar = escucharNucleo }: 
             }
           : {}),
       }}
-      onPointerMove={(e) => void seguir(e)}
+      onPointerMove={seguir}
       onPointerUp={soltar}
     >
       {avisoRemoto && (

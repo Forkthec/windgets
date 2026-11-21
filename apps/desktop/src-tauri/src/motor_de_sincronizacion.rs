@@ -94,8 +94,30 @@ async fn preparar(base: &BaseLocal, user_id: &str) -> Result<(), sqlx::Error> {
         .bind(uuid::Uuid::new_v4().to_string())
         .execute(pool)
         .await?;
+    // Antes de P23 las filas con booleanos (widget, theme_widget) no se aplicaban y el cursor ya las pasó: una
+    // sola vez por base se vuelve a descargar desde el principio. Aplicar una fila otra vez no cambia nada.
+    let hecha: Option<String> =
+        sqlx::query_scalar("SELECT value FROM device_setting WHERE key = ?")
+            .bind(REDESCARGA)
+            .fetch_optional(pool)
+            .await?;
+    if hecha.is_none() {
+        let mut tx = pool.begin().await?;
+        sqlx::query("UPDATE sync_state SET last_pulled_seq = 0 WHERE id = 1")
+            .execute(&mut *tx)
+            .await?;
+        sqlx::query("INSERT INTO device_setting (key, value, updated_at) VALUES (?, 'true', ?)")
+            .bind(REDESCARGA)
+            .bind(instante(chrono::Utc::now().timestamp_millis()))
+            .execute(&mut *tx)
+            .await?;
+        tx.commit().await?;
+    }
     Ok(())
 }
+
+/// Marca de `device_setting`: la base ya volvió a descargar todo tras corregir los booleanos (P23).
+const REDESCARGA: &str = "sync_full_pull_after_booleans";
 
 /// IPC-SYNC-01 `sync_get_status`: el estado del indicador y la cantidad de cambios pendientes.
 pub async fn estado(base: &BaseLocal) -> Result<SyncStatus, sqlx::Error> {
@@ -376,6 +398,9 @@ fn valor_sql(valor: &serde_json::Value) -> Option<String> {
     match valor {
         serde_json::Value::Null => None,
         serde_json::Value::String(texto) => Some(texto.clone()),
+        // SQLite guarda los booleanos como 0 y 1 (`CHECK (is_default IN (0,1))`); el texto «true» no cumple el
+        // esquema y la fila no se aplicaba (widget, theme_widget).
+        serde_json::Value::Bool(si) => Some(if *si { "1" } else { "0" }.to_string()),
         otro => Some(otro.to_string()),
     }
 }
@@ -819,6 +844,87 @@ mod pruebas {
             .unwrap();
         });
         servicio
+    }
+
+    #[test]
+    fn redescarga_una_sola_vez_tras_corregir_los_booleanos() {
+        // Una base que ya sincronizó antes de P23 pasó las filas con booleanos sin aplicarlas: el cursor vuelve a
+        // 0 una sola vez para traerlas.
+        let base = BaseLocal::en_memoria();
+        let cursor = || -> i64 {
+            bloquear(async {
+                sqlx::query_scalar("SELECT last_pulled_seq FROM sync_state WHERE id = 1")
+                    .fetch_one(base.pool().await.unwrap())
+                    .await
+                    .unwrap()
+            })
+        };
+        bloquear(async {
+            let pool = base.pool().await.unwrap();
+            sqlx::query("INSERT INTO sync_state (id, user_id, device_id, last_pulled_seq) VALUES (1, ?, '00000000-0000-4000-8000-0000000000d1', 30)")
+                .bind(USUARIO)
+                .execute(pool)
+                .await
+                .unwrap();
+            preparar(&base, USUARIO).await.unwrap();
+        });
+        assert_eq!(cursor(), 0);
+        bloquear(async {
+            sqlx::query("UPDATE sync_state SET last_pulled_seq = 58 WHERE id = 1")
+                .execute(base.pool().await.unwrap())
+                .await
+                .unwrap();
+            preparar(&base, USUARIO).await.unwrap();
+        });
+        assert_eq!(cursor(), 58);
+    }
+
+    #[test]
+    fn descarga_aplica_los_booleanos_como_0_y_1() {
+        // HE-15-HU03-ET06: el computador descarga el resultado final. Los widgets por defecto llegan con
+        // `is_default: true` y su posición con `is_active: true`; antes se descartaban en silencio.
+        let base = BaseLocal::en_memoria();
+        let fila = |tipo: &str, id: &str, campos: serde_json::Value, seq: i64| -> SyncRow {
+            serde_json::from_value(serde_json::json!({
+                "entity_kind": tipo,
+                "entity_id": id,
+                "fields": campos,
+                "field_mods": {},
+                "deleted_at": serde_json::Value::Null,
+                "updated_seq": seq,
+            }))
+            .unwrap()
+        };
+        let creado = "2026-11-14T12:00:00.000Z";
+        let widget = "00000000-0000-4000-8000-0000000000c1";
+        let filas = vec![
+            fila(
+                "profile",
+                USUARIO,
+                serde_json::json!({ "alias": "Ana", "auth_provider": "email", "created_at": creado }),
+                1,
+            ),
+            fila(
+                "widget",
+                widget,
+                serde_json::json!({ "type": "kanban", "is_default": true, "created_at": creado }),
+                2,
+            ),
+        ];
+        let guardado: Option<i64> = bloquear(async {
+            let pool = base.pool().await.unwrap();
+            let mut tx = pool.begin().await.unwrap();
+            let tocadas = aplicar_filas(&mut tx, &filas, USUARIO).await.unwrap();
+            tx.commit().await.unwrap();
+            assert_eq!(tocadas.len(), 2);
+            sqlx::query_scalar("SELECT is_default FROM widget WHERE id = ?")
+                .bind(widget)
+                .fetch_optional(pool)
+                .await
+                .unwrap()
+        });
+        assert_eq!(guardado, Some(1));
+        assert_eq!(valor_sql(&serde_json::json!(false)).as_deref(), Some("0"));
     }
 
     fn fila_de_tarjeta(campos: serde_json::Value, borrada: bool) -> SyncRow {

@@ -31,7 +31,7 @@ function Grupo({
   return (
     <section aria-label={titulo}>
       <h2>{titulo}</h2>
-      <ul className="wg-lista">
+      <ul className="wg-lista wg-catalogo">
         {entradas.map((e) => (
           // ET02: nombre, ícono y descripción de una línea; CA02: deshabilitado con su motivo (RT-04).
           <li key={e.type} className="wg-lista__elemento">

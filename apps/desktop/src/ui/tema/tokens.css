@@ -356,7 +356,7 @@ body {
 /* Tablero Kanban (P-KAN-01, HE-09-HU01): columnas una al lado de otra, con desplazamiento horizontal. */
 .wg-tablero {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch; /* columnas de la misma altura */
   gap: calc(var(--wg-unidad) * 4);
   overflow-x: auto;
   padding-block: calc(var(--wg-unidad) * 4);
@@ -369,6 +369,7 @@ body {
   border-radius: var(--wg-radio);
 }
 .wg-columna__encabezado {
+  flex-wrap: wrap;
   margin: 0 0 calc(var(--wg-unidad) * 3);
   font-size: inherit;
 }
@@ -609,13 +610,39 @@ button.wg-tarjeta__titulo:focus-visible {
 .wg-lista__nombre {
   flex: 1;
 }
+/* Catálogo de Agregar widget (HE-04-HU04-ET02): cada opción es un botón que ocupa toda la fila, sin borde doble;
+   el nombre va en negrita y separado de su descripción. */
+.wg-catalogo .wg-lista__elemento {
+  padding: 0;
+  border: 0;
+}
+.wg-catalogo .wg-lista__elemento > .wg-fila,
+.wg-catalogo .wg-lista__elemento > .wg-boton {
+  width: 100%;
+}
+.wg-catalogo .wg-boton {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: calc(var(--wg-unidad) * 3);
+  padding-block: calc(var(--wg-unidad) * 2);
+  text-align: left;
+}
+.wg-catalogo .wg-lista__nombre {
+  flex: 0 0 auto;
+  font-weight: 600;
+}
+.wg-catalogo .wg-icono-widget {
+  flex: 0 0 auto;
+  background: var(--wg-borde);
+}
 /* Reportes (HE-13-HU02-ET15): indicador de carga de cada sección, sin transparencias ni desenfoque. */
 .wg-seccion {
   display: flex;
   flex-direction: column;
   gap: calc(var(--wg-unidad) * 2);
 }
-.wg-indicador {
+.wg-cifra {
   font-size: calc(var(--wg-unidad) * 8);
   font-weight: 600;
   margin: 0;
@@ -821,4 +848,155 @@ button.wg-tarjeta__titulo:focus-visible {
 }
 .wg-icono {
   flex: none;
+}
+
+/* Configuración (HE-16): las opciones en columna, separadas, sin estirarse al ancho de la pantalla. */
+.wg-configuracion {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(var(--wg-unidad) * 4);
+}
+/* Panel del día del Calendario (HE-10-HU03-ET02, ET03): recuadro con la fecha, sus opciones y las tarjetas. */
+.wg-panel-del-dia {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--wg-unidad) * 3);
+  margin-top: calc(var(--wg-unidad) * 4);
+  padding: calc(var(--wg-unidad) * 4);
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-radius: var(--wg-radio);
+  background: var(--wg-superficie-alta);
+}
+.wg-panel-del-dia h3 {
+  margin: 0 auto 0 0;
+}
+.wg-panel-del-dia .wg-tarjeta {
+  flex-wrap: wrap;
+}
+/* Filas de una lista con varias opciones (Temas): bajan de línea en lugar de apretarse. */
+.wg-lista__elemento.wg-fila {
+  flex-wrap: wrap;
+}
+
+/* Widgets de la capa del wallpaper (C-02). Fondo `superficie` (interfaz.md, tokens) con el borde y el radio de la
+   aplicación; sin transparencias ni desenfoque y sin identificador de marca (R-10). */
+.wg-widget {
+  box-sizing: border-box;
+  overflow: hidden;
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-radius: var(--wg-radio);
+  background: var(--wg-superficie);
+  color: var(--wg-tinta);
+}
+.wg-widget p {
+  margin: 0;
+}
+.wg-widget button {
+  font: inherit;
+  color: inherit;
+}
+.wg-reloj,
+.wg-widget-clima,
+.wg-widget-noticias,
+.wg-widget-reproductor,
+.wg-widget-texto {
+  display: flex;
+  box-sizing: border-box;
+  height: 100%;
+  padding: calc(var(--wg-unidad) * 3);
+}
+.wg-reloj {
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--wg-unidad) * 10);
+  font-weight: 700;
+}
+/* Clima (HE-04-HU05): ciudad, temperatura destacada y condición. */
+.wg-widget-clima {
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--wg-unidad);
+}
+.wg-widget-clima__ciudad {
+  font-weight: 600;
+}
+.wg-widget-clima__temperatura {
+  font-size: calc(var(--wg-unidad) * 8);
+  font-weight: 700;
+  line-height: 1.1;
+}
+/* Noticias (HE-04-HU06, HE-06-HU10): cada titular es un botón de ancho completo con su fuente debajo. */
+.wg-widget-noticias {
+  flex-direction: column;
+  gap: calc(var(--wg-unidad) * 2);
+  overflow-y: auto;
+}
+.wg-widget-noticias ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wg-unidad);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wg-widget-noticias__titular {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--wg-unidad) / 2);
+  width: 100%;
+  padding: calc(var(--wg-unidad) * 2);
+  border: var(--wg-borde-ancho) solid transparent;
+  border-radius: var(--wg-radio);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.wg-widget-noticias__titular:hover {
+  border-color: var(--wg-borde);
+  background: var(--wg-superficie-alta);
+}
+.wg-widget-noticias__titular > span:first-child {
+  font-weight: 600;
+}
+.wg-widget-noticias__titular > span:last-child {
+  color: var(--wg-texto);
+  font-size: 0.85em;
+}
+/* Reproductor de música (HE-04-HU11, HE-06-HU09). */
+.wg-widget-reproductor {
+  flex-direction: column;
+  justify-content: center;
+  gap: calc(var(--wg-unidad) * 2);
+}
+.wg-widget-reproductor img,
+.wg-widget-reproductor__icono {
+  flex: 0 0 auto;
+  border-radius: var(--wg-radio);
+}
+.wg-widget-reproductor button {
+  min-height: var(--wg-grosor-control);
+  padding: 0 calc(var(--wg-unidad) * 3);
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-radius: var(--wg-radio);
+  background: var(--wg-superficie-alta);
+  cursor: pointer;
+}
+/* Texto (HE-04-HU10). */
+.wg-widget-texto {
+  overflow-y: auto;
+}
+/* Imagen estática y Carrusel (HE-04-HU07, HU08): la imagen cubre el widget sin deformarse. */
+.wg-widget-imagen {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.wg-widget-animacion__pausa {
+  min-height: var(--wg-grosor-control);
+  padding: 0 calc(var(--wg-unidad) * 2);
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-radius: var(--wg-radio);
+  background: var(--wg-superficie-alta);
 }

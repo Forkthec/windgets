@@ -24,7 +24,7 @@ export function TasaCumplimiento({ reporte }: TasaCumplimientoProps) {
     <Seccion titulo="Tasa de cumplimiento" vacia={reporte ? reporte.is_empty : null}>
       {reporte && reporte.percent !== null && (
         <>
-          <p className="wg-indicador">{porcentaje(reporte.percent)}</p>
+          <p className="wg-cifra">{porcentaje(reporte.percent)}</p>
           <p>{textoDeCumplimiento(reporte.on_time, reporte.total)}</p>
         </>
       )}

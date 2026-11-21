@@ -399,9 +399,14 @@ impl ServicioDePersonalizacion {
 
     /// IPC-CAT-01 `catalog_list` con `kind: 'template'`: las plantillas activas, por `sort_order`
     /// (HE-02-HU02-CA01, ET01). Solo el catálogo: no hay forma de crear plantillas propias (ET04).
-    /// DUDA: HE-02-HU02 `thumbnail_url` debe ser una URL del protocolo de assets de Tauri; hasta que
-    /// `asset_resolve` (HE-02-HU01) exista, valor neutro: la ruta de la miniatura en el paquete del instalador.
-    pub async fn plantillas(&self, base: &BaseLocal) -> Result<Vec<CatalogItem>, AppError> {
+    /// `thumbnail_url` es la ruta de un archivo del computador; la vista la convierte con el protocolo de
+    /// assets de Tauri. La plantilla por defecto viene en el instalador (`recursos`, HE-02-HU01-ET02).
+    /// DUDA: HE-02-HU02 las demás plantillas todavía dan la ruta de `catalog_template.thumbnail_path`.
+    pub async fn plantillas(
+        &self,
+        base: &BaseLocal,
+        recursos: &std::path::Path,
+    ) -> Result<Vec<CatalogItem>, AppError> {
         let pool = base.pool().await.map_err(de_sqlx)?;
         let filas = sqlx::query(
             "SELECT id, name, thumbnail_path, default_color_primary, default_color_secondary,              default_color_text FROM catalog_template WHERE is_active = 1 ORDER BY sort_order, name",
@@ -412,10 +417,19 @@ impl ServicioDePersonalizacion {
         filas
             .iter()
             .map(|f| {
+                let id: String = f.try_get("id")?;
+                let thumbnail_url = if id == "default" {
+                    recursos
+                        .join("assets/templates/default/thumbnail.png")
+                        .to_string_lossy()
+                        .into_owned()
+                } else {
+                    f.try_get("thumbnail_path")?
+                };
                 Ok(CatalogItem {
-                    id: f.try_get("id")?,
+                    id,
                     name: f.try_get("name")?,
-                    thumbnail_url: f.try_get("thumbnail_path")?,
+                    thumbnail_url,
                     is_cached: true,
                     hex: None,
                     color_primary: Some(Hex(f.try_get("default_color_primary")?)),

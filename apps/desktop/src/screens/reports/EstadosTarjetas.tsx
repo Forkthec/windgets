@@ -91,7 +91,7 @@ export function EstadosTarjetas({ reporte, rango, alAbrir }: EstadosTarjetasProp
                 <Cell key={e.estado} fill={e.color} />
               ))}
             </Pie>
-            <text x={120} y={120} textAnchor="middle" dominantBaseline="middle" className="wg-indicador">
+            <text x={120} y={120} textAnchor="middle" dominantBaseline="middle" className="wg-cifra">
               {reporte.total}
             </text>
           </PieChart>

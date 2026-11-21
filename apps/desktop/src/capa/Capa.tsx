@@ -163,6 +163,7 @@ export function Capa({
         <section
           key={w.widget_id}
           aria-label={NOMBRE_DEL_WIDGET[w.type]}
+          className="wg-widget"
           data-widget-id={w.widget_id}
           data-interactivo={INTERACTIVOS.includes(w.type)}
           style={{ position: 'absolute', left: w.x, top: w.y, width: w.width, height: w.height }}

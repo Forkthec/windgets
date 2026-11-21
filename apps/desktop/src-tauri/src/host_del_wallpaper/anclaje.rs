@@ -13,6 +13,9 @@
 
 use std::ffi::c_void;
 use std::mem::size_of;
+use std::sync::OnceLock;
+use std::sync::mpsc::{self, RecvTimeoutError, Sender};
+use std::time::Duration;
 
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 use windows::Win32::Foundation::{HWND, LPARAM, POINT, RECT, WPARAM};
@@ -21,9 +24,10 @@ use windows::Win32::Graphics::Gdi::{
 };
 use windows::Win32::UI::HiDpi::{GetDpiForMonitor, MDT_EFFECTIVE_DPI};
 use windows::Win32::UI::WindowsAndMessaging::{
-    EnumWindows, FindWindowExW, FindWindowW, GWL_STYLE, GetParent, GetWindowLongPtrW, SMTO_NORMAL,
-    SW_HIDE, SW_SHOWNOACTIVATE, SWP_NOACTIVATE, SWP_NOZORDER, SendMessageTimeoutW, SetParent,
-    SetWindowLongPtrW, SetWindowPos, ShowWindow, WS_CAPTION, WS_CHILD, WS_POPUP, WS_THICKFRAME,
+    EnumWindows, FindWindowExW, FindWindowW, GWL_STYLE, GetParent, GetWindowLongPtrW, IsWindow,
+    IsWindowVisible, SMTO_NORMAL, SW_HIDE, SW_SHOWNOACTIVATE, SWP_NOACTIVATE, SWP_NOZORDER,
+    SendMessageTimeoutW, SetParent, SetWindowLongPtrW, SetWindowPos, ShowWindow, WS_CAPTION,
+    WS_CHILD, WS_POPUP, WS_THICKFRAME,
 };
 use windows::core::{BOOL, PCWSTR, w};
 
@@ -50,7 +54,22 @@ const ESCRITORIO_POR_DEFECTO: Rect = Rect {
 pub fn iniciar(app: &AppHandle) {
     let virtual_ = leer_monitores(app);
     let nucleo = app.state::<Nucleo>();
-    let anclaje = WebviewWindowBuilder::new(app, CAPA, WebviewUrl::App("capa.html".into()))
+    match crear_y_anclar(app, virtual_) {
+        Ok(escala) => nucleo
+            .host
+            .ubicar_capa((virtual_.izquierda, virtual_.arriba), escala),
+        Err(error) => {
+            eprintln!("No se pudo anclar la capa del wallpaper: {error}");
+            nucleo.host.marcar_anclaje(true);
+        }
+    }
+    super::raw_input::iniciar(app);
+    vigilar(app.clone());
+}
+
+/// Crea la ventana de la capa, oculta, y la ancla a WorkerW. Devuelve su escala.
+fn crear_y_anclar(app: &AppHandle, virtual_: Rect) -> Result<f64, String> {
+    WebviewWindowBuilder::new(app, CAPA, WebviewUrl::App("capa.html".into()))
         .title("Windgets · capa del wallpaper")
         .decorations(false)
         .skip_taskbar(true)
@@ -63,17 +82,124 @@ pub fn iniciar(app: &AppHandle) {
             let hwnd = capa.hwnd().map_err(|error| error.to_string())?;
             anclar(hwnd, virtual_)?;
             Ok(escala_de(&capa))
-        });
-    match anclaje {
-        Ok(escala) => nucleo
-            .host
-            .ubicar_capa((virtual_.izquierda, virtual_.arriba), escala),
-        Err(error) => {
-            eprintln!("No se pudo anclar la capa del wallpaper: {error}");
-            nucleo.host.marcar_anclaje(true);
+        })
+}
+
+/// Revisión de respaldo cuando no llega ningún evento de Windows.
+const REVISION_DE_RESPALDO: Duration = Duration::from_secs(60);
+/// Tras un evento, Explorer tarda en crear su WorkerW: se revisa a los 2 s y otra vez a los 10 s.
+const REVISIONES_TRAS_UN_EVENTO: [Duration; 2] = [Duration::from_secs(2), Duration::from_secs(8)];
+
+/// Despierta al vigilante (`revisar_pronto`).
+static AVISO: OnceLock<Sender<()>> = OnceLock::new();
+
+/// Pide revisar el anclaje ya. La llama la ventana oculta de `raw_input` con los eventos de Windows que recrean
+/// el WorkerW: Explorer reiniciado (`TaskbarCreated`), pantalla encendida o reanudación (`WM_POWERBROADCAST`),
+/// cambio de monitores (`WM_DISPLAYCHANGE`) o de la configuración del escritorio (`WM_SETTINGCHANGE`).
+pub fn revisar_pronto() {
+    if let Some(aviso) = AVISO.get() {
+        let _ = aviso.send(());
+    }
+}
+
+/// Explorer recrea el WorkerW al apagar o suspender la pantalla, al bloquear la sesión o al reiniciarse, y la capa
+/// (su hija) desaparece o queda detrás de una ventana oculta: vuelve el fondo de Windows (pruebas manuales, P23).
+/// INT-07 advierte que Windows 11 puede cambiar esa jerarquía, pero no dice cómo recuperarse. DUDA: HE-02-HU01
+/// valor usado: con cada evento de Windows que puede recrear el WorkerW (`revisar_pronto`) y, de respaldo, cada
+/// 60 s, se revisa que la capa siga hija del WorkerW vigente y visible; si no, se vuelve a anclar (paso 1) o, si
+/// la ventana ya no existe, se crea de nuevo. Después se decide su visibilidad como al abrir la aplicación
+/// (`avisar_wallpaper`).
+fn vigilar(app: AppHandle) {
+    let (aviso, avisos) = mpsc::channel();
+    if AVISO.set(aviso).is_err() {
+        return;
+    }
+    std::thread::spawn(move || {
+        let comprobar = |app: &AppHandle| {
+            if revisar(app) {
+                tauri::async_runtime::block_on(crate::puente_ipc::avisar_wallpaper(app));
+            }
+        };
+        loop {
+            match avisos.recv_timeout(REVISION_DE_RESPALDO) {
+                Ok(()) => {
+                    for espera in REVISIONES_TRAS_UN_EVENTO {
+                        std::thread::sleep(espera);
+                        // Varios eventos seguidos cuentan como uno.
+                        while avisos.try_recv().is_ok() {}
+                        comprobar(&app);
+                    }
+                }
+                Err(RecvTimeoutError::Timeout) => comprobar(&app),
+                Err(RecvTimeoutError::Disconnected) => return,
+            }
+        }
+    });
+}
+
+/// `true` si tuvo que volver a anclar o crear la capa.
+fn revisar(app: &AppHandle) -> bool {
+    let nucleo = app.state::<Nucleo>();
+    let capa = app.get_webview_window(CAPA);
+    let hwnd = capa
+        .as_ref()
+        .and_then(|c| c.hwnd().ok())
+        .filter(|h| existe(*h));
+    let virtual_;
+    match hwnd {
+        Some(hwnd) => {
+            if anclada(hwnd) {
+                return false;
+            }
+            virtual_ = leer_monitores(app);
+            if let Err(error) = anclar(hwnd, virtual_) {
+                eprintln!("No se pudo volver a anclar la capa del wallpaper: {error}");
+                return false;
+            }
+        }
+        None => {
+            if let Some(capa) = capa {
+                let _ = capa.destroy();
+            }
+            virtual_ = leer_monitores(app);
+            if let Err(error) = crear_y_anclar(app, virtual_) {
+                eprintln!("No se pudo crear de nuevo la capa del wallpaper: {error}");
+                return false;
+            }
         }
     }
-    super::raw_input::iniciar(app);
+    let escala = app
+        .get_webview_window(CAPA)
+        .map(|c| escala_de(&c))
+        .unwrap_or(1.0);
+    nucleo
+        .host
+        .ubicar_capa((virtual_.izquierda, virtual_.arriba), escala);
+    nucleo.host.marcar_anclaje(false);
+    true
+}
+
+/// La capa es hija de un WorkerW visible y, si Explorer ya tiene el suyo detrás de los íconos, es ese.
+fn anclada(capa: HWND) -> bool {
+    // SAFETY: `capa` es la ventana de la capa, de este proceso; GetParent no recibe punteros.
+    let Some(padre) = (unsafe { GetParent(capa) }).ok().filter(|p| existe(*p)) else {
+        return false;
+    };
+    // SAFETY: IsWindowVisible no recibe punteros; `padre` existe.
+    if !unsafe { IsWindowVisible(padre) }.as_bool() {
+        return false;
+    }
+    // SAFETY: FindWindowW solo lee las dos cadenas, que son literales terminados en cero.
+    let vigente = unsafe { FindWindowW(w!("Progman"), PCWSTR::null()) }
+        .ok()
+        .and_then(buscar_workerw);
+    vigente.is_none_or(|w| w == padre)
+}
+
+/// La ventana todavía existe.
+fn existe(ventana: HWND) -> bool {
+    // SAFETY: IsWindow no recibe punteros; con un identificador que ya no existe responde falso.
+    unsafe { IsWindow(Some(ventana)) }.as_bool()
 }
 
 /// Lee los monitores, los guarda en el host y los avisa con EV-17 `monitors_changed`. Devuelve el escritorio
