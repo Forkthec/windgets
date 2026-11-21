@@ -280,7 +280,17 @@ pub struct ServicioDeSesion<A, R> {
     reloj: R,
     almacen: Box<dyn AlmacenDeSesion>,
     pendiente: Mutex<Option<RegistroPendiente>>,
+    /// Una sola renovación a la vez: el refresh_token se usa una vez y las demás llamadas esperan su resultado.
+    renovando: tokio::sync::Mutex<()>,
 }
+
+/// Margen antes del vencimiento con el que se renueva el token. DUDA: HE-15-HU02 el margen no está definido
+/// (docs/DUDAS.md).
+pub const MARGEN_DE_RENOVACION_MS: i64 = 60_000;
+
+/// El token venció y Auth no lo renovó con conexión (INT-01, «Renovar token»): `session.expired` (D-191).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SesionVencida;
 
 impl<A: AuthDeSupabase, R: Reloj> ServicioDeSesion<A, R> {
     pub fn nuevo(auth: A, reloj: R, almacen: Box<dyn AlmacenDeSesion>) -> Self {
@@ -289,6 +299,37 @@ impl<A: AuthDeSupabase, R: Reloj> ServicioDeSesion<A, R> {
             reloj,
             almacen,
             pendiente: Mutex::new(None),
+            renovando: tokio::sync::Mutex::new(()),
+        }
+    }
+
+    /// La sesión guardada con un token de acceso vigente, para llamar a la nube (INT-01, «Renovar token»;
+    /// HE-15-HU02). Si vence en menos de [`MARGEN_DE_RENOVACION_MS`], la renueva con el refresh_token y guarda
+    /// la nueva. Sin red o sin respuesta se conserva la sesión y se trabaja con lo guardado. Si Auth la rechaza
+    /// (4xx salvo 429), borra solo el token y responde [`SesionVencida`]: los datos locales no se borran
+    /// (contratos.md, `session.expired`; D-191).
+    pub async fn sesion_vigente(&self) -> Result<Option<SesionGuardada>, SesionVencida> {
+        let Some(sesion) = self.sesion_guardada() else {
+            return Ok(None);
+        };
+        if sesion.expires_at - MARGEN_DE_RENOVACION_MS > self.reloj.ahora_ms() {
+            return Ok(Some(sesion));
+        }
+        let _turno = self.renovando.lock().await;
+        // Otra llamada pudo renovarla mientras esperaba el turno.
+        let Some(sesion) = self.sesion_guardada() else {
+            return Ok(None);
+        };
+        if sesion.expires_at - MARGEN_DE_RENOVACION_MS > self.reloj.ahora_ms() {
+            return Ok(Some(sesion));
+        }
+        match self.auth.renovar(&sesion.refresh_token).await {
+            Ok(nueva) => Ok(Some(self.guardar_sesion(&nueva, &sesion.alias))),
+            Err(FallaDeAuth::Rechazo { estado, .. }) if estado != 429 && estado < 500 => {
+                let _ = self.almacen.borrar();
+                Err(SesionVencida)
+            }
+            Err(_) => Ok(Some(sesion)),
         }
     }
 
@@ -303,14 +344,16 @@ impl<A: AuthDeSupabase, R: Reloj> ServicioDeSesion<A, R> {
 
     /// Guarda la sesión que entregó Supabase Auth. DUDA: P05 si no se puede escribir `session.bin`, la sesión
     /// sigue abierta en esta ejecución y se pedirá iniciar sesión la próxima vez (docs/DUDAS.md).
-    fn guardar_sesion(&self, sesion: &SesionDeAuth, alias: &str) {
-        let _ = self.almacen.guardar(&SesionGuardada {
+    fn guardar_sesion(&self, sesion: &SesionDeAuth, alias: &str) -> SesionGuardada {
+        let guardada = SesionGuardada {
             access_token: sesion.access_token.clone(),
             refresh_token: sesion.refresh_token.clone(),
             expires_at: self.reloj.ahora_ms() + sesion.expires_in * 1_000,
             user_id: sesion.user_id.clone(),
             alias: alias.to_string(),
-        });
+        };
+        let _ = self.almacen.guardar(&guardada);
+        guardada
     }
 
     pub fn registro_pendiente(&self) -> Option<RegistroPendiente> {
@@ -701,6 +744,15 @@ pub(crate) mod pruebas {
                 });
             }
             Ok(Self::sesion("Prueba"))
+        }
+
+        async fn renovar(&self, refresh_token: &str) -> Result<SesionDeAuth, FallaDeAuth> {
+            self.anotar(format!("refresh {refresh_token}"))?;
+            Ok(SesionDeAuth {
+                access_token: "acceso-nuevo".into(),
+                refresh_token: "renovacion-nueva".into(),
+                ..Self::sesion("")
+            })
         }
     }
 
@@ -1344,6 +1396,97 @@ pub(crate) mod pruebas {
             ("Prueba", "acceso", "renovacion")
         );
         assert_eq!(sesion.expires_at, 1_794_663_000_000 + 3_600_000);
+    }
+
+    /// Servicio con la sesión de `REGISTRADO` abierta (token de 3600 s) y el registro de llamadas limpio.
+    fn con_sesion() -> (ServicioDeSesion<AuthDePrueba, RelojDePrueba>, RelojDePrueba) {
+        let (servicio, reloj) = servicio();
+        esperar(servicio.iniciar_sesion(inicio(REGISTRADO, CLAVE))).unwrap();
+        servicio.auth().llamadas.lock().unwrap().clear();
+        (servicio, reloj)
+    }
+
+    #[test]
+    fn renovacion_token_vigente_no_llama_a_auth() {
+        // INT-01 «Renovar token»: con el token vigente se usa el guardado.
+        let (servicio, reloj) = con_sesion();
+        reloj.adelantar(3_600_000 - MARGEN_DE_RENOVACION_MS - 1);
+        let sesion = esperar(servicio.sesion_vigente()).unwrap().unwrap();
+        assert_eq!(sesion.access_token, "acceso");
+        assert!(servicio.auth().llamadas().is_empty());
+    }
+
+    #[test]
+    fn renovacion_token_por_vencer_guarda_la_sesion_nueva() {
+        // INT-01 «Renovar token»: 200 con la sesión nueva; se guarda y se conserva el alias.
+        let (servicio, reloj) = con_sesion();
+        reloj.adelantar(3_600_000 - MARGEN_DE_RENOVACION_MS);
+        let sesion = esperar(servicio.sesion_vigente()).unwrap().unwrap();
+        assert_eq!(
+            (
+                sesion.access_token.as_str(),
+                sesion.refresh_token.as_str(),
+                sesion.alias.as_str()
+            ),
+            ("acceso-nuevo", "renovacion-nueva", "Prueba")
+        );
+        assert_eq!(servicio.sesion_guardada(), Some(sesion.clone()));
+        assert_eq!(
+            servicio.auth().llamadas(),
+            vec!["refresh renovacion".to_string()]
+        );
+        // La sesión nueva queda vigente: la siguiente llamada ya no renueva.
+        esperar(servicio.sesion_vigente()).unwrap();
+        assert_eq!(servicio.auth().llamadas().len(), 1);
+    }
+
+    #[test]
+    fn renovacion_sin_red_conserva_la_sesion() {
+        // INT-01 «Renovar token»: sin red se conserva la sesión y se trabaja con lo guardado (HE-15-HU02).
+        for falla in [FallaDeAuth::SinConexion, FallaDeAuth::SinRespuesta] {
+            let (servicio, reloj) = con_sesion();
+            reloj.adelantar(3_600_000 * 24 * 4);
+            servicio.auth().fallar(falla);
+            let sesion = esperar(servicio.sesion_vigente()).unwrap().unwrap();
+            assert_eq!(sesion.access_token, "acceso");
+            assert!(servicio.sesion_guardada().is_some());
+        }
+    }
+
+    #[test]
+    fn renovacion_rechazada_con_conexion_vence_la_sesion() {
+        // INT-01 «Renovar token»: 400 refresh_token_not_found / session_expired con red → session.expired. Se
+        // borra el token; los datos locales no los toca este servicio (D-191).
+        for codigo in ["refresh_token_not_found", "session_expired"] {
+            let (servicio, reloj) = con_sesion();
+            reloj.adelantar(3_600_000);
+            servicio.auth().fallar(FallaDeAuth::Rechazo {
+                estado: 400,
+                codigo: codigo.into(),
+            });
+            assert_eq!(esperar(servicio.sesion_vigente()), Err(SesionVencida));
+            assert_eq!(servicio.sesion_guardada(), None);
+        }
+    }
+
+    #[test]
+    fn renovacion_limitada_por_frecuencia_conserva_la_sesion() {
+        // Un 429 no dice que la sesión venció: se conserva y se reintenta en la siguiente llamada.
+        let (servicio, reloj) = con_sesion();
+        reloj.adelantar(3_600_000);
+        servicio.auth().fallar(FallaDeAuth::Rechazo {
+            estado: 429,
+            codigo: "over_request_rate_limit".into(),
+        });
+        assert!(esperar(servicio.sesion_vigente()).unwrap().is_some());
+        assert!(servicio.sesion_guardada().is_some());
+    }
+
+    #[test]
+    fn renovacion_sin_sesion_no_llama_a_auth() {
+        let (servicio, _) = servicio();
+        assert_eq!(esperar(servicio.sesion_vigente()), Ok(None));
+        assert!(servicio.auth().llamadas().is_empty());
     }
 
     #[test]

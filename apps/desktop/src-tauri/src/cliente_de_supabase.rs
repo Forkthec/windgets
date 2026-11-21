@@ -98,6 +98,12 @@ pub trait AuthDeSupabase: Send + Sync {
         correo: &str,
         contrasena: &str,
     ) -> impl Future<Output = Result<SesionDeAuth, FallaDeAuth>> + Send;
+    /// `POST /token?grant_type=refresh_token` `{ refresh_token }`: entrega la sesión nueva (INT-01, «Renovar
+    /// token»). Un 400 `refresh_token_not_found` o `session_expired` significa que ya no se puede renovar.
+    fn renovar(
+        &self,
+        refresh_token: &str,
+    ) -> impl Future<Output = Result<SesionDeAuth, FallaDeAuth>> + Send;
 }
 
 /// Sesión que entrega Supabase Auth (`access_token`, `refresh_token`, `expires_in`, `user`).
@@ -332,6 +338,18 @@ impl AuthDeSupabase for ClienteDeSupabase {
             .enviar(
                 reqwest::Method::POST,
                 "/auth/v1/token?grant_type=password",
+                Some(cuerpo),
+            )
+            .await?;
+        leer_sesion(&texto)
+    }
+
+    async fn renovar(&self, refresh_token: &str) -> Result<SesionDeAuth, FallaDeAuth> {
+        let cuerpo = serde_json::json!({ "refresh_token": refresh_token });
+        let texto = self
+            .enviar(
+                reqwest::Method::POST,
+                "/auth/v1/token?grant_type=refresh_token",
                 Some(cuerpo),
             )
             .await?;

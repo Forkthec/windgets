@@ -87,6 +87,30 @@ impl Nucleo {
     }
 }
 
+/// La sesión con un token de acceso vigente, para llamar a la nube (INT-01, «Renovar token»; HE-15-HU02). Si
+/// el token no se pudo renovar con conexión, emite EV-01 `session_changed` con `reason: 'token_expired'`: la
+/// ventana principal vuelve a Inicio de sesión sin borrar los datos locales (contratos.md, `session.expired`;
+/// D-191).
+async fn sesion_para_la_nube(
+    app: &AppHandle,
+    nucleo: &Nucleo,
+) -> Option<crate::repositorios_y_archivos_locales::SesionGuardada> {
+    match nucleo.sesion.sesion_vigente().await {
+        Ok(sesion) => sesion,
+        Err(crate::servicio_de_sesion::SesionVencida) => {
+            let _ = app.emit(
+                "session_changed",
+                EventMapSessionChanged {
+                    state: EventMapSessionChangedState::SignedOut,
+                    alias: None,
+                    reason: EventMapSessionChangedReason::TokenExpired,
+                },
+            );
+            None
+        }
+    }
+}
+
 /// EV-01 `session_changed` con la sesión iniciada: la ventana principal abre la pantalla principal (RT-01).
 fn avisar_sesion_iniciada(app: &AppHandle, alias: &str, reason: EventMapSessionChangedReason) {
     let _ = app.emit(
@@ -170,7 +194,8 @@ pub fn sincronizar(app: AppHandle) {
             std::thread::sleep(REVISION_DE_LA_COLA);
             let nucleo = app.state::<Nucleo>();
             let _ciclo = nucleo.ciclo.blocking_lock();
-            let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+            let Some(sesion) = tauri::async_runtime::block_on(sesion_para_la_nube(&app, &nucleo))
+            else {
                 // Tras cerrar sesión (HE-16-HU03), la próxima sesión empieza como al abrir la aplicación: con la
                 // base vacía, la primera consulta va de inmediato.
                 en_linea_antes = None;
@@ -867,7 +892,7 @@ pub async fn widget_add(
     nucleo: State<'_, Nucleo>,
     params: crate::tipos::WidgetAddParams,
 ) -> Result<IpcResult<crate::tipos::WidgetItem>, ()> {
-    let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+    let Some(sesion) = sesion_para_la_nube(&app, &nucleo).await else {
         return Ok(leido(Err(crate::servicio_del_planificador::inesperado())));
     };
     let user_id = sesion.user_id.to_lowercase();
@@ -984,7 +1009,7 @@ pub async fn widget_configure(
     params: crate::tipos::WidgetConfigureParams,
 ) -> Result<IpcResult<crate::tipos::WidgetItem>, ()> {
     use crate::servicio_de_personalizacion_y_configuracion::agregar::Configuracion;
-    let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+    let Some(sesion) = sesion_para_la_nube(&app, &nucleo).await else {
         return Ok(leido(Err(crate::servicio_del_planificador::inesperado())));
     };
     let user_id = sesion.user_id.to_lowercase();
@@ -1058,7 +1083,7 @@ pub async fn widget_get_data(
 /// conexión) y avisa a la capa con EV-20. La falla de un widget no toca a los demás (RNF-13).
 pub async fn actualizar_widgets_de_clima(app: &AppHandle) {
     let nucleo = app.state::<Nucleo>();
-    let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+    let Some(sesion) = sesion_para_la_nube(app, &nucleo).await else {
         return;
     };
     let user_id = sesion.user_id.to_lowercase();
@@ -1112,7 +1137,7 @@ pub async fn actualizar_widgets_de_clima(app: &AppHandle) {
 /// HE-04-HU06-ET03, ET05, ET06: consulta los titulares cada 60 min, o al volver la conexión, y avisa con EV-20.
 pub async fn actualizar_widgets_de_noticias(app: &AppHandle) {
     let nucleo = app.state::<Nucleo>();
-    let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+    let Some(sesion) = sesion_para_la_nube(app, &nucleo).await else {
         return;
     };
     let user_id = sesion.user_id.to_lowercase();
@@ -2578,10 +2603,11 @@ pub fn windi_get_conversation(
 /// espera la respuesta como máximo 15 s (RNF-11).
 #[tauri::command]
 pub async fn windi_send_message(
+    app: AppHandle,
     nucleo: State<'_, Nucleo>,
     params: crate::tipos::WindiSendMessageParams,
 ) -> Result<IpcResult<crate::tipos::WindiSendMessageResult>, ()> {
-    let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+    let Some(sesion) = sesion_para_la_nube(&app, &nucleo).await else {
         return Ok(leido(Err(crate::servicio_del_planificador::inesperado())));
     };
     let user_id = sesion.user_id.to_lowercase();
@@ -2629,7 +2655,7 @@ pub async fn windi_confirm_proposal(
     nucleo: State<'_, Nucleo>,
     params: crate::tipos::WindiConfirmProposalParams,
 ) -> Result<IpcResult<crate::tipos::WindiConfirmProposalResult>, ()> {
-    let Some(sesion) = nucleo.sesion.sesion_guardada() else {
+    let Some(sesion) = sesion_para_la_nube(&app, &nucleo).await else {
         return Ok(leido(Err(crate::servicio_del_planificador::inesperado())));
     };
     let user_id = sesion.user_id.to_lowercase();
