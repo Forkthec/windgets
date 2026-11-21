@@ -61,6 +61,15 @@ pub const CREDENCIALES_INCORRECTAS: &str = "Correo electrónico o contraseña in
 /// `net.offline` en Inicio de sesión (HE-01-HU04-CA10).
 pub const SIN_CONEXION_INICIO: &str = "No hay conexión a internet. Conéctate para iniciar sesión.";
 
+// HE-01-HU06 a HU08 · Recuperar contraseña (IPC-AUTH-08 a IPC-AUTH-11).
+
+/// Resultado de `auth_recovery_request`, el mismo exista o no la cuenta (HE-01-HU06-CA01, CA02, ET09).
+pub const CODIGO_DE_RECUPERACION_ENVIADO: &str =
+    "Si el correo está registrado, te enviamos un código de verificación.";
+/// `net.offline` en Recuperar contraseña (HE-01-HU06-CA06, HE-01-HU07-CA09, HE-01-HU08-CA05, CA06).
+pub const SIN_CONEXION_RECUPERAR: &str =
+    "No hay conexión a internet. Conéctate para recuperar tu contraseña.";
+
 // HE-01-HU05 · Iniciar sesión con la cuenta de Google (IPC-AUTH-06, IPC-AUTH-07, EV-02).
 
 /// EV-02 `cancelled` (HE-01-HU05-CA05, ET13).
@@ -446,6 +455,11 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("CREDENCIALES_INCORRECTAS", CREDENCIALES_INCORRECTAS),
     ("SIN_CONEXION_INICIO", SIN_CONEXION_INICIO),
     ("GOOGLE_CANCELADO", GOOGLE_CANCELADO),
+    (
+        "CODIGO_DE_RECUPERACION_ENVIADO",
+        CODIGO_DE_RECUPERACION_ENVIADO,
+    ),
+    ("SIN_CONEXION_RECUPERAR", SIN_CONEXION_RECUPERAR),
     ("GOOGLE_ERROR", GOOGLE_ERROR),
     ("GOOGLE_CORREO_MUY_LARGO", GOOGLE_CORREO_MUY_LARGO),
     ("TARJETA_CREADA", TARJETA_CREADA),

@@ -7,6 +7,7 @@ import { Reports } from '@/screens/reports/Reports';
 import { Settings } from '@/screens/settings/Settings';
 import { PlannerDaily } from '@/screens/planner_daily/PlannerDaily';
 import { Register } from '@/screens/register/Register';
+import { Recovery } from '@/screens/recovery/Recovery';
 import { SignIn } from '@/screens/sign_in/SignIn';
 import { Themes } from '@/screens/themes/Themes';
 import { Widgets } from '@/screens/widgets/Widgets';
@@ -30,7 +31,7 @@ export default function App() {
         widgets: Widgets,
         windi: Windi,
       }}
-      pantallasDeCuenta={{ register: Register, sign_in: SignIn }}
+      pantallasDeCuenta={{ recovery: Recovery, register: Register, sign_in: SignIn }}
     />
   );
 }

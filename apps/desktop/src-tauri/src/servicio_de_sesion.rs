@@ -13,6 +13,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::cliente_de_supabase::{AuthDeSupabase, FallaDeAuth, SesionDeAuth};
 
 pub mod google;
+pub mod recuperacion;
 use crate::messages;
 use crate::repositorios_y_archivos_locales::{
     AlmacenDeSesion, BaseLocal, SesionGuardada, borrar_archivos,
@@ -284,6 +285,8 @@ pub struct ServicioDeSesion<A, R> {
     pendiente: Mutex<Option<RegistroPendiente>>,
     /// Inicio con Google en espera del regreso `windgets://auth/callback` (IPC-AUTH-06, IPC-AUTH-07).
     google: Mutex<Option<google::EsperaDeGoogle>>,
+    /// Recuperar contraseña en curso (IPC-AUTH-08 a IPC-AUTH-11): solo en memoria.
+    recuperacion: Mutex<Option<recuperacion::RecuperacionPendiente>>,
     /// Una sola renovación a la vez: el refresh_token se usa una vez y las demás llamadas esperan su resultado.
     renovando: tokio::sync::Mutex<()>,
 }
@@ -304,6 +307,7 @@ impl<A: AuthDeSupabase, R: Reloj> ServicioDeSesion<A, R> {
             almacen,
             pendiente: Mutex::new(None),
             google: Mutex::new(None),
+            recuperacion: Mutex::new(None),
             renovando: tokio::sync::Mutex::new(()),
         }
     }
@@ -661,6 +665,8 @@ pub(crate) mod pruebas {
         pub codigos: Mutex<Vec<String>>,
         /// La cuenta de Google que entrega `grant_type=pkce`; sin ella, `invalid_grant`.
         pub google: Mutex<Option<crate::cliente_de_supabase::SesionDeGoogle>>,
+        /// Correos a los que Supabase envió un código de recuperación.
+        pub recuperaciones: Mutex<Vec<String>>,
     }
 
     impl AuthDePrueba {
@@ -760,6 +766,19 @@ pub(crate) mod pruebas {
                 refresh_token: "renovacion-nueva".into(),
                 ..Self::sesion("")
             })
+        }
+
+        async fn recuperar(&self, correo: &str) -> Result<(), FallaDeAuth> {
+            self.anotar(format!("recover {correo}"))?;
+            // Supabase solo envía el código si el correo tiene cuenta, y responde 200 en los dos casos.
+            if self
+                .verificados
+                .iter()
+                .any(|v| v.eq_ignore_ascii_case(correo))
+            {
+                self.recuperaciones.lock().unwrap().push(correo.to_string());
+            }
+            Ok(())
         }
 
         fn url_de_google(&self, desafio: &str, regreso: &str, permisos: &str) -> String {
@@ -1711,3 +1730,5 @@ pub(crate) mod pruebas {
 mod pruebas_de_cierre;
 #[cfg(test)]
 mod pruebas_de_google;
+#[cfg(test)]
+mod pruebas_de_recuperacion;

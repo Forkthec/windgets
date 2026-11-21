@@ -253,6 +253,12 @@ const respuestas: Respuestas = {
   // HE-01-HU05: fuera de Tauri no hay navegador ni regreso windgets://; la espera no recibe resultado.
   auth_google_start: () => ({ ok: true, value: { expires_at: new Date(Date.now() + 300_000).toISOString() } }),
   auth_google_cancel: () => ({ ok: true, value: null }),
+  // HE-01-HU06: el simulado no envía correos; responde igual exista o no la cuenta (ET09).
+  auth_recovery_request: () => ({
+    ok: true,
+    value: { resend_available_at: new Date(Date.now() + 60_000).toISOString() },
+    result_message: { code: 'auth_recovery_request', message: textos.CODIGO_DE_RECUPERACION_ENVIADO },
+  }),
   // HE-07-HU01: el simulado no tiene etiquetas y crea la tarjeta tal cual llega, al final de Por hacer.
   label_list: () => ({ ok: true, value: [] }),
   card_create: (p) => {

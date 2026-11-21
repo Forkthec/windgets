@@ -21,17 +21,18 @@ use crate::servicio_del_planificador::{
     Calendario, CalendarioDelSistema, ServicioDelPlanificador, VigiaDelDia,
 };
 use crate::tipos::{
-    AgendaDay, AgendaDayParams, AppError, AuthGoogleStartResult, AuthRegisterStartParams,
-    AuthRegisterStartResult, AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState,
-    AuthSignInParams, AuthSignOutInfo, Card, CardAssignTimeBlockParams, CardCreateParams,
-    CardDetail, CardIdParams, CardListBoardResult, CardMoveParams, CardSetCompletedParams,
-    CardUpdateParams, CatalogItem, CatalogKind, CatalogListParams, ChangeOp, CodeSent, Column,
-    ColumnCreateParams, ColumnReorderParams, ColumnUpdateParams, Connectivity, EntityChange,
-    ErrorCode, EventMapAuthGoogleResultStatus, EventMapConnectivityChanged, EventMapSessionChanged,
-    EventMapSessionChangedReason, EventMapSessionChangedState, ImageImportParams,
-    ImageImportResult, IpcErr, IpcOk, IpcResult, KanbanWidgetData, Label, LabelCreateParams,
-    NoParams, OriginKind, PlannerToday, SessionInfo, ThemeDraftOpenParams, ThemeDraftResetParams,
-    ThemeDraftSelectParams, ThemeDraftStatus, ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
+    AgendaDay, AgendaDayParams, AppError, AuthGoogleStartResult, AuthRecoveryRequestParams,
+    AuthRegisterStartParams, AuthRegisterStartResult, AuthRegisterVerifyParams,
+    AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, AuthSignOutInfo, Card,
+    CardAssignTimeBlockParams, CardCreateParams, CardDetail, CardIdParams, CardListBoardResult,
+    CardMoveParams, CardSetCompletedParams, CardUpdateParams, CatalogItem, CatalogKind,
+    CatalogListParams, ChangeOp, CodeSent, Column, ColumnCreateParams, ColumnReorderParams,
+    ColumnUpdateParams, Connectivity, EntityChange, ErrorCode, EventMapAuthGoogleResultStatus,
+    EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
+    EventMapSessionChangedState, ImageImportParams, ImageImportResult, IpcErr, IpcOk, IpcResult,
+    KanbanWidgetData, Label, LabelCreateParams, NoParams, OriginKind, PlannerToday, SessionInfo,
+    ThemeDraftOpenParams, ThemeDraftResetParams, ThemeDraftSelectParams, ThemeDraftStatus,
+    ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
 };
 use crate::tipos::{
     AppliedThemeView, ApplyMode, AssetResolveParams, AssetResolveResult,
@@ -623,6 +624,19 @@ pub fn atender_argumentos(app: &AppHandle, argumentos: Vec<String>) {
             avisar_wallpaper(&app).await;
         }
     });
+}
+
+/// IPC-AUTH-08 `auth_recovery_request` (HE-01-HU06).
+#[tauri::command]
+pub async fn auth_recovery_request(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: AuthRecoveryRequestParams,
+) -> Result<IpcResult<CodeSent>, ()> {
+    let antes = nucleo.sesion.auth().en_linea();
+    let r = nucleo.sesion.recuperar_solicitar(params).await;
+    avisar_conectividad(&app, antes);
+    Ok(con_mensaje(r))
 }
 
 /// IPC-AUTH-12 `auth_get_session` (HE-01-HU04-CA02): lee `session.bin`, sin llamar a la nube.

@@ -104,6 +104,9 @@ pub trait AuthDeSupabase: Send + Sync {
         &self,
         refresh_token: &str,
     ) -> impl Future<Output = Result<SesionDeAuth, FallaDeAuth>> + Send;
+    /// `POST /recover` `{ email }` (INT-01, «Recuperar: enviar código»): responde 200 exista o no la cuenta y
+    /// solo envía el código si la tiene.
+    fn recuperar(&self, correo: &str) -> impl Future<Output = Result<(), FallaDeAuth>> + Send;
     /// `GET /auth/v1/authorize?provider=google&redirect_to=…&code_challenge=…&code_challenge_method=s256&scopes=…`
     /// (INT-01, «Inicio con Google (PKCE)», paso 2): la dirección que se abre en el navegador predeterminado.
     fn url_de_google(&self, desafio: &str, regreso: &str, permisos: &str) -> String;
@@ -433,6 +436,13 @@ impl AuthDeSupabase for ClienteDeSupabase {
             )
             .await?;
         leer_sesion(&texto)
+    }
+
+    async fn recuperar(&self, correo: &str) -> Result<(), FallaDeAuth> {
+        let cuerpo = serde_json::json!({ "email": correo });
+        self.enviar(reqwest::Method::POST, "/auth/v1/recover", Some(cuerpo))
+            .await
+            .map(|_| ())
     }
 
     fn url_de_google(&self, desafio: &str, regreso: &str, permisos: &str) -> String {
