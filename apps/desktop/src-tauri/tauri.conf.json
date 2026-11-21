@@ -15,7 +15,9 @@
         "label": "main",
         "title": "Windgets",
         "width": 1200,
-        "height": 800
+        "height": 800,
+        "minWidth": 960,
+        "minHeight": 600
       }
     ],
     "security": {
