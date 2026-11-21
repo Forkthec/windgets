@@ -13,6 +13,8 @@
 
 use std::ffi::c_void;
 use std::mem::size_of;
+use std::sync::OnceLock;
+use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::time::Duration;
 
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
@@ -83,21 +85,53 @@ fn crear_y_anclar(app: &AppHandle, virtual_: Rect) -> Result<f64, String> {
         })
 }
 
-/// Cada cuánto se revisa que la capa siga anclada.
-const REVISION_DEL_ANCLAJE: Duration = Duration::from_secs(5);
+/// Revisión de respaldo cuando no llega ningún evento de Windows.
+const REVISION_DE_RESPALDO: Duration = Duration::from_secs(60);
+/// Tras un evento, Explorer tarda en crear su WorkerW: se revisa a los 2 s y otra vez a los 10 s.
+const REVISIONES_TRAS_UN_EVENTO: [Duration; 2] = [Duration::from_secs(2), Duration::from_secs(8)];
+
+/// Despierta al vigilante (`revisar_pronto`).
+static AVISO: OnceLock<Sender<()>> = OnceLock::new();
+
+/// Pide revisar el anclaje ya. La llama la ventana oculta de `raw_input` con los eventos de Windows que recrean
+/// el WorkerW: Explorer reiniciado (`TaskbarCreated`), pantalla encendida o reanudación (`WM_POWERBROADCAST`),
+/// cambio de monitores (`WM_DISPLAYCHANGE`) o de la configuración del escritorio (`WM_SETTINGCHANGE`).
+pub fn revisar_pronto() {
+    if let Some(aviso) = AVISO.get() {
+        let _ = aviso.send(());
+    }
+}
 
 /// Explorer recrea el WorkerW al apagar o suspender la pantalla, al bloquear la sesión o al reiniciarse, y la capa
 /// (su hija) desaparece o queda detrás de una ventana oculta: vuelve el fondo de Windows (pruebas manuales, P23).
 /// INT-07 advierte que Windows 11 puede cambiar esa jerarquía, pero no dice cómo recuperarse. DUDA: HE-02-HU01
-/// valor usado: cada 5 s se revisa que la capa siga hija del WorkerW vigente y visible; si no, se vuelve a anclar
-/// (paso 1) o, si la ventana ya no existe, se crea de nuevo. Después se decide su visibilidad como al abrir la
-/// aplicación (`avisar_wallpaper`).
+/// valor usado: con cada evento de Windows que puede recrear el WorkerW (`revisar_pronto`) y, de respaldo, cada
+/// 60 s, se revisa que la capa siga hija del WorkerW vigente y visible; si no, se vuelve a anclar (paso 1) o, si
+/// la ventana ya no existe, se crea de nuevo. Después se decide su visibilidad como al abrir la aplicación
+/// (`avisar_wallpaper`).
 fn vigilar(app: AppHandle) {
+    let (aviso, avisos) = mpsc::channel();
+    if AVISO.set(aviso).is_err() {
+        return;
+    }
     std::thread::spawn(move || {
+        let comprobar = |app: &AppHandle| {
+            if revisar(app) {
+                tauri::async_runtime::block_on(crate::puente_ipc::avisar_wallpaper(app));
+            }
+        };
         loop {
-            std::thread::sleep(REVISION_DEL_ANCLAJE);
-            if revisar(&app) {
-                tauri::async_runtime::block_on(crate::puente_ipc::avisar_wallpaper(&app));
+            match avisos.recv_timeout(REVISION_DE_RESPALDO) {
+                Ok(()) => {
+                    for espera in REVISIONES_TRAS_UN_EVENTO {
+                        std::thread::sleep(espera);
+                        // Varios eventos seguidos cuentan como uno.
+                        while avisos.try_recv().is_ok() {}
+                        comprobar(&app);
+                    }
+                }
+                Err(RecvTimeoutError::Timeout) => comprobar(&app),
+                Err(RecvTimeoutError::Disconnected) => return,
             }
         }
     });

@@ -33,9 +33,10 @@ use windows::Win32::UI::Input::{
     RIDEV_INPUTSINK, RIM_TYPEMOUSE, RegisterRawInputDevices,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, DispatchMessageW, GetClassNameW, GetCursorPos, GetMessageW,
-    GetParent, GetSystemMetrics, GetWindowThreadProcessId, MSG, RegisterClassW, SM_SWAPBUTTON,
-    SendMessageW, TranslateMessage, WM_DISPLAYCHANGE, WM_DPICHANGED, WM_INPUT, WNDCLASSW,
+    CreateWindowExW, DEVICE_NOTIFY_WINDOW_HANDLE, DefWindowProcW, DispatchMessageW, GetClassNameW,
+    GetCursorPos, GetMessageW, GetParent, GetSystemMetrics, GetWindowThreadProcessId, MSG,
+    RegisterClassW, RegisterWindowMessageW, SM_SWAPBUTTON, SendMessageW, TranslateMessage,
+    WM_DISPLAYCHANGE, WM_DPICHANGED, WM_INPUT, WM_POWERBROADCAST, WM_SETTINGCHANGE, WNDCLASSW,
     WS_EX_TOOLWINDOW, WS_POPUP, WindowFromPoint,
 };
 use windows::core::{PCWSTR, w};
@@ -45,6 +46,13 @@ use crate::puente_ipc::Nucleo;
 
 /// La aplicación, para leer el estado del host y emitir eventos desde el hilo de Raw Input.
 static APLICACION: OnceLock<AppHandle> = OnceLock::new();
+
+/// Mensaje `TaskbarCreated`: Explorer lo envía a las ventanas de nivel superior al reiniciarse.
+static EXPLORER_REINICIADO: OnceLock<u32> = OnceLock::new();
+
+/// `GUID_CONSOLE_DISPLAY_STATE`: avisa con `WM_POWERBROADCAST` cuando la pantalla se apaga o se enciende.
+const ESTADO_DE_LA_PANTALLA: windows::core::GUID =
+    windows::core::GUID::from_u128(0x6fe69556_704a_47a0_8f24_c28d936fda47);
 
 /// Arranca el hilo con la ventana oculta que recibe Raw Input y los cambios de monitores.
 pub fn iniciar(app: &AppHandle) {
@@ -90,6 +98,21 @@ fn leer_raw_input() {
         )
     }) else {
         return;
+    };
+
+    // Eventos que pueden recrear el WorkerW de Explorer: el vigilante del anclaje revisa la capa (HE-02-HU01).
+    // SAFETY: el nombre es un literal terminado en cero.
+    let reiniciado = unsafe { RegisterWindowMessageW(w!("TaskbarCreated")) };
+    if reiniciado != 0 {
+        let _ = EXPLORER_REINICIADO.set(reiniciado);
+    }
+    // SAFETY: `ventana` es la ventana de este hilo y el GUID es una constante que vive todo el programa.
+    let _ = unsafe {
+        windows::Win32::System::Power::RegisterPowerSettingNotification(
+            windows::Win32::Foundation::HANDLE(ventana.0),
+            &ESTADO_DE_LA_PANTALLA,
+            DEVICE_NOTIFY_WINDOW_HANDLE,
+        )
     };
 
     // Página de uso genérica 0x01, uso 0x02 (mouse), RIDEV_INPUTSINK: recibe la entrada sin tener el foco.
@@ -141,6 +164,13 @@ unsafe extern "system" fn procedimiento(
         && let Some(app) = APLICACION.get()
     {
         super::anclaje::reubicar(app);
+    }
+    if mensaje == WM_DISPLAYCHANGE
+        || mensaje == WM_SETTINGCHANGE
+        || mensaje == WM_POWERBROADCAST
+        || EXPLORER_REINICIADO.get() == Some(&mensaje)
+    {
+        super::anclaje::revisar_pronto();
     }
     // SAFETY: se reenvían los mismos parámetros que llegaron al procedimiento.
     unsafe { DefWindowProcW(ventana, mensaje, wparam, lparam) }
