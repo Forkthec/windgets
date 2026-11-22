@@ -13,6 +13,7 @@ use chrono::DateTime;
 
 use crate::cliente_de_supabase::FallaDeAuth;
 use crate::repositorios_y_archivos_locales::BaseLocal;
+pub mod archivos;
 pub mod cancelacion;
 pub mod catalogo;
 
@@ -28,6 +29,11 @@ pub const ESPERA_TRAS_GUARDAR_MS: i64 = 2_000;
 pub const REINTENTO_MS: i64 = 60_000;
 /// `sync_push` acepta hasta 200 cambios por llamada (RPC-02, `too_many_changes`).
 pub const CAMBIOS_POR_ENVIO: i64 = 200;
+
+/// INT-09, «Falla»: el cambio que usa una imagen propia espera a que el archivo suba (`depends_on_upload_id`). Como
+/// la cola se envía en el orden en que se hicieron los cambios (HE-15-HU03-ET06) y los que vienen después pueden
+/// usar esa imagen (un tema, un widget), se envían solo los anteriores al primer cambio que espera.
+const ENVIABLE: &str = "id < coalesce((SELECT min(id) FROM pending_change WHERE depends_on_upload_id IS NOT NULL),      9223372036854775807)";
 
 /// La cuenta y el JWT de la sesión iniciada.
 pub struct Credenciales<'a> {
@@ -182,22 +188,25 @@ pub async fn enviar<N: NubeDeSincronizacion>(
     .bind(&reintento)
     .fetch_one(pool)
     .await?;
-    let listos: i64 =
-        sqlx::query_scalar("SELECT count(*) FROM pending_change WHERE modified_at <= ?")
-            .bind(instante(ahora_ms - ESPERA_TRAS_GUARDAR_MS))
-            .fetch_one(pool)
-            .await?;
-    let hay: i64 = sqlx::query_scalar("SELECT count(*) FROM pending_change")
-        .fetch_one(pool)
-        .await?;
+    let listos: i64 = sqlx::query_scalar(&format!(
+        "SELECT count(*) FROM pending_change WHERE modified_at <= ? AND {ENVIABLE}"
+    ))
+    .bind(instante(ahora_ms - ESPERA_TRAS_GUARDAR_MS))
+    .fetch_one(pool)
+    .await?;
+    let hay: i64 = sqlx::query_scalar(&format!(
+        "SELECT count(*) FROM pending_change WHERE {ENVIABLE}"
+    ))
+    .fetch_one(pool)
+    .await?;
     if hay == 0 || (!forzar && (en_espera > 0 || listos == 0)) {
         return Ok(Ciclo::default());
     }
 
     // HE-15-HU03-ET06 (CA07): en el orden en que se hicieron (el `id` de la cola).
-    let filas: Vec<(i64, String, String, String, String, String)> = sqlx::query_as(
-        "SELECT id, entity_kind, entity_id, op, fields, modified_at FROM pending_change ORDER BY id LIMIT ?",
-    )
+    let filas: Vec<(i64, String, String, String, String, String)> = sqlx::query_as(&format!(
+        "SELECT id, entity_kind, entity_id, op, fields, modified_at FROM pending_change WHERE {ENVIABLE}          ORDER BY id LIMIT ?"
+    ))
     .bind(CAMBIOS_POR_ENVIO)
     .fetch_all(pool)
     .await?;

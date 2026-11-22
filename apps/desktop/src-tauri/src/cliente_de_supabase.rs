@@ -617,6 +617,109 @@ impl crate::motor_de_sincronizacion::NubeDeSincronizacion for ClienteDeSupabase 
     }
 }
 
+/// Una imagen propia pesa hasta 20 MB (HE-02-HU03-ET04): los 10 s de las demás llamadas no alcanzan con una red
+/// lenta. DUDA: P26 INT-09 no define el límite de espera de Storage. Valor usado: 120 s.
+const ESPERA_DE_ARCHIVOS: Duration = Duration::from_secs(120);
+
+/// Storage responde sus errores con `{ "statusCode": "409", "error": "Duplicate", … }`, a veces con otro estado
+/// HTTP (400). Se usa el `statusCode` del cuerpo si lo trae (INT-09).
+pub fn estado_de_storage(estado: u16, cuerpo: &[u8]) -> u16 {
+    if (200..300).contains(&estado) {
+        return estado;
+    }
+    serde_json::from_slice::<serde_json::Value>(cuerpo)
+        .ok()
+        .and_then(|json| {
+            let valor = json.get("statusCode")?;
+            valor
+                .as_str()
+                .and_then(|texto| texto.parse().ok())
+                .or_else(|| valor.as_u64().and_then(|n| u16::try_from(n).ok()))
+        })
+        .unwrap_or(estado)
+}
+
+impl ClienteDeSupabase {
+    /// Una petición a Storage con el JWT de la sesión y, si se indica, un cuerpo binario con su tipo (INT-09).
+    async fn storage(
+        &self,
+        metodo: reqwest::Method,
+        ruta: &str,
+        token: &str,
+        cuerpo: Option<(Vec<u8>, &str)>,
+    ) -> Result<Vec<u8>, FallaDeAuth> {
+        let Some(http) = self.http.as_ref().filter(|_| !self.url.is_empty()) else {
+            return Err(FallaDeAuth::SinRespuesta);
+        };
+        let mut peticion = http
+            .request(metodo, format!("{}/storage/v1/object/{ruta}", self.url))
+            .header("apikey", &self.anon)
+            .bearer_auth(token)
+            .timeout(ESPERA_DE_ARCHIVOS);
+        if let Some((bytes, tipo)) = cuerpo {
+            peticion = peticion
+                .header(reqwest::header::CONTENT_TYPE, tipo)
+                .body(bytes);
+        }
+        let respuesta = match peticion.send().await {
+            Ok(respuesta) => respuesta,
+            Err(error) => {
+                let falla = if error.is_connect() {
+                    FallaDeAuth::SinConexion
+                } else {
+                    FallaDeAuth::SinRespuesta
+                };
+                self.en_linea
+                    .store(falla != FallaDeAuth::SinConexion, Ordering::Relaxed);
+                return Err(falla);
+            }
+        };
+        self.en_linea.store(true, Ordering::Relaxed);
+        let estado = respuesta.status().as_u16();
+        let bytes = respuesta
+            .bytes()
+            .await
+            .map_err(|_| FallaDeAuth::SinRespuesta)?
+            .to_vec();
+        let efectivo = estado_de_storage(estado, &bytes);
+        if (200..300).contains(&efectivo) {
+            return Ok(bytes);
+        }
+        interpretar_respuesta(efectivo, &String::from_utf8_lossy(&bytes)).map(|()| bytes)
+    }
+}
+
+impl crate::motor_de_sincronizacion::archivos::AlmacenDeImagenes for ClienteDeSupabase {
+    async fn subir(
+        &self,
+        token: &str,
+        ruta: &str,
+        tipo: &str,
+        bytes: Vec<u8>,
+    ) -> Result<(), FallaDeAuth> {
+        let destino = format!(
+            "{}/{ruta}",
+            crate::motor_de_sincronizacion::archivos::BUCKET
+        );
+        match self
+            .storage(reqwest::Method::POST, &destino, token, Some((bytes, tipo)))
+            .await
+        {
+            Ok(_) | Err(FallaDeAuth::Rechazo { estado: 409, .. }) => Ok(()),
+            Err(falla) => Err(falla),
+        }
+    }
+
+    async fn descargar(&self, token: &str, ruta: &str) -> Result<Vec<u8>, FallaDeAuth> {
+        let origen = format!(
+            "authenticated/{}/{ruta}",
+            crate::motor_de_sincronizacion::archivos::BUCKET
+        );
+        self.storage(reqwest::Method::GET, &origen, token, None)
+            .await
+    }
+}
+
 #[cfg(test)]
 mod pruebas {
     use super::*;
@@ -701,6 +804,16 @@ mod pruebas {
             (3600, "0b6e", "Estef")
         );
         assert_eq!(leer_sesion("{}"), Err(FallaDeAuth::SinRespuesta));
+    }
+
+    #[test]
+    fn ca_he_02_hu03_ca09_estado_de_storage() {
+        // INT-09: Storage puede responder «Duplicate» con 400 y `statusCode: "409"`; manda el del cuerpo.
+        let duplicado = br#"{ "statusCode": "409", "error": "Duplicate", "message": "The resource already exists" }"#;
+        assert_eq!(estado_de_storage(400, duplicado), 409);
+        assert_eq!(estado_de_storage(403, br#"{ "statusCode": 403 }"#), 403);
+        assert_eq!(estado_de_storage(401, b"sin json"), 401);
+        assert_eq!(estado_de_storage(200, duplicado), 200);
     }
 
     #[test]

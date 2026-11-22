@@ -12,7 +12,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use crate::cliente_de_supabase::ClienteDeSupabase;
 use crate::host_del_wallpaper::estado::EstadoDelHost;
 use crate::integracion_con_el_sistema::ventana_de_edicion;
-use crate::motor_de_sincronizacion;
+use crate::motor_de_sincronizacion::{self, archivos};
 use crate::repositorios_y_archivos_locales::{BaseLocal, almacen_de_la_aplicacion};
 use crate::servicio_de_personalizacion_y_configuracion::ServicioDePersonalizacion;
 use crate::servicio_de_personalizacion_y_configuracion::escritorio::Carpetas;
@@ -193,6 +193,8 @@ pub fn sincronizar(app: AppHandle) {
         let mut en_linea_antes: Option<bool> = None;
         let mut ultima_consulta = 0_i64;
         let mut vuelta_anterior: Option<i64> = None;
+        // INT-09: hora de la última subida de imagen que falló de forma pasajera (se reintenta al minuto).
+        let mut falla_de_subida: Option<i64> = None;
         loop {
             std::thread::sleep(REVISION_DE_LA_COLA);
             let nucleo = app.state::<Nucleo>();
@@ -237,6 +239,22 @@ pub fn sincronizar(app: AppHandle) {
                         motor_de_sincronizacion::calibrar(base, cliente, &credenciales, ahora)
                             .await?;
                     }
+                    // INT-09: las imágenes propias suben antes que la cola, para que su fila no llegue a la nube
+                    // sin el archivo (HE-02-HU03-CA09).
+                    let subidas = if archivos::toca_subir(falla_de_subida, ahora) || reconectado {
+                        Some(
+                            archivos::subir_pendientes(
+                                base,
+                                cliente,
+                                &credenciales,
+                                &carpeta_de_archivos(),
+                                antes,
+                            )
+                            .await?,
+                        )
+                    } else {
+                        None
+                    };
                     let envio = motor_de_sincronizacion::enviar(
                         base,
                         cliente,
@@ -274,7 +292,20 @@ pub fn sincronizar(app: AppHandle) {
                     } else {
                         motor_de_sincronizacion::Ciclo::default()
                     };
-                    Ok::<_, sqlx::Error>((envio, descarga))
+                    // INT-09, «Descargar»: las imágenes propias que llegaron sin su archivo.
+                    let bajadas = if consultar && cliente.en_linea() {
+                        archivos::descargar_imagenes(
+                            base,
+                            cliente,
+                            &credenciales,
+                            &carpeta_de_archivos(),
+                            ahora,
+                        )
+                        .await?
+                    } else {
+                        Vec::new()
+                    };
+                    Ok::<_, sqlx::Error>((envio, descarga, subidas, bajadas))
                 }))
             else {
                 continue;
@@ -282,12 +313,18 @@ pub fn sincronizar(app: AppHandle) {
             en_linea_antes = Some(cliente.en_linea());
             // HE-15-HU02-ET05: un envío que no encuentra la red avisa que se perdió la conexión (EV-03).
             avisar_conectividad(&app, antes);
-            if let Ok((envio, descarga)) = resultado {
+            if let Ok((envio, descarga, subidas, bajadas)) = resultado {
                 if descarga.llamo {
                     ultima_consulta = ahora;
                 }
+                if let Some(subidas) = subidas {
+                    falla_de_subida = subidas.reintentar.then_some(ahora);
+                }
                 avisar_ciclo(&app, &envio, &descarga, reconectado && hubo_pendientes);
                 avisar_personalizacion(&app, &descarga);
+                if !bajadas.is_empty() {
+                    avisar_imagenes_descargadas(&app);
+                }
             }
             if let Ok(estado) =
                 tauri::async_runtime::block_on(motor_de_sincronizacion::estado(base))
@@ -377,6 +414,32 @@ fn avisar_personalizacion(app: &AppHandle, descarga: &motor_de_sincronizacion::C
             },
         );
     }
+}
+
+/// Llegaron imágenes propias de Storage: la capa y las pantallas vuelven a leer el tema aplicado (EV-11) y el
+/// estado del wallpaper (EV-16), que deja de usar `fallback_default` si el fondo ya está en el computador.
+fn avisar_imagenes_descargadas(app: &AppHandle) {
+    let nucleo = app.state::<Nucleo>();
+    let user_id = usuario(&nucleo).unwrap_or_default();
+    let tema = tauri::async_runtime::block_on(
+        crate::servicio_de_personalizacion_y_configuracion::ServicioDePersonalizacion::id_del_tema(
+            nucleo.planificador.base(),
+            &user_id,
+        ),
+    )
+    .ok()
+    .flatten();
+    if let Some(tema) = tema {
+        let _ = app.emit(
+            "applied_theme_changed",
+            crate::tipos::EventMapAppliedThemeChanged {
+                theme_id: crate::tipos::Uuid(tema),
+                origin: OriginKind::Remote,
+                has_unsaved_draft: nucleo.personalizacion.hay_cambios_sin_guardar(),
+            },
+        );
+    }
+    tauri::async_runtime::block_on(avisar_wallpaper(app));
 }
 
 /// EV-05 `sync_completed`, EV-06 `sync_conflicts_resolved` y los cambios de entidades que recibió el computador
