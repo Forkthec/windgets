@@ -239,6 +239,17 @@ describe('EF-01 windi-chat · HE-14-HU02 (instrucción del sistema de INT-03)', 
   });
 });
 
+describe('EF-01 windi-chat · P27 (instrucción del sistema)', () => {
+  const texto = instruccionDelSistema(CONTEXTO);
+
+  it('P27 (C6) · HE-14-HU05-CA11 · «de HH:00 a (HH+1):00» va directo a la propuesta', () => {
+    expect(texto).toContain(
+      'Un bloque «de HH:00 a (HH+1):00», como «de 15:00 a 16:00», es un bloque válido de una hora',
+    );
+    expect(texto).toContain('directamente con start_hour HH, sin preguntar');
+  });
+});
+
 describe('EF-01 windi-chat · HE-14-HU04 (crear tarjetas)', () => {
   const conEtiquetas: Contexto = { ...CONTEXTO, labels: [{ id: 'l1', name: 'Trabajo' }] };
 

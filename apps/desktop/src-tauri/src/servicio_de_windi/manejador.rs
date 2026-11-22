@@ -533,6 +533,19 @@ impl<C: Calendario> ManejadorDelPlanificador<'_, C> {
                 despues.insert("time_block".to_string(), pedido);
             }
         }
+        // P27 (C7): una fecha límite anterior al bloque lo quita al aplicar (HE-11 ET12, ET13; misma regla que
+        // `servicio_del_planificador`); la propuesta lo muestra para que la persona lo vea antes de confirmar.
+        let sale_del_bloque = !despues.contains_key("time_block")
+            && match (
+                despues.get("due_date").and_then(Value::as_str),
+                tarjeta.scheduled_date.as_ref(),
+            ) {
+                (Some(nueva), Some(dia)) => dia.0.as_str() > nueva,
+                _ => false,
+            };
+        if sale_del_bloque {
+            despues.insert("time_block".to_string(), Value::Null);
+        }
         if despues.is_empty() {
             return Err(motivo(
                 ErrorCode::WindiSameValue,

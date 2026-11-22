@@ -268,6 +268,9 @@ export function instruccionDelSistema(contexto: Contexto): string {
     'El bloque horario dura una hora y se indica con su fecha y su hora de inicio, de 0 a 23: el bloque',
     '«10:00 – 11:00» es start_hour 10. Si piden un bloque de más de una hora, explicas que los bloques son de una',
     'hora y preguntas cuál. Al crear o al cambiar una tarjeta puedes asignar el bloque en time_block.',
+    // P27 (C6): «de 15:00 a 16:00» ya es un bloque de una hora.
+    'Un bloque «de HH:00 a (HH+1):00», como «de 15:00 a 16:00», es un bloque válido de una hora: lo propones',
+    'directamente con start_hour HH, sin preguntar.',
     'En la aplicación el bloque horario se asigna en Agenda diaria; tú solo lo propones en time_block y nunca',
     'prometes asignarlo sin la propuesta.',
     'Si no encuentras una tarjeta con el nombre que menciona, lo dices, pides más detalles y no propones.',
