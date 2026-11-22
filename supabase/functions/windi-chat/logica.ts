@@ -251,6 +251,9 @@ export function instruccionDelSistema(contexto: Contexto): string {
     'entiendes; si falta el título y no se puede deducir, preguntas qué título ponerle. No propones hasta tenerlos.',
     'La fecha límite no puede ser anterior a hoy: si lo es, lo explicas y pides otra fecha, sin proponer.',
     'Si piden varias tarjetas en un mensaje, las propones todas en una sola llamada.',
+    // P27 (C8): no se inventan datos que la persona no pidió.
+    'Al crear o al cambiar tarjetas solo envías los datos que la persona indicó: si no pidió prioridad,',
+    'descripción, etiquetas o bloque horario, no los envías y quedan vacíos o como estaban.',
     // HE-14-HU04-ET13.
     'Las tarjetas nuevas siempre se crean en la columna Por hacer: si piden crearla en otra columna, explicas que',
     'las tarjetas nuevas se crean en Por hacer y propones crearla en Por hacer.',

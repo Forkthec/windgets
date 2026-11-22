@@ -248,6 +248,13 @@ describe('EF-01 windi-chat · P27 (instrucción del sistema)', () => {
     );
     expect(texto).toContain('directamente con start_hour HH, sin preguntar');
   });
+
+  it('P27 (C8) · HE-14-HU04 · los datos que no se pidieron no se envían', () => {
+    expect(texto).toContain('Al crear o al cambiar tarjetas solo envías los datos que la persona indicó');
+    expect(texto).toContain(
+      'descripción, etiquetas o bloque horario, no los envías y quedan vacíos o como estaban',
+    );
+  });
 });
 
 describe('EF-01 windi-chat · HE-14-HU04 (crear tarjetas)', () => {
