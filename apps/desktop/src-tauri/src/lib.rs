@@ -20,6 +20,13 @@ pub mod tipos;
 /// (solo en Windows) arranca además el prototipo del spike P01 (WorkerW y Raw Input, D-131 y D-186).
 pub fn run() {
     let builder = tauri::Builder::default()
+        // INT-10: una segunda ejecución (por ejemplo, Windows al abrir `windgets://auth/callback?…`) entrega sus
+        // argumentos a esta instancia y termina. Va primero, como pide el plugin.
+        .plugin(tauri_plugin_single_instance::init(
+            |app, argumentos, _carpeta| {
+                puente_ipc::atender_argumentos(app, argumentos);
+            },
+        ))
         .plugin(tauri_plugin_dialog::init())
         .manage(puente_ipc::Nucleo::nuevo())
         .invoke_handler(tauri::generate_handler![
@@ -29,6 +36,12 @@ pub fn run() {
             puente_ipc::auth_register_resend,
             puente_ipc::auth_register_cancel,
             puente_ipc::auth_sign_in,
+            puente_ipc::auth_google_start,
+            puente_ipc::auth_google_cancel,
+            puente_ipc::auth_recovery_request,
+            puente_ipc::auth_recovery_verify,
+            puente_ipc::auth_recovery_resend,
+            puente_ipc::auth_recovery_set_password,
             puente_ipc::auth_get_session,
             puente_ipc::auth_get_sign_out_info,
             puente_ipc::auth_sign_out,

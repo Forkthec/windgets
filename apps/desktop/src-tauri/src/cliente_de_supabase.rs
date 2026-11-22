@@ -104,6 +104,102 @@ pub trait AuthDeSupabase: Send + Sync {
         &self,
         refresh_token: &str,
     ) -> impl Future<Output = Result<SesionDeAuth, FallaDeAuth>> + Send;
+    /// `POST /recover` `{ email }` (INT-01, «Recuperar: enviar código»): responde 200 exista o no la cuenta y
+    /// solo envía el código si la tiene.
+    fn recuperar(&self, correo: &str) -> impl Future<Output = Result<(), FallaDeAuth>> + Send;
+    /// `POST /verify` `{ type: 'recovery', email, token }` (INT-01, «Recuperar: verificar»): la sesión de
+    /// recuperación. Como en el registro, un código incorrecto o vencido responde 403 `otp_expired`.
+    fn verificar_recuperacion(
+        &self,
+        correo: &str,
+        codigo: &str,
+    ) -> impl Future<Output = Result<SesionDeAuth, FallaDeAuth>> + Send;
+    /// `PUT /user` `{ password }` con el `access_token` de recuperación (INT-01, «Recuperar: nueva
+    /// contraseña»). La contraseña igual a la actual responde 422 `same_password`.
+    fn cambiar_contrasena(
+        &self,
+        token: &str,
+        contrasena: &str,
+    ) -> impl Future<Output = Result<(), FallaDeAuth>> + Send;
+    /// `GET /auth/v1/authorize?provider=google&redirect_to=…&code_challenge=…&code_challenge_method=s256&scopes=…`
+    /// (INT-01, «Inicio con Google (PKCE)», paso 2): la dirección que se abre en el navegador predeterminado.
+    fn url_de_google(&self, desafio: &str, regreso: &str, permisos: &str) -> String;
+    /// `POST /token?grant_type=pkce` `{ auth_code, code_verifier }` (paso 4): la sesión de la cuenta de Google.
+    fn intercambiar_google(
+        &self,
+        codigo: &str,
+        verificador: &str,
+    ) -> impl Future<Output = Result<SesionDeGoogle, FallaDeAuth>> + Send;
+}
+
+/// Sesión del inicio con Google con los datos de la cuenta que decide el alias y si la cuenta es nueva.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SesionDeGoogle {
+    pub sesion: SesionDeAuth,
+    pub correo: String,
+    /// `user_metadata.full_name` (o `name`) de Google; `None` si la cuenta de Google no tiene nombre.
+    pub nombre: Option<String>,
+    /// `user.created_at` y `user.last_sign_in_at`, en milisegundos desde 1970.
+    pub creada_ms: Option<i64>,
+    pub ingreso_ms: Option<i64>,
+}
+
+impl SesionDeGoogle {
+    /// La cuenta se creó en este inicio: Supabase la crea y la inicia en el mismo regreso, así que la creación
+    /// y el último inicio quedan a menos de `margen_ms`.
+    pub fn nueva(&self, margen_ms: i64) -> bool {
+        matches!((self.creada_ms, self.ingreso_ms), (Some(c), Some(i)) if (i - c).abs() <= margen_ms)
+    }
+}
+
+/// Lee la respuesta de `grant_type=pkce`: la sesión y los datos de la cuenta de Google.
+pub fn leer_sesion_de_google(cuerpo: &str) -> Result<SesionDeGoogle, FallaDeAuth> {
+    let sesion = leer_sesion(cuerpo)?;
+    let json: serde_json::Value =
+        serde_json::from_str(cuerpo).map_err(|_| FallaDeAuth::SinRespuesta)?;
+    let texto = |ruta: &str| {
+        json.pointer(ruta)
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .map(str::to_string)
+    };
+    let fecha = |ruta: &str| {
+        texto(ruta)
+            .and_then(|v| chrono::DateTime::parse_from_rfc3339(&v).ok())
+            .map(|f| f.timestamp_millis())
+    };
+    Ok(SesionDeGoogle {
+        correo: texto("/user/email").unwrap_or_default(),
+        nombre: texto("/user/user_metadata/full_name")
+            .or_else(|| texto("/user/user_metadata/name")),
+        creada_ms: fecha("/user/created_at"),
+        ingreso_ms: fecha("/user/last_sign_in_at"),
+        sesion,
+    })
+}
+
+/// Codifica un valor para la consulta de una dirección (RFC 3986: solo letras, cifras y `-._~` van sin cambio).
+pub fn codificar(valor: &str) -> String {
+    valor
+        .bytes()
+        .map(|b| match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => {
+                char::from(b).to_string()
+            }
+            _ => format!("%{b:02X}"),
+        })
+        .collect()
+}
+
+/// La dirección de `/auth/v1/authorize` para Google con PKCE (INT-01, paso 2).
+pub fn direccion_de_google(base: &str, desafio: &str, regreso: &str, permisos: &str) -> String {
+    format!(
+        "{base}/auth/v1/authorize?provider=google&redirect_to={}&code_challenge={}&code_challenge_method=s256&scopes={}",
+        codificar(regreso),
+        codificar(desafio),
+        codificar(permisos)
+    )
 }
 
 /// Sesión que entrega Supabase Auth (`access_token`, `refresh_token`, `expires_in`, `user`).
@@ -354,6 +450,57 @@ impl AuthDeSupabase for ClienteDeSupabase {
             )
             .await?;
         leer_sesion(&texto)
+    }
+
+    async fn recuperar(&self, correo: &str) -> Result<(), FallaDeAuth> {
+        let cuerpo = serde_json::json!({ "email": correo });
+        self.enviar(reqwest::Method::POST, "/auth/v1/recover", Some(cuerpo))
+            .await
+            .map(|_| ())
+    }
+
+    async fn cambiar_contrasena(&self, token: &str, contrasena: &str) -> Result<(), FallaDeAuth> {
+        let cuerpo = serde_json::json!({ "password": contrasena });
+        self.enviar_como(
+            reqwest::Method::PUT,
+            "/auth/v1/user",
+            Some(cuerpo),
+            Some(token),
+        )
+        .await
+        .map(|_| ())
+    }
+
+    async fn verificar_recuperacion(
+        &self,
+        correo: &str,
+        codigo: &str,
+    ) -> Result<SesionDeAuth, FallaDeAuth> {
+        let cuerpo = serde_json::json!({ "type": "recovery", "email": correo, "token": codigo });
+        let texto = self
+            .enviar(reqwest::Method::POST, "/auth/v1/verify", Some(cuerpo))
+            .await?;
+        leer_sesion(&texto)
+    }
+
+    fn url_de_google(&self, desafio: &str, regreso: &str, permisos: &str) -> String {
+        direccion_de_google(&self.url, desafio, regreso, permisos)
+    }
+
+    async fn intercambiar_google(
+        &self,
+        codigo: &str,
+        verificador: &str,
+    ) -> Result<SesionDeGoogle, FallaDeAuth> {
+        let cuerpo = serde_json::json!({ "auth_code": codigo, "code_verifier": verificador });
+        let texto = self
+            .enviar(
+                reqwest::Method::POST,
+                "/auth/v1/token?grant_type=pkce",
+                Some(cuerpo),
+            )
+            .await?;
+        leer_sesion_de_google(&texto)
     }
 }
 

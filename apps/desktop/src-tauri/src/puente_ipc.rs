@@ -21,17 +21,18 @@ use crate::servicio_del_planificador::{
     Calendario, CalendarioDelSistema, ServicioDelPlanificador, VigiaDelDia,
 };
 use crate::tipos::{
-    AgendaDay, AgendaDayParams, AppError, AuthRegisterStartParams, AuthRegisterStartResult,
-    AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams,
-    AuthSignOutInfo, Card, CardAssignTimeBlockParams, CardCreateParams, CardDetail, CardIdParams,
-    CardListBoardResult, CardMoveParams, CardSetCompletedParams, CardUpdateParams, CatalogItem,
-    CatalogKind, CatalogListParams, ChangeOp, CodeSent, Column, ColumnCreateParams,
-    ColumnReorderParams, ColumnUpdateParams, Connectivity, EntityChange, ErrorCode,
-    EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
-    EventMapSessionChangedState, ImageImportParams, ImageImportResult, IpcErr, IpcOk, IpcResult,
-    KanbanWidgetData, Label, LabelCreateParams, NoParams, OriginKind, PlannerToday, SessionInfo,
-    ThemeDraftOpenParams, ThemeDraftResetParams, ThemeDraftSelectParams, ThemeDraftStatus,
-    ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
+    AgendaDay, AgendaDayParams, AppError, AuthGoogleStartResult, AuthRecoveryRequestParams,
+    AuthRecoverySetPasswordParams, AuthRecoveryVerifyParams, AuthRegisterStartParams,
+    AuthRegisterStartResult, AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState,
+    AuthSignInParams, AuthSignOutInfo, Card, CardAssignTimeBlockParams, CardCreateParams,
+    CardDetail, CardIdParams, CardListBoardResult, CardMoveParams, CardSetCompletedParams,
+    CardUpdateParams, CatalogItem, CatalogKind, CatalogListParams, ChangeOp, CodeSent, Column,
+    ColumnCreateParams, ColumnReorderParams, ColumnUpdateParams, Connectivity, EntityChange,
+    ErrorCode, EventMapAuthGoogleResultStatus, EventMapConnectivityChanged, EventMapSessionChanged,
+    EventMapSessionChangedReason, EventMapSessionChangedState, ImageImportParams,
+    ImageImportResult, IpcErr, IpcOk, IpcResult, KanbanWidgetData, Label, LabelCreateParams,
+    NoParams, OriginKind, PlannerToday, SessionInfo, ThemeDraftOpenParams, ThemeDraftResetParams,
+    ThemeDraftSelectParams, ThemeDraftStatus, ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
 };
 use crate::tipos::{
     AppliedThemeView, ApplyMode, AssetResolveParams, AssetResolveResult,
@@ -530,6 +531,159 @@ pub async fn auth_sign_in(
             error,
         }),
     })
+}
+
+/// IPC-AUTH-06 `auth_google_start` (HE-01-HU05). Abre `/auth/v1/authorize` en el navegador predeterminado
+/// (RNF-36) y deja la espera del regreso `windgets://auth/callback`; el resultado llega por EV-02
+/// `auth_google_result`. A los 5 minutos sin regreso cierra la espera con `cancelled` (ET13; DP-09).
+#[tauri::command]
+pub fn auth_google_start(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> IpcResult<AuthGoogleStartResult> {
+    let _ = params;
+    let (direccion, inicio) = match nucleo
+        .sesion
+        .iniciar_google(nucleo.sesion.auth().en_linea())
+    {
+        Ok(listo) => listo,
+        Err(error) => {
+            return IpcResult::Err(IpcErr {
+                ok: false.into(),
+                error,
+            });
+        }
+    };
+    let estado = nucleo
+        .sesion
+        .espera_de_google()
+        .map(|e| e.estado)
+        .unwrap_or_default();
+    // Sin navegador que abra la página de Google, el inicio con Google no es posible (CA06).
+    if crate::integracion_con_el_sistema::navegador::abrir(&direccion).is_err() {
+        nucleo.sesion.cancelar_google();
+        let _ = app.emit(
+            "auth_google_result",
+            crate::servicio_de_sesion::google::resultado(EventMapAuthGoogleResultStatus::Error),
+        );
+        return correcto(inicio);
+    }
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(
+            crate::servicio_de_sesion::google::ESPERA_MAXIMA_MS.unsigned_abs(),
+        ));
+        if let Some(r) = app.state::<Nucleo>().sesion.vencer_google(&estado) {
+            let _ = app.emit("auth_google_result", r);
+        }
+    });
+    correcto(inicio)
+}
+
+/// IPC-AUTH-07 `auth_google_cancel` (HE-01-HU05-CA05): cierra la espera y emite `cancelled`.
+#[tauri::command]
+pub fn auth_google_cancel(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> IpcResult<()> {
+    let _ = params;
+    let _ = app.emit("auth_google_result", nucleo.sesion.cancelar_google());
+    correcto(())
+}
+
+/// INT-10: Windows abre `windgets://auth/callback?…` en una segunda ejecución; el plugin de instancia única
+/// entrega sus argumentos a esta instancia. Si es el regreso de la espera de Google, cambia el código por la
+/// sesión, emite EV-02 `auth_google_result` y, con la sesión iniciada, EV-01 `session_changed` (RT-01-CA02).
+pub fn atender_argumentos(app: &AppHandle, argumentos: Vec<String>) {
+    let Some(direccion) = argumentos
+        .into_iter()
+        .find(|a| a.starts_with(crate::servicio_de_sesion::google::REGRESO))
+    else {
+        return;
+    };
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let nucleo = app.state::<Nucleo>();
+        let Some(r) = nucleo.sesion.atender_regreso(&direccion).await else {
+            return;
+        };
+        // El navegador quedó al frente: la ventana principal vuelve al frente con el resultado.
+        if let Some(ventana) = app.get_webview_window(
+            crate::integracion_con_el_sistema::area_de_notificacion::VENTANA_PRINCIPAL,
+        ) {
+            let _ = ventana.show();
+            let _ = ventana.unminimize();
+            let _ = ventana.set_focus();
+        }
+        let iniciada = r.status == EventMapAuthGoogleResultStatus::Success;
+        let alias = r.alias.clone().unwrap_or_default();
+        let _ = app.emit("auth_google_result", r);
+        if iniciada {
+            avisar_sesion_iniciada(&app, &alias, EventMapSessionChangedReason::SignIn);
+            avisar_wallpaper(&app).await;
+        }
+    });
+}
+
+/// IPC-AUTH-08 `auth_recovery_request` (HE-01-HU06).
+#[tauri::command]
+pub async fn auth_recovery_request(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: AuthRecoveryRequestParams,
+) -> Result<IpcResult<CodeSent>, ()> {
+    let antes = nucleo.sesion.auth().en_linea();
+    let r = nucleo.sesion.recuperar_solicitar(params).await;
+    avisar_conectividad(&app, antes);
+    Ok(con_mensaje(r))
+}
+
+/// IPC-AUTH-09 `auth_recovery_verify` (HE-01-HU07).
+#[tauri::command]
+pub async fn auth_recovery_verify(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: AuthRecoveryVerifyParams,
+) -> Result<IpcResult<()>, ()> {
+    let antes = nucleo.sesion.auth().en_linea();
+    let r = nucleo.sesion.recuperar_verificar(params).await;
+    avisar_conectividad(&app, antes);
+    Ok(match r {
+        Ok(()) => correcto(()),
+        Err(error) => IpcResult::Err(IpcErr {
+            ok: false.into(),
+            error,
+        }),
+    })
+}
+
+/// IPC-AUTH-10 `auth_recovery_resend` (HE-01-HU07).
+#[tauri::command]
+pub async fn auth_recovery_resend(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<CodeSent>, ()> {
+    let _ = params;
+    let antes = nucleo.sesion.auth().en_linea();
+    let r = nucleo.sesion.recuperar_reenviar().await;
+    avisar_conectividad(&app, antes);
+    Ok(con_mensaje(r))
+}
+
+/// IPC-AUTH-11 `auth_recovery_set_password` (HE-01-HU08). La Ventana principal abre Inicio de sesión con el
+/// mensaje de resultado (T-033).
+#[tauri::command]
+pub async fn auth_recovery_set_password(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: AuthRecoverySetPasswordParams,
+) -> Result<IpcResult<()>, ()> {
+    let antes = nucleo.sesion.auth().en_linea();
+    let r = nucleo.sesion.recuperar_guardar(params).await;
+    avisar_conectividad(&app, antes);
+    Ok(con_mensaje(r))
 }
 
 /// IPC-AUTH-12 `auth_get_session` (HE-01-HU04-CA02): lee `session.bin`, sin llamar a la nube.

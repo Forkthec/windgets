@@ -250,6 +250,31 @@ const respuestas: Respuestas = {
     email.trim().toLowerCase() === CUENTA_SIMULADA.email && password === CONTRASENA_SIMULADA
       ? { ok: true, value: { user_id: 'simulado', alias: CUENTA_SIMULADA.alias } }
       : error({ code: 'auth.invalid_credentials', message: textos.CREDENCIALES_INCORRECTAS }),
+  // HE-01-HU05: fuera de Tauri no hay navegador ni regreso windgets://; la espera no recibe resultado.
+  auth_google_start: () => ({
+    ok: true,
+    value: { expires_at: new Date(Date.now() + 300_000).toISOString() },
+  }),
+  auth_google_cancel: () => ({ ok: true, value: null }),
+  // HE-01-HU06: el simulado no envía correos; responde igual exista o no la cuenta (ET09).
+  auth_recovery_request: () => ({
+    ok: true,
+    value: { resend_available_at: new Date(Date.now() + 60_000).toISOString() },
+    result_message: { code: 'auth_recovery_request', message: textos.CODIGO_DE_RECUPERACION_ENVIADO },
+  }),
+  // HE-01-HU07: cualquier código se acepta, como en el registro.
+  auth_recovery_verify: () => ({ ok: true, value: null }),
+  auth_recovery_resend: () => ({
+    ok: true,
+    value: { resend_available_at: new Date(Date.now() + ESPERA_DE_REENVIO_MS).toISOString() },
+    result_message: { code: 'auth_recovery_resend', message: textos.CODIGO_REENVIADO },
+  }),
+  // HE-01-HU08: el simulado no cambia contraseñas; responde como si la hubiera guardado.
+  auth_recovery_set_password: () => ({
+    ok: true,
+    value: null,
+    result_message: { code: 'auth_recovery_set_password', message: textos.CONTRASENA_ACTUALIZADA },
+  }),
   // HE-07-HU01: el simulado no tiene etiquetas y crea la tarjeta tal cual llega, al final de Por hacer.
   label_list: () => ({ ok: true, value: [] }),
   card_create: (p) => {

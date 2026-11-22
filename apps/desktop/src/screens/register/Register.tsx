@@ -8,6 +8,7 @@ import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNavegacion, useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { useConexion } from '../cuenta/conexion';
+import { useInicioConGoogle } from '../cuenta/google';
 import { Hipervinculo } from '../cuenta/Hipervinculo';
 import { MarcoDeCuenta } from '../cuenta/MarcoDeCuenta';
 import { VerificarCorreo } from './VerificarCorreo';
@@ -46,6 +47,8 @@ export function Register() {
     [valores.password],
   );
   const campos = useMensajesDeCampo(CAMPOS, validadores);
+  // HE-01-HU05-CA09, ET11: el mismo inicio con Google, sin tomar los datos del formulario.
+  const google = useInicioConGoogle(sinConexion);
 
   const cambiar = (campo: Campo) => (valor: string) => {
     setValores((v) => ({ ...v, [campo]: valor }));
@@ -107,6 +110,7 @@ export function Register() {
         {/* ET11: sin conexión, el aviso va en la parte superior del formulario. */}
         {!enLinea && <Aviso texto={TEXTOS.SIN_CONEXION_REGISTRO} />}
         {aviso && enLinea && <Aviso texto={aviso} />}
+        {enLinea && google.aviso}
         {registrado && (
           <div className="wg-aviso" role="alert">
             {TEXTOS.CORREO_YA_REGISTRADO}{' '}
@@ -148,8 +152,10 @@ export function Register() {
           mensaje={campos.mensajes.password_confirmation}
         />
         {/* ET12: sin conexión, los botones se ven deshabilitados en vez de mostrar un error al seleccionarlos.
-            El inicio con Google es HE-01-HU05 (P12, Cuentas: Google y recuperación). */}
-        <Boton disabled={!enLinea}>Continuar con Google</Boton>
+            HE-01-HU05-CA07: «Continuar con Google» también. */}
+        <Boton disabled={!enLinea || google.enCurso} onClick={() => void google.continuar()}>
+          Continuar con Google
+        </Boton>
         <div className="wg-fila wg-cuenta__pie">
           <p>
             ¿Ya tienes cuenta?{' '}

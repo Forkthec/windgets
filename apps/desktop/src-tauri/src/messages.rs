@@ -61,6 +61,28 @@ pub const CREDENCIALES_INCORRECTAS: &str = "Correo electrónico o contraseña in
 /// `net.offline` en Inicio de sesión (HE-01-HU04-CA10).
 pub const SIN_CONEXION_INICIO: &str = "No hay conexión a internet. Conéctate para iniciar sesión.";
 
+// HE-01-HU06 a HU08 · Recuperar contraseña (IPC-AUTH-08 a IPC-AUTH-11).
+
+/// Resultado de `auth_recovery_request`, el mismo exista o no la cuenta (HE-01-HU06-CA01, CA02, ET09).
+pub const CODIGO_DE_RECUPERACION_ENVIADO: &str =
+    "Si el correo está registrado, te enviamos un código de verificación.";
+/// `net.offline` en Recuperar contraseña (HE-01-HU06-CA06, HE-01-HU07-CA09, HE-01-HU08-CA05, CA06).
+pub const SIN_CONEXION_RECUPERAR: &str =
+    "No hay conexión a internet. Conéctate para recuperar tu contraseña.";
+/// Resultado de `auth_recovery_set_password` (HE-01-HU08-CA01).
+pub const CONTRASENA_ACTUALIZADA: &str = "Tu contraseña fue actualizada. Ya puedes iniciar sesión.";
+/// `password.same_as_current` (HE-01-HU08-CA07, ET10).
+pub const CONTRASENA_IGUAL_A_LA_ACTUAL: &str = "Elige una contraseña distinta de la actual.";
+
+// HE-01-HU05 · Iniciar sesión con la cuenta de Google (IPC-AUTH-06, IPC-AUTH-07, EV-02).
+
+/// EV-02 `cancelled` (HE-01-HU05-CA05, ET13).
+pub const GOOGLE_CANCELADO: &str = "Se canceló el inicio de sesión con Google.";
+/// EV-02 `error` (HE-01-HU05-CA06).
+pub const GOOGLE_ERROR: &str = "No fue posible iniciar sesión con Google. Intenta de nuevo.";
+/// EV-02 `email_too_long` (HE-01-HU05-CA08); «Regístrate» es el hipervínculo que abre Registro.
+pub const GOOGLE_CORREO_MUY_LARGO: &str = "No pudimos crear tu cuenta: tu correo de Google supera los 64 caracteres. Regístrate con otro correo electrónico.";
+
 // HE-07-HU01 · Crear una tarjeta de tipo Tarea, Recordatorio o Evento (IPC-CARD-01 card_create).
 
 /// Resultado de `card_create` (HE-07-HU01-CA01, CA02, CA12; ET16).
@@ -436,6 +458,16 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("REENVIO_EN_SEGUNDOS", REENVIO_EN_SEGUNDOS),
     ("CREDENCIALES_INCORRECTAS", CREDENCIALES_INCORRECTAS),
     ("SIN_CONEXION_INICIO", SIN_CONEXION_INICIO),
+    ("GOOGLE_CANCELADO", GOOGLE_CANCELADO),
+    (
+        "CODIGO_DE_RECUPERACION_ENVIADO",
+        CODIGO_DE_RECUPERACION_ENVIADO,
+    ),
+    ("SIN_CONEXION_RECUPERAR", SIN_CONEXION_RECUPERAR),
+    ("CONTRASENA_ACTUALIZADA", CONTRASENA_ACTUALIZADA),
+    ("CONTRASENA_IGUAL_A_LA_ACTUAL", CONTRASENA_IGUAL_A_LA_ACTUAL),
+    ("GOOGLE_ERROR", GOOGLE_ERROR),
+    ("GOOGLE_CORREO_MUY_LARGO", GOOGLE_CORREO_MUY_LARGO),
     ("TARJETA_CREADA", TARJETA_CREADA),
     ("TITULO_MUY_LARGO", TITULO_MUY_LARGO),
     ("FECHA_INVALIDA", FECHA_INVALIDA),

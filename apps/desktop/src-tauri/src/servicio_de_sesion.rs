@@ -11,6 +11,9 @@ use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::cliente_de_supabase::{AuthDeSupabase, FallaDeAuth, SesionDeAuth};
+
+pub mod google;
+pub mod recuperacion;
 use crate::messages;
 use crate::repositorios_y_archivos_locales::{
     AlmacenDeSesion, BaseLocal, SesionGuardada, borrar_archivos,
@@ -280,6 +283,10 @@ pub struct ServicioDeSesion<A, R> {
     reloj: R,
     almacen: Box<dyn AlmacenDeSesion>,
     pendiente: Mutex<Option<RegistroPendiente>>,
+    /// Inicio con Google en espera del regreso `windgets://auth/callback` (IPC-AUTH-06, IPC-AUTH-07).
+    google: Mutex<Option<google::EsperaDeGoogle>>,
+    /// Recuperar contraseña en curso (IPC-AUTH-08 a IPC-AUTH-11): solo en memoria.
+    recuperacion: Mutex<Option<recuperacion::RecuperacionPendiente>>,
     /// Una sola renovación a la vez: el refresh_token se usa una vez y las demás llamadas esperan su resultado.
     renovando: tokio::sync::Mutex<()>,
 }
@@ -299,6 +306,8 @@ impl<A: AuthDeSupabase, R: Reloj> ServicioDeSesion<A, R> {
             reloj,
             almacen,
             pendiente: Mutex::new(None),
+            google: Mutex::new(None),
+            recuperacion: Mutex::new(None),
             renovando: tokio::sync::Mutex::new(()),
         }
     }
@@ -654,6 +663,14 @@ pub(crate) mod pruebas {
         pub llamadas: Mutex<Vec<String>>,
         /// Códigos enviados, del primero al último.
         pub codigos: Mutex<Vec<String>>,
+        /// La cuenta de Google que entrega `grant_type=pkce`; sin ella, `invalid_grant`.
+        pub google: Mutex<Option<crate::cliente_de_supabase::SesionDeGoogle>>,
+        /// Correos a los que Supabase envió un código de recuperación.
+        pub recuperaciones: Mutex<Vec<String>>,
+        /// Códigos de recuperación enviados, del primero al último: 100001, 100002…
+        pub codigos_de_recuperacion: Mutex<Vec<String>>,
+        /// La contraseña que guardó `PUT /user`.
+        pub contrasena_nueva: Mutex<Option<String>>,
     }
 
     impl AuthDePrueba {
@@ -753,6 +770,85 @@ pub(crate) mod pruebas {
                 refresh_token: "renovacion-nueva".into(),
                 ..Self::sesion("")
             })
+        }
+
+        async fn recuperar(&self, correo: &str) -> Result<(), FallaDeAuth> {
+            self.anotar(format!("recover {correo}"))?;
+            // Supabase solo envía el código si el correo tiene cuenta, y responde 200 en los dos casos.
+            if self
+                .verificados
+                .iter()
+                .any(|v| v.eq_ignore_ascii_case(correo))
+            {
+                self.recuperaciones.lock().unwrap().push(correo.to_string());
+                let n = self.recuperaciones.lock().unwrap().len();
+                self.codigos_de_recuperacion
+                    .lock()
+                    .unwrap()
+                    .push(format!("{:06}", 100_000 + n));
+            }
+            Ok(())
+        }
+
+        async fn verificar_recuperacion(
+            &self,
+            correo: &str,
+            codigo: &str,
+        ) -> Result<SesionDeAuth, FallaDeAuth> {
+            self.anotar(format!("verify recovery {correo} {codigo}"))?;
+            // Solo el último código enviado es válido (ET06, ET08); lo demás es otp_expired.
+            let ultimo = self.codigos_de_recuperacion.lock().unwrap().last().cloned();
+            if ultimo.as_deref() != Some(codigo) {
+                return Err(FallaDeAuth::Rechazo {
+                    estado: 403,
+                    codigo: "otp_expired".into(),
+                });
+            }
+            Ok(SesionDeAuth {
+                access_token: "acceso-recuperacion".into(),
+                ..Self::sesion("")
+            })
+        }
+
+        async fn cambiar_contrasena(
+            &self,
+            token: &str,
+            contrasena: &str,
+        ) -> Result<(), FallaDeAuth> {
+            self.anotar(format!("put user {token}"))?;
+            if contrasena == CLAVE {
+                return Err(FallaDeAuth::Rechazo {
+                    estado: 422,
+                    codigo: "same_password".into(),
+                });
+            }
+            *self.contrasena_nueva.lock().unwrap() = Some(contrasena.to_string());
+            Ok(())
+        }
+
+        fn url_de_google(&self, desafio: &str, regreso: &str, permisos: &str) -> String {
+            crate::cliente_de_supabase::direccion_de_google(
+                "https://proyecto.supabase.co",
+                desafio,
+                regreso,
+                permisos,
+            )
+        }
+
+        async fn intercambiar_google(
+            &self,
+            codigo: &str,
+            verificador: &str,
+        ) -> Result<crate::cliente_de_supabase::SesionDeGoogle, FallaDeAuth> {
+            self.anotar(format!("pkce {codigo} {verificador}"))?;
+            self.google
+                .lock()
+                .unwrap()
+                .clone()
+                .ok_or(FallaDeAuth::Rechazo {
+                    estado: 400,
+                    codigo: "invalid_grant".into(),
+                })
         }
     }
 
@@ -1677,3 +1773,7 @@ pub(crate) mod pruebas {
 
 #[cfg(test)]
 mod pruebas_de_cierre;
+#[cfg(test)]
+mod pruebas_de_google;
+#[cfg(test)]
+mod pruebas_de_recuperacion;

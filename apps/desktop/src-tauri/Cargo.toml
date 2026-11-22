@@ -34,6 +34,9 @@ sha2 = "=0.10.9"
 tokio = { version = "=1.54.1", default-features = false, features = ["sync"] }
 # Explorador de archivos de Windows para «Subir imagen» (HE-02-HU03-ET06, X-02).
 tauri-plugin-dialog = "=2.8.4"
+# Instancia única (INT-10, D-191): la segunda ejecución con `windgets://auth/callback?…` entrega la dirección a la
+# instancia en ejecución, sin abrir puertos locales (HE-01-HU05).
+tauri-plugin-single-instance = "=2.5.5"
 
 # API de Windows para el Host del wallpaper (INT-07, contratos.md): la misma versión que ya trae Tauri.
 [target.'cfg(windows)'.dependencies]
