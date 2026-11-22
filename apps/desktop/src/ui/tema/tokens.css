@@ -628,7 +628,7 @@ button.wg-tarjeta__titulo:focus-visible {
 /* HE-12-HU01-ET10: botón de información «i» de una tarjeta. */
 .wg-boton-informacion {
   min-width: calc(var(--wg-unidad) * 8);
-  font-style: italic;
+  /* Sin cursiva: en cursiva y negrita la «i» parecía «¡» (prueba manual del 22-nov, P26). */
   font-weight: 700;
 }
 
