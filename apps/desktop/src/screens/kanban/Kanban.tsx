@@ -155,18 +155,21 @@ function Columna({
         <span className="wg-muestra-color" style={{ background: column.color_hex }} aria-hidden="true" />
         <span>{column.name}</span>
         <span className="wg-columna__cantidad">{column.card_count}</span>
-        {/* HE-09-HU04-ET01: cada columna tiene «Editar». */}
-        <Boton onClick={() => alEditar(column)}>Editar</Boton>
-        {/* HE-09-HU06-ET01, ET02: «Eliminar» en cada columna; en las por defecto, deshabilitada con su texto. El
-            encabezado no tiene espacio para el texto: aparece al pasar el mouse (RT-04-ET11). */}
-        <Boton
-          disabled={column.is_default}
-          motivo={textos.COLUMNA_POR_DEFECTO_NO_ELIMINABLE}
-          motivoAlPasar
-          onClick={() => alEliminar(column)}
-        >
-          Eliminar
-        </Boton>
+        {/* HE-09-HU04-ET01, HE-09-HU06-ET01 (RT-02-ET10): «Editar» y «Eliminar» en el botón de acciones «⋮» de
+            cada columna. En las por defecto, «Eliminar» está deshabilitada y su motivo aparece al pasar el mouse
+            (HE-09-HU06-ET02, RT-04-ET11). */}
+        <MenuDeAcciones
+          nombre={column.name}
+          opciones={[
+            { etiqueta: 'Editar', alElegir: () => alEditar(column) },
+            {
+              etiqueta: 'Eliminar',
+              deshabilitada: column.is_default,
+              motivo: textos.COLUMNA_POR_DEFECTO_NO_ELIMINABLE,
+              alElegir: () => alEliminar(column),
+            },
+          ]}
+        />
       </h2>
       {cards.length === 0 ? (
         // HE-09-HU01-ET04: estado vacío de la columna (RT-04).

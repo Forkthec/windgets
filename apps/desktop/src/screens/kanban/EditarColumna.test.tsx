@@ -31,10 +31,11 @@ async function abrirTablero(extra: Column[] = [REVISION]): Promise<NucleoDelPlan
   return nucleo;
 }
 
-/** «Editar» de la columna indicada (ET01). */
+/** «Editar» en el botón de acciones «⋮» de la columna indicada (ET01). */
 async function editar(nombre: string) {
   const columna = screen.getByRole('region', { name: nombre });
-  fireEvent.click(within(columna).getByRole('button', { name: 'Editar' }));
+  fireEvent.click(within(columna).getByRole('button', { name: `Acciones de ${nombre}` }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Editar' }));
   const ventana = await screen.findByRole('dialog', { name: 'Editar columna' });
   await within(ventana).findByRole('radio', { name: 'Gris' });
   return ventana;

@@ -39,10 +39,14 @@ async function abrirTablero(cantidad: number, destino = 'Por hacer') {
   return nucleo;
 }
 
+/** «Eliminar» en el botón de acciones «⋮» de la columna Revisión (ET01). */
 async function pedirEliminar(nucleo: NucleoDelPlanificador) {
   fireEvent.click(
-    within(screen.getByRole('region', { name: 'Revisión' })).getByRole('button', { name: 'Eliminar' }),
+    within(screen.getByRole('region', { name: 'Revisión' })).getByRole('button', {
+      name: 'Acciones de Revisión',
+    }),
   );
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Eliminar' }));
   const ventana = await screen.findByRole('dialog');
   return { nucleo, ventana };
 }
@@ -83,12 +87,16 @@ describe('HE-09-HU06 · Eliminar las columnas creadas', () => {
   it('HE-09-HU06-CA05 · Columna por defecto', async () => {
     await abrirTablero(0);
     for (const nombre of ['Por hacer', 'En progreso', 'Hecho']) {
-      const boton = within(screen.getByRole('region', { name: nombre })).getByRole('button', {
-        name: 'Eliminar',
-      }) as HTMLButtonElement;
+      fireEvent.click(
+        within(screen.getByRole('region', { name: nombre })).getByRole('button', {
+          name: `Acciones de ${nombre}`,
+        }),
+      );
+      const boton = screen.getByRole('menuitem', { name: 'Eliminar' }) as HTMLButtonElement;
       expect(boton.disabled).toBe(true);
-      // RT-04-ET11: el encabezado no tiene espacio; el motivo aparece al pasar el mouse.
+      // RT-04-ET11 (RT-02-ET11): el motivo aparece al pasar el mouse.
       expect(boton.title).toBe('Las columnas por defecto no se pueden eliminar.');
+      fireEvent.keyDown(boton, { key: 'Escape' });
     }
   });
 
