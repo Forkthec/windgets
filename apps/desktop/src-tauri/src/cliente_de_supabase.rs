@@ -114,6 +114,13 @@ pub trait AuthDeSupabase: Send + Sync {
         correo: &str,
         codigo: &str,
     ) -> impl Future<Output = Result<SesionDeAuth, FallaDeAuth>> + Send;
+    /// `PUT /user` `{ password }` con el `access_token` de recuperación (INT-01, «Recuperar: nueva
+    /// contraseña»). La contraseña igual a la actual responde 422 `same_password`.
+    fn cambiar_contrasena(
+        &self,
+        token: &str,
+        contrasena: &str,
+    ) -> impl Future<Output = Result<(), FallaDeAuth>> + Send;
     /// `GET /auth/v1/authorize?provider=google&redirect_to=…&code_challenge=…&code_challenge_method=s256&scopes=…`
     /// (INT-01, «Inicio con Google (PKCE)», paso 2): la dirección que se abre en el navegador predeterminado.
     fn url_de_google(&self, desafio: &str, regreso: &str, permisos: &str) -> String;
@@ -450,6 +457,18 @@ impl AuthDeSupabase for ClienteDeSupabase {
         self.enviar(reqwest::Method::POST, "/auth/v1/recover", Some(cuerpo))
             .await
             .map(|_| ())
+    }
+
+    async fn cambiar_contrasena(&self, token: &str, contrasena: &str) -> Result<(), FallaDeAuth> {
+        let cuerpo = serde_json::json!({ "password": contrasena });
+        self.enviar_como(
+            reqwest::Method::PUT,
+            "/auth/v1/user",
+            Some(cuerpo),
+            Some(token),
+        )
+        .await
+        .map(|_| ())
     }
 
     async fn verificar_recuperacion(

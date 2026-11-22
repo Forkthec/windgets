@@ -1,9 +1,12 @@
 //! Pruebas de Recuperar contraseña (HE-01-HU06 a HU08; IPC-AUTH-08 a IPC-AUTH-11).
 
+use super::pruebas::CLAVE;
 use super::pruebas::{AuthDePrueba, REGISTRADO, RelojDePrueba, esperar, servicio};
 use super::*;
 use super::{ESPERA_DE_REENVIO_MS, VIGENCIA_DEL_CODIGO_MS};
-use crate::tipos::{AuthRecoveryRequestParams, AuthRecoveryVerifyParams};
+use crate::tipos::{
+    AuthRecoveryRequestParams, AuthRecoverySetPasswordParams, AuthRecoveryVerifyParams,
+};
 
 type Servicio = ServicioDeSesion<AuthDePrueba, RelojDePrueba>;
 
@@ -327,4 +330,214 @@ fn ca_he_01_hu07_ca09() {
     assert!(servicio.recuperacion_pendiente().is_some());
     servicio.auth().sin_falla();
     assert!(verificar(&servicio, "100001").is_ok());
+}
+
+/// Servicio en el paso Nueva contraseña: el código 100001 se verificó.
+fn en_nueva() -> (Servicio, RelojDePrueba) {
+    let (servicio, reloj) = en_codigo();
+    verificar(&servicio, "100001").unwrap();
+    (servicio, reloj)
+}
+
+fn guardar(
+    servicio: &Servicio,
+    nueva: &str,
+    confirmacion: &str,
+) -> Result<ConMensaje<()>, AppError> {
+    esperar(servicio.recuperar_guardar(AuthRecoverySetPasswordParams {
+        password: nueva.to_string(),
+        password_confirmation: confirmacion.to_string(),
+    }))
+}
+
+/// No se guardó: este error en este campo, sin `PUT /user` y con la recuperación pendiente.
+fn no_guarda(nueva: &str, confirmacion: &str, code: ErrorCode, message: &str, field: &str) {
+    let (servicio, _) = en_nueva();
+    let error = guardar(&servicio, nueva, confirmacion).unwrap_err();
+    assert_eq!(
+        (error.code, error.message.as_str(), error.field.as_deref()),
+        (code, message, Some(field))
+    );
+    assert!(
+        !servicio
+            .auth()
+            .llamadas()
+            .iter()
+            .any(|l| l.starts_with("put user"))
+    );
+    assert!(servicio.recuperacion_pendiente().is_some());
+}
+
+const INVALIDA: &str = "La contraseña debe tener entre 8 y 64 caracteres e incluir una mayúscula, una minúscula y un número.";
+
+#[test]
+fn ca_he_01_hu08_ca01() {
+    // HE-01-HU08-CA01 · Contraseña válida y confirmada (ET03 a ET05): PUT /user con el token de recuperación,
+    // el mensaje de resultado y la recuperación cerrada, sin iniciar la sesión de la aplicación.
+    for nueva in ["Nueva123".to_string(), format!("Ab1{}", "x".repeat(61))] {
+        let (servicio, _) = en_nueva();
+        let r = guardar(&servicio, &nueva, &nueva).unwrap();
+        assert_eq!(
+            r.mensaje.message,
+            "Tu contraseña fue actualizada. Ya puedes iniciar sesión."
+        );
+        assert!(
+            servicio
+                .auth()
+                .llamadas()
+                .contains(&"put user acceso-recuperacion".to_string())
+        );
+        assert_eq!(
+            servicio.auth().contrasena_nueva.lock().unwrap().clone(),
+            Some(nueva)
+        );
+        assert_eq!(servicio.recuperacion_pendiente(), None);
+        assert_eq!(servicio.sesion_guardada(), None);
+    }
+}
+
+#[test]
+fn ca_he_01_hu08_ca02() {
+    // HE-01-HU08-CA02 · Nueva contraseña vacía (ET02).
+    for vacia in ["", "   "] {
+        no_guarda(
+            vacia,
+            vacia,
+            ErrorCode::PasswordRequired,
+            "Este campo es obligatorio.",
+            "password",
+        );
+    }
+}
+
+#[test]
+fn ca_he_01_hu08_ca03() {
+    // HE-01-HU08-CA03 · Longitud de 8 a 64 o composición incumplidas (ET03, ET04): 7 y 65 caracteres, sin
+    // mayúscula, sin minúscula y sin número. La regla de Supabase (`weak_password`) da el mismo error.
+    let de_65 = format!("Ab1{}", "x".repeat(62));
+    for mala in [
+        "Abc1234",
+        de_65.as_str(),
+        "nueva123",
+        "NUEVA123",
+        "NuevaClave",
+    ] {
+        no_guarda(mala, mala, ErrorCode::PasswordInvalid, INVALIDA, "password");
+    }
+    let (servicio, _) = en_nueva();
+    servicio.auth().fallar(FallaDeAuth::Rechazo {
+        estado: 422,
+        codigo: "weak_password".into(),
+    });
+    let error = guardar(&servicio, "Nueva123", "Nueva123").unwrap_err();
+    assert_eq!(
+        (error.code, error.field.as_deref()),
+        (ErrorCode::PasswordInvalid, Some("password"))
+    );
+}
+
+#[test]
+fn ca_he_01_hu08_ca04() {
+    // HE-01-HU08-CA04 · Confirmar contraseña distinta (ET05), también vacía.
+    for distinta in ["Nueva124", ""] {
+        no_guarda(
+            "Nueva123",
+            distinta,
+            ErrorCode::PasswordConfirmationMismatch,
+            "Las contraseñas no coinciden.",
+            "password_confirmation",
+        );
+    }
+}
+
+#[test]
+fn ca_he_01_hu08_ca05() {
+    // HE-01-HU08-CA05 · Sin conexión desde el paso (ET06, ET07): la Ventana principal deshabilita «Guardar
+    // contraseña»; si llega el pedido, net.offline y nada cambia.
+    let (servicio, _) = en_nueva();
+    servicio.auth().fallar(FallaDeAuth::SinConexion);
+    let error = guardar(&servicio, "Nueva123", "Nueva123").unwrap_err();
+    assert_eq!(
+        (error.code, error.message.as_str(), error.field),
+        (
+            ErrorCode::NetOffline,
+            "No hay conexión a internet. Conéctate para recuperar tu contraseña.",
+            None
+        )
+    );
+    assert_eq!(
+        servicio.auth().contrasena_nueva.lock().unwrap().clone(),
+        None
+    );
+}
+
+#[test]
+fn ca_he_01_hu08_ca06() {
+    // HE-01-HU08-CA06 · La conexión se pierde al guardar (ET08): no se actualiza, la recuperación sigue
+    // pendiente y al volver la conexión se puede guardar. Sin respuesta, service.unavailable (RT-04-CA13).
+    let (servicio, _) = en_nueva();
+    servicio.auth().fallar(FallaDeAuth::SinConexion);
+    assert_eq!(
+        guardar(&servicio, "Nueva123", "Nueva123").unwrap_err().code,
+        ErrorCode::NetOffline
+    );
+    assert!(
+        servicio
+            .recuperacion_pendiente()
+            .and_then(|r| r.sesion)
+            .is_some()
+    );
+    servicio.auth().fallar(FallaDeAuth::SinRespuesta);
+    assert_eq!(
+        guardar(&servicio, "Nueva123", "Nueva123").unwrap_err().code,
+        ErrorCode::ServiceUnavailable
+    );
+    servicio.auth().sin_falla();
+    assert!(guardar(&servicio, "Nueva123", "Nueva123").is_ok());
+}
+
+#[test]
+fn ca_he_01_hu08_ca07() {
+    // HE-01-HU08-CA07 · Igual a la contraseña actual (ET09, ET10): solo Supabase la conoce y responde 422
+    // same_password; la contraseña no cambia y la recuperación sigue pendiente.
+    let (servicio, _) = en_nueva();
+    let error = guardar(&servicio, CLAVE, CLAVE).unwrap_err();
+    assert_eq!(
+        (error.code, error.message.as_str(), error.field.as_deref()),
+        (
+            ErrorCode::PasswordSameAsCurrent,
+            "Elige una contraseña distinta de la actual.",
+            Some("password")
+        )
+    );
+    assert_eq!(
+        servicio.auth().contrasena_nueva.lock().unwrap().clone(),
+        None
+    );
+    assert!(servicio.recuperacion_pendiente().is_some());
+}
+
+#[test]
+fn sesion_de_recuperacion_vencida_o_ausente() {
+    // DUDA HE-01-HU08: la sesión de recuperación venció (401/403) o no existe: code.expired, nunca el genérico.
+    let (servicio, _) = en_nueva();
+    servicio.auth().fallar(FallaDeAuth::Rechazo {
+        estado: 401,
+        codigo: "bad_jwt".into(),
+    });
+    let error = guardar(&servicio, "Nueva123", "Nueva123").unwrap_err();
+    assert_eq!(
+        (error.code, error.message.as_str()),
+        (
+            ErrorCode::CodeExpired,
+            "El código venció. Solicita uno nuevo."
+        )
+    );
+    let (sin_verificar, _) = en_codigo();
+    assert_eq!(
+        guardar(&sin_verificar, "Nueva123", "Nueva123")
+            .unwrap_err()
+            .code,
+        ErrorCode::CodeExpired
+    );
 }

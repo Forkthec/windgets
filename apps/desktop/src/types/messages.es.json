@@ -41,6 +41,8 @@
   "CONFIRMAR_ELIMINAR_TEMA": "¿Deseas eliminar el tema “<nombre del tema>”? Esta acción no se puede deshacer.",
   "CONFIRMAR_ELIMINAR_WIDGET": "¿Deseas eliminar el widget “<nombre del widget>”? Se quitará de todos tus temas.",
   "CONTRASENAS_NO_COINCIDEN": "Las contraseñas no coinciden.",
+  "CONTRASENA_ACTUALIZADA": "Tu contraseña fue actualizada. Ya puedes iniciar sesión.",
+  "CONTRASENA_IGUAL_A_LA_ACTUAL": "Elige una contraseña distinta de la actual.",
   "CONTRASENA_INVALIDA": "La contraseña debe tener entre 8 y 64 caracteres e incluir una mayúscula, una minúscula y un número.",
   "CONTRASTE_BAJO": "El contraste de estos colores es bajo (<contraste>:1). Prueba con <color sugerido>.",
   "CORREO_INVALIDO": "Diligencia un correo electrónico válido.",

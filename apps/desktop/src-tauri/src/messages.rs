@@ -69,6 +69,10 @@ pub const CODIGO_DE_RECUPERACION_ENVIADO: &str =
 /// `net.offline` en Recuperar contraseña (HE-01-HU06-CA06, HE-01-HU07-CA09, HE-01-HU08-CA05, CA06).
 pub const SIN_CONEXION_RECUPERAR: &str =
     "No hay conexión a internet. Conéctate para recuperar tu contraseña.";
+/// Resultado de `auth_recovery_set_password` (HE-01-HU08-CA01).
+pub const CONTRASENA_ACTUALIZADA: &str = "Tu contraseña fue actualizada. Ya puedes iniciar sesión.";
+/// `password.same_as_current` (HE-01-HU08-CA07, ET10).
+pub const CONTRASENA_IGUAL_A_LA_ACTUAL: &str = "Elige una contraseña distinta de la actual.";
 
 // HE-01-HU05 · Iniciar sesión con la cuenta de Google (IPC-AUTH-06, IPC-AUTH-07, EV-02).
 
@@ -460,6 +464,8 @@ pub const TEXTOS: &[(&str, &str)] = &[
         CODIGO_DE_RECUPERACION_ENVIADO,
     ),
     ("SIN_CONEXION_RECUPERAR", SIN_CONEXION_RECUPERAR),
+    ("CONTRASENA_ACTUALIZADA", CONTRASENA_ACTUALIZADA),
+    ("CONTRASENA_IGUAL_A_LA_ACTUAL", CONTRASENA_IGUAL_A_LA_ACTUAL),
     ("GOOGLE_ERROR", GOOGLE_ERROR),
     ("GOOGLE_CORREO_MUY_LARGO", GOOGLE_CORREO_MUY_LARGO),
     ("TARJETA_CREADA", TARJETA_CREADA),

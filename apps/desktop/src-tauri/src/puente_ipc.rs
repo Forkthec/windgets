@@ -22,13 +22,13 @@ use crate::servicio_del_planificador::{
 };
 use crate::tipos::{
     AgendaDay, AgendaDayParams, AppError, AuthGoogleStartResult, AuthRecoveryRequestParams,
-    AuthRecoveryVerifyParams, AuthRegisterStartParams, AuthRegisterStartResult,
-    AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams,
-    AuthSignOutInfo, Card, CardAssignTimeBlockParams, CardCreateParams, CardDetail, CardIdParams,
-    CardListBoardResult, CardMoveParams, CardSetCompletedParams, CardUpdateParams, CatalogItem,
-    CatalogKind, CatalogListParams, ChangeOp, CodeSent, Column, ColumnCreateParams,
-    ColumnReorderParams, ColumnUpdateParams, Connectivity, EntityChange, ErrorCode,
-    EventMapAuthGoogleResultStatus, EventMapConnectivityChanged, EventMapSessionChanged,
+    AuthRecoverySetPasswordParams, AuthRecoveryVerifyParams, AuthRegisterStartParams,
+    AuthRegisterStartResult, AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState,
+    AuthSignInParams, AuthSignOutInfo, Card, CardAssignTimeBlockParams, CardCreateParams,
+    CardDetail, CardIdParams, CardListBoardResult, CardMoveParams, CardSetCompletedParams,
+    CardUpdateParams, CatalogItem, CatalogKind, CatalogListParams, ChangeOp, CodeSent, Column,
+    ColumnCreateParams, ColumnReorderParams, ColumnUpdateParams, Connectivity, EntityChange,
+    ErrorCode, EventMapAuthGoogleResultStatus, EventMapConnectivityChanged, EventMapSessionChanged,
     EventMapSessionChangedReason, EventMapSessionChangedState, ImageImportParams,
     ImageImportResult, IpcErr, IpcOk, IpcResult, KanbanWidgetData, Label, LabelCreateParams,
     NoParams, OriginKind, PlannerToday, SessionInfo, ThemeDraftOpenParams, ThemeDraftResetParams,
@@ -668,6 +668,20 @@ pub async fn auth_recovery_resend(
     let _ = params;
     let antes = nucleo.sesion.auth().en_linea();
     let r = nucleo.sesion.recuperar_reenviar().await;
+    avisar_conectividad(&app, antes);
+    Ok(con_mensaje(r))
+}
+
+/// IPC-AUTH-11 `auth_recovery_set_password` (HE-01-HU08). La Ventana principal abre Inicio de sesión con el
+/// mensaje de resultado (T-033).
+#[tauri::command]
+pub async fn auth_recovery_set_password(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: AuthRecoverySetPasswordParams,
+) -> Result<IpcResult<()>, ()> {
+    let antes = nucleo.sesion.auth().en_linea();
+    let r = nucleo.sesion.recuperar_guardar(params).await;
     avisar_conectividad(&app, antes);
     Ok(con_mensaje(r))
 }

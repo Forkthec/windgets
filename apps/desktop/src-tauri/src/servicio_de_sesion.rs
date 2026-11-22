@@ -669,6 +669,8 @@ pub(crate) mod pruebas {
         pub recuperaciones: Mutex<Vec<String>>,
         /// Códigos de recuperación enviados, del primero al último: 100001, 100002…
         pub codigos_de_recuperacion: Mutex<Vec<String>>,
+        /// La contraseña que guardó `PUT /user`.
+        pub contrasena_nueva: Mutex<Option<String>>,
     }
 
     impl AuthDePrueba {
@@ -806,6 +808,22 @@ pub(crate) mod pruebas {
                 access_token: "acceso-recuperacion".into(),
                 ..Self::sesion("")
             })
+        }
+
+        async fn cambiar_contrasena(
+            &self,
+            token: &str,
+            contrasena: &str,
+        ) -> Result<(), FallaDeAuth> {
+            self.anotar(format!("put user {token}"))?;
+            if contrasena == CLAVE {
+                return Err(FallaDeAuth::Rechazo {
+                    estado: 422,
+                    codigo: "same_password".into(),
+                });
+            }
+            *self.contrasena_nueva.lock().unwrap() = Some(contrasena.to_string());
+            Ok(())
         }
 
         fn url_de_google(&self, desafio: &str, regreso: &str, permisos: &str) -> String {

@@ -266,6 +266,12 @@ const respuestas: Respuestas = {
     value: { resend_available_at: new Date(Date.now() + ESPERA_DE_REENVIO_MS).toISOString() },
     result_message: { code: 'auth_recovery_resend', message: textos.CODIGO_REENVIADO },
   }),
+  // HE-01-HU08: el simulado no cambia contraseñas; responde como si la hubiera guardado.
+  auth_recovery_set_password: () => ({
+    ok: true,
+    value: null,
+    result_message: { code: 'auth_recovery_set_password', message: textos.CONTRASENA_ACTUALIZADA },
+  }),
   // HE-07-HU01: el simulado no tiene etiquetas y crea la tarjeta tal cual llega, al final de Por hacer.
   label_list: () => ({ ok: true, value: [] }),
   card_create: (p) => {

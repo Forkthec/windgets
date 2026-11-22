@@ -10,6 +10,7 @@ import { useConexion } from '../cuenta/conexion';
 import { MarcoDeCuenta } from '../cuenta/MarcoDeCuenta';
 import { validarCorreo } from '../cuenta/validaciones';
 import { DiligenciarCodigo } from './DiligenciarCodigo';
+import { NuevaContrasena } from './NuevaContrasena';
 import { PasoDeRecuperacion } from './PasoDeRecuperacion';
 
 // P-CTA-03 Recuperar contraseña (HE-01-HU06 a HU08). Tres pasos en este orden: Correo electrónico, Diligenciar
@@ -53,19 +54,21 @@ export function Recovery() {
   }, [campos, correo, fallo, invocar]);
   const envio = useEnvioUnico(enviar);
 
-  const alVerificar = useCallback(() => setPaso('nueva'), []);
+  const alVerificar = useCallback(() => {
+    setAviso(null);
+    setPaso('nueva');
+  }, []);
   const regresarAlCorreo = useCallback(() => {
     setAviso(null);
     setPaso('correo');
   }, []);
+  const regresarAlCodigo = useCallback(() => setPaso('codigo'), []);
 
   if (paso === 'nueva') {
     return (
       <MarcoDeCuenta nombre="Recuperar contraseña">
-        {/* HE-01-HU07-CA01: el paso Nueva contraseña; su formulario es de HE-01-HU08. */}
-        <PasoDeRecuperacion nombre="Nueva contraseña" enLinea={enLinea} alRegresar={regresarAlCorreo}>
-          {null}
-        </PasoDeRecuperacion>
+        {/* HE-01-HU07-CA01, HE-01-HU08: el paso Nueva contraseña; «Regresar» vuelve a Diligenciar código. */}
+        <NuevaContrasena alRegresar={regresarAlCodigo} />
       </MarcoDeCuenta>
     );
   }

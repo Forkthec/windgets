@@ -278,3 +278,130 @@ describe('HE-01-HU07 · Verificar el código de verificación en Recuperar contr
     expect(screen.getByRole('button', { name: 'Verificar' }).hasAttribute('disabled')).toBe(false);
   });
 });
+
+const ACTUALIZADA = 'Tu contraseña fue actualizada. Ya puedes iniciar sesión.';
+const INVALIDA = 'La contraseña debe tener entre 8 y 64 caracteres e incluir una mayúscula, una minúscula y un número.';
+
+/** En el paso Nueva contraseña, con el código verificado. */
+async function enNueva() {
+  const nucleo = await enCodigo();
+  nucleo.responder('auth_recovery_verify', () => ({ ok: true, value: null }));
+  nucleo.responder('auth_recovery_set_password', () => ({
+    ok: true,
+    value: null,
+    result_message: { code: 'auth_recovery_set_password', message: ACTUALIZADA },
+  }));
+  escribir('Código de verificación', '482913');
+  await seleccionar('Verificar');
+  return nucleo;
+}
+
+function diligenciar(nueva: string, confirmacion = nueva) {
+  escribir('Nueva contraseña', nueva);
+  escribir('Confirmar contraseña', confirmacion);
+}
+
+describe('HE-01-HU08 · Crear una contraseña nueva para la cuenta', () => {
+  it('HE-01-HU08-CA01 · Crear la contraseña nueva', async () => {
+    const nucleo = await enNueva();
+    // ET01: los dos campos, «Guardar contraseña», miga de pan y «Regresar».
+    const nueva = paso('Nueva contraseña');
+    expect(within(nueva).getByRole('navigation', { name: 'Miga de pan' }).textContent).toBe(
+      'Inicio de sesión>Recuperar contraseña',
+    );
+    expect(within(nueva).getByRole('button', { name: 'Regresar' })).toBeTruthy();
+    // ET03: 8 y 64 caracteres son válidos.
+    for (const valida of ['Nueva123', `Ab1${'x'.repeat(61)}`]) {
+      diligenciar(valida);
+      expect(textoDebajoDe('Nueva contraseña')).toBeFalsy();
+    }
+    diligenciar('Nueva123');
+    await seleccionar('Guardar contraseña');
+    expect(llamadasA(nucleo, 'auth_recovery_set_password')[0]?.params).toEqual({
+      password: 'Nueva123',
+      password_confirmation: 'Nueva123',
+    });
+    // T-033: abre Inicio de sesión con el mensaje de resultado.
+    expect(screen.getByRole('main', { name: 'Inicio de sesión' })).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toContain(ACTUALIZADA);
+  });
+
+  it('HE-01-HU08-CA02 · Contraseña nueva vacía', async () => {
+    const nucleo = await enNueva();
+    await seleccionar('Guardar contraseña');
+    expect(textoDebajoDe('Nueva contraseña')).toBe('Este campo es obligatorio.');
+    expect(llamadasA(nucleo, 'auth_recovery_set_password')).toHaveLength(0);
+  });
+
+  it('HE-01-HU08-CA03 · Contraseña nueva que incumple las reglas', async () => {
+    const nucleo = await enNueva();
+    for (const mala of ['Abc1234', `Ab1${'x'.repeat(62)}`, 'nueva123', 'NUEVA123', 'NuevaClave']) {
+      diligenciar(mala);
+      await seleccionar('Guardar contraseña');
+      expect(textoDebajoDe('Nueva contraseña')).toBe(INVALIDA);
+    }
+    expect(llamadasA(nucleo, 'auth_recovery_set_password')).toHaveLength(0);
+    expect(paso('Nueva contraseña')).toBeTruthy();
+  });
+
+  it('HE-01-HU08-CA04 · Confirmación distinta de la contraseña nueva', async () => {
+    const nucleo = await enNueva();
+    diligenciar('Nueva123', 'Nueva124');
+    await seleccionar('Guardar contraseña');
+    expect(textoDebajoDe('Confirmar contraseña')).toBe('Las contraseñas no coinciden.');
+    expect(llamadasA(nucleo, 'auth_recovery_set_password')).toHaveLength(0);
+  });
+
+  it('HE-01-HU08-CA05 · Crear la contraseña nueva sin conexión', async () => {
+    const nucleo = await enNueva();
+    diligenciar('Nueva123');
+    nucleo.emitir('connectivity_changed', { online: false });
+    // ET06: el aviso en la parte superior del paso; ET07: «Guardar contraseña» deshabilitado y lo diligenciado
+    // se conserva.
+    expect(within(paso('Nueva contraseña')).getByRole('alert').textContent).toBe(SIN_CONEXION);
+    const guardar = screen.getByRole('button', { name: 'Guardar contraseña' });
+    expect(guardar.hasAttribute('disabled')).toBe(true);
+    await seleccionar('Guardar contraseña');
+    expect(llamadasA(nucleo, 'auth_recovery_set_password')).toHaveLength(0);
+    nucleo.emitir('connectivity_changed', { online: true });
+    expect(guardar.hasAttribute('disabled')).toBe(false);
+    expect(campo('Nueva contraseña')).toHaveProperty('value', 'Nueva123');
+    expect(campo('Confirmar contraseña')).toHaveProperty('value', 'Nueva123');
+  });
+
+  it('HE-01-HU08-CA06 · Perder la conexión al guardar la contraseña nueva', async () => {
+    const nucleo = await enNueva();
+    nucleo.responder('auth_recovery_set_password', () => ({
+      ok: false,
+      error: { code: 'net.offline', message: SIN_CONEXION },
+    }));
+    diligenciar('Nueva123');
+    await seleccionar('Guardar contraseña');
+    // ET08: sigue en el paso con lo diligenciado y el aviso.
+    expect(within(paso('Nueva contraseña')).getByRole('alert').textContent).toBe(SIN_CONEXION);
+    expect(campo('Nueva contraseña')).toHaveProperty('value', 'Nueva123');
+  });
+
+  it('HE-01-HU08-CA07 · Contraseña nueva igual a la actual', async () => {
+    const nucleo = await enNueva();
+    nucleo.responder('auth_recovery_set_password', () => ({
+      ok: false,
+      error: {
+        code: 'password.same_as_current',
+        message: 'Elige una contraseña distinta de la actual.',
+        field: 'password',
+      },
+    }));
+    diligenciar('Clave123');
+    await seleccionar('Guardar contraseña');
+    // ET10: el mensaje debajo del campo Nueva contraseña.
+    expect(textoDebajoDe('Nueva contraseña')).toBe('Elige una contraseña distinta de la actual.');
+    expect(paso('Nueva contraseña')).toBeTruthy();
+  });
+
+  it('HE-01-HU08-ET01 · «Regresar» vuelve al paso Diligenciar código', async () => {
+    await enNueva();
+    await seleccionar('Regresar');
+    expect(paso('Diligenciar código')).toBeTruthy();
+  });
+});
