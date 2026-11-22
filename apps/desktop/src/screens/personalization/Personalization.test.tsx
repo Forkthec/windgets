@@ -416,6 +416,41 @@ describe('HE-02-HU03 · Imagen de fondo', () => {
     );
   });
 
+  it('HE-02-HU03-CA09 · Aviso cuando la imagen propia no está en el computador', async () => {
+    // RT-04 (P26, DUDAS): el tema en edición tiene una imagen propia que no está en el computador; se avisa en vez de
+    // dejar la vista previa vacía. Al llegar la imagen de Storage (EV-11) el aviso se va.
+    let lista = false;
+    const nucleo = await abrir(false, false, (n) => {
+      n.responder('theme_draft_open', () => ({
+        ok: true,
+        value: {
+          ...vista('t1', 'Mi tema'),
+          content: {
+            ...CONTENIDO,
+            background: { source: 'own', catalog_image_id: null, uploaded_image_id: 'img-9' },
+          },
+        },
+      }));
+      n.responder('asset_resolve', ({ kind, id }) => ({
+        ok: true,
+        value: lista
+          ? { url: `C:/Windgets/files/${kind}-${id}.png`, state: 'ready' }
+          : { url: '', state: 'unavailable' },
+      }));
+    });
+    expect(
+      await within(seccion()).findByText(
+        'No encontramos la imagen de fondo de este tema. Sube otra o elige una del catálogo.',
+      ),
+    ).toBeTruthy();
+    lista = true;
+    nucleo.emitir('applied_theme_changed', { theme_id: 't1', origin: 'remote', has_unsaved_draft: false });
+    await waitFor(() =>
+      expect(within(seccion()).queryByText(/No encontramos la imagen de fondo/)).toBeNull(),
+    );
+    expect(vistaPrevia().style.backgroundImage).toContain('Windgets/files/uploaded_image-img-9.png');
+  });
+
   it('HE-02-HU03-CA08 · Cancelar la selección de archivo', async () => {
     const nucleo = await abrir();
     await screen.findByRole('list', { name: 'Catálogo de plantillas' });

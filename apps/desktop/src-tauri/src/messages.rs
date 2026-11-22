@@ -293,6 +293,10 @@ pub const MAXIMO_DE_TEMAS: &str =
 pub const CONFIRMAR_APLICAR_TEMA: &str = "Se reemplazará la personalización actual por la del tema “<nombre del tema>”. ¿Deseas aplicarlo?";
 /// `background.already_default` (HE-02-HU04-CA02): texto de la opción «Quitar imagen» deshabilitada.
 pub const FONDO_YA_POR_DEFECTO: &str = "Esta plantilla ya muestra su imagen de fondo por defecto.";
+/// Aviso de Personalización cuando la imagen propia del tema en edición no está en el computador (RT-04; P26,
+/// DUDAS).
+pub const IMAGEN_DE_FONDO_NO_ENCONTRADA: &str =
+    "No encontramos la imagen de fondo de este tema. Sube otra o elige una del catálogo.";
 
 /// Un texto de HE-02-HU12 con el nombre del tema.
 pub fn con_nombre_del_tema(texto: &str, nombre: &str) -> String {
@@ -603,6 +607,10 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ),
     ("CONFIRMAR_ELIMINAR_WIDGET", CONFIRMAR_ELIMINAR_WIDGET),
     ("FONDO_YA_POR_DEFECTO", FONDO_YA_POR_DEFECTO),
+    (
+        "IMAGEN_DE_FONDO_NO_ENCONTRADA",
+        IMAGEN_DE_FONDO_NO_ENCONTRADA,
+    ),
     ("NO_SE_GUARDARON_CAMBIOS", NO_SE_GUARDARON_CAMBIOS),
     ("TEMA_GUARDADO", TEMA_GUARDADO),
     ("CONFIRMAR_APLICAR_TEMA", CONFIRMAR_APLICAR_TEMA),
@@ -652,6 +660,10 @@ pub const TEXTOS: &[(&str, &str)] = &[
     (
         "NO_PUDIMOS_CAMBIAR_EL_INICIO_AUTOMATICO",
         NO_PUDIMOS_CAMBIAR_EL_INICIO_AUTOMATICO,
+    ),
+    (
+        "NO_PUDIMOS_ABRIR_EL_NAVEGADOR",
+        NO_PUDIMOS_ABRIR_EL_NAVEGADOR,
     ),
     ("SALIR_SIN_GUARDAR", SALIR_SIN_GUARDAR),
     ("MENSAJE_MUY_LARGO", MENSAJE_MUY_LARGO),

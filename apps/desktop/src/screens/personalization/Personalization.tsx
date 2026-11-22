@@ -122,19 +122,27 @@ export function Personalization() {
       ? recursoDelFondo(borrador.content)
       : null;
   const claveDelFondo = recursoDeImagen ? `${recursoDeImagen.kind}:${recursoDeImagen.id}` : '';
+  // RT-04 (P26): la clave de la imagen propia que no está en el computador (archivo borrado o descarga fallida).
+  const [imagenFaltante, setImagenFaltante] = useState<string | null>(null);
+  // Al bajar la imagen de Storage llega EV-11 (INT-09, «Descargar»): se vuelve a resolver.
+  const [revision, setRevision] = useState(0);
+  useEffect(() => escuchar('applied_theme_changed', () => setRevision((n) => n + 1)), [escuchar]);
   useEffect(() => {
     if (!recursoDeImagen) return;
     let vigente = true;
     void invocar('asset_resolve', recursoDeImagen).then((r) => {
-      if (vigente && r.ok && r.value.state === 'ready')
+      if (!vigente) return;
+      if (r.ok && r.value.state === 'ready')
         setImagenResuelta({ clave: claveDelFondo, url: urlDeArchivo(r.value.url) });
+      const falta = recursoDeImagen.kind === 'uploaded_image' && (!r.ok || r.value.state === 'unavailable');
+      setImagenFaltante(falta ? claveDelFondo : null);
     });
     return () => {
       vigente = false;
     };
-    // Se vuelve a resolver solo cuando cambia la imagen (la clave), no en cada render.
+    // Se vuelve a resolver solo cuando cambia la imagen (la clave) o llega EV-11, no en cada render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [claveDelFondo, invocar]);
+  }, [claveDelFondo, invocar, revision]);
 
   // HE-15-HU04-CA08 (ET11, ET12): llega una personalización más reciente de otro computador con cambios sin guardar
   // en la vista previa: el escritorio la aplica, la vista previa conserva los cambios y se muestra el aviso.
@@ -383,6 +391,11 @@ export function Personalization() {
                   </div>
                   <p>JPG, JPEG o PNG. Máximo 20 MB.</p>
                   {rechazo && <p role="alert">{rechazo}</p>}
+                  {fondo?.source === 'own' && imagenFaltante === claveDelFondo && (
+                    <p className="wg-aviso" aria-live="polite">
+                      {textos.IMAGEN_DE_FONDO_NO_ENCONTRADA}
+                    </p>
+                  )}
                   {imagenes && (
                     // ET07, ET08: solo miniaturas para elegir; no se agregan imágenes al catálogo.
                     <ul className="wg-lista" aria-label="Catálogo de imágenes">
