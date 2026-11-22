@@ -29,9 +29,10 @@ jobs:
         with:
           version: 3.2.0
       # Sin nombre despliega todas las funciones de supabase/functions/ (las carpetas que empiezan por `_` son
-      # código compartido) con el `verify_jwt = true` de supabase/config.toml (D-192).
+      # código compartido) con el `verify_jwt = true` de supabase/config.toml (D-192). `--yes` porque el CLI pide
+      # confirmación y en Actions no hay terminal: sin él no despliega nada y el job falla.
       - name: Desplegar las Edge Functions
-        run: supabase functions deploy --project-ref "$SUPABASE_PROJECT_ID"
+        run: supabase functions deploy --yes --project-ref "$SUPABASE_PROJECT_ID"
       - name: Dejar en el log las versiones desplegadas
         run: supabase functions list --project-ref "$SUPABASE_PROJECT_ID"
 
