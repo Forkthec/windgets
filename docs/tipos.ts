@@ -651,6 +651,12 @@ export interface WindiRejectProposalResult { reply: WindiMessage }
 type NoParams = Record<string, never>;
 type Void = null;
 
+/** Formato de hora corta de Windows (`LOCALE_SSHORTTIME`) para el widget Reloj (HE-04-HU03-ET02). */
+export interface TimeFormat {
+  hour_cycle: 'h12' | 'h23';
+  two_digit_hour: boolean;
+}
+
 export interface CommandMap {
   // a.1 cuenta y sesión
   auth_register_start: { params: AuthRegisterStartParams; result: AuthRegisterStartResult };
@@ -752,6 +758,8 @@ export interface CommandMap {
   preference_get: { params: NoParams; result: Preference };
   preference_set: { params: Preference; result: Void };
   connectivity_get: { params: NoParams; result: Connectivity };
+  /** IPC-DESK-14: formato de hora corta de Windows; 24 horas si no se puede leer (HE-04-HU03-ET02). */
+  system_time_format_get: { params: NoParams; result: TimeFormat };
   // a.11 música
   media_get_session: { params: NoParams; result: MediaSession };
   media_toggle_play_pause: { params: NoParams; result: Void };
@@ -819,6 +827,8 @@ export interface EventMap {
   exit_requested: { requires_confirmation: boolean };
   catalog_updated: { kinds: CatalogKind[] };
   preference_changed: { board_card_view: 'compact' | 'expanded'; origin: OriginKind };
+  /** EV-28: el formato de hora corta de Windows cambió (HE-04-HU03-CA04). */
+  time_format_changed: TimeFormat;
 }
 
 export type EventName = keyof EventMap;

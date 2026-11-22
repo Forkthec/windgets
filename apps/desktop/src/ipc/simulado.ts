@@ -161,6 +161,8 @@ const respuestas: Respuestas = {
   },
   theme_draft_select: () => ({ ok: true, value: TEMA_SIMULADO }),
   connectivity_get: () => ({ ok: true, value: { online: true } }),
+  // HE-04-HU03: fuera de Windows no hay formato regional que leer; 24 horas (ET02).
+  system_time_format_get: () => ({ ok: true, value: { hour_cycle: 'h23', two_digit_hour: true } }),
   sync_get_status: () => ({ ok: true, value: { status: 'synced', pending_count: 0, last_sync_at: null } }),
   auth_get_session: () => ({ ok: true, value: { state: 'signed_out', token: 'valid' } }),
   // HE-16-HU03: el simulado no guarda cambios pendientes; cerrar sesión responde el mensaje de CA01.

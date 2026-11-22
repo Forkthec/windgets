@@ -9,6 +9,8 @@
 //! - `WM_DISPLAYCHANGE` y `WM_DPICHANGED`: al conectar o desconectar un monitor, o al cambiar su resolución o su
 //!   escala, se vuelven a leer los monitores (EV-17) y la capa cubre el nuevo escritorio virtual.
 //!
+//! - `WM_SETTINGCHANGE` con «intl»: la persona cambió el formato regional; la capa recibe el formato de hora
+//!   nuevo (EV-28 `time_format_changed`, HE-04-HU03-CA04).
 //! - `WM_TIMER`: con el gancho de mouse habilitado (D-215), cada 2 s se actualizan sus rectángulos y se instala o
 //!   se quita (HE-06-HU06-ET07, `gancho`).
 //!
@@ -183,6 +185,19 @@ unsafe extern "system" fn procedimiento(
         && let Some(app) = APLICACION.get()
     {
         super::anclaje::reubicar(app);
+    }
+    // HE-04-HU03-CA04, ET03: Windows avisa el cambio de la configuración regional con «intl»; el Reloj lo refleja
+    // de inmediato, sin reiniciar la aplicación.
+    if mensaje == WM_SETTINGCHANGE
+        && lparam.0 != 0
+        // SAFETY: con WM_SETTINGCHANGE, un lParam no nulo es una cadena terminada en cero válida durante el mensaje.
+        && unsafe { PCWSTR(lparam.0 as *const u16).to_string() }.is_ok_and(|area| area == "intl")
+        && let Some(app) = APLICACION.get()
+    {
+        let _ = app.emit(
+            "time_format_changed",
+            crate::integracion_con_el_sistema::formato_de_hora::leer(),
+        );
     }
     if mensaje == WM_DISPLAYCHANGE
         || mensaje == WM_SETTINGCHANGE

@@ -452,6 +452,14 @@ pub fn connectivity_get(nucleo: State<'_, Nucleo>, params: NoParams) -> IpcResul
     })
 }
 
+/// IPC-DESK-14 `system_time_format_get` (HE-04-HU03-CA02, CA03, ET02): el formato de hora corta de Windows para
+/// el widget Reloj; si no se puede leer, 24 horas.
+#[tauri::command]
+pub fn system_time_format_get(params: NoParams) -> IpcResult<crate::tipos::TimeFormat> {
+    let _ = params;
+    correcto(crate::integracion_con_el_sistema::formato_de_hora::leer())
+}
+
 /// IPC-AUTH-01 `auth_register_start` (HE-01-HU01, HE-01-HU02).
 #[tauri::command]
 pub async fn auth_register_start(

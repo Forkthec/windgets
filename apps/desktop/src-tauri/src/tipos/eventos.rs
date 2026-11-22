@@ -264,6 +264,7 @@ pub struct EventMap {
     pub exit_requested: EventMapExitRequested,
     pub catalog_updated: EventMapCatalogUpdated,
     pub preference_changed: EventMapPreferenceChanged,
+    pub time_format_changed: TimeFormat,
 }
 
 #[derive(TS)]

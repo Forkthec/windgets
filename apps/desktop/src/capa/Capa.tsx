@@ -198,7 +198,7 @@ export function Capa({
           data-interactivo={INTERACTIVOS.includes(w.type)}
           style={{ position: 'absolute', ...aEscala(w, monitorPrincipal(pintado.estado.monitors)) }}
         >
-          {w.type === 'clock' && <Reloj />}
+          {w.type === 'clock' && <Reloj invocar={invocar} escuchar={escuchar} />}
           {w.type === 'daily_tasks' && <TareasDelDia invocar={invocar} escuchar={escuchar} />}
           {w.type === 'kanban' && (
             <WidgetKanban invocar={invocar} escuchar={escuchar} escucharArrastre={escucharArrastre} />

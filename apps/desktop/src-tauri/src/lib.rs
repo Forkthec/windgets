@@ -31,6 +31,7 @@ pub fn run() {
         .manage(puente_ipc::Nucleo::nuevo())
         .invoke_handler(tauri::generate_handler![
             puente_ipc::connectivity_get,
+            puente_ipc::system_time_format_get,
             puente_ipc::auth_register_start,
             puente_ipc::auth_register_verify,
             puente_ipc::auth_register_resend,

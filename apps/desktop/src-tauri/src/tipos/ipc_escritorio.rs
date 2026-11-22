@@ -96,6 +96,23 @@ pub struct Connectivity {
     pub online: bool,
 }
 
+// IPC-DESK-14 `system_time_format_get` y EV-28 `time_format_changed` (HE-04-HU03-ET02).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
+pub enum TimeFormatHourCycle {
+    #[serde(rename = "h12")]
+    H12,
+    #[serde(rename = "h23")]
+    H23,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
+pub struct TimeFormat {
+    pub hour_cycle: TimeFormatHourCycle,
+    pub two_digit_hour: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "index.ts")]
 pub enum PlaybackStatus {

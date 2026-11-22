@@ -82,6 +82,9 @@ function nucleo(
         return ok({ url: '', state: 'unavailable' });
       case 'catalog_list':
         return ok([]);
+      case 'system_time_format_get':
+        // IPC-DESK-14: el Reloj de la capa lee el formato de hora de Windows (HE-04-HU03-ET02).
+        return ok({ hour_cycle: 'h23', two_digit_hour: true });
       case 'layout_edit_move': {
         const r = responder.mover?.(params) ?? {
           rect: widgets.find((w) => w.widget_id === (params as { widget_id: string }).widget_id) ?? RELOJ,
