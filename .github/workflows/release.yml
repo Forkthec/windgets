@@ -1,17 +1,46 @@
 name: release
 
-# Al crear una etiqueta v*: compila, genera el instalador NSIS y lo publica como
-# Windgets-Setup.exe (nombre fijo, D-194; la landing lo descarga, INT-12).
+# Al crear una etiqueta v*: despliega las Edge Functions (job `funciones`, con la aprobación del environment
+# `produccion`) y después compila, genera el instalador NSIS y lo publica como Windgets-Setup.exe (nombre fijo,
+# D-194; la landing lo descarga, INT-12). El instalador espera a las funciones: no sale una app nueva que hable con
+# una función vieja. `workflow_dispatch` redespliega solo las funciones, a mano, desde Actions.
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
+  funciones:
+    runs-on: ubuntu-24.04
+    environment: produccion
+    permissions:
+      contents: read
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: supabase/setup-cli@v3.2.0
+        with:
+          version: 3.2.0
+      # Sin nombre despliega todas las funciones de supabase/functions/ (las carpetas que empiezan por `_` son
+      # código compartido) con el `verify_jwt = true` de supabase/config.toml (D-192).
+      - name: Desplegar las Edge Functions
+        run: supabase functions deploy --project-ref "$SUPABASE_PROJECT_ID"
+      - name: Dejar en el log las versiones desplegadas
+        run: supabase functions list --project-ref "$SUPABASE_PROJECT_ID"
+
   release:
+    needs: funciones
+    if: github.event_name == 'push'
     runs-on: windows-2025
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6

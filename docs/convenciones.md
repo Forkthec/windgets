@@ -72,7 +72,7 @@ NEWS_API_KEY=
 
 El SMTP propio de Supabase Auth se configura en el panel del proyecto con la cuenta de Gmail del proyecto (`smtp.gmail.com`, puerto 465, contraseña de aplicación; INT-02). No es un secreto de las Edge Functions ni del repositorio, y no se compra dominio (D-195).
 
-Secretos de GitHub Actions (Settings > Secrets): `SUPABASE_URL`, `SUPABASE_ANON_KEY` (flujo `keepalive` y compilación), `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD` (solo si el flujo despliega migraciones). Un secreto filtrado se rota de inmediato.
+Secretos de GitHub Actions (Settings > Secrets): `SUPABASE_URL`, `SUPABASE_ANON_KEY` (flujo `keepalive` y compilación) y `SUPABASE_DB_PASSWORD` (solo si el flujo despliega migraciones). Los del despliegue de las Edge Functions, `SUPABASE_ACCESS_TOKEN` y `SUPABASE_PROJECT_ID` (el ref del proyecto), van dentro del environment `produccion` (Settings > Environments), que pide la aprobación de su revisora antes de desplegar. Un secreto filtrado se rota de inmediato.
 
 ## Marca e íconos
 
@@ -120,7 +120,7 @@ Configuración en `apps/desktop/src-tauri/tauri.conf.json`: `bundle.windows.nsis
 
 | Qué | Quién la entrega | Cuándo |
 |---|---|---|
-| Proyecto de Supabase (URL, clave anon, `SUPABASE_PROJECT_REF`) | Gerente de Proyecto | Antes de P05 |
+| Proyecto de Supabase (URL, clave anon, `SUPABASE_PROJECT_ID`) | Gerente de Proyecto | Antes de P05 |
 | Cuenta de Gmail del proyecto con verificación en dos pasos y contraseña de aplicación, para el SMTP de Supabase Auth | Gerente de Proyecto | Antes de la prueba real de registro de P05 |
 | Organización de GitHub (`WINDGETS_GITHUB_REPO`) | Gerente de Proyecto | Antes de P03 |
 | Clave de Gemini (`GEMINI_API_KEY`) y de GNews (`NEWS_API_KEY`) | Gerente de Proyecto | Antes de P17 y de HE-04-HU06 |
@@ -139,7 +139,7 @@ El `dist` se publica en Vercel (carpeta de salida `apps/landing/dist`, sin funci
 
 - Un archivo SQL numerado por cambio en `supabase/migrations/` (`0005_<tema>.sql`, …); nunca se edita uno aplicado. Todo cambio de esquema tiene su equivalente en `local/` y sus pruebas en `docs/pruebas/`.
 - Local: `supabase db reset`. Remoto: `supabase link --project-ref <ref>` y `supabase db push`. Orden: `0001` a `0004` y `seed.sql`.
-- Edge Functions: `supabase functions deploy <nombre>` (con `verify_jwt = true` en `supabase/config.toml`); secretos con `supabase secrets set`.
+- Edge Functions: salen con cada release. El job `funciones` de `.github/workflows/release.yml` corre con la etiqueta `v*`, espera la aprobación del environment `produccion` y ejecuta `supabase functions deploy --project-ref "$SUPABASE_PROJECT_ID"`, que despliega todas las funciones de `supabase/functions/` con el `verify_jwt = true` de `supabase/config.toml`, y luego `supabase functions list`. El instalador se publica solo después (`needs: funciones`), para que una app nueva no hable con una función vieja. Para redesplegar sin release: Actions > release > «Run workflow» (`workflow_dispatch`, también con la aprobación). El despliegue manual (`supabase functions deploy <nombre>`) queda solo para emergencias y se anota en `.trabajo/ESTADO.md`. Secretos de las funciones con `supabase secrets set`; el despliegue no los toca.
 - Los catálogos (imágenes, plantillas, tipografías, animaciones) se cargan al bucket `catalog` con las rutas de `seed.sql`.
 
 ## CI con GitHub Actions
