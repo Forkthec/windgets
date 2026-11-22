@@ -3,6 +3,7 @@
 import { act, cleanup, fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { abrirCuenta, Destino, llamadasA } from '../cuenta/pruebas';
+import type { ErrorCode } from '@/types';
 import { Recovery } from './Recovery';
 
 const ENVIADO = 'Si el correo está registrado, te enviamos un código de verificación.';
@@ -90,7 +91,9 @@ describe('HE-01-HU06 · Solicitar un código de verificación en Recuperar contr
     const nucleo = await recuperar();
     escribir('Correo electrónico', `${'a'.repeat(53)}@example.com`);
     await seleccionar('Enviar código');
-    expect(textoDebajoDe('Correo electrónico')).toBe('El correo electrónico no puede superar los 64 caracteres.');
+    expect(textoDebajoDe('Correo electrónico')).toBe(
+      'El correo electrónico no puede superar los 64 caracteres.',
+    );
     expect(llamadasA(nucleo, 'auth_recovery_request')).toHaveLength(0);
   });
 
@@ -156,8 +159,11 @@ async function enCodigo(esperaMs = 0) {
 type Nucleo = Awaited<ReturnType<typeof enCodigo>>;
 
 /** El Núcleo rechaza el código con este error. */
-function rechazarCodigo(nucleo: Nucleo, code: string, message: string, field?: string) {
-  nucleo.responder('auth_recovery_verify', () => ({ ok: false, error: { code, message, ...(field && { field }) } }));
+function rechazarCodigo(nucleo: Nucleo, code: ErrorCode, message: string, field?: string) {
+  nucleo.responder('auth_recovery_verify', () => ({
+    ok: false,
+    error: { code, message, ...(field && { field }) },
+  }));
 }
 
 describe('HE-01-HU07 · Verificar el código de verificación en Recuperar contraseña', () => {
@@ -280,7 +286,8 @@ describe('HE-01-HU07 · Verificar el código de verificación en Recuperar contr
 });
 
 const ACTUALIZADA = 'Tu contraseña fue actualizada. Ya puedes iniciar sesión.';
-const INVALIDA = 'La contraseña debe tener entre 8 y 64 caracteres e incluir una mayúscula, una minúscula y un número.';
+const INVALIDA =
+  'La contraseña debe tener entre 8 y 64 caracteres e incluir una mayúscula, una minúscula y un número.';
 
 /** En el paso Nueva contraseña, con el código verificado. */
 async function enNueva() {

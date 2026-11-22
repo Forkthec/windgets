@@ -22,7 +22,10 @@ export function PasoDeRecuperacion({
       {/* HE-01-HU06-CA07, ET04: «Inicio de sesión» en la miga de pan abre Inicio de sesión sin cambiar la
           contraseña. */}
       <EncabezadoDeRuta
-        niveles={[{ texto: 'Inicio de sesión', alElegir: () => abrirCuenta('sign_in') }, { texto: 'Recuperar contraseña' }]}
+        niveles={[
+          { texto: 'Inicio de sesión', alElegir: () => abrirCuenta('sign_in') },
+          { texto: 'Recuperar contraseña' },
+        ]}
         alRegresar={alRegresar}
       />
       {/* HE-01-HU06-ET11, HE-01-HU07-ET13: sin conexión, el aviso va en la parte superior del paso. */}

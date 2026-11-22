@@ -251,7 +251,10 @@ const respuestas: Respuestas = {
       ? { ok: true, value: { user_id: 'simulado', alias: CUENTA_SIMULADA.alias } }
       : error({ code: 'auth.invalid_credentials', message: textos.CREDENCIALES_INCORRECTAS }),
   // HE-01-HU05: fuera de Tauri no hay navegador ni regreso windgets://; la espera no recibe resultado.
-  auth_google_start: () => ({ ok: true, value: { expires_at: new Date(Date.now() + 300_000).toISOString() } }),
+  auth_google_start: () => ({
+    ok: true,
+    value: { expires_at: new Date(Date.now() + 300_000).toISOString() },
+  }),
   auth_google_cancel: () => ({ ok: true, value: null }),
   // HE-01-HU06: el simulado no envía correos; responde igual exista o no la cuenta (ET09).
   auth_recovery_request: () => ({

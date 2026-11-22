@@ -32,7 +32,12 @@ export interface DiligenciarCodigoProps {
 /** Segundos que faltan para poder reenviar, redondeados hacia arriba. */
 const segundosHasta = (instante: number, ahora: number) => Math.max(0, Math.ceil((instante - ahora) / 1000));
 
-export function DiligenciarCodigo({ reenvioDisponible, avisoInicial, alVerificar, alRegresar }: DiligenciarCodigoProps) {
+export function DiligenciarCodigo({
+  reenvioDisponible,
+  avisoInicial,
+  alVerificar,
+  alRegresar,
+}: DiligenciarCodigoProps) {
   const { invocar } = useNucleo();
   const mostrarResultado = useMensajeDeResultado();
   const { enLinea, sinConexion } = useConexion();

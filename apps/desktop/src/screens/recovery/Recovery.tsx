@@ -90,7 +90,11 @@ export function Recovery() {
 
   return (
     <MarcoDeCuenta nombre="Recuperar contraseña">
-      <PasoDeRecuperacion nombre="Correo electrónico" enLinea={enLinea} alRegresar={() => abrirCuenta('sign_in')}>
+      <PasoDeRecuperacion
+        nombre="Correo electrónico"
+        enLinea={enLinea}
+        alRegresar={() => abrirCuenta('sign_in')}
+      >
         <form
           className="wg-formulario"
           aria-label="Formulario"
