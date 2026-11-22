@@ -29,7 +29,7 @@ Menú principal, ventanas emergentes, formularios y tipos de mensaje. Se constru
 | 46 | RT-04 | Mensajes, opciones deshabilitadas y alineación | Alta | 2 | 14 | 26 | Ninguna |
 | 45 | RT-03 | Miga de pan y Regresar | Alta | 2 | 7 | 8 | Ninguna |
 | 43 | RT-01 | Menú principal y pantalla principal | Alta | 3 | 12 | 9 | Ninguna |
-| 44 | RT-02 | Ventanas emergentes | Alta | 2 | 9 | 9 | RT-01 |
+| 44 | RT-02 | Ventanas emergentes | Alta | 2 | 10 | 12 | RT-01 |
 
 Puntos del paso: 9.
 
@@ -85,11 +85,11 @@ Wallpaper como fondo real, plantilla por defecto sin conexión, tema en edición
 
 | Orden | HU | Historia | Prioridad | Puntos | CA | ET | Depende de |
 |---|---|---|---|---|---|---|---|
-| 10 | HE-02-HU01 | Consultar el wallpaper como fondo real de Windows | Alta | 13 | 6 | 12 | Ninguna |
+| 10 | HE-02-HU01 | Consultar el wallpaper como fondo real de Windows | Alta | 13 | 7 | 13 | Ninguna |
 | 11 | HE-02-HU10 | Seleccionar el tema en edición en la pantalla de personalización | Alta | 2 | 6 | 6 | Ninguna |
 | 12 | HE-02-HU02 | Seleccionar una plantilla del catálogo de plantillas | Alta | 3 | 2 | 7 | HE-02-HU10 |
-| 13 | HE-02-HU03 | Seleccionar la imagen de fondo de la plantilla, propia o del catálogo de imágenes | Alta | 3 | 8 | 10 | HE-02-HU02; HE-02-HU10 |
-| 14 | HE-02-HU11 | Guardar en el tema en edición los cambios de la vista previa sin llevarlos al escritorio | Alta | 3 | 5 | 5 | HE-02-HU10 |
+| 13 | HE-02-HU03 | Seleccionar la imagen de fondo de la plantilla, propia o del catálogo de imágenes | Alta | 3 | 9 | 11 | HE-02-HU02; HE-02-HU10 |
+| 14 | HE-02-HU11 | Guardar en el tema en edición los cambios de la vista previa sin llevarlos al escritorio | Alta | 3 | 6 | 6 | HE-02-HU10 |
 | 15 | HE-02-HU12 | Aplicar al escritorio los cambios de la vista previa | Alta | 5 | 11 | 7 | HE-02-HU01 |
 
 Puntos del paso: 29.
@@ -118,14 +118,14 @@ Tarjetas, tablero Kanban, agenda diaria y primer planificador diario.
 | Orden | HU | Historia | Prioridad | Puntos | CA | ET | Depende de |
 |---|---|---|---|---|---|---|---|
 | 20 | HE-07-HU01 | Crear una tarjeta de tipo Tarea, Recordatorio o Evento | Alta | 5 | 12 | 27 | Ninguna |
-| 21 | HE-07-HU03 | Consultar el detalle de una tarjeta | Alta | 2 | 4 | 8 | HE-07-HU01 |
-| 22 | HE-07-HU04 | Editar una tarjeta | Alta | 3 | 11 | 21 | HE-07-HU03 |
-| 23 | HE-07-HU05 | Eliminar una tarjeta | Alta | 2 | 3 | 6 | HE-07-HU03 |
+| 21 | HE-07-HU03 | Consultar el detalle de una tarjeta | Alta | 2 | 5 | 8 | HE-07-HU01 |
+| 22 | HE-07-HU04 | Editar una tarjeta | Alta | 3 | 12 | 23 | HE-07-HU03 |
+| 23 | HE-07-HU05 | Eliminar una tarjeta | Alta | 2 | 4 | 6 | HE-07-HU03 |
 | 24 | HE-09-HU01 | Consultar las tarjetas en el tablero Kanban organizadas por columnas | Alta | 3 | 5 | 7 | HE-07-HU01 |
-| 25 | HE-09-HU02 | Mover una tarjeta entre columnas mediante drag-and-drop o con la opción «Mover a» | Alta | 5 | 9 | 13 | HE-09-HU01 |
+| 25 | HE-09-HU02 | Mover una tarjeta entre columnas mediante drag-and-drop o con la opción «Mover a» | Alta | 5 | 10 | 14 | HE-09-HU01 |
 | 26 | HE-11-HU01 | Consultar la agenda diaria | Alta | 2 | 6 | 8 | HE-07-HU01 |
 | 27 | HE-11-HU02 | Asignar una tarjeta a un bloque horario de la agenda diaria | Alta | 3 | 5 | 11 | HE-11-HU01 |
-| 28 | HE-12-HU01 | Consultar el planificador diario con las tarjetas de hoy | Alta | 3 | 5 | 9 | HE-11-HU02 |
+| 28 | HE-12-HU01 | Consultar el planificador diario con las tarjetas de hoy | Alta | 3 | 7 | 12 | HE-11-HU02 |
 
 Puntos del paso: 28.
 
@@ -138,9 +138,9 @@ Widget Tareas del día, completar y mover tarjetas desde él, y completar y resu
 | Orden | HU | Historia | Prioridad | Puntos | CA | ET | Depende de |
 |---|---|---|---|---|---|---|---|
 | 29 | HE-06-HU02 | Consultar las tarjetas del planificador diario en el widget Tareas del día | Alta | 5 | 6 | 4 | HE-04-HU01; HE-12-HU01 |
-| 30 | HE-06-HU03 | Alternar la casilla de completada de una tarjeta desde el widget Tareas del día | Alta | 2 | 4 | 5 | HE-06-HU01; HE-06-HU02 |
+| 30 | HE-06-HU03 | Alternar la casilla de completada de una tarjeta desde el widget Tareas del día | Alta | 2 | 5 | 6 | HE-06-HU01; HE-06-HU02 |
 | 31 | HE-06-HU04 | Mover una tarjeta de columna con la opción «Mover a» desde el widget Tareas del día | Alta | 2 | 5 | 6 | HE-06-HU01; HE-06-HU02 |
-| 32 | HE-12-HU02 | Alternar la casilla de completada de una tarjeta desde el planificador diario | Alta | 2 | 3 | 7 | HE-09-HU02; HE-12-HU01 |
+| 32 | HE-12-HU02 | Alternar la casilla de completada de una tarjeta desde el planificador diario | Alta | 2 | 4 | 7 | HE-09-HU02; HE-12-HU01 |
 | 33 | HE-12-HU03 | Consultar el resumen de avance del día | Alta | 2 | 5 | 7 | HE-12-HU02 |
 
 Puntos del paso: 13.
@@ -169,7 +169,7 @@ Inicio automático, cerrar sesión y área de notificación.
 | Orden | HU | Historia | Prioridad | Puntos | CA | ET | Depende de |
 |---|---|---|---|---|---|---|---|
 | 38 | HE-16-HU02 | Alternar el inicio automático en la pantalla Configuración | Alta | 2 | 5 | 9 | CD-02-HU02 |
-| 39 | HE-16-HU03 | Cerrar sesión desde la pantalla Configuración | Alta | 2 | 5 | 7 | Ninguna |
+| 39 | HE-16-HU03 | Cerrar sesión desde la pantalla Configuración | Alta | 2 | 7 | 9 | Ninguna |
 | 40 | HE-17-HU01 | Cerrar la ventana de la aplicación | Alta | 2 | 2 | 5 | HE-02-HU01 |
 | 41 | HE-17-HU02 | Abrir la ventana de la aplicación desde el ícono del área de notificación | Alta | 2 | 3 | 6 | HE-17-HU01 |
 | 42 | HE-17-HU03 | Salir de la aplicación desde el ícono del área de notificación | Alta | 2 | 4 | 7 | HE-17-HU01 |
@@ -207,7 +207,7 @@ Quitar la imagen de fondo, colores, tipografía, paletas, restablecer, vista pre
 | 56 | HE-02-HU09 | Consultar una vista previa en tiempo real de los cambios de personalización | Media | 3 | 2 | 4 | Ninguna |
 | 57 | HE-02-HU13 | Cancelar los cambios sin guardar de la vista previa | Media | 2 | 9 | 8 | Ninguna |
 | 58 | HE-03-HU01 | Consultar los temas guardados con el tema aplicado marcado | Media | 2 | 4 | 7 | Ninguna |
-| 59 | HE-03-HU02 | Guardar como tema nuevo los cambios de la vista previa | Media | 3 | 7 | 12 | HE-02-HU09 |
+| 59 | HE-03-HU02 | Guardar como tema nuevo los cambios de la vista previa | Media | 3 | 8 | 14 | HE-02-HU09 |
 | 60 | HE-03-HU03 | Aplicar un tema guardado | Media | 3 | 6 | 8 | HE-03-HU01 |
 | 61 | HE-03-HU06 | Consultar la aplicación con los colores del tema y la tipografía del tema aplicado | Media | 5 | 8 | 9 | HE-02-HU12 |
 
@@ -221,12 +221,12 @@ Reloj, eliminar un widget y la pantalla de edición (tercera vista temporal): ab
 
 | Orden | HU | Historia | Prioridad | Puntos | CA | ET | Depende de |
 |---|---|---|---|---|---|---|---|
-| 62 | HE-04-HU03 | Consultar la hora del sistema en el widget Reloj | Media | 1 | 1 | 1 | Ninguna |
+| 62 | HE-04-HU03 | Consultar la hora del sistema en el widget Reloj | Media | 1 | 4 | 4 | Ninguna |
 | 63 | HE-04-HU13 | Eliminar un widget externo o local | Media | 2 | 6 | 7 | HE-04-HU01 |
 | 64 | HE-05-HU01 | Abrir la pantalla de edición desde la pantalla Widgets | Media | 1 | 2 | 6 | HE-04-HU01 |
-| 65 | HE-05-HU02 | Mover un widget mediante drag-and-drop en la pantalla de edición | Media | 3 | 4 | 6 | HE-05-HU01 |
-| 66 | HE-05-HU03 | Redimensionar un widget en la pantalla de edición | Media | 3 | 5 | 6 | HE-05-HU01 |
-| 67 | HE-05-HU04 | Guardar la distribución de widgets | Media | 2 | 4 | 4 | HE-05-HU01 |
+| 65 | HE-05-HU02 | Mover un widget mediante drag-and-drop en la pantalla de edición | Media | 3 | 5 | 7 | HE-05-HU01 |
+| 66 | HE-05-HU03 | Redimensionar un widget en la pantalla de edición | Media | 3 | 6 | 6 | HE-05-HU01 |
+| 67 | HE-05-HU04 | Guardar la distribución de widgets | Media | 2 | 5 | 6 | HE-05-HU01 |
 | 68 | HE-05-HU05 | Cancelar los cambios de la distribución de widgets | Media | 1 | 5 | 7 | HE-05-HU01 |
 
 Puntos del paso: 13.
@@ -240,7 +240,7 @@ Consultar el tablero Kanban y mover tarjetas con drag-and-drop en el widget Kanb
 | Orden | HU | Historia | Prioridad | Puntos | CA | ET | Depende de |
 |---|---|---|---|---|---|---|---|
 | 69 | HE-06-HU05 | Consultar el tablero Kanban en el widget Kanban | Media | 3 | 4 | 3 | HE-04-HU01; HE-09-HU01 |
-| 70 | HE-06-HU06 | Mover tarjetas entre columnas mediante drag-and-drop en el widget Kanban | Media | 5 | 5 | 6 | HE-06-HU01; HE-06-HU05 |
+| 70 | HE-06-HU06 | Mover tarjetas entre columnas mediante drag-and-drop en el widget Kanban | Media | 5 | 6 | 8 | HE-06-HU01; HE-06-HU05 |
 | 71 | HE-06-HU07 | Consultar el mes actual en el widget Calendario | Media | 2 | 1 | 1 | HE-04-HU01 |
 
 Puntos del paso: 10.
@@ -272,8 +272,8 @@ Vistas mensual y semanal, tarjetas de un día, crear desde un día, días vencid
 |---|---|---|---|---|---|---|---|
 | 78 | HE-10-HU01 | Consultar las tarjetas en el calendario en vista mensual | Media | 5 | 6 | 7 | HE-07-HU01 |
 | 79 | HE-10-HU02 | Consultar las tarjetas en el calendario en vista semanal | Media | 3 | 7 | 9 | HE-10-HU01; HE-11-HU02 |
-| 80 | HE-10-HU03 | Consultar las tarjetas de un día desde el calendario | Media | 2 | 4 | 8 | HE-07-HU03; HE-10-HU01; HE-10-HU02 |
-| 81 | HE-06-HU08 | Abrir la pantalla relacionada de la aplicación desde un widget interactivo | Media | 3 | 7 | 7 | HE-06-HU01; HE-06-HU02; HE-06-HU05; HE-06-HU07; HE-07-HU03; HE-10-HU01; HE-10-HU03 |
+| 80 | HE-10-HU03 | Consultar las tarjetas de un día desde el calendario | Media | 2 | 5 | 9 | HE-07-HU03; HE-10-HU01; HE-10-HU02 |
+| 81 | HE-06-HU08 | Abrir la pantalla relacionada de la aplicación desde un widget interactivo | Media | 3 | 10 | 9 | HE-06-HU01; HE-06-HU02; HE-06-HU05; HE-06-HU07; HE-07-HU03; HE-10-HU01; HE-10-HU03 |
 | 82 | HE-10-HU04 | Crear una tarjeta directamente desde un día del calendario | Media | 2 | 5 | 9 | HE-07-HU01; HE-10-HU03 |
 | 83 | HE-10-HU05 | Consultar los días con tarjetas vencidas o pendientes en el calendario | Media | 3 | 8 | 18 | HE-09-HU02; HE-10-HU01; HE-10-HU02 |
 | 84 | HE-11-HU03 | Quitar una tarjeta de un bloque horario de la agenda diaria | Media | 1 | 2 | 5 | HE-11-HU02 |
@@ -303,13 +303,13 @@ Edge Function `windi-chat`, chat, personalidad, historial en memoria, propuestas
 
 | Orden | HU | Historia | Prioridad | Puntos | CA | ET | Depende de |
 |---|---|---|---|---|---|---|---|
-| 89 | HE-14-HU01 | Conversar por chat de texto con el agente de IA | Media | 3 | 9 | 24 | Ninguna |
+| 89 | HE-14-HU01 | Conversar por chat de texto con el agente de IA | Media | 3 | 9 | 26 | Ninguna |
 | 90 | HE-14-HU02 | Conversar con el agente de IA con una personalidad cercana, relajada y optimista | Media | 2 | 5 | 12 | HE-14-HU01 |
-| 91 | HE-14-HU03 | Confirmar una propuesta del agente de IA | Media | 2 | 4 | 8 | HE-14-HU01 |
-| 92 | HE-14-HU04 | Pedir al agente de IA que cree tarjetas | Media | 5 | 9 | 9 | HE-07-HU01; HE-14-HU03 |
-| 93 | HE-14-HU05 | Pedir al agente de IA que edite tarjetas | Media | 3 | 7 | 9 | HE-07-HU04; HE-14-HU03 |
-| 94 | HE-14-HU06 | Pedir al agente de IA que mueva tarjetas entre columnas | Media | 2 | 8 | 11 | HE-09-HU02; HE-14-HU03 |
-| 95 | HE-14-HU07 | Pedir al agente de IA que elimine tarjetas | Media | 2 | 6 | 6 | HE-07-HU05; HE-14-HU03 |
+| 91 | HE-14-HU03 | Confirmar una propuesta del agente de IA | Media | 2 | 8 | 13 | HE-14-HU01 |
+| 92 | HE-14-HU04 | Pedir al agente de IA que cree tarjetas | Media | 5 | 12 | 14 | HE-07-HU01; HE-14-HU03 |
+| 93 | HE-14-HU05 | Pedir al agente de IA que edite tarjetas | Media | 3 | 12 | 14 | HE-07-HU04; HE-14-HU03 |
+| 94 | HE-14-HU06 | Pedir al agente de IA que mueva tarjetas entre columnas | Media | 2 | 9 | 13 | HE-09-HU02; HE-14-HU03 |
+| 95 | HE-14-HU07 | Pedir al agente de IA que elimine tarjetas | Media | 2 | 7 | 7 | HE-07-HU05; HE-14-HU03 |
 
 Puntos del paso: 19.
 
@@ -361,13 +361,63 @@ Controlar la música y abrir una noticia desde los widgets, editar y eliminar et
 | 111 | HE-09-HU06 | Eliminar las columnas creadas | Baja | 3 | 7 | 9 | HE-09-HU03 |
 | 112 | HE-09-HU07 | Alternar entre la vista compacta y la vista expandida de las tarjetas | Baja | 2 | 3 | 5 | HE-09-HU01 |
 | 113 | HE-13-HU05 | Filtrar los reportes por etiqueta | Baja | 2 | 7 | 9 | HE-08-HU02; HE-13-HU01 |
-| 114 | HE-14-HU08 | Preguntar al agente de IA cómo funciona la aplicación | Baja | 2 | 2 | 3 | HE-14-HU01 |
-| 115 | HE-14-HU09 | Preguntar al agente de IA por las tarjetas | Baja | 3 | 4 | 5 | HE-09-HU01; HE-14-HU01 |
+| 114 | HE-14-HU08 | Preguntar al agente de IA cómo funciona la aplicación | Baja | 2 | 3 | 4 | HE-14-HU01 |
+| 115 | HE-14-HU09 | Preguntar al agente de IA por las tarjetas | Baja | 3 | 6 | 7 | HE-09-HU01; HE-14-HU01 |
 
 Puntos del paso: 19.
 
 **Se prueba al terminar.** Confirmaciones M-09, M-10, M-13 y M-14 con sus textos; todos los CA y ET del backlog en verde; recorrido completo en Windows 11; todos los RNF medidos.
 
+## P24 · Correcciones de las pruebas de usuario
+
+Corrige lo que encontraron las pruebas de usuario de la v0.3.0 sobre HU ya construidas: menú de acciones «⋮» en Tablero Kanban, Etiquetas y Temas; botón de información «i» y «Nueva tarjeta» en el Planificador diario; celda completa del día en el Calendario; imagen de fondo, tema igual a otro, distribución a escala, wallpaper sin franjas; widgets que abren la misma ventana, casilla grande en Tareas del día y arrastre sin la selección de Windows; Reloj con el formato de Windows; Windi (rechazos con su motivo, varias tarjetas, etiquetas, bloque horario, contexto completo e intenciones), y cierre de sesión que no se bloquea. No agrega HU ni puntos: los CA y ET son los de la v12 (D-214, D-215).
+
+| Orden | HU | Historia | Prioridad | Puntos | CA nuevos o cambiados | ET nuevas o cambiadas | Depende de |
+|---|---|---|---|---|---|---|---|
+| 10 | HE-02-HU01 | Consultar el wallpaper como fondo real de Windows | Alta | 13 | nuevos CA07 | nuevas ET13 | Ninguna |
+| 13 | HE-02-HU03 | Seleccionar la imagen de fondo de la plantilla, propia o del catálogo de imágenes | Alta | 3 | nuevos CA09 | nuevas ET11 | HE-02-HU02; HE-02-HU10 |
+| 14 | HE-02-HU11 | Guardar en el tema en edición los cambios de la vista previa sin llevarlos al escritorio | Alta | 3 | nuevos CA06 | nuevas ET06 | HE-02-HU10 |
+| 20 | HE-07-HU01 | Crear una tarjeta de tipo Tarea, Recordatorio o Evento | Alta | 5 | — | cambian ET01, ET25 | Ninguna |
+| 21 | HE-07-HU03 | Consultar el detalle de una tarjeta | Alta | 2 | nuevos CA05 | cambian ET02 | HE-07-HU01 |
+| 22 | HE-07-HU04 | Editar una tarjeta | Alta | 3 | nuevos CA12 | nuevas ET22, ET23; cambian ET01, ET03 | HE-07-HU03 |
+| 23 | HE-07-HU05 | Eliminar una tarjeta | Alta | 2 | nuevos CA04 | cambian ET01, ET05 | HE-07-HU03 |
+| 25 | HE-09-HU02 | Mover una tarjeta entre columnas mediante drag-and-drop o con la opción «Mover a» | Alta | 5 | nuevos CA10; cambian CA06, CA07, CA08, CA09 | nuevas ET14; cambian ET10 | HE-09-HU01 |
+| 28 | HE-12-HU01 | Consultar el planificador diario con las tarjetas de hoy | Alta | 3 | nuevos CA06, CA07; cambian CA01 | nuevas ET10, ET11, ET12; cambian ET04, ET06 | HE-11-HU02 |
+| 30 | HE-06-HU03 | Alternar la casilla de completada de una tarjeta desde el widget Tareas del día | Alta | 2 | nuevos CA05 | nuevas ET06 | HE-06-HU01; HE-06-HU02 |
+| 32 | HE-12-HU02 | Alternar la casilla de completada de una tarjeta desde el planificador diario | Alta | 2 | nuevos CA04; cambian CA01, CA02, CA03 | cambian ET01 | HE-09-HU02; HE-12-HU01 |
+| 33 | HE-12-HU03 | Consultar el resumen de avance del día | Alta | 2 | cambian CA05 | cambian ET06 | HE-12-HU02 |
+| 39 | HE-16-HU03 | Cerrar sesión desde la pantalla Configuración | Alta | 2 | nuevos CA06, CA07 | nuevas ET08, ET09 | Ninguna |
+| 44 | RT-02 | Ventanas emergentes | Alta | 2 | nuevos CA10 | nuevas ET10, ET11, ET12; cambian ET03 | RT-01 |
+| 46 | RT-04 | Mensajes, opciones deshabilitadas y alineación | Alta | 2 | cambian CA08 | — | Ninguna |
+| 58 | HE-03-HU01 | Consultar los temas guardados con el tema aplicado marcado | Media | 2 | cambian CA01 | cambian ET01 | Ninguna |
+| 59 | HE-03-HU02 | Guardar como tema nuevo los cambios de la vista previa | Media | 3 | nuevos CA08 | nuevas ET13, ET14; cambian ET09 | HE-02-HU09 |
+| 62 | HE-04-HU03 | Consultar la hora del sistema en el widget Reloj | Media | 1 | nuevos CA02, CA03, CA04 | nuevas ET02, ET03, ET04 | Ninguna |
+| 64 | HE-05-HU01 | Abrir la pantalla de edición desde la pantalla Widgets | Media | 1 | — | cambian ET01 | HE-04-HU01 |
+| 65 | HE-05-HU02 | Mover un widget mediante drag-and-drop en la pantalla de edición | Media | 3 | nuevos CA05 | nuevas ET07 | HE-05-HU01 |
+| 66 | HE-05-HU03 | Redimensionar un widget en la pantalla de edición | Media | 3 | nuevos CA06; cambian CA03 | cambian ET03 | HE-05-HU01 |
+| 67 | HE-05-HU04 | Guardar la distribución de widgets | Media | 2 | nuevos CA05 | nuevas ET05, ET06 | HE-05-HU01 |
+| 70 | HE-06-HU06 | Mover tarjetas entre columnas mediante drag-and-drop en el widget Kanban | Media | 5 | nuevos CA06 | nuevas ET07, ET08 | HE-06-HU01; HE-06-HU05 |
+| 72 | HE-08-HU01 | Consultar las etiquetas creadas | Media | 1 | cambian CA01 | cambian ET02 | Ninguna |
+| 76 | HE-09-HU04 | Editar el nombre y el color de una columna | Media | 2 | cambian CA08 | cambian ET01 | HE-09-HU01 |
+| 80 | HE-10-HU03 | Consultar las tarjetas de un día desde el calendario | Media | 2 | nuevos CA05 | nuevas ET09; cambian ET01, ET05, ET08 | HE-07-HU03; HE-10-HU01; HE-10-HU02 |
+| 81 | HE-06-HU08 | Abrir la pantalla relacionada de la aplicación desde un widget interactivo | Media | 3 | nuevos CA08, CA09, CA10 | nuevas ET08, ET09; cambian ET05 | HE-06-HU01; HE-06-HU02; HE-06-HU05; HE-06-HU07; HE-07-HU03; HE-10-HU01; HE-10-HU03 |
+| 89 | HE-14-HU01 | Conversar por chat de texto con el agente de IA | Media | 3 | cambian CA06, CA09 | nuevas ET25, ET26; cambian ET22, ET23 | Ninguna |
+| 91 | HE-14-HU03 | Confirmar una propuesta del agente de IA | Media | 2 | nuevos CA05, CA06, CA07, CA08 | nuevas ET09, ET10, ET11, ET12, ET13; cambian ET05 | HE-14-HU01 |
+| 92 | HE-14-HU04 | Pedir al agente de IA que cree tarjetas | Media | 5 | nuevos CA10, CA11, CA12 | nuevas ET10, ET11, ET12, ET13, ET14 | HE-07-HU01; HE-14-HU03 |
+| 93 | HE-14-HU05 | Pedir al agente de IA que edite tarjetas | Media | 3 | nuevos CA08, CA09, CA10, CA11, CA12 | nuevas ET10, ET11, ET12, ET13, ET14 | HE-07-HU04; HE-14-HU03 |
+| 94 | HE-14-HU06 | Pedir al agente de IA que mueva tarjetas entre columnas | Media | 2 | nuevos CA09 | nuevas ET12, ET13 | HE-09-HU02; HE-14-HU03 |
+| 95 | HE-14-HU07 | Pedir al agente de IA que elimine tarjetas | Media | 2 | nuevos CA07 | nuevas ET07 | HE-07-HU05; HE-14-HU03 |
+| 97 | HE-03-HU04 | Renombrar un tema | Baja | 1 | cambian CA07 | cambian ET01 | HE-03-HU01 |
+| 98 | HE-03-HU05 | Eliminar un tema | Baja | 1 | — | cambian ET01, ET04 | HE-03-HU01 |
+| 109 | HE-08-HU03 | Editar el nombre y el color de una etiqueta | Baja | 2 | cambian CA07 | cambian ET01 | HE-08-HU02 |
+| 110 | HE-08-HU04 | Eliminar una etiqueta | Baja | 2 | cambian CA01, CA03, CA04 | cambian ET01 | HE-08-HU02 |
+| 111 | HE-09-HU06 | Eliminar las columnas creadas | Baja | 3 | cambian CA01, CA03, CA07 | cambian ET01 | HE-09-HU03 |
+| 114 | HE-14-HU08 | Preguntar al agente de IA cómo funciona la aplicación | Baja | 2 | nuevos CA03 | nuevas ET04 | HE-14-HU01 |
+| 115 | HE-14-HU09 | Preguntar al agente de IA por las tarjetas | Baja | 3 | nuevos CA05, CA06 | nuevas ET06, ET07 | HE-09-HU01; HE-14-HU01 |
+
+Puntos del paso: 0 (las HU ya están contadas en sus pasos).
+
+**Se prueba al terminar.** Todos los CA y ET nuevos o cambiados de la v12 en verde, y la prueba manual en Windows 11: escalas 100 %, 125 % y 150 % y dos monitores; fondo sin franjas; imagen de fondo propia y del catálogo, también al reabrir; editar → guardar → la capa coincide; el widget abre la misma ventana; casilla de Tareas del día; arrastre en el widget Kanban sin el rectángulo de Windows; Reloj al cambiar el formato de hora en Windows; cerrar sesión mientras se sincroniza; Windi con 10 pedidos por función (después de que Paula despliegue la Edge Function).
 ## Total
 
-115 ítems del Backlog y 316 puntos en 23 pasos (P00 y P01 no tienen HU).
+115 ítems del Backlog y 316 puntos en 24 pasos (P00 y P01 no tienen HU; P24 corrige HU ya contadas).

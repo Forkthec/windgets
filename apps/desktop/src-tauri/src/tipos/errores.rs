@@ -49,6 +49,8 @@ pub enum ErrorCode {
     AuthRateLimited,
     #[serde(rename = "auth.invalid_credentials")]
     AuthInvalidCredentials,
+    #[serde(rename = "auth.sign_out_failed")]
+    AuthSignOutFailed,
     #[serde(rename = "title.required")]
     TitleRequired,
     #[serde(rename = "title.too_long")]
@@ -115,6 +117,8 @@ pub enum ErrorCode {
     ThemeAlreadyApplied,
     #[serde(rename = "theme.applied_not_deletable")]
     ThemeAppliedNotDeletable,
+    #[serde(rename = "theme.content_duplicate")]
+    ThemeContentDuplicate,
     #[serde(rename = "background.already_default")]
     BackgroundAlreadyDefault,
     #[serde(rename = "template.not_found")]
@@ -137,6 +141,8 @@ pub enum ErrorCode {
     WidgetAlreadyAdded,
     #[serde(rename = "widget.default_not_deletable")]
     WidgetDefaultNotDeletable,
+    #[serde(rename = "layout.widget_missing")]
+    LayoutWidgetMissing,
     #[serde(rename = "city.not_found")]
     CityNotFound,
     #[serde(rename = "city.duplicate")]
@@ -167,6 +173,18 @@ pub enum ErrorCode {
     WindiUnavailable,
     #[serde(rename = "proposal.discarded")]
     ProposalDiscarded,
+    #[serde(rename = "windi.card_not_found")]
+    WindiCardNotFound,
+    #[serde(rename = "windi.column_not_found")]
+    WindiColumnNotFound,
+    #[serde(rename = "windi.label_not_found")]
+    WindiLabelNotFound,
+    #[serde(rename = "windi.same_value")]
+    WindiSameValue,
+    #[serde(rename = "windi.already_in_column")]
+    WindiAlreadyInColumn,
+    #[serde(rename = "windi.apply_failed")]
+    WindiApplyFailed,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]

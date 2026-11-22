@@ -434,6 +434,34 @@ pub const WINDI_TARJETAS_ELIMINADAS: &str = "Listo, eliminé <cantidad> tarjetas
 pub const WINDI_TARJETA_YA_NO_EXISTE: &str = "«<título>» ya no existe";
 pub const WINDI_TARJETA_CAMBIO: &str = "«<título>» tiene otro valor en <campos>";
 
+// P24 · Códigos sembrados con su mensaje (docs/DUDAS.md, sección P24). Cada HU los usa en su commit.
+
+/// `theme.content_duplicate`: tema igual a otro (HE-03-HU02-CA08, ET13, ET14; HE-02-HU11-CA06, ET06).
+pub const TEMA_CON_LAS_MISMAS_PROPIEDADES: &str =
+    "Ya tienes el tema “<nombre del tema>” con estas mismas propiedades.";
+/// `layout.widget_missing`: la pantalla de edición mueve o redimensiona un widget que ya no existe; la pantalla de
+/// edición no se cierra (HE-05-HU04-ET06).
+pub const WIDGET_YA_NO_EXISTE_EN_LA_EDICION: &str =
+    "Uno de los widgets ya no existe. Vuelve a abrir la pantalla de edición.";
+/// `auth.sign_out_failed`: no se pudo borrar el token al cerrar la sesión (HE-16-HU03-CA07, ET09).
+pub const NO_PUDIMOS_CERRAR_LA_SESION: &str =
+    "No pudimos cerrar la sesión. Cierra la aplicación y vuelve a intentarlo.";
+/// `windi.card_not_found` (HE-14-HU03-ET10; HE-14-HU07-CA07).
+pub const WINDI_TARJETA_NO_ENCONTRADA: &str =
+    "No encuentro una tarjeta llamada “<nombre>”. ¿Me das más detalles?";
+/// `windi.column_not_found` (HE-14-HU03-CA06, ET10).
+pub const WINDI_COLUMNA_NO_ENCONTRADA: &str =
+    "No encuentro la columna “<columna>”. Tus columnas son: <columnas en orden>.";
+/// `windi.label_not_found` (HE-14-HU05-CA10; HE-14-HU03-ET10).
+pub const WINDI_ETIQUETA_NO_ENCONTRADA: &str =
+    "No tienes la etiqueta “<etiqueta>”. Tus etiquetas son: <etiquetas>.";
+/// `windi.same_value` (HE-14-HU03-ET10).
+pub const WINDI_MISMO_VALOR: &str = "La tarjeta “<título>” ya tiene ese valor.";
+/// `windi.already_in_column` (HE-14-HU03-ET10).
+pub const WINDI_YA_ESTA_EN_LA_COLUMNA: &str = "La tarjeta “<título>” ya está en <columna>.";
+/// `windi.apply_failed`: la propuesta no se pudo aplicar completa (HE-14-HU03-CA07, ET12, ET13).
+pub const WINDI_NO_PUDE_APLICAR: &str = "No pude aplicar los cambios. No se hizo ningún cambio.";
+
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
     ("SERVICIO_NO_DISPONIBLE", SERVICIO_NO_DISPONIBLE),
@@ -628,6 +656,21 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("WINDI_PROPUESTA_NUEVA", WINDI_PROPUESTA_NUEVA),
     ("WINDI_TARJETA_YA_NO_EXISTE", WINDI_TARJETA_YA_NO_EXISTE),
     ("WINDI_TARJETA_CAMBIO", WINDI_TARJETA_CAMBIO),
+    (
+        "TEMA_CON_LAS_MISMAS_PROPIEDADES",
+        TEMA_CON_LAS_MISMAS_PROPIEDADES,
+    ),
+    (
+        "WIDGET_YA_NO_EXISTE_EN_LA_EDICION",
+        WIDGET_YA_NO_EXISTE_EN_LA_EDICION,
+    ),
+    ("NO_PUDIMOS_CERRAR_LA_SESION", NO_PUDIMOS_CERRAR_LA_SESION),
+    ("WINDI_TARJETA_NO_ENCONTRADA", WINDI_TARJETA_NO_ENCONTRADA),
+    ("WINDI_COLUMNA_NO_ENCONTRADA", WINDI_COLUMNA_NO_ENCONTRADA),
+    ("WINDI_ETIQUETA_NO_ENCONTRADA", WINDI_ETIQUETA_NO_ENCONTRADA),
+    ("WINDI_MISMO_VALOR", WINDI_MISMO_VALOR),
+    ("WINDI_YA_ESTA_EN_LA_COLUMNA", WINDI_YA_ESTA_EN_LA_COLUMNA),
+    ("WINDI_NO_PUDE_APLICAR", WINDI_NO_PUDE_APLICAR),
 ];
 
 #[cfg(test)]

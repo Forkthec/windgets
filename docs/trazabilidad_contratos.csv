@@ -16,7 +16,7 @@ IPC-AUTH-11 auth_recovery_set_password,ipc,HE-01-HU08,HE-01-HU08-CA01;HE-01-HU08
 IPC-AUTH-12 auth_get_session,ipc,HE-01-HU04,HE-01-HU04-CA02,"Lee: session.bin, profile"
 IPC-AUTH-12 auth_get_session,ipc,HE-02-HU01,HE-02-HU01-CA05,"Lee: session.bin, profile"
 IPC-AUTH-13 auth_get_sign_out_info,ipc,HE-16-HU03,HE-16-HU03-CA03,Lee: pending_change
-IPC-AUTH-14 auth_sign_out,ipc,HE-16-HU03,HE-16-HU03-CA01;HE-16-HU03-CA04,"Borra: base local, local_file, session.bin"
+IPC-AUTH-14 auth_sign_out,ipc,HE-16-HU03,HE-16-HU03-CA01;HE-16-HU03-CA04;HE-16-HU03-CA06;HE-16-HU03-CA07,"Borra: base local, local_file, session.bin"
 IPC-CARD-01 card_create,ipc,HE-07-HU01,HE-07-HU01-CA01;HE-07-HU01-CA02;HE-07-HU01-CA04;HE-07-HU01-CA05;HE-07-HU01-CA06;HE-07-HU01-CA07;HE-07-HU01-CA08;HE-07-HU01-CA09;HE-07-HU01-CA10;HE-07-HU01-CA12,"Escribe: card, card_label, pending_change. Lee: kanban_column, label"
 IPC-CARD-01 card_create,ipc,HE-07-HU02,HE-07-HU02-CA02,"Escribe: card, card_label, pending_change. Lee: kanban_column, label"
 IPC-CARD-01 card_create,ipc,HE-10-HU04,HE-10-HU04-CA01,"Escribe: card, card_label, pending_change. Lee: kanban_column, label"
@@ -80,7 +80,7 @@ IPC-THEME-05 theme_draft_update,ipc,HE-02-HU07,HE-02-HU07-CA01,"Lee: catalog_*, 
 IPC-THEME-05 theme_draft_update,ipc,HE-02-HU09,HE-02-HU09-CA01,"Lee: catalog_*, uploaded_image. Memoria: borrador"
 IPC-THEME-06 theme_draft_reset,ipc,HE-02-HU08,HE-02-HU08-CA01;HE-02-HU08-CA02,Lee: catalog_template. Memoria: borrador
 IPC-THEME-07 theme_draft_save,ipc,HE-02-HU11,HE-02-HU11-CA01;HE-02-HU11-CA02;HE-02-HU11-CA03,"Escribe: theme, pending_change"
-IPC-THEME-08 theme_draft_save_as,ipc,HE-03-HU02,HE-03-HU02-CA01;HE-03-HU02-CA03;HE-03-HU02-CA04;HE-03-HU02-CA05,"Escribe: theme, pending_change"
+IPC-THEME-08 theme_draft_save_as,ipc,HE-03-HU02,HE-03-HU02-CA01;HE-03-HU02-CA03;HE-03-HU02-CA04;HE-03-HU02-CA05;HE-03-HU02-CA08,"Escribe: theme, pending_change"
 IPC-THEME-09 theme_draft_apply,ipc,HE-02-HU12,HE-02-HU12-CA01;HE-02-HU12-CA02;HE-02-HU12-CA03;HE-02-HU12-CA04;HE-02-HU12-CA06,"Escribe: applied_theme, theme"
 IPC-THEME-10 theme_draft_get_status,ipc,HE-02-HU13,HE-02-HU13-CA02;HE-02-HU13-CA05,Memoria: borrador
 IPC-THEME-10 theme_draft_get_status,ipc,HE-17-HU03,HE-17-HU03-CA02,Memoria: borrador
@@ -121,7 +121,7 @@ IPC-WID-07 widget_get_data,ipc,HE-04-HU05,HE-04-HU05-CA07;HE-04-HU05-CA08,Lee: e
 IPC-WID-07 widget_get_data,ipc,HE-04-HU06,HE-04-HU06-CA03;HE-04-HU06-CA04,Lee: external_widget_cache
 IPC-WID-07 widget_get_data,ipc,HE-15-HU02,HE-15-HU02-CA06,Lee: external_widget_cache
 IPC-LAY-01 layout_edit_open,ipc,HE-05-HU01,HE-05-HU01-CA02,Lee: theme_widget
-IPC-LAY-02 layout_edit_move,ipc,HE-05-HU02,HE-05-HU02-CA02,Memoria: distribución en edición
+IPC-LAY-02 layout_edit_move,ipc,HE-05-HU02,HE-05-HU02-CA02;HE-05-HU02-CA05,Memoria: distribución en edición
 IPC-LAY-03 layout_edit_resize,ipc,HE-05-HU03,HE-05-HU03-CA02,Memoria: distribución en edición
 IPC-LAY-04 layout_edit_get_status,ipc,HE-05-HU05,HE-05-HU05-CA02,Memoria: distribución en edición
 IPC-LAY-05 layout_edit_save,ipc,HE-05-HU04,HE-05-HU04-CA01;HE-05-HU04-CA02;HE-05-HU04-CA03;HE-05-HU04-CA04,"Escribe: theme_widget, pending_change"
@@ -140,6 +140,7 @@ IPC-DESK-10 autostart_get,ipc,HE-16-HU02,HE-16-HU02-CA03,"Lee: registro de Windo
 IPC-DESK-11 autostart_set,ipc,HE-16-HU02,HE-16-HU02-CA01;HE-16-HU02-CA02;HE-16-HU02-CA04;HE-16-HU02-CA05,Escribe: registro de Windows (Run)
 IPC-DESK-12 preference_get,ipc,HE-09-HU07,HE-09-HU07-CA01,Lee: user_preference
 IPC-DESK-13 preference_set,ipc,HE-09-HU07,HE-09-HU07-CA03,Escribe: user_preference
+IPC-DESK-14 system_time_format_get,ipc,HE-04-HU03,HE-04-HU03-CA02;HE-04-HU03-CA03,Lee: configuración regional de Windows
 IPC-DESK-14 connectivity_get,ipc,HE-15-HU02,HE-15-HU02-CA01,Lee: estado de red (memoria)
 IPC-MED-01 media_get_session,ipc,HE-04-HU11,HE-04-HU11-CA03,Sin entidad (sesión de Windows)
 IPC-MED-02 media_toggle_play_pause,ipc,HE-06-HU09,HE-06-HU09-CA01,Sin entidad (sesión de Windows)
@@ -155,7 +156,7 @@ IPC-WIN-02 windi_send_message,ipc,HE-14-HU06,HE-14-HU06-CA01,"Lee: card, label, 
 IPC-WIN-02 windi_send_message,ipc,HE-14-HU07,HE-14-HU07-CA01,"Lee: card, label, kanban_column. Memoria: historial y propuesta"
 IPC-WIN-02 windi_send_message,ipc,HE-14-HU08,HE-14-HU08-CA01,"Lee: card, label, kanban_column. Memoria: historial y propuesta"
 IPC-WIN-02 windi_send_message,ipc,HE-14-HU09,HE-14-HU09-CA01,"Lee: card, label, kanban_column. Memoria: historial y propuesta"
-IPC-WIN-03 windi_confirm_proposal,ipc,HE-14-HU03,HE-14-HU03-CA01;HE-14-HU03-CA02;HE-14-HU03-CA03,"Escribe: card, card_label. Lee: kanban_column"
+IPC-WIN-03 windi_confirm_proposal,ipc,HE-14-HU03,HE-14-HU03-CA01;HE-14-HU03-CA02;HE-14-HU03-CA03;HE-14-HU03-CA07;HE-14-HU03-CA08,"Escribe: card, card_label. Lee: kanban_column"
 IPC-WIN-03 windi_confirm_proposal,ipc,HE-14-HU04,HE-14-HU04-CA07,"Escribe: card, card_label. Lee: kanban_column"
 IPC-WIN-03 windi_confirm_proposal,ipc,HE-14-HU05,HE-14-HU05-CA01,"Escribe: card, card_label. Lee: kanban_column"
 IPC-WIN-03 windi_confirm_proposal,ipc,HE-14-HU06,HE-14-HU06-CA01,"Escribe: card, card_label. Lee: kanban_column"
@@ -233,6 +234,8 @@ EV-24 exit_requested,evento,HE-17-HU03,HE-17-HU03-CA01,sin entidad
 EV-25 catalog_updated,evento,HE-02-HU02,HE-02-HU02-CA01,catalog_*
 EV-25 catalog_updated,evento,HE-02-HU03,HE-02-HU03-CA01,catalog_*
 EV-26 preference_changed,evento,HE-09-HU07,HE-09-HU07-CA01,user_preference
+EV-27 pointer_released,evento,HE-06-HU08,HE-06-HU08-CA09;HE-06-HU08-CA10,theme_widget (rectángulos)
+EV-28 time_format_changed,evento,HE-04-HU03,HE-04-HU03-CA04,Configuración regional de Windows
 RPC-01 server_time,rpc,HE-15-HU03,HE-15-HU03-CA08,sync_state (clock_offset_ms)
 RPC-02 sync_push,rpc,HE-15-HU01,HE-15-HU01-CA01;HE-15-HU01-CA02;HE-15-HU01-CA03,todas las entidades sincronizadas (escritura)
 RPC-02 sync_push,rpc,HE-15-HU03,HE-15-HU03-CA01,todas las entidades sincronizadas (escritura)

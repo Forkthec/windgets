@@ -146,7 +146,7 @@ La columna «Ruta (Dado)» es el texto exacto con el que los CA nombran la panta
 | P-INS-02 | Instalador, paso Instalación en curso | pantalla | C-05 Instalador | el paso Instalación en curso del instalador | — | con datos, cargando | 1 |
 | P-INS-03 | Instalador, paso Instalación completada | pantalla | C-05 Instalador | el paso Instalación completada del instalador | — | con datos, éxito | 1 |
 
-Las ventanas emergentes se abren sobre estas pantallas: Detalle de tarjeta sobre Tablero Kanban, Calendario, Agenda diaria, Planificador diario y Reportes; Formulario de tarjeta sobre Tablero Kanban y Calendario (y, con el Panel del día abierto, sobre Calendario); Formulario de etiqueta sobre Etiquetas y sobre el Formulario de tarjeta; Formulario de columna sobre Tablero Kanban; Guardar como tema sobre Personalización del wallpaper; Renombrar tema sobre Temas; Formulario de widget sobre Widgets.
+Las ventanas emergentes se abren sobre estas pantallas: Detalle de tarjeta sobre Tablero Kanban, Calendario (desde el Panel del día), Agenda diaria, Planificador diario (con el botón de información «i») y Reportes; Formulario de tarjeta sobre Tablero Kanban, Calendario (y, con el Panel del día abierto, sobre Calendario) y Planificador diario; Formulario de etiqueta sobre Etiquetas y sobre el Formulario de tarjeta; Formulario de columna sobre Tablero Kanban; Guardar como tema sobre Personalización del wallpaper; Renombrar tema sobre Temas; Formulario de widget sobre Widgets.
 
 ### 3.1 Mensajes de confirmación que se abren como ventana emergente
 
@@ -233,10 +233,10 @@ Cada fila es un disparador literal y su resultado. La columna «CA y ET» cita l
 | T-055 | P-TEM-01 Temas | M-05 Confirmación de aplicar un tema | «Aplicar» en un tema que no es el aplicado | HE-03-HU03-CA06 | — |
 | T-056 | M-05 Confirmación de aplicar un tema | P-TEM-01 Temas | «Aplicar» (mensaje «Tema “<nombre del tema>” aplicado.») | HE-03-HU03-CA01 | — |
 | T-057 | M-05 Confirmación de aplicar un tema | P-TEM-01 Temas | «Cancelar» | HE-03-HU03-CA02 | — |
-| T-058 | P-TEM-01 Temas | P-TEM-03 Renombrar tema | «Renombrar» | HE-03-HU04-CA07 | — |
+| T-058 | P-TEM-01 Temas | P-TEM-03 Renombrar tema | «Renombrar» en el botón de acciones «⋮» del tema | HE-03-HU04-CA07 | — |
 | T-059 | P-TEM-03 Renombrar tema | P-TEM-01 Temas | «Guardar» (mensaje «Tema renombrado.») | HE-03-HU04-CA01 | — |
 | T-060 | P-TEM-03 Renombrar tema | P-TEM-01 Temas | «Cancelar» | HE-03-HU04-CA05 | — |
-| T-061 | P-TEM-01 Temas | M-06 Confirmación de eliminar un tema | «Eliminar» | RT-04-CA08 | — |
+| T-061 | P-TEM-01 Temas | M-06 Confirmación de eliminar un tema | «Eliminar» en el botón de acciones «⋮» del tema | RT-04-CA08 | — |
 | T-062 | M-06 Confirmación de eliminar un tema | P-TEM-01 Temas | «Eliminar» (mensaje «Tema eliminado.») | HE-03-HU05-CA01 | — |
 | T-063 | M-06 Confirmación de eliminar un tema | P-TEM-01 Temas | «Cancelar» | HE-03-HU05-CA03 | — |
 | T-064 | P-WID-01 Widgets | P-WID-02 Agregar widget | «Agregar widget» | HE-04-HU04-CA01 | Miga de pan «Widgets > Agregar widget». |
@@ -265,7 +265,7 @@ Cada fila es un disparador literal y su resultado. La columna «CA y ET» cita l
 | T-087 | P-WAL-02 Escritorio de Windows (wallpaper y widgets) | P-CAL-01 Calendario | Encabezado del widget Calendario | HE-06-HU08-CA06 | — |
 | T-088 | P-WAL-02 Escritorio de Windows (wallpaper y widgets) | C-01 Ventana principal al frente | Elemento de un widget con la aplicación minimizada o en el área de notificación | HE-06-HU08-CA07 | — |
 | T-089 | P-WAL-02 Escritorio de Windows (wallpaper y widgets) | X-03 Navegador por defecto de Windows | Titular del widget Noticias | HE-06-HU10-CA01 | — |
-| T-090 | P-KAN-01 Tablero Kanban / P-CAL-01 Calendario / P-AGE-01 Agenda diaria / P-PLA-01 Planificador diario (pantalla principal) / P-REP-01 Reportes | P-TAR-01 Detalle de tarjeta | Título de una tarjeta | HE-07-HU03-CA01, RT-02-CA01, HE-10-HU03-CA04, HE-13-HU04-CA03 | RT-02-ET03 incluye Agenda diaria y Planificador diario; sin CA propio. |
+| T-090 | P-KAN-01 Tablero Kanban / P-CAL-02 Panel del día / P-AGE-01 Agenda diaria / P-PLA-01 Planificador diario (pantalla principal) / P-REP-01 Reportes | P-TAR-01 Detalle de tarjeta | Título de una tarjeta; en el Tablero Kanban también «Vista detallada» en el botón de acciones «⋮» de la tarjeta; en el Planificador diario, el botón de información «i» (el título alterna la casilla) | HE-07-HU03-CA01, HE-07-HU03-CA05, RT-02-CA01, HE-10-HU03-CA04, HE-12-HU01-CA06, HE-13-HU04-CA03 | RT-02-ET03 incluye Agenda diaria; en el Calendario el detalle se abre solo desde el Panel del día (HE-10-HU03-ET05). |
 | T-091 | P-TAR-01 Detalle de tarjeta | Pantalla de origen | «Cerrar» | HE-07-HU03-CA04, RT-02-CA02 | — |
 | T-092 | P-TAR-01 Detalle de tarjeta | P-TAR-02 Formulario de tarjeta | «Editar» | RT-02-CA05 | Reemplaza el detalle por el formulario en modo edición. |
 | T-093 | P-TAR-01 Detalle de tarjeta | M-08 Confirmación de eliminar una tarjeta | «Eliminar» | HE-07-HU05-CA01 | — |
@@ -279,20 +279,20 @@ Cada fila es un disparador literal y su resultado. La columna «CA y ET» cita l
 | T-101 | P-TAR-02 Formulario de tarjeta | P-ETQ-02 Formulario de etiqueta | «Nueva etiqueta» (sobre el Formulario de tarjeta) | HE-07-HU02-CA04 | — |
 | T-102 | P-ETQ-02 Formulario de etiqueta | P-TAR-02 Formulario de tarjeta | Guardar o cancelar el Formulario de etiqueta abierto desde la tarjeta | HE-07-HU02-CA04 | — |
 | T-103 | P-KAN-01 Tablero Kanban | P-KAN-02 Formulario de columna | «Nueva columna» | HE-09-HU03-CA08 | — |
-| T-104 | P-KAN-01 Tablero Kanban | P-KAN-02 Formulario de columna | «Editar» en una columna | HE-09-HU04-CA08 | — |
+| T-104 | P-KAN-01 Tablero Kanban | P-KAN-02 Formulario de columna | «Editar» en el botón de acciones «⋮» de una columna | HE-09-HU04-CA08 | — |
 | T-105 | P-KAN-02 Formulario de columna | P-KAN-01 Tablero Kanban | «Guardar» (mensajes «Columna creada.» y «Columna actualizada.») | HE-09-HU03-CA01, HE-09-HU04-CA01 | — |
 | T-106 | P-KAN-02 Formulario de columna | P-KAN-01 Tablero Kanban | «Cancelar» | HE-09-HU03-CA07, HE-09-HU04-CA07 | — |
-| T-107 | P-KAN-01 Tablero Kanban | M-09 Confirmación de eliminar una columna | «Eliminar» en una columna sin tarjetas | HE-09-HU06-CA01 | — |
+| T-107 | P-KAN-01 Tablero Kanban | M-09 Confirmación de eliminar una columna | «Eliminar» en el botón de acciones «⋮» de una columna sin tarjetas | HE-09-HU06-CA01 | — |
 | T-108 | M-09 Confirmación de eliminar una columna | P-KAN-01 Tablero Kanban | «Eliminar» (mensaje «Columna eliminada.») | HE-09-HU06-CA02 | — |
 | T-109 | M-09 Confirmación de eliminar una columna | P-KAN-01 Tablero Kanban | «Cancelar» | HE-09-HU06-CA06 | Sin CA propio para M-09: HE-09-HU06-CA06 verifica «Cancelar» en M-13. |
 | T-110 | P-ETQ-01 Etiquetas | P-ETQ-02 Formulario de etiqueta | «Nueva etiqueta» | HE-08-HU02-CA09 | — |
-| T-111 | P-ETQ-01 Etiquetas | P-ETQ-02 Formulario de etiqueta | «Editar» en una etiqueta | HE-08-HU03-CA07 | — |
+| T-111 | P-ETQ-01 Etiquetas | P-ETQ-02 Formulario de etiqueta | «Editar» en el botón de acciones «⋮» de una etiqueta | HE-08-HU03-CA07 | — |
 | T-112 | P-ETQ-02 Formulario de etiqueta | P-ETQ-01 Etiquetas | «Guardar» (mensajes «Etiqueta creada.» y «Etiqueta actualizada.») | HE-08-HU02-CA01, HE-08-HU03-CA01 | — |
 | T-113 | P-ETQ-02 Formulario de etiqueta | P-ETQ-01 Etiquetas | «Cancelar» | HE-08-HU02-CA07, HE-08-HU03-CA06 | — |
-| T-114 | P-ETQ-01 Etiquetas | M-10 Confirmación de eliminar una etiqueta | «Eliminar» en una etiqueta sin tarjetas asignadas | HE-08-HU04-CA01 | — |
+| T-114 | P-ETQ-01 Etiquetas | M-10 Confirmación de eliminar una etiqueta | «Eliminar» en el botón de acciones «⋮» de una etiqueta sin tarjetas asignadas | HE-08-HU04-CA01 | — |
 | T-115 | M-10 Confirmación de eliminar una etiqueta | P-ETQ-01 Etiquetas | «Eliminar» (mensaje «Etiqueta eliminada.») | HE-08-HU04-CA02 | — |
 | T-116 | M-10 Confirmación de eliminar una etiqueta | P-ETQ-01 Etiquetas | «Cancelar» | HE-08-HU04-CA06 | — |
-| T-117 | P-CAL-01 Calendario | P-CAL-02 Panel del día | Día en la vista mensual o semanal | HE-10-HU03-CA01, HE-10-HU03-CA02 | — |
+| T-117 | P-CAL-01 Calendario | P-CAL-02 Panel del día | Cualquier parte de la celda de un día en la vista mensual o semanal, incluidos los títulos de sus tarjetas y «+N más» | HE-10-HU03-CA01, HE-10-HU03-CA02, HE-10-HU03-CA05 | Las celdas vacías de la vista mensual no abren el Panel del día (HE-10-HU03-ET09). |
 | T-118 | P-CAL-02 Panel del día | P-TAR-02 Formulario de tarjeta | «Nueva tarjeta» | HE-10-HU04-CA02 | — |
 | T-119 | P-TAR-02 Formulario de tarjeta | P-CAL-02 Panel del día | «Guardar» o «Cancelar» | HE-10-HU04-CA01, HE-10-HU04-CA05 | — |
 | T-120 | P-CAL-02 Panel del día | P-CAL-01 Calendario | «Cerrar» | HE-10-HU03-ET02, RT-02-CA02 | La opción «Cerrar» del Panel del día se cubre con RT-02. |
@@ -315,10 +315,10 @@ Cada fila es un disparador literal y su resultado. La columna «CA y ET» cita l
 | T-137 | P-WAL-01 Personalización del wallpaper | X-02 Explorador de archivos de Windows | «Subir imagen» | HE-02-HU03-CA01 | «Cancelar» en el Explorador de archivos cierra la ventana sin cambiar la vista previa. |
 | T-138 | P-WID-05 Imagen estática | X-02 Explorador de archivos de Windows | «Subir imagen» | HE-04-HU07-CA01 | — |
 | T-139 | P-WID-06 Carrusel de imágenes | X-02 Explorador de archivos de Windows | «Subir imagen» | HE-04-HU08-CA05 | — |
-| T-140 | P-KAN-01 Tablero Kanban | M-13 Confirmación de eliminar una columna con tarjetas | «Eliminar» en una columna con tarjetas | HE-09-HU06-CA03, HE-09-HU06-CA07 | — |
+| T-140 | P-KAN-01 Tablero Kanban | M-13 Confirmación de eliminar una columna con tarjetas | «Eliminar» en el botón de acciones «⋮» de una columna con tarjetas | HE-09-HU06-CA03, HE-09-HU06-CA07 | — |
 | T-141 | M-13 Confirmación de eliminar una columna con tarjetas | P-KAN-01 Tablero Kanban | «Eliminar» (mensaje «Columna eliminada.») | HE-09-HU06-CA04 | Mueve las tarjetas a «Por hacer». |
 | T-142 | M-13 Confirmación de eliminar una columna con tarjetas | P-KAN-01 Tablero Kanban | «Cancelar» | HE-09-HU06-CA06 | — |
-| T-143 | P-ETQ-01 Etiquetas | M-14 Confirmación de eliminar una etiqueta asignada | «Eliminar» en una etiqueta asignada a tarjetas | HE-08-HU04-CA03, HE-08-HU04-CA04 | — |
+| T-143 | P-ETQ-01 Etiquetas | M-14 Confirmación de eliminar una etiqueta asignada | «Eliminar» en el botón de acciones «⋮» de una etiqueta asignada a tarjetas | HE-08-HU04-CA03, HE-08-HU04-CA04 | — |
 | T-144 | M-14 Confirmación de eliminar una etiqueta asignada | P-ETQ-01 Etiquetas | «Eliminar» (mensaje «Etiqueta eliminada.») | HE-08-HU04-CA05 | — |
 | T-145 | M-14 Confirmación de eliminar una etiqueta asignada | P-ETQ-01 Etiquetas | «Cancelar» | HE-08-HU04-CA06 | — |
 | T-146 | P-WAL-01 Personalización del wallpaper | M-15 Confirmación de aplicar con cambios sin guardar | «Aplicar» con cambios sin guardar | HE-02-HU12-CA02 | — |
@@ -326,6 +326,12 @@ Cada fila es un disparador literal y su resultado. La columna «CA y ET» cita l
 | T-148 | M-05 Confirmación de aplicar un tema | M-15 Confirmación de aplicar con cambios sin guardar | «Aplicar» en el mensaje de confirmación con cambios sin guardar en el tema en edición | HE-03-HU03-CA05 | — |
 | T-149 | M-04 Confirmación de cambiar de tema con cambios sin guardar | P-WAL-01 Personalización del wallpaper | «Cambiar sin guardar» | HE-02-HU10-CA04 | — |
 | T-150 | P-INS-01 Instalador, paso Opciones | M-17 Aviso de instalación incompleta | «Instalar» con una instalación anterior incompleta | CD-02-HU01-CA01, CD-02-HU01-CA09 | — |
+| T-151 | P-PLA-01 Planificador diario (pantalla principal) | P-TAR-02 Formulario de tarjeta | «Nueva tarjeta» | HE-12-HU01-CA07, HE-12-HU01-ET11 | Se abre en modo creación con la fecha límite de hoy diligenciada. |
+| T-152 | P-TAR-02 Formulario de tarjeta | P-PLA-01 Planificador diario (pantalla principal) | «Guardar» o «Cancelar» en modo creación abierto desde el Planificador diario (mensaje «Tarjeta creada.» al guardar) | HE-12-HU01-CA07 | — |
+| T-153 | P-KAN-01 Tablero Kanban | P-TAR-02 Formulario de tarjeta | «Editar» en el botón de acciones «⋮» de una tarjeta | HE-07-HU04-CA12, HE-07-HU04-ET22 | Se abre en modo edición. |
+| T-154 | P-TAR-02 Formulario de tarjeta | P-KAN-01 Tablero Kanban | «Guardar» o «Cancelar» en modo edición abierto desde el botón de acciones «⋮» (mensaje «Tarjeta actualizada.» al guardar) | HE-07-HU04-CA12, HE-07-HU04-ET23 | No vuelve al Detalle de tarjeta. |
+| T-155 | P-KAN-01 Tablero Kanban | M-08 Confirmación de eliminar una tarjeta | «Eliminar» en el botón de acciones «⋮» de una tarjeta | HE-07-HU05-CA04 | — |
+| T-156 | M-08 Confirmación de eliminar una tarjeta | P-KAN-01 Tablero Kanban | «Cancelar» con el mensaje abierto desde el botón de acciones «⋮» | HE-07-HU05-CA04, HE-07-HU05-ET05 | La tarjeta sigue en el tablero. |
 
 ## Inventario · 5. Mapa de navegación
 
@@ -450,6 +456,7 @@ El tipo sigue los seis de RT-04 (resultado, campo, opción deshabilitada, aviso,
 | P-WAL-01 Personalización del wallpaper | «Tienes cambios sin guardar en el tema “<nombre del tema en edición>”. ¿Deseas cambiar de tema sin guardarlos?» | aviso | HE-02-HU10-CA03 |
 | P-WAL-01 Personalización del wallpaper | «Tienes cambios sin guardar en el tema “<nombre del tema>”. ¿Qué deseas hacer?» | confirmación | HE-02-HU12-CA02 |
 | P-WAL-01 Personalización del wallpaper | «Tienes cambios sin guardar. ¿Deseas salir sin guardarlos?» | confirmación | HE-02-HU13-CA02, RT-01-CA08 |
+| P-WAL-01 Personalización del wallpaper | «Ya tienes el tema “<nombre del tema>” con estas mismas propiedades.» | resultado | HE-02-HU11-CA06 |
 | P-TEM-01 Temas | «Este tema ya está aplicado.» | opción deshabilitada | HE-03-HU03-CA03 |
 | P-TEM-01 Temas | «Guarda otra personalización con “Guardar como tema” para tener más temas.» | campo | HE-03-HU01-CA02 |
 | P-TEM-01 Temas | «No puedes eliminar el tema aplicado. Aplica otro tema primero.» | opción deshabilitada | HE-03-HU05-CA02 |
@@ -461,6 +468,7 @@ El tipo sigue los seis de RT-04 (resultado, campo, opción deshabilitada, aviso,
 | P-TEM-02 Guardar como tema | «El nombre no puede superar los 40 caracteres.» | campo | HE-03-HU02-CA03 |
 | P-TEM-02 Guardar como tema | «Tema “<nombre del tema>” guardado.» | resultado | HE-03-HU02-CA01 |
 | P-TEM-02 Guardar como tema | «Ya existe un tema con ese nombre. Elige otro.» | resultado | HE-03-HU02-CA04 |
+| P-TEM-02 Guardar como tema | «Ya tienes el tema “<nombre del tema>” con estas mismas propiedades.» | campo | HE-03-HU02-CA08 |
 | P-TEM-03 Renombrar tema | «El nombre no puede superar los 40 caracteres.» | campo | HE-03-HU04-CA03 |
 | P-TEM-03 Renombrar tema | «Tema renombrado.» | resultado | HE-03-HU04-CA01, HE-03-HU04-CA06 |
 | P-TEM-03 Renombrar tema | «Ya existe un tema con ese nombre. Elige otro.» | resultado | HE-03-HU04-CA04 |
@@ -491,10 +499,11 @@ El tipo sigue los seis de RT-04 (resultado, campo, opción deshabilitada, aviso,
 | P-WID-09 Reproductor de música | «No hay música en reproducción.» | opción deshabilitada | HE-04-HU11-CA03 |
 | P-WID-10 Formulario de widget | «No encontramos esa ciudad. Revisa el nombre e intenta de nuevo.» | campo | HE-04-HU12-CA04 |
 | P-WID-10 Formulario de widget | «Ya tienes un widget Clima para esa ciudad.» | campo | HE-04-HU12-CA05 |
-| P-DIS-01 Pantalla de edición | «Cambios guardados.» | resultado | HE-05-HU04-CA01, HE-05-HU04-CA02, HE-05-HU04-CA04 |
+| P-DIS-01 Pantalla de edición | «Cambios guardados.» | resultado | HE-05-HU04-CA01, HE-05-HU04-CA02, HE-05-HU04-CA04, HE-05-HU04-CA05 |
 | P-DIS-01 Pantalla de edición | «No se guardaron cambios.» | resultado | HE-05-HU05-CA03 |
 | P-DIS-01 Pantalla de edición | «Se aplicó una personalización más reciente desde otro computador. Tus cambios sin guardar se conservan.» | resultado | HE-15-HU04-CA08 |
 | P-DIS-01 Pantalla de edición | «Tienes cambios sin guardar. ¿Deseas salir sin guardarlos?» | confirmación | HE-05-HU05-CA01, HE-05-HU05-CA02 |
+| P-DIS-01 Pantalla de edición | «Uno de los widgets ya no existe. Vuelve a abrir la pantalla de edición.» | aviso | HE-05-HU04-ET06 |
 | P-WAL-02 Escritorio de Windows (wallpaper y widgets) | «No pudimos cargar las noticias. Intenta de nuevo más tarde.» | aviso | RT-04-CA06 |
 | P-WAL-02 Escritorio de Windows (wallpaper y widgets) | «No pudimos mostrar tu wallpaper. Se aplicó el wallpaper por defecto.» | aviso | HE-02-HU01-CA04 |
 | P-WAL-02 Escritorio de Windows (wallpaper y widgets) | «No tienes tarjetas para hoy.» | estado vacío | HE-06-HU02-CA05 |
@@ -544,6 +553,7 @@ El tipo sigue los seis de RT-04 (resultado, campo, opción deshabilitada, aviso,
 | P-AGE-01 Agenda diaria | «Tarjeta asignada al bloque 12:00 – 13:00.» | resultado | HE-11-HU02-CA03 |
 | P-AGE-01 Agenda diaria | «Tarjeta quitada del horario.» | resultado | HE-11-HU03-CA01, RT-04-CA09 |
 | P-PLA-01 Planificador diario (pantalla principal) | «No tienes tarjetas para hoy.» | estado vacío | HE-12-HU01-CA03, HE-12-HU03-CA05 |
+| P-PLA-01 Planificador diario (pantalla principal) | «Tarjeta creada.» | resultado | HE-12-HU01-CA07 |
 | P-PLA-01 Planificador diario (pantalla principal) | «¡Bien hecho! Tarjeta completada.» | resultado | HE-12-HU02-CA01 |
 | P-PLA-01 Planificador diario (pantalla principal) | «¡Completaste todas tus tarjetas de hoy!» | resultado | HE-12-HU03-CA04 |
 | P-REP-01 Reportes | «Aún no tienes etiquetas.» | opción deshabilitada | HE-13-HU05-CA05 |
@@ -559,14 +569,21 @@ El tipo sigue los seis de RT-04 (resultado, campo, opción deshabilitada, aviso,
 | P-IA-01 Agente de IA | «Esta tarjeta está completada. Editarla no cambia su columna.» | resultado | HE-14-HU05-CA06 |
 | P-IA-01 Agente de IA | «Esta tarjeta está completada. Si la eliminas, dejará de contar en tus reportes.» | resultado | HE-14-HU07-CA06 |
 | P-IA-01 Agente de IA | «Esta tarjeta está completada. Si la mueves, dejará de estar completada y se borrará su fecha de completado.» | resultado | HE-14-HU06-CA06 |
+| P-IA-01 Agente de IA | «La fecha límite no puede ser anterior a hoy.» | resultado | HE-14-HU04-CA11 |
+| P-IA-01 Agente de IA | «No encuentro la columna “<columna>”. Tus columnas son: <columnas en orden>.» | resultado | HE-14-HU03-CA06 |
+| P-IA-01 Agente de IA | «No encuentro una tarjeta llamada “<nombre>”. ¿Me das más detalles?» | resultado | HE-14-HU07-CA07 |
+| P-IA-01 Agente de IA | «No pude aplicar los cambios. No se hizo ningún cambio.» | aviso | HE-14-HU03-CA07 |
 | P-IA-01 Agente de IA | «No pude responder en este momento. Intenta de nuevo.» | aviso | HE-14-HU01-CA08 |
+| P-IA-01 Agente de IA | «No tienes la etiqueta “<etiqueta>”. Tus etiquetas son: <etiquetas>.» | resultado | HE-14-HU05-CA10 |
 | P-IA-01 Agente de IA | «Se perdió la conexión. No se hizo ningún cambio.» | resultado | HE-14-HU03-CA02, HE-14-HU04-CA07 |
+| P-IA-01 Agente de IA | «Solo puedo ayudarte con tus tarjetas y con Windgets. Por ejemplo, puedo crear una tarjeta o contarte qué tienes para hoy.» | resultado | HE-14-HU01-CA06 |
 | P-IA-01 Agente de IA | «Tu mensaje no puede superar los 2000 caracteres.» | opción deshabilitada | HE-14-HU01-CA05 |
 | P-CFG-01 Configuración | «Error de sincronización. Reintentaremos automáticamente.» | aviso | HE-16-HU01-CA05 |
 | P-CFG-01 Configuración | «Inicio automático activado.» | resultado | HE-16-HU02-CA02 |
 | P-CFG-01 Configuración | «Inicio automático desactivado.» | resultado | HE-16-HU02-CA01 |
 | P-CFG-01 Configuración | «No pudimos cambiar el inicio automático. Intenta de nuevo.» | aviso | HE-16-HU02-CA05 |
-| P-CFG-01 Configuración | «Sesión cerrada.» | resultado | HE-16-HU03-CA01, HE-16-HU03-CA04 |
+| P-CFG-01 Configuración | «No pudimos cerrar la sesión. Cierra la aplicación y vuelve a intentarlo.» | aviso | HE-16-HU03-CA07 |
+| P-CFG-01 Configuración | «Sesión cerrada.» | resultado | HE-16-HU03-CA01, HE-16-HU03-CA04, HE-16-HU03-CA06 |
 | P-CFG-01 Configuración | «Tienes cambios sin sincronizar. Si cierras sesión ahora, se perderán. ¿Deseas cerrar sesión?» | aviso | HE-16-HU03-CA03 |
 | P-CFG-01 Configuración | «¿Deseas cerrar sesión?» | confirmación | HE-16-HU03-CA05 |
 | P-SIN-01 Indicador de sincronización | «Algunas tarjetas se actualizaron con cambios más recientes de otro computador.» | resultado | HE-15-HU03-CA02, HE-15-HU03-CA05, HE-15-HU03-CA06 |
@@ -597,9 +614,9 @@ Cada pantalla se asocia con las HU y los CA cuyo Dado la nombra como ruta o cont
 | P-CTA-01 Inicio de sesión | HE-01-HU04, HE-01-HU05, HE-15-HU04, RT-01, RT-04 | HE-01-HU04 (CA01, CA03 a CA12); HE-01-HU05 (CA01 a CA08); HE-15-HU04 (CA02); RT-01 (CA01, CA02, CA10); RT-04 (CA13, CA14) |
 | P-CTA-02 Registro | HE-01-HU01, HE-01-HU02, HE-01-HU03, HE-01-HU05, RT-01, RT-03 | HE-01-HU01 (CA01 a CA12); HE-01-HU02 (CA01 a CA08); HE-01-HU03 (CA01 a CA09); HE-01-HU05 (CA07, CA09); RT-01 (CA03); RT-03 (CA07) |
 | P-CTA-03 Recuperar contraseña | HE-01-HU06, HE-01-HU07, HE-01-HU08, RT-03 | HE-01-HU06 (CA01 a CA07); HE-01-HU07 (CA01 a CA09); HE-01-HU08 (CA01 a CA07); RT-03 (CA06) |
-| P-WAL-01 Personalización del wallpaper | HE-02-HU02, HE-02-HU03, HE-02-HU04, HE-02-HU05, HE-02-HU06, HE-02-HU07, HE-02-HU08, HE-02-HU09, HE-02-HU10, HE-02-HU11, HE-02-HU12, HE-02-HU13, HE-03-HU02, HE-03-HU06, HE-15-HU04, RT-01 | HE-02-HU02 (CA01, CA02); HE-02-HU03 (CA01 a CA08); HE-02-HU04 (CA01, CA02); HE-02-HU05 (CA01 a CA05); HE-02-HU06 (CA01, CA02); HE-02-HU07 (CA01, CA02); HE-02-HU08 (CA01, CA02); HE-02-HU09 (CA01, CA02); HE-02-HU10 (CA01 a CA06); HE-02-HU11 (CA01 a CA05); HE-02-HU12 (CA01 a CA11); HE-02-HU13 (CA01 a CA09); HE-03-HU02 (CA01 a CA07); HE-03-HU06 (CA02, CA04); HE-15-HU04 (CA08); RT-01 (CA08, CA09) |
+| P-WAL-01 Personalización del wallpaper | HE-02-HU02, HE-02-HU03, HE-02-HU04, HE-02-HU05, HE-02-HU06, HE-02-HU07, HE-02-HU08, HE-02-HU09, HE-02-HU10, HE-02-HU11, HE-02-HU12, HE-02-HU13, HE-03-HU02, HE-03-HU06, HE-15-HU04, RT-01 | HE-02-HU02 (CA01, CA02); HE-02-HU03 (CA01 a CA09); HE-02-HU04 (CA01, CA02); HE-02-HU05 (CA01 a CA05); HE-02-HU06 (CA01, CA02); HE-02-HU07 (CA01, CA02); HE-02-HU08 (CA01, CA02); HE-02-HU09 (CA01, CA02); HE-02-HU10 (CA01 a CA06); HE-02-HU11 (CA01 a CA06); HE-02-HU12 (CA01 a CA11); HE-02-HU13 (CA01 a CA09); HE-03-HU02 (CA01 a CA08); HE-03-HU06 (CA02, CA04); HE-15-HU04 (CA08); RT-01 (CA08, CA09) |
 | P-TEM-01 Temas | HE-03-HU01, HE-03-HU03, HE-03-HU04, HE-03-HU05, HE-03-HU06, RT-04 | HE-03-HU01 (CA01 a CA04); HE-03-HU03 (CA01 a CA06); HE-03-HU04 (CA01 a CA07); HE-03-HU05 (CA01 a CA03); HE-03-HU06 (CA05); RT-04 (CA08) |
-| P-TEM-02 Guardar como tema | HE-03-HU02 | HE-03-HU02 (CA01 a CA04, CA06) |
+| P-TEM-02 Guardar como tema | HE-03-HU02 | HE-03-HU02 (CA01 a CA04, CA06, CA08) |
 | P-TEM-03 Renombrar tema | HE-03-HU04 | HE-03-HU04 (CA01 a CA06) |
 | P-WID-01 Widgets | HE-04-HU01, HE-04-HU02, HE-04-HU04, HE-04-HU12, HE-04-HU13, HE-05-HU01, RT-01 | HE-04-HU01 (CA01 a CA03); HE-04-HU02 (CA01, CA02); HE-04-HU04 (CA01); HE-04-HU12 (CA01 a CA05); HE-04-HU13 (CA01 a CA06); HE-05-HU01 (CA01, CA02); RT-01 (CA12) |
 | P-WID-02 Agregar widget | HE-04-HU04, RT-03, RT-04 | HE-04-HU04 (CA02); RT-03 (CA01); RT-04 (CA05) |
@@ -611,21 +628,21 @@ Cada pantalla se asocia con las HU y los CA cuyo Dado la nombra como ruta o cont
 | P-WID-08 Texto | HE-04-HU10 | HE-04-HU10 (CA01 a CA04) |
 | P-WID-09 Reproductor de música | HE-04-HU11 | HE-04-HU11 (CA01 a CA06) |
 | P-WID-10 Formulario de widget | HE-04-HU12 | HE-04-HU12 (CA01 a CA05) |
-| P-DIS-01 Pantalla de edición | HE-05-HU02, HE-05-HU03, HE-05-HU04, HE-05-HU05, HE-15-HU04 | HE-05-HU02 (CA01 a CA03); HE-05-HU03 (CA01 a CA04); HE-05-HU04 (CA01 a CA04); HE-05-HU05 (CA01 a CA05); HE-15-HU04 (CA08) |
-| P-WAL-02 Escritorio de Windows (wallpaper y widgets) | HE-01-HU04, HE-02-HU01, HE-04-HU03, HE-05-HU02, HE-05-HU03, HE-06-HU01, HE-06-HU02, HE-06-HU03, HE-06-HU04, HE-06-HU05, HE-06-HU06, HE-06-HU07, HE-06-HU08, HE-06-HU09, HE-06-HU10, HE-15-HU02, HE-15-HU04, HE-17-HU01, HE-17-HU02, HE-17-HU03, RT-01, RT-04 | HE-01-HU04 (CA02); HE-02-HU01 (CA01 a CA06); HE-04-HU03 (CA01); HE-05-HU02 (CA04); HE-05-HU03 (CA05); HE-06-HU01 (CA01 a CA07); HE-06-HU02 (CA01 a CA06); HE-06-HU03 (CA01 a CA04); HE-06-HU04 (CA01 a CA05); HE-06-HU05 (CA01 a CA04); HE-06-HU06 (CA01 a CA05); HE-06-HU07 (CA01); HE-06-HU08 (CA01 a CA07); HE-06-HU09 (CA01); HE-06-HU10 (CA01); HE-15-HU02 (CA04, CA06); HE-15-HU04 (CA01, CA03 a CA07); HE-17-HU01 (CA01, CA02); HE-17-HU02 (CA01 a CA03); HE-17-HU03 (CA01 a CA04); RT-01 (CA04, CA05); RT-04 (CA06, CA07) |
+| P-DIS-01 Pantalla de edición | HE-05-HU02, HE-05-HU03, HE-05-HU04, HE-05-HU05, HE-15-HU04 | HE-05-HU02 (CA01 a CA03, CA05); HE-05-HU03 (CA01 a CA04, CA06); HE-05-HU04 (CA01 a CA05); HE-05-HU05 (CA01 a CA05); HE-15-HU04 (CA08) |
+| P-WAL-02 Escritorio de Windows (wallpaper y widgets) | HE-01-HU04, HE-02-HU01, HE-04-HU03, HE-05-HU02, HE-05-HU03, HE-06-HU01, HE-06-HU02, HE-06-HU03, HE-06-HU04, HE-06-HU05, HE-06-HU06, HE-06-HU07, HE-06-HU08, HE-06-HU09, HE-06-HU10, HE-15-HU02, HE-15-HU04, HE-17-HU01, HE-17-HU02, HE-17-HU03, RT-01, RT-04 | HE-01-HU04 (CA02); HE-02-HU01 (CA01 a CA07); HE-04-HU03 (CA01 a CA04); HE-05-HU02 (CA04); HE-05-HU03 (CA05); HE-06-HU01 (CA01 a CA07); HE-06-HU02 (CA01 a CA06); HE-06-HU03 (CA01 a CA05); HE-06-HU04 (CA01 a CA05); HE-06-HU05 (CA01 a CA04); HE-06-HU06 (CA01 a CA06); HE-06-HU07 (CA01); HE-06-HU08 (CA01 a CA10); HE-06-HU09 (CA01); HE-06-HU10 (CA01); HE-15-HU02 (CA04, CA06); HE-15-HU04 (CA01, CA03 a CA07); HE-17-HU01 (CA01, CA02); HE-17-HU02 (CA01 a CA03); HE-17-HU03 (CA01 a CA04); RT-01 (CA04, CA05); RT-04 (CA06, CA07) |
 | P-TAR-01 Detalle de tarjeta | HE-07-HU03, HE-07-HU05, RT-02 | HE-07-HU03 (CA04); HE-07-HU05 (CA01 a CA03); RT-02 (CA02, CA05, CA08, CA09) |
 | P-TAR-02 Formulario de tarjeta | HE-07-HU01, HE-07-HU02, HE-07-HU04, HE-10-HU04, RT-02, RT-04 | HE-07-HU01 (CA01 a CA12); HE-07-HU02 (CA01 a CA05); HE-07-HU04 (CA01 a CA11); HE-10-HU04 (CA01, CA03, CA05); RT-02 (CA03, CA04, CA06, CA07); RT-04 (CA01, CA03, CA04) |
-| P-ETQ-01 Etiquetas | HE-08-HU01, HE-08-HU02, HE-08-HU03, HE-08-HU04, HE-13-HU05, RT-04 | HE-08-HU01 (CA01 a CA03); HE-08-HU02 (CA01 a CA09); HE-08-HU03 (CA01 a CA07); HE-08-HU04 (CA01 a CA06); HE-13-HU05 (CA06, CA07); RT-04 (CA10) |
+| P-ETQ-01 Etiquetas | HE-08-HU01, HE-08-HU02, HE-08-HU03, HE-08-HU04, HE-13-HU05, RT-02, RT-04 | HE-08-HU01 (CA01 a CA03); HE-08-HU02 (CA01 a CA09); HE-08-HU03 (CA01 a CA07); HE-08-HU04 (CA01 a CA06); HE-13-HU05 (CA06, CA07); RT-02 (CA10); RT-04 (CA10) |
 | P-ETQ-02 Formulario de etiqueta | HE-08-HU02, HE-08-HU03 | HE-08-HU02 (CA01 a CA05, CA07, CA08); HE-08-HU03 (CA01 a CA06) |
-| P-KAN-01 Tablero Kanban | HE-07-HU01, HE-07-HU02, HE-07-HU03, HE-07-HU04, HE-07-HU05, HE-09-HU01, HE-09-HU02, HE-09-HU03, HE-09-HU04, HE-09-HU05, HE-09-HU06, HE-09-HU07, RT-02, RT-04 | HE-07-HU01 (CA01 a CA12); HE-07-HU02 (CA01 a CA05); HE-07-HU03 (CA01 a CA04); HE-07-HU04 (CA01 a CA11); HE-07-HU05 (CA01 a CA03); HE-09-HU01 (CA01 a CA05); HE-09-HU02 (CA01 a CA09); HE-09-HU03 (CA01 a CA08); HE-09-HU04 (CA01 a CA08); HE-09-HU05 (CA01, CA02); HE-09-HU06 (CA01 a CA07); HE-09-HU07 (CA01 a CA03); RT-02 (CA01 a CA09); RT-04 (CA01 a CA04) |
+| P-KAN-01 Tablero Kanban | HE-07-HU01, HE-07-HU02, HE-07-HU03, HE-07-HU04, HE-07-HU05, HE-09-HU01, HE-09-HU02, HE-09-HU03, HE-09-HU04, HE-09-HU05, HE-09-HU06, HE-09-HU07, RT-02, RT-04 | HE-07-HU01 (CA01 a CA12); HE-07-HU02 (CA01 a CA05); HE-07-HU03 (CA01 a CA05); HE-07-HU04 (CA01 a CA12); HE-07-HU05 (CA01 a CA04); HE-09-HU01 (CA01 a CA05); HE-09-HU02 (CA01 a CA10); HE-09-HU03 (CA01 a CA08); HE-09-HU04 (CA01 a CA08); HE-09-HU05 (CA01, CA02); HE-09-HU06 (CA01 a CA07); HE-09-HU07 (CA01 a CA03); RT-02 (CA01 a CA09); RT-04 (CA01 a CA04) |
 | P-KAN-02 Formulario de columna | HE-09-HU03, HE-09-HU04 | HE-09-HU03 (CA01 a CA05, CA07); HE-09-HU04 (CA01 a CA07) |
-| P-CAL-01 Calendario | HE-10-HU01, HE-10-HU02, HE-10-HU03, HE-10-HU04, HE-10-HU05 | HE-10-HU01 (CA01 a CA06); HE-10-HU02 (CA01 a CA07); HE-10-HU03 (CA01 a CA03); HE-10-HU04 (CA01, CA03, CA05); HE-10-HU05 (CA01 a CA08) |
+| P-CAL-01 Calendario | HE-10-HU01, HE-10-HU02, HE-10-HU03, HE-10-HU04, HE-10-HU05 | HE-10-HU01 (CA01 a CA06); HE-10-HU02 (CA01 a CA07); HE-10-HU03 (CA01 a CA03, CA05); HE-10-HU04 (CA01, CA03, CA05); HE-10-HU05 (CA01 a CA08) |
 | P-CAL-02 Panel del día | HE-10-HU03, HE-10-HU04 | HE-10-HU03 (CA04); HE-10-HU04 (CA02, CA04) |
 | P-AGE-01 Agenda diaria | HE-11-HU01, HE-11-HU02, HE-11-HU03, RT-04 | HE-11-HU01 (CA01 a CA06); HE-11-HU02 (CA01 a CA05); HE-11-HU03 (CA01, CA02); RT-04 (CA09) |
-| P-PLA-01 Planificador diario (pantalla principal) | HE-03-HU06, HE-12-HU01, HE-12-HU02, HE-12-HU03, RT-01, RT-04 | HE-03-HU06 (CA08); HE-12-HU01 (CA01 a CA05); HE-12-HU02 (CA01 a CA03); HE-12-HU03 (CA01 a CA05); RT-01 (CA06, CA07, CA11); RT-04 (CA11) |
+| P-PLA-01 Planificador diario (pantalla principal) | HE-03-HU06, HE-12-HU01, HE-12-HU02, HE-12-HU03, RT-01, RT-04 | HE-03-HU06 (CA08); HE-12-HU01 (CA01 a CA07); HE-12-HU02 (CA01 a CA04); HE-12-HU03 (CA01 a CA05); RT-01 (CA06, CA07, CA11); RT-04 (CA11) |
 | P-REP-01 Reportes | HE-13-HU01, HE-13-HU02, HE-13-HU03, HE-13-HU04, HE-13-HU05 | HE-13-HU01 (CA01 a CA08); HE-13-HU02 (CA01 a CA10); HE-13-HU03 (CA01 a CA08); HE-13-HU04 (CA01 a CA05); HE-13-HU05 (CA01 a CA07) |
-| P-IA-01 Agente de IA | HE-14-HU01, HE-14-HU02, HE-14-HU03, HE-14-HU04, HE-14-HU05, HE-14-HU06, HE-14-HU07, HE-14-HU08, HE-14-HU09 | HE-14-HU01 (CA01 a CA09); HE-14-HU02 (CA01 a CA05); HE-14-HU03 (CA01 a CA04); HE-14-HU04 (CA01 a CA09); HE-14-HU05 (CA01 a CA07); HE-14-HU06 (CA01 a CA08); HE-14-HU07 (CA01 a CA06); HE-14-HU08 (CA01, CA02); HE-14-HU09 (CA01 a CA04) |
-| P-CFG-01 Configuración | HE-03-HU06, HE-16-HU01, HE-16-HU02, HE-16-HU03 | HE-03-HU06 (CA07); HE-16-HU01 (CA01 a CA05); HE-16-HU02 (CA01 a CA05); HE-16-HU03 (CA01 a CA05) |
+| P-IA-01 Agente de IA | HE-14-HU01, HE-14-HU02, HE-14-HU03, HE-14-HU04, HE-14-HU05, HE-14-HU06, HE-14-HU07, HE-14-HU08, HE-14-HU09 | HE-14-HU01 (CA01 a CA09); HE-14-HU02 (CA01 a CA05); HE-14-HU03 (CA01 a CA08); HE-14-HU04 (CA01 a CA12); HE-14-HU05 (CA01 a CA12); HE-14-HU06 (CA01 a CA09); HE-14-HU07 (CA01 a CA07); HE-14-HU08 (CA01 a CA03); HE-14-HU09 (CA01 a CA06) |
+| P-CFG-01 Configuración | HE-03-HU06, HE-16-HU01, HE-16-HU02, HE-16-HU03 | HE-03-HU06 (CA07); HE-16-HU01 (CA01 a CA05); HE-16-HU02 (CA01 a CA05); HE-16-HU03 (CA01 a CA07) |
 | P-SIN-01 Indicador de sincronización | HE-03-HU06, HE-15-HU01, HE-15-HU02, HE-15-HU03, HE-16-HU01 | HE-03-HU06 (CA01, CA03, CA06); HE-15-HU01 (CA01 a CA03); HE-15-HU02 (CA01 a CA03, CA05); HE-15-HU03 (CA01 a CA08); HE-16-HU01 (CA01 a CA05) |
 | P-CFG-02 Menú del ícono del área de notificación | HE-06-HU08, HE-17-HU02, HE-17-HU03 | HE-06-HU08 (CA07); HE-17-HU02 (CA01 a CA03); HE-17-HU03 (CA01 a CA04) |
 | P-LAN-01 Landing page | CD-01-HU01, CD-01-HU02 | CD-01-HU01 (CA01 a CA03); CD-01-HU02 (CA01, CA02) |

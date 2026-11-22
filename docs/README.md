@@ -53,6 +53,6 @@ Todo lo que un agente de código necesita para construir la aplicación, la land
 
 ## Dependencias y regeneración
 
-- **Depende de:** Historias de usuario v11 y modelos de 04-diseno-desarrollo.
+- **Depende de:** Historias de usuario v12 y modelos de 04-diseno-desarrollo.
 - **Cómo se regenera:** Los archivos por épica (HE-nn.md, CD-nn.md, RT.md) y el plan se generan con `GPI/_trabajo/scripts/gen_especificacion.py` y `GPI/_trabajo/scripts/ensamblar_especificacion.py`; ver `00-gobierno-plantillas/00.5-fuentes-regeneracion/09112026_v1_fuente_especificacion_construccion.md`.
 - **Paquete del EDT:** 1.3.7 Especificación de construcción para vibecoding

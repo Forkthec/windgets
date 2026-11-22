@@ -42,7 +42,7 @@ export type ErrorCode =
   | 'password.required' | 'password.invalid' | 'password.same_as_current'
   | 'password_confirmation.required' | 'password_confirmation.mismatch'
   | 'code.required' | 'code.incorrect' | 'code.expired' | 'code.resend_too_soon'
-  | 'auth.rate_limited' | 'auth.invalid_credentials'
+  | 'auth.rate_limited' | 'auth.invalid_credentials' | 'auth.sign_out_failed'
   // tarjetas, agenda y planificador
   | 'title.required' | 'title.too_long'
   | 'due_date.required' | 'due_date.invalid' | 'due_date.in_past'
@@ -59,13 +59,13 @@ export type ErrorCode =
   | 'range.start_after_end' | 'range.too_long'
   // temas y personalización
   | 'draft.unsaved_changes' | 'draft.unsaved_changes_on_apply' | 'draft.no_changes'
-  | 'theme.limit_reached' | 'theme.already_applied' | 'theme.applied_not_deletable'
+  | 'theme.limit_reached' | 'theme.already_applied' | 'theme.applied_not_deletable' | 'theme.content_duplicate'
   | 'background.already_default'
   | 'template.not_found' | 'font.not_found' | 'image.not_found'
   // imágenes y catálogos
   | 'image.format_not_allowed' | 'image.too_large' | 'image.unreadable' | 'asset.unavailable'
   // widgets
-  | 'widget.not_found' | 'widget.already_added' | 'widget.default_not_deletable'
+  | 'widget.not_found' | 'widget.already_added' | 'widget.default_not_deletable' | 'layout.widget_missing'
   | 'city.not_found' | 'city.duplicate' | 'city.too_long'
   | 'text.too_long'
   | 'carousel.too_few' | 'carousel.too_many'
@@ -75,7 +75,8 @@ export type ErrorCode =
   // música
   | 'media.no_session' | 'media.action_unsupported'
   // agente de IA
-  | 'message.too_long' | 'windi.unavailable' | 'proposal.discarded';
+  | 'message.too_long' | 'windi.unavailable' | 'proposal.discarded' | 'windi.card_not_found' | 'windi.column_not_found' | 'windi.label_not_found'
+  | 'windi.same_value' | 'windi.already_in_column' | 'windi.apply_failed';
 
 /** Parámetros con los que el Núcleo sustituye los marcadores del mensaje (contratos.md, 1.4). */
 export type ErrorParams = Record<string, string | number>;
