@@ -293,6 +293,8 @@ pub const MAXIMO_DE_TEMAS: &str =
 pub const CONFIRMAR_APLICAR_TEMA: &str = "Se reemplazará la personalización actual por la del tema “<nombre del tema>”. ¿Deseas aplicarlo?";
 /// `background.already_default` (HE-02-HU04-CA02): texto de la opción «Quitar imagen» deshabilitada.
 pub const FONDO_YA_POR_DEFECTO: &str = "Esta plantilla ya muestra su imagen de fondo por defecto.";
+/// Estado vacío del catálogo de imágenes en Personalización (RT-04-ET19; P26, DUDAS).
+pub const CATALOGO_DE_IMAGENES_VACIO: &str = "El catálogo de imágenes no tiene imágenes por ahora.";
 /// Aviso de Personalización cuando la imagen propia del tema en edición no está en el computador (RT-04; P26,
 /// DUDAS).
 pub const IMAGEN_DE_FONDO_NO_ENCONTRADA: &str =
@@ -607,6 +609,7 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ),
     ("CONFIRMAR_ELIMINAR_WIDGET", CONFIRMAR_ELIMINAR_WIDGET),
     ("FONDO_YA_POR_DEFECTO", FONDO_YA_POR_DEFECTO),
+    ("CATALOGO_DE_IMAGENES_VACIO", CATALOGO_DE_IMAGENES_VACIO),
     (
         "IMAGEN_DE_FONDO_NO_ENCONTRADA",
         IMAGEN_DE_FONDO_NO_ENCONTRADA,

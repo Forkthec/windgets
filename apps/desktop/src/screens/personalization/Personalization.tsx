@@ -15,6 +15,7 @@ import type {
 } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
+import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { Selector } from '@/ui/Selector/Selector';
 import { useGuardiaDeSalida, useNucleo } from '@/ventana_principal/VentanaPrincipal';
@@ -254,7 +255,12 @@ export function Personalization() {
 
   const abrirCatalogoDeImagenes = async () => {
     const r = await invocar('catalog_list', { kind: 'image' });
-    if (r.ok) setImagenes(r.value);
+    // RT-04 (P26): si el Núcleo no pudo leer el catálogo, se muestra su error en vez de no hacer nada.
+    if (!r.ok) {
+      if (r.error.message) mostrarResultado(r.error.message);
+      return;
+    }
+    setImagenes(r.value);
   };
 
   // HE-02-HU11: «Guardar» actualiza el tema en edición (no crea otro) y no toca el escritorio (ET01, ET02).
@@ -396,7 +402,9 @@ export function Personalization() {
                       {textos.IMAGEN_DE_FONDO_NO_ENCONTRADA}
                     </p>
                   )}
-                  {imagenes && (
+                  {/* RT-04-ET19 (P26, DUDAS): el catálogo abierto sin imágenes muestra su estado vacío. */}
+                  {imagenes?.length === 0 && <EstadoVacio texto={textos.CATALOGO_DE_IMAGENES_VACIO} />}
+                  {imagenes && imagenes.length > 0 && (
                     // ET07, ET08: solo miniaturas para elegir; no se agregan imágenes al catálogo.
                     <ul className="wg-lista" aria-label="Catálogo de imágenes">
                       {imagenes.map((i) => (

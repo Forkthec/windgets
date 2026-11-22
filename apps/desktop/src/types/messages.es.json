@@ -15,6 +15,7 @@
   "CAMPO_OBLIGATORIO": "Este campo es obligatorio.",
   "CARRUSEL_DEMASIADAS_IMAGENES": "Puedes agregar máximo 10 imágenes al carrusel.",
   "CARRUSEL_POCAS_IMAGENES": "Selecciona al menos 2 imágenes para el carrusel.",
+  "CATALOGO_DE_IMAGENES_VACIO": "El catálogo de imágenes no tiene imágenes por ahora.",
   "CIUDAD_DUPLICADA": "Ya tienes un widget Clima para esa ciudad.",
   "CIUDAD_MUY_LARGA": "La ciudad no puede superar los 100 caracteres.",
   "CIUDAD_NO_ENCONTRADA": "No encontramos esa ciudad. Revisa el nombre e intenta de nuevo.",

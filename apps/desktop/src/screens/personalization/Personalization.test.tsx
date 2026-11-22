@@ -340,6 +340,26 @@ describe('HE-02-HU03 · Imagen de fondo', () => {
     expect(llamadasA(nucleo, 'catalog_list')).toContainEqual({ kind: 'image' });
   });
 
+  it('HE-02-HU03-CA02 · Catálogo de imágenes vacío o que no se pudo leer', async () => {
+    // RT-04-ET19 (P26, DUDAS): sin imágenes, el estado vacío; si el Núcleo falla, su mensaje (RT-04), nunca nada.
+    let falla = false;
+    await abrir(false, false, (n) => {
+      n.responder('catalog_list', () =>
+        falla
+          ? { ok: false, error: { code: 'internal.unexpected', message: 'Ocurrió un error inesperado.' } }
+          : { ok: true, value: [] },
+      );
+    });
+    fireEvent.click(within(seccion()).getByRole('button', { name: 'Catálogo de imágenes' }));
+    expect(
+      await within(seccion()).findByText('El catálogo de imágenes no tiene imágenes por ahora.'),
+    ).toBeTruthy();
+    expect(screen.queryByRole('list', { name: 'Catálogo de imágenes' })).toBeNull();
+    falla = true;
+    fireEvent.click(within(seccion()).getByRole('button', { name: 'Catálogo de imágenes' }));
+    expect((await screen.findByRole('status')).textContent).toContain('Ocurrió un error inesperado.');
+  });
+
   it('HE-02-HU03-CA03 · Seleccionar una imagen del catálogo de imágenes', async () => {
     const nucleo = await abrir();
     await screen.findByRole('list', { name: 'Catálogo de plantillas' });
