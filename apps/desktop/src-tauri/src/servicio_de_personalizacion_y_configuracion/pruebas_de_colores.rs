@@ -169,3 +169,21 @@ fn el_tema_por_defecto_cumple_los_tres_pares() {
     }
     assert!((contraste_de_prueba("#FFFFFF", "#000000") - 21.0).abs() < 1e-9);
 }
+
+#[test]
+fn pruebas_de_paletas_del_rediseno() {
+    // docs/rediseno.md RD-14: las paletas «Claro» y «Oscuro» (migración 0007) cumplen los tres pares de R-13, y su
+    // superficie es la nota de cada modo (la de Claro, más oscura que la del Figma para que la acción llegue a 3:1).
+    for (principal, secundario, texto, superficie) in [
+        ("#F5F0FF", "#B6A560", "#17131D", "#E2DBBF"),
+        ("#201B2B", "#5D566B", "#F8F5FF", "#302D38"),
+    ] {
+        assert_eq!(superficie_de_prueba(secundario, texto), superficie);
+        let l = legibilidad::legibilidad(&crate::tipos::ThemeColors {
+            primary: crate::tipos::Hex(principal.into()),
+            secondary: crate::tipos::Hex(secundario.into()),
+            text: crate::tipos::Hex(texto.into()),
+        });
+        assert!(l.ok, "{principal} {secundario} {texto}: {:?}", l.items);
+    }
+}
