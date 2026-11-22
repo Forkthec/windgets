@@ -921,6 +921,8 @@ mod pruebas_de_restablecer;
 #[cfg(test)]
 mod pruebas_de_salir;
 #[cfg(test)]
+mod pruebas_de_subida_de_imagenes;
+#[cfg(test)]
 mod pruebas_de_temas;
 #[cfg(test)]
 mod pruebas_de_tipografia_y_paletas;

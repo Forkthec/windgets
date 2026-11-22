@@ -141,6 +141,39 @@ pub fn estilo_extendido_de_la_capa(estilo: u32) -> u32 {
     estilo & !(WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE)
 }
 
+/// HE-02-HU01-ET13 (CA07): lo que le falta al área cliente de la capa, ya en coordenadas de pantalla, para cubrir el
+/// escritorio virtual: `None` si lo cubre exacto, o los bordes `[izquierda, arriba, derecha, abajo]` en píxeles
+/// físicos. En la prueba manual del 22-nov (P26) la ventana medía todo el escritorio, pero tao restaba el borde de
+/// la sombra (9, 1, 9 y 9 px) y quedaban franjas del fondo de Windows.
+pub fn bordes_sin_cubrir(cliente: Rect, escritorio: Rect) -> Option<[i32; 4]> {
+    let bordes = [
+        cliente.izquierda - escritorio.izquierda,
+        cliente.arriba - escritorio.arriba,
+        escritorio.derecha - cliente.derecha,
+        escritorio.abajo - cliente.abajo,
+    ];
+    (bordes != [0; 4]).then_some(bordes)
+}
+
+/// Los mensajes de Windows que llevan a reubicar la capa (`winuser.h`).
+pub mod mensajes {
+    pub const WM_SETTINGCHANGE: u32 = 0x001A;
+    pub const WM_DISPLAYCHANGE: u32 = 0x007E;
+    pub const WM_DPICHANGED: u32 = 0x02E0;
+}
+
+/// RNF-34, HE-05-HU02-ET07 (P26): ¿la capa se vuelve a ubicar y avisa EV-17 tras este mensaje? Siempre con
+/// `WM_DISPLAYCHANGE` y `WM_DPICHANGED`; con `WM_SETTINGCHANGE` (al cambiar la escala, Windows no siempre envía
+/// `WM_DPICHANGED` a una ventana oculta) solo si los monitores cambiaron, para no repintar con cada ajuste.
+pub fn reubicar_tras(mensaje: u32, monitores_cambiaron: impl FnOnce() -> bool) -> bool {
+    use mensajes::*;
+    match mensaje {
+        WM_DISPLAYCHANGE | WM_DPICHANGED => true,
+        WM_SETTINGCHANGE => monitores_cambiaron(),
+        _ => false,
+    }
+}
+
 #[cfg(test)]
 mod pruebas {
     use super::*;
@@ -176,6 +209,51 @@ mod pruebas {
                 | 0x0000_0080,
         );
         assert_eq!(extendido, 0x0000_0080);
+    }
+
+    #[test]
+    fn ca_he_02_hu01_ca07_el_area_cliente_cubre_el_escritorio() {
+        // HE-02-HU01-CA07 · Lo medido en la prueba manual del 22-nov (125 %): ventana de 1920×1080 en (0, 0) con el
+        // área cliente de 1902×1070 en (9, 1) por la sombra de tao. Eso deja franjas; sin sombra, el cliente es todo.
+        let escritorio = monitor(0, 0, 1920, 1080, 1.25).rect;
+        let con_sombra = Rect {
+            izquierda: 9,
+            arriba: 1,
+            derecha: 1911,
+            abajo: 1071,
+        };
+        assert_eq!(
+            bordes_sin_cubrir(con_sombra, escritorio),
+            Some([9, 1, 9, 9])
+        );
+        assert_eq!(bordes_sin_cubrir(escritorio, escritorio), None);
+        // Dos monitores, el secundario a la izquierda: el origen es negativo y se compara igual.
+        let virtual_ = Rect {
+            izquierda: -1280,
+            arriba: -200,
+            derecha: 1920,
+            abajo: 1080,
+        };
+        assert_eq!(bordes_sin_cubrir(virtual_, virtual_), None);
+        let corrida = Rect {
+            izquierda: -1271,
+            ..virtual_
+        };
+        assert_eq!(bordes_sin_cubrir(corrida, virtual_), Some([9, 0, 0, 0]));
+    }
+
+    #[test]
+    fn rnf_34_la_capa_se_reubica_al_cambiar_la_escala() {
+        // RNF-34 · HE-05-HU02-ET07: con el cambio de pantalla o de escala la capa se reubica y avisa EV-17.
+        use mensajes::*;
+        assert!(reubicar_tras(WM_DISPLAYCHANGE, || false));
+        assert!(reubicar_tras(WM_DPICHANGED, || false));
+        assert!(reubicar_tras(WM_SETTINGCHANGE, || true));
+        assert!(!reubicar_tras(WM_SETTINGCHANGE, || false));
+        // Otro mensaje no lee los monitores.
+        assert!(!reubicar_tras(0x0200, || panic!(
+            "no debía leer los monitores"
+        )));
     }
 
     fn monitor(izquierda: i32, arriba: i32, ancho: i32, alto: i32, escala: f64) -> Monitor {

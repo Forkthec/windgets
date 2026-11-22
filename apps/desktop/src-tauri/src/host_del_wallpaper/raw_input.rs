@@ -7,7 +7,8 @@
 //! - `WM_INPUT` (Raw Input con `RIDEV_INPUTSINK`, sin tener el foco): con el botón principal presionado se mira
 //!   qué hay bajo el cursor. Los íconos y las ventanas de otras aplicaciones tienen prioridad (ET04, ET05).
 //! - `WM_DISPLAYCHANGE` y `WM_DPICHANGED`: al conectar o desconectar un monitor, o al cambiar su resolución o su
-//!   escala, se vuelven a leer los monitores (EV-17) y la capa cubre el nuevo escritorio virtual.
+//!   escala, se vuelven a leer los monitores (EV-17) y la capa cubre el nuevo escritorio virtual; con
+//!   `WM_SETTINGCHANGE`, solo si los monitores cambiaron (`geometria::reubicar_tras`, P26).
 //!
 //! - `WM_SETTINGCHANGE` con «intl»: la persona cambió el formato regional; la capa recibe el formato de hora
 //!   nuevo (EV-28 `time_format_changed`, HE-04-HU03-CA04).
@@ -43,7 +44,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
     GetClassNameW, GetCursorPos, GetMessageW, GetParent, GetSystemMetrics,
     GetWindowThreadProcessId, HHOOK, MSG, MSLLHOOKSTRUCT, RegisterClassW, RegisterWindowMessageW,
     SM_SWAPBUTTON, SendMessageW, SetTimer, SetWindowsHookExW, TranslateMessage,
-    UnhookWindowsHookEx, WH_MOUSE_LL, WM_DISPLAYCHANGE, WM_DPICHANGED, WM_INPUT, WM_POWERBROADCAST,
+    UnhookWindowsHookEx, WH_MOUSE_LL, WM_DISPLAYCHANGE, WM_INPUT, WM_POWERBROADCAST,
     WM_SETTINGCHANGE, WM_TIMER, WNDCLASSW, WS_EX_TOOLWINDOW, WS_POPUP, WindowFromPoint,
 };
 use windows::core::{PCWSTR, w};
@@ -181,8 +182,9 @@ unsafe extern "system" fn procedimiento(
     if mensaje == WM_TIMER && wparam.0 == TEMPORIZADOR_DEL_GANCHO {
         revisar_gancho();
     }
-    if (mensaje == WM_DISPLAYCHANGE || mensaje == WM_DPICHANGED)
-        && let Some(app) = APLICACION.get()
+    // RNF-34 (P26): con el cambio de escala, la capa se reubica y avisa EV-17 para que vuelva a leer la escala.
+    if let Some(app) = APLICACION.get()
+        && super::geometria::reubicar_tras(mensaje, || super::anclaje::monitores_cambiaron(app))
     {
         super::anclaje::reubicar(app);
     }

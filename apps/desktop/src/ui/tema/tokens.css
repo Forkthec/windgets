@@ -264,7 +264,9 @@ body {
      de ensanchar la rejilla y empujar el menú principal. */
   grid-template-columns: auto minmax(0, 1fr);
   gap: calc(var(--wg-unidad) * 4);
-  min-height: 100vh;
+  /* RT-01 (P26): la ventana mide la pantalla y solo se desplaza el panel de la pantalla actual; con min-height, un
+     contenido alto (Agente de IA, Personalización) desplazaba toda la página, incluido el menú principal. */
+  height: 100vh;
   box-sizing: border-box;
   padding: calc(var(--wg-unidad) * 4);
   background: var(--wg-marco); /* WG-MK-01: el principal es el marco exterior */
@@ -274,6 +276,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: calc(var(--wg-unidad) * 4);
+  min-height: 0;
+  overflow-y: auto;
 }
 .wg-indicador-sincronizacion {
   display: flex;
@@ -283,6 +287,7 @@ body {
   color: var(--wg-texto);
 }
 .wg-ventana-principal__pantalla {
+  min-height: 0;
   overflow: auto;
   padding: calc(var(--wg-unidad) * 6);
   border: var(--wg-borde-ancho) solid var(--wg-borde);
@@ -609,8 +614,12 @@ button.wg-tarjeta__titulo:focus-visible {
 
 /* Planificador diario (P-PLA-01, HE-12-HU01-ET07): una tarjeta completada va tachada (y con la casilla marcada:
    no depende solo del estilo). */
+/* HE-12-HU01-ET04: la tarjeta es una fila (casilla, título, hora y prioridad) con la «i» a la derecha; sin esto,
+   `.wg-tarjeta` la dejaba en columna con la «i» debajo del título (P26). */
 .wg-planificador .wg-tarjeta {
+  flex-direction: row;
   align-items: center;
+  cursor: pointer;
 }
 .wg-tachada .wg-tarjeta__titulo {
   text-decoration: line-through;
@@ -624,7 +633,7 @@ button.wg-tarjeta__titulo:focus-visible {
 /* HE-12-HU01-ET10: botón de información «i» de una tarjeta. */
 .wg-boton-informacion {
   min-width: calc(var(--wg-unidad) * 8);
-  font-style: italic;
+  /* Sin cursiva: en cursiva y negrita la «i» parecía «¡» (prueba manual del 22-nov, P26). */
   font-weight: 700;
 }
 

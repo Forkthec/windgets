@@ -163,6 +163,8 @@ pub enum ErrorCode {
     UrlNotAllowed,
     #[serde(rename = "autostart.failed")]
     AutostartFailed,
+    #[serde(rename = "browser.open_failed")]
+    BrowserOpenFailed,
     #[serde(rename = "media.no_session")]
     MediaNoSession,
     #[serde(rename = "media.action_unsupported")]
