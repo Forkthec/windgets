@@ -9,16 +9,20 @@
 //! - `WM_DISPLAYCHANGE` y `WM_DPICHANGED`: al conectar o desconectar un monitor, o al cambiar su resolución o su
 //!   escala, se vuelven a leer los monitores (EV-17) y la capa cubre el nuevo escritorio virtual.
 //!
+//! - `WM_TIMER`: con el gancho de mouse habilitado (D-215), cada 2 s se actualizan sus rectángulos y se instala o
+//!   se quita (HE-06-HU06-ET07, `gancho`).
+//!
 //! Este módulo usa la API de Windows; cada bloque `unsafe` explica por qué es seguro.
 #![allow(unsafe_code)]
 
 use std::ffi::c_void;
 use std::mem::size_of;
+use std::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
 use std::sync::{Mutex, OnceLock};
 
 use tauri::{AppHandle, Emitter, Manager};
-use windows::Win32::Foundation::{CloseHandle, HANDLE, HWND, LPARAM, LRESULT, POINT, WPARAM};
-use windows::Win32::Graphics::Gdi::ScreenToClient;
+use windows::Win32::Foundation::{CloseHandle, HANDLE, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
+use windows::Win32::Graphics::Gdi::{MapWindowPoints, ScreenToClient};
 use windows::Win32::System::Diagnostics::Debug::{ReadProcessMemory, WriteProcessMemory};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::System::Memory::{
@@ -27,20 +31,23 @@ use windows::Win32::System::Memory::{
 use windows::Win32::System::Threading::{
     OpenProcess, PROCESS_VM_OPERATION, PROCESS_VM_READ, PROCESS_VM_WRITE,
 };
-use windows::Win32::UI::Controls::{LVHITTESTINFO, LVM_HITTEST};
+use windows::Win32::UI::Controls::{LVHITTESTINFO, LVM_GETITEMCOUNT, LVM_GETITEMRECT, LVM_HITTEST};
 use windows::Win32::UI::Input::{
     GetRawInputData, HRAWINPUT, RAWINPUT, RAWINPUTDEVICE, RAWINPUTHEADER, RID_INPUT,
     RIDEV_INPUTSINK, RIM_TYPEMOUSE, RegisterRawInputDevices,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DEVICE_NOTIFY_WINDOW_HANDLE, DefWindowProcW, DispatchMessageW, GetClassNameW,
-    GetCursorPos, GetMessageW, GetParent, GetSystemMetrics, GetWindowThreadProcessId, MSG,
-    RegisterClassW, RegisterWindowMessageW, SM_SWAPBUTTON, SendMessageW, TranslateMessage,
-    WM_DISPLAYCHANGE, WM_DPICHANGED, WM_INPUT, WM_POWERBROADCAST, WM_SETTINGCHANGE, WNDCLASSW,
-    WS_EX_TOOLWINDOW, WS_POPUP, WindowFromPoint,
+    CallNextHookEx, CreateWindowExW, DEVICE_NOTIFY_WINDOW_HANDLE, DefWindowProcW, DispatchMessageW,
+    GetClassNameW, GetCursorPos, GetMessageW, GetParent, GetSystemMetrics,
+    GetWindowThreadProcessId, HHOOK, MSG, MSLLHOOKSTRUCT, RegisterClassW, RegisterWindowMessageW,
+    SM_SWAPBUTTON, SendMessageW, SetTimer, SetWindowsHookExW, TranslateMessage,
+    UnhookWindowsHookEx, WH_MOUSE_LL, WM_DISPLAYCHANGE, WM_DPICHANGED, WM_INPUT, WM_POWERBROADCAST,
+    WM_SETTINGCHANGE, WM_TIMER, WNDCLASSW, WS_EX_TOOLWINDOW, WS_POPUP, WindowFromPoint,
 };
 use windows::core::{PCWSTR, w};
 
+use super::gancho;
+use super::geometria::Rect;
 use super::seleccion::{self, BajoElCursor};
 use crate::puente_ipc::Nucleo;
 
@@ -131,6 +138,15 @@ fn leer_raw_input() {
         );
     }
 
+    // HE-06-HU06-ET07 (D-215): con el gancho habilitado, sus rectángulos se actualizan fuera de él cada 2 s, y se
+    // instala o se quita según haya widgets interactivos visibles. El gancho corre en este hilo, que tiene el ciclo
+    // de mensajes que `WH_MOUSE_LL` necesita.
+    if gancho::GANCHO_HABILITADO {
+        // SAFETY: `ventana` es de este hilo; sin función de temporizador, llega WM_TIMER a `procedimiento`.
+        unsafe { SetTimer(Some(ventana), TEMPORIZADOR_DEL_GANCHO, 2000, None) };
+        revisar_gancho();
+    }
+
     let mut mensaje = MSG::default();
     // SAFETY: `mensaje` es local; el ciclo de mensajes es el de este hilo.
     while unsafe { GetMessageW(&mut mensaje, None, 0, 0) }.as_bool() {
@@ -159,6 +175,9 @@ unsafe extern "system" fn procedimiento(
                 intercambiados,
             ));
         }
+    }
+    if mensaje == WM_TIMER && wparam.0 == TEMPORIZADOR_DEL_GANCHO {
+        revisar_gancho();
     }
     if (mensaje == WM_DISPLAYCHANGE || mensaje == WM_DPICHANGED)
         && let Some(app) = APLICACION.get()
@@ -271,6 +290,216 @@ fn al_seleccionar() {
     }
 }
 
+// ---------------------------------------------------------------- Gancho del mouse (HE-06-HU06-ET07; D-215)
+
+const TEMPORIZADOR_DEL_GANCHO: usize = 1;
+
+/// Tope de íconos que se leen del escritorio para la caché del gancho.
+const MAXIMO_DE_ICONOS: isize = 512;
+
+/// El gancho instalado, como número (`HHOOK` no se comparte entre hilos); 0 si no hay.
+static GANCHO_INSTALADO: AtomicIsize = AtomicIsize::new(0);
+
+/// Presiones que el gancho no dejó llegar a Windows, para el spike.
+static PRESIONES_TRAGADAS: AtomicUsize = AtomicUsize::new(0);
+
+/// La decisión del gancho y los rectángulos que consulta.
+static GANCHO: Mutex<(gancho::Gancho, gancho::CacheDelGancho)> =
+    Mutex::new((gancho::Gancho::nuevo(), gancho::CacheDelGancho::vacia()));
+
+/// Actualiza los rectángulos de los widgets interactivos y de los íconos (fuera del gancho, para no consultar al
+/// explorador dentro de él) e instala o quita el gancho (ET07).
+fn revisar_gancho() {
+    let Some(app) = APLICACION.get() else {
+        return;
+    };
+    let nucleo = app.state::<Nucleo>();
+    let widgets = gancho::rectangulos_interactivos(&nucleo.host.capa());
+    let instalar = gancho::debe_estar_instalado(
+        gancho::GANCHO_HABILITADO,
+        &widgets,
+        nucleo.host.anclaje_fallido(),
+    );
+    // Los íconos se leen de la lista del escritorio que está bajo el primer widget; si otra ventana lo tapa, no se
+    // leen y el gancho no traga nada (RNF-35).
+    let iconos = widgets.first().and_then(|r| {
+        let centro = POINT {
+            x: (r.izquierda + r.derecha) / 2,
+            y: (r.arriba + r.abajo) / 2,
+        };
+        // SAFETY: WindowFromPoint no recibe punteros.
+        let lista = unsafe { WindowFromPoint(centro) };
+        if es_el_escritorio(lista) {
+            rectangulos_de_iconos(lista)
+        } else {
+            None
+        }
+    });
+    if let Ok(mut g) = GANCHO.lock() {
+        g.1 = gancho::CacheDelGancho { widgets, iconos };
+    }
+    let instalado = GANCHO_INSTALADO.load(Ordering::SeqCst);
+    if instalar && instalado == 0 {
+        // SAFETY: GetModuleHandleW(None) devuelve el módulo de este proceso, sin punteros de entrada.
+        let Ok(modulo) = (unsafe { GetModuleHandleW(None) }) else {
+            return;
+        };
+        // SAFETY: `gancho_del_mouse` cumple la firma de HOOKPROC y vive todo el programa; 0 = todos los hilos.
+        match unsafe {
+            SetWindowsHookExW(WH_MOUSE_LL, Some(gancho_del_mouse), Some(modulo.into()), 0)
+        } {
+            Ok(h) => GANCHO_INSTALADO.store(h.0 as isize, Ordering::SeqCst),
+            Err(error) => eprintln!("No se pudo instalar el gancho del mouse: {error}"),
+        }
+    } else if !instalar && instalado != 0 {
+        // SAFETY: el gancho lo instaló este mismo hilo y no se vuelve a usar.
+        let _ = unsafe { UnhookWindowsHookEx(HHOOK(instalado as *mut c_void)) };
+        GANCHO_INSTALADO.store(0, Ordering::SeqCst);
+        if let Ok(mut g) = GANCHO.lock() {
+            g.0 = gancho::Gancho::nuevo();
+        }
+    }
+}
+
+/// `WH_MOUSE_LL`: decide con la caché, sin esperar ni consultar al explorador. El movimiento y los demás botones
+/// pasan siempre (ET07).
+unsafe extern "system" fn gancho_del_mouse(codigo: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+    if codigo >= 0 {
+        // SAFETY: con `codigo` >= 0 (HC_ACTION), lparam apunta a un MSLLHOOKSTRUCT válido durante la llamada.
+        let datos = unsafe { &*(lparam.0 as *const MSLLHOOKSTRUCT) };
+        // SAFETY: GetSystemMetrics no recibe punteros.
+        let intercambiados = unsafe { GetSystemMetrics(SM_SWAPBUTTON) } != 0;
+        let boton = gancho::boton(wparam.0 as u32, intercambiados);
+        if boton != gancho::Boton::Otro {
+            // SAFETY: WindowFromPoint no recibe punteros.
+            let bajo_el_cursor = if es_el_escritorio(unsafe { WindowFromPoint(datos.pt) }) {
+                BajoElCursor::Escritorio
+            } else {
+                BajoElCursor::OtraVentana
+            };
+            // try_lock: el gancho nunca espera; si la caché se está actualizando, el mensaje pasa a Windows.
+            if let Ok(mut g) = GANCHO.try_lock() {
+                let (estado, cache) = &mut *g;
+                if estado.decidir(cache, boton, (datos.pt.x, datos.pt.y), bajo_el_cursor) {
+                    if boton == gancho::Boton::PresionarPrincipal {
+                        PRESIONES_TRAGADAS.fetch_add(1, Ordering::Relaxed);
+                    }
+                    return LRESULT(1);
+                }
+            }
+        }
+    }
+    // SAFETY: se pasan los mismos parámetros al siguiente gancho.
+    unsafe { CallNextHookEx(None, codigo, wparam, lparam) }
+}
+
+/// Los rectángulos de los íconos del escritorio en la pantalla (`LVM_GETITEMRECT` en la memoria del explorador).
+/// `None` si no hay acceso.
+fn rectangulos_de_iconos(lista: HWND) -> Option<Vec<Rect>> {
+    // SAFETY: LVM_GETITEMCOUNT no recibe punteros.
+    let cantidad = unsafe { SendMessageW(lista, LVM_GETITEMCOUNT, None, None) }
+        .0
+        .clamp(0, MAXIMO_DE_ICONOS);
+    let mut pid = 0u32;
+    // SAFETY: `pid` es local.
+    unsafe { GetWindowThreadProcessId(lista, Some(&mut pid)) };
+    // SAFETY: OpenProcess no recibe punteros; el explorador corre con el mismo usuario (permisos estándar).
+    let proceso = unsafe {
+        OpenProcess(
+            PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE,
+            false,
+            pid,
+        )
+    }
+    .ok()?;
+    let resultado = leer_rectangulos(proceso, lista, cantidad as usize);
+    // SAFETY: `proceso` lo abrió OpenProcess y no se vuelve a usar.
+    let _ = unsafe { CloseHandle(proceso) };
+    resultado
+}
+
+fn leer_rectangulos(proceso: HANDLE, lista: HWND, cantidad: usize) -> Option<Vec<Rect>> {
+    let tamano = size_of::<RECT>();
+    // SAFETY: se reserva memoria en el explorador; se libera abajo en todos los caminos.
+    let remoto = unsafe {
+        VirtualAllocEx(
+            proceso,
+            None,
+            tamano,
+            MEM_COMMIT | MEM_RESERVE,
+            PAGE_READWRITE,
+        )
+    };
+    if remoto.is_null() {
+        return None;
+    }
+    let mut rectangulos = Vec::with_capacity(cantidad);
+    let mut completo = true;
+    for i in 0..cantidad {
+        // `left` = LVIR_BOUNDS (0): el rectángulo completo del ícono con su texto.
+        let pedido = RECT::default();
+        // SAFETY: `remoto` tiene `tamano` bytes reservados; `pedido` es local y del mismo tamaño.
+        let escrito = unsafe {
+            WriteProcessMemory(
+                proceso,
+                remoto,
+                &pedido as *const RECT as *const c_void,
+                tamano,
+                None,
+            )
+        };
+        if escrito.is_err() {
+            completo = false;
+            break;
+        }
+        // SAFETY: lParam apunta al RECT en la memoria del explorador, como pide LVM_GETITEMRECT.
+        unsafe {
+            SendMessageW(
+                lista,
+                LVM_GETITEMRECT,
+                Some(WPARAM(i)),
+                Some(LPARAM(remoto as isize)),
+            )
+        };
+        let mut leido = RECT::default();
+        // SAFETY: se leen `tamano` bytes de la misma reserva a un RECT local.
+        let lectura = unsafe {
+            ReadProcessMemory(
+                proceso,
+                remoto,
+                &mut leido as *mut RECT as *mut c_void,
+                tamano,
+                None,
+            )
+        };
+        if lectura.is_err() {
+            completo = false;
+            break;
+        }
+        let mut esquinas = [
+            POINT {
+                x: leido.left,
+                y: leido.top,
+            },
+            POINT {
+                x: leido.right,
+                y: leido.bottom,
+            },
+        ];
+        // SAFETY: `esquinas` es un arreglo local válido durante la llamada.
+        unsafe { MapWindowPoints(Some(lista), None, &mut esquinas) };
+        rectangulos.push(Rect {
+            izquierda: esquinas[0].x,
+            arriba: esquinas[0].y,
+            derecha: esquinas[1].x,
+            abajo: esquinas[1].y,
+        });
+    }
+    // SAFETY: `remoto` lo reservó VirtualAllocEx en este mismo proceso remoto; MEM_RELEASE pide tamaño 0.
+    let _ = unsafe { VirtualFreeEx(proceso, remoto, 0, MEM_RELEASE) };
+    completo.then_some(rectangulos)
+}
+
 fn clase_de(ventana: HWND) -> String {
     let mut nombre = [0u16; 64];
     // SAFETY: el búfer es local y GetClassNameW respeta su tamaño.
@@ -373,4 +602,61 @@ fn hit_test_remoto(proceso: HANDLE, lista: HWND, punto: POINT) -> Option<bool> {
     // SAFETY: `remoto` lo reservó VirtualAllocEx en este mismo proceso remoto; MEM_RELEASE pide tamaño 0.
     let _ = unsafe { VirtualFreeEx(proceso, remoto, 0, MEM_RELEASE) };
     resultado
+}
+
+#[cfg(test)]
+mod spike_del_gancho {
+    //! Spike de D-215 en Windows 11 (como el de WorkerW, P01): se corre a mano con la aplicación cerrada,
+    //! `cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml ca_he_06_hu06_ca06_spike -- --ignored --nocapture`.
+    use std::time::{Duration, Instant};
+
+    use windows::Win32::UI::WindowsAndMessaging::{PM_REMOVE, PeekMessageW};
+
+    use super::*;
+
+    #[test]
+    #[ignore = "spike manual en Windows 11 (D-215)"]
+    fn ca_he_06_hu06_ca06_spike() {
+        // HE-06-HU06-CA06 · Arrastrar sin la selección del escritorio. Durante 20 s, un widget de prueba cubre
+        // (200, 200) a (600, 500) del monitor principal: arrastra con el botón principal dentro de ese rectángulo,
+        // sobre el escritorio sin íconos. Esperado: Windows no dibuja su rectángulo de selección dentro, sí fuera;
+        // los íconos se siguen abriendo y el puntero se mueve sin retraso. Al terminar se imprime cuántas presiones
+        // se tragaron; la prueba falla si ninguna.
+        if let Ok(mut g) = GANCHO.lock() {
+            g.1 = gancho::CacheDelGancho {
+                widgets: vec![Rect {
+                    izquierda: 200,
+                    arriba: 200,
+                    derecha: 600,
+                    abajo: 500,
+                }],
+                iconos: Some(Vec::new()),
+            };
+        }
+        // SAFETY: GetModuleHandleW(None) devuelve el módulo de este proceso.
+        let modulo = unsafe { GetModuleHandleW(None) }.expect("módulo del proceso");
+        // SAFETY: `gancho_del_mouse` cumple la firma de HOOKPROC y vive todo el programa.
+        let instalado = unsafe {
+            SetWindowsHookExW(WH_MOUSE_LL, Some(gancho_del_mouse), Some(modulo.into()), 0)
+        }
+        .expect("SetWindowsHookExW");
+        let fin = Instant::now() + Duration::from_secs(20);
+        let mut mensaje = MSG::default();
+        while Instant::now() < fin {
+            // SAFETY: `mensaje` es local; WH_MOUSE_LL necesita el ciclo de mensajes del hilo que lo instaló.
+            while unsafe { PeekMessageW(&mut mensaje, None, 0, 0, PM_REMOVE) }.as_bool() {
+                // SAFETY: `mensaje` viene de PeekMessageW.
+                unsafe {
+                    let _ = TranslateMessage(&mensaje);
+                    DispatchMessageW(&mensaje);
+                }
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        // SAFETY: el gancho lo instaló este hilo y no se vuelve a usar.
+        unsafe { UnhookWindowsHookEx(instalado) }.expect("UnhookWindowsHookEx");
+        let tragadas = PRESIONES_TRAGADAS.load(Ordering::Relaxed);
+        println!("Presiones tragadas por el gancho: {tragadas}");
+        assert!(tragadas > 0, "no se presionó dentro del widget de prueba");
+    }
 }

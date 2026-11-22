@@ -923,6 +923,8 @@ button.wg-tarjeta__titulo:focus-visible {
 .wg-widget {
   box-sizing: border-box;
   overflow: hidden;
+  /* HE-06-HU06-CA06: arrastrar dentro de un widget no selecciona su texto. */
+  user-select: none;
   border: var(--wg-borde-ancho) solid var(--wg-borde);
   border-radius: var(--wg-radio);
   background: var(--wg-superficie);

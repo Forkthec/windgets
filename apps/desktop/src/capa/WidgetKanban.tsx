@@ -15,6 +15,9 @@ import { abrirPantalla } from './abrirPantalla';
 // tarjeta visible la toma; el Núcleo reenvía después el movimiento y el lugar donde se suelta
 // (`pointer_drag_forwarded`) y el widget mueve la tarjeta con IPC-CARD-06, como el tablero (`arrastre.ts`).
 
+/** HE-06-HU06-ET08: un arrastre que no termina en este tiempo devuelve la tarjeta a su columna original. */
+export const LIMITE_DEL_ARRASTRE_MS = 10_000;
+
 /** La tarjeta que se arrastra: dónde se tomó, dónde va el puntero y el lugar donde se soltaría. */
 interface Arrastre {
   id: string;
@@ -132,14 +135,20 @@ export function WidgetKanban({ invocar, escuchar, escucharArrastre }: WidgetKanb
       if (!elemento || !columna) return undefined;
       return { columna, tarjeta: elemento.closest<HTMLElement>('[data-tarjeta]')?.dataset.tarjeta };
     };
+    let limite: ReturnType<typeof setTimeout> | undefined;
     // EV-18: la selección sobre una tarjeta visible la toma; cualquier otra no empieza un arrastre.
     const dejarSeleccion = escuchar('pointer_forwarded', ({ x, y }) => {
+      clearTimeout(limite);
       const id = enElWidget(x, y)?.closest<HTMLElement>('[data-tarjeta]')?.dataset.tarjeta;
       cambiar(id ? { id, origen: { x, y }, punto: { x, y }, lugar: lugarEn(x, y), movido: false } : null);
+      // HE-06-HU06-ET08: si el arrastre no termina en 10 s, la tarjeta vuelve a su columna original, como al
+      // soltarla fuera de las columnas (CA04).
+      if (id) limite = setTimeout(() => cambiar(null), LIMITE_DEL_ARRASTRE_MS);
     });
     const dejarArrastre = escucharArrastre(({ x, y, phase }) => {
       const tomada = actual.current;
       if (!tomada) return;
+      if (phase === 'up') clearTimeout(limite);
       const lugar = lugarEn(x, y);
       if (phase === 'move') {
         const movido = tomada.movido || x !== tomada.origen.x || y !== tomada.origen.y;
@@ -156,6 +165,7 @@ export function WidgetKanban({ invocar, escuchar, escucharArrastre }: WidgetKanb
       if (movimiento) void invocar('card_move', movimiento).then(() => leer());
     });
     return () => {
+      clearTimeout(limite);
       dejarSeleccion();
       dejarArrastre();
     };
