@@ -145,6 +145,17 @@ impl ServicioDePersonalizacion {
         self.abrir_borrador(base, user_id, None).await?;
         let actual = self.con_borrador(|b| b.clone()).ok_or_else(inesperado)?;
         guardado::validar_colores(&actual.contenido)?;
+        // ET13, ET14 (CA08): después del nombre y del máximo de 10 temas, el contenido igual al de otro tema del
+        // usuario (sin contar los widgets); el mensaje va en el campo Nombre.
+        if let Some(otro) =
+            guardado::tema_con_el_mismo_contenido(base, user_id, &actual.contenido, None).await?
+        {
+            return Err(error(
+                ErrorCode::ThemeContentDuplicate,
+                &messages::con_nombre_del_tema(messages::TEMA_CON_LAS_MISMAS_PROPIEDADES, &otro),
+                Some("name"),
+            ));
+        }
         let nuevo = Borrador {
             theme_id: TEMA_INICIAL_VIRTUAL.to_string(),
             name: nombre.to_string(),

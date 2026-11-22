@@ -1000,6 +1000,29 @@ describe('HE-03-HU02 · Guardar como tema', () => {
     expect(within(ventana).getByRole('button', { name: 'Cancelar' })).toBeTruthy();
     expect(screen.getByRole('main', { name: 'Personalización del wallpaper' })).toBeTruthy();
   });
+
+  it('HE-03-HU02-CA08 · Tema con las mismas propiedades que otro', async () => {
+    const { nucleo, ventana } = await abrirVentana();
+    // ET13: el Núcleo compara el contenido (sin los widgets) después del nombre y del máximo de temas.
+    nucleo.responder('theme_draft_save_as', () => ({
+      ok: false,
+      error: {
+        code: 'theme.content_duplicate',
+        message: 'Ya tienes el tema “Verano” con estas mismas propiedades.',
+        field: 'name',
+      },
+    }));
+    diligenciarNombre(ventana, 'Otoño');
+    fireEvent.click(guardar(ventana));
+    // ET14: el mensaje en el campo Nombre; no se guarda y la ventana sigue abierta.
+    const mensaje = await within(ventana).findByText(
+      'Ya tienes el tema “Verano” con estas mismas propiedades.',
+    );
+    const campo = within(ventana).getByRole('textbox', { name: 'Nombre' });
+    expect(campo.getAttribute('aria-describedby')?.split(' ')).toContain(mensaje.id);
+    expect(screen.getByRole('dialog', { name: 'Guardar como tema' })).toBeTruthy();
+    expect(llamadasA(nucleo, 'theme_draft_open')).toHaveLength(1);
+  });
 });
 
 describe('HE-02-HU11 · Guardar los cambios de la vista previa', () => {
@@ -1038,6 +1061,25 @@ describe('HE-02-HU11 · Guardar los cambios de la vista previa', () => {
       'Cambios guardados. Selecciona Aplicar para verlos en tu escritorio.',
     );
     expect(llamadasA(nucleo, 'theme_apply')).toEqual([]);
+  });
+
+  it('HE-02-HU11-CA06 · Tema igual a otro', async () => {
+    const nucleo = await abrir(true);
+    await waitFor(() => expect(guardar().disabled).toBe(false));
+    nucleo.responder('theme_draft_save', () => ({
+      ok: false,
+      error: {
+        code: 'theme.content_duplicate',
+        message: 'Ya tienes el tema “Verano” con estas mismas propiedades.',
+      },
+    }));
+    fireEvent.click(guardar());
+    // ET06: el mensaje de resultado (RT-04); no se guarda y los cambios siguen en la vista previa.
+    expect((await screen.findByRole('status')).textContent).toContain(
+      'Ya tienes el tema “Verano” con estas mismas propiedades.',
+    );
+    expect(guardar().disabled).toBe(false);
+    expect(llamadasA(nucleo, 'theme_draft_open')).toHaveLength(1);
   });
 
   it('HE-02-HU11-CA03 · Guardar sin cambios', async () => {

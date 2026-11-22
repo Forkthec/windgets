@@ -84,6 +84,8 @@ fn ca_he_03_hu02_ca03() {
     assert_eq!(e.code, ErrorCode::NameTooLong);
     assert_eq!(e.message, "El nombre no puede superar los 40 caracteres.");
     assert_eq!(e.field.as_deref(), Some("name"));
+    // Con otro color, para que el tema nuevo no sea igual a «Mi tema» (HE-03-HU02-ET13).
+    bloquear(servicio.actualizar_borrador(&base, USUARIO, &primario("#112233"))).unwrap();
     assert!(guardar_como(&servicio, &base, &"á".repeat(40)).is_ok());
 }
 
@@ -147,4 +149,26 @@ fn ca_he_03_hu02_ca01_con_widgets() {
     let originales = contar(MI_TEMA);
     assert_eq!(originales.len(), 4);
     assert_eq!(contar(&r.valor.theme_id.0), originales);
+}
+
+#[test]
+fn ca_he_03_hu02_ca08() {
+    // HE-03-HU02-CA08 · La vista previa con el mismo contenido que «Verano» (plantilla, fondo, colores, paleta,
+    // fuente y tamaño) no se guarda como tema nuevo; el mensaje va en el campo Nombre (ET13, ET14).
+    let (base, servicio) = con_temas();
+    bloquear(servicio.actualizar_borrador(&base, USUARIO, &primario("#DCBA04"))).unwrap();
+    let e = guardar_como(&servicio, &base, "Otoño").err().unwrap();
+    assert_eq!(e.code, ErrorCode::ThemeContentDuplicate);
+    assert_eq!(
+        e.message,
+        "Ya tienes el tema “Verano” con estas mismas propiedades."
+    );
+    assert_eq!(e.field.as_deref(), Some("name"));
+    assert_eq!(bloquear(servicio.temas(&base, USUARIO)).unwrap().len(), 2);
+    // ET13: el orden de revisión es nombre, máximo de 10 temas y contenido igual.
+    let e = guardar_como(&servicio, &base, "verano").err().unwrap();
+    assert_eq!(e.code, ErrorCode::NameDuplicate);
+    // Con un color distinto sí se guarda.
+    bloquear(servicio.actualizar_borrador(&base, USUARIO, &primario("#DCBA05"))).unwrap();
+    assert!(guardar_como(&servicio, &base, "Otoño").is_ok());
 }

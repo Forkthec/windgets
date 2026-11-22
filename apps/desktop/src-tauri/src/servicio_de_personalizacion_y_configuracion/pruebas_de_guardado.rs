@@ -1,7 +1,7 @@
 //! Pruebas del Núcleo de HE-02-HU11 (guardar en el tema en edición los cambios de la vista previa).
 
 use super::pruebas_de_plantillas::{cambio, con_otra_plantilla};
-use super::pruebas_del_tema_en_edicion::{MI_TEMA, OTRO_TEMA, editar_un_color};
+use super::pruebas_del_tema_en_edicion::{MI_TEMA, OTRO_TEMA, con_temas, editar_un_color};
 use super::*;
 use crate::servicio_de_sesion::ConMensaje;
 use crate::servicio_del_planificador::pruebas::{USUARIO, bloquear};
@@ -168,4 +168,26 @@ fn guardar_el_tema_inicial_virtual_lo_crea() {
     let temas = bloquear(servicio.temas(&base, USUARIO)).unwrap();
     assert_eq!(temas.len(), 1);
     assert_eq!(temas[0].name, "Mi tema");
+}
+
+#[test]
+fn ca_he_02_hu11_ca06() {
+    // HE-02-HU11-CA06 · Los cambios dejan «Mi tema» igual a «Verano»: «Guardar» responde el mensaje, no guarda y
+    // los cambios siguen en la vista previa (ET06, con la comparación de HE-03-HU02-ET13).
+    let (base, servicio) = con_temas();
+    bloquear(servicio.abrir_borrador(&base, USUARIO, Some(MI_TEMA))).unwrap();
+    servicio.edicion_de_prueba(|c| c.colors.primary = Hex("#DCBA04".into()));
+    let e = guardar(&servicio, &base).err().unwrap();
+    assert_eq!(e.code, ErrorCode::ThemeContentDuplicate);
+    assert_eq!(
+        e.message,
+        "Ya tienes el tema “Verano” con estas mismas propiedades."
+    );
+    assert_eq!(primario_guardado(&base, MI_TEMA), "#96B2B2");
+    let vista = bloquear(servicio.abrir_borrador(&base, USUARIO, None)).unwrap();
+    assert!(vista.dirty);
+    assert_eq!(vista.content.colors.primary.0, "#DCBA04");
+    // El propio tema no cuenta: guardar «Mi tema» con otro color sí se guarda.
+    servicio.edicion_de_prueba(|c| c.colors.primary = Hex("#DCBA05".into()));
+    assert!(guardar(&servicio, &base).is_ok());
 }
