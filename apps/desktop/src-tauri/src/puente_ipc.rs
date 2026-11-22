@@ -22,17 +22,17 @@ use crate::servicio_del_planificador::{
 };
 use crate::tipos::{
     AgendaDay, AgendaDayParams, AppError, AuthGoogleStartResult, AuthRecoveryRequestParams,
-    AuthRegisterStartParams, AuthRegisterStartResult, AuthRegisterVerifyParams,
-    AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams, AuthSignOutInfo, Card,
-    CardAssignTimeBlockParams, CardCreateParams, CardDetail, CardIdParams, CardListBoardResult,
-    CardMoveParams, CardSetCompletedParams, CardUpdateParams, CatalogItem, CatalogKind,
-    CatalogListParams, ChangeOp, CodeSent, Column, ColumnCreateParams, ColumnReorderParams,
-    ColumnUpdateParams, Connectivity, EntityChange, ErrorCode, EventMapAuthGoogleResultStatus,
-    EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
-    EventMapSessionChangedState, ImageImportParams, ImageImportResult, IpcErr, IpcOk, IpcResult,
-    KanbanWidgetData, Label, LabelCreateParams, NoParams, OriginKind, PlannerToday, SessionInfo,
-    ThemeDraftOpenParams, ThemeDraftResetParams, ThemeDraftSelectParams, ThemeDraftStatus,
-    ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
+    AuthRecoveryVerifyParams, AuthRegisterStartParams, AuthRegisterStartResult,
+    AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState, AuthSignInParams,
+    AuthSignOutInfo, Card, CardAssignTimeBlockParams, CardCreateParams, CardDetail, CardIdParams,
+    CardListBoardResult, CardMoveParams, CardSetCompletedParams, CardUpdateParams, CatalogItem,
+    CatalogKind, CatalogListParams, ChangeOp, CodeSent, Column, ColumnCreateParams,
+    ColumnReorderParams, ColumnUpdateParams, Connectivity, EntityChange, ErrorCode,
+    EventMapAuthGoogleResultStatus, EventMapConnectivityChanged, EventMapSessionChanged,
+    EventMapSessionChangedReason, EventMapSessionChangedState, ImageImportParams,
+    ImageImportResult, IpcErr, IpcOk, IpcResult, KanbanWidgetData, Label, LabelCreateParams,
+    NoParams, OriginKind, PlannerToday, SessionInfo, ThemeDraftOpenParams, ThemeDraftResetParams,
+    ThemeDraftSelectParams, ThemeDraftStatus, ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
 };
 use crate::tipos::{
     AppliedThemeView, ApplyMode, AssetResolveParams, AssetResolveResult,
@@ -635,6 +635,39 @@ pub async fn auth_recovery_request(
 ) -> Result<IpcResult<CodeSent>, ()> {
     let antes = nucleo.sesion.auth().en_linea();
     let r = nucleo.sesion.recuperar_solicitar(params).await;
+    avisar_conectividad(&app, antes);
+    Ok(con_mensaje(r))
+}
+
+/// IPC-AUTH-09 `auth_recovery_verify` (HE-01-HU07).
+#[tauri::command]
+pub async fn auth_recovery_verify(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: AuthRecoveryVerifyParams,
+) -> Result<IpcResult<()>, ()> {
+    let antes = nucleo.sesion.auth().en_linea();
+    let r = nucleo.sesion.recuperar_verificar(params).await;
+    avisar_conectividad(&app, antes);
+    Ok(match r {
+        Ok(()) => correcto(()),
+        Err(error) => IpcResult::Err(IpcErr {
+            ok: false.into(),
+            error,
+        }),
+    })
+}
+
+/// IPC-AUTH-10 `auth_recovery_resend` (HE-01-HU07).
+#[tauri::command]
+pub async fn auth_recovery_resend(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<CodeSent>, ()> {
+    let _ = params;
+    let antes = nucleo.sesion.auth().en_linea();
+    let r = nucleo.sesion.recuperar_reenviar().await;
     avisar_conectividad(&app, antes);
     Ok(con_mensaje(r))
 }

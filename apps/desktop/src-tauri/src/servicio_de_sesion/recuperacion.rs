@@ -5,18 +5,24 @@
 //! pendiente y su sesión viven solo en la memoria del Núcleo (IPC-AUTH-09).
 
 use super::{
-    ConMensaje, ESPERA_DE_REENVIO_MS, Reloj, ServicioDeSesion, falla_comun, inesperado, instante,
-    resultado, validar_correo,
+    ConMensaje, ESPERA_DE_REENVIO_MS, Reloj, ServicioDeSesion, VIGENCIA_DEL_CODIGO_MS, con_params,
+    error, falla_comun, inesperado, instante, resultado, validar_correo,
 };
-use crate::cliente_de_supabase::{AuthDeSupabase, FallaDeAuth};
+use crate::cliente_de_supabase::{AuthDeSupabase, FallaDeAuth, SesionDeAuth};
 use crate::messages;
-use crate::tipos::{AppError, AuthRecoveryRequestParams, CodeSent};
+use crate::tipos::{
+    AppError, AuthRecoveryRequestParams, AuthRecoveryVerifyParams, CodeSent, ErrorCode,
+    ErrorParamsValue,
+};
 
 /// Recuperación en curso: el correo y la hora del último envío del código.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecuperacionPendiente {
     pub correo: String,
     pub enviado_ms: i64,
+    /// Sesión de recuperación que entrega `/verify` con el código correcto (HE-01-HU07-CA01). Solo en memoria:
+    /// no se guarda en `session.bin` ni inicia la sesión de la aplicación.
+    pub sesion: Option<SesionDeAuth>,
 }
 
 /// Fallas de Supabase comunes a los pasos de Recuperar contraseña (HE-01-HU06-CA06; RT-04-CA13).
@@ -51,7 +57,11 @@ impl<A: AuthDeSupabase, R: Reloj> ServicioDeSesion<A, R> {
             .await
             .map_err(falla_de_recuperacion)?;
         let enviado_ms = self.reloj.ahora_ms();
-        self.fijar_recuperacion(Some(RecuperacionPendiente { correo, enviado_ms }));
+        self.fijar_recuperacion(Some(RecuperacionPendiente {
+            correo,
+            enviado_ms,
+            sesion: None,
+        }));
         Ok(ConMensaje {
             valor: CodeSent {
                 resend_available_at: instante(enviado_ms + ESPERA_DE_REENVIO_MS),
@@ -60,6 +70,98 @@ impl<A: AuthDeSupabase, R: Reloj> ServicioDeSesion<A, R> {
                 "auth_recovery_request",
                 messages::CODIGO_DE_RECUPERACION_ENVIADO,
             ),
+        })
+    }
+
+    /// Recuperación pendiente para verificar o reenviar. Sin ella (la aplicación se reinició en el paso
+    /// Diligenciar código) no hay código vigente: `code.expired`, como en el registro.
+    fn recuperacion_o_vencida(&self) -> Result<RecuperacionPendiente, AppError> {
+        self.recuperacion_pendiente().ok_or_else(|| {
+            error(
+                ErrorCode::CodeExpired,
+                messages::CODIGO_VENCIDO,
+                Some("code"),
+            )
+        })
+    }
+
+    /// IPC-AUTH-09 `auth_recovery_verify` (HE-01-HU07): código obligatorio (ET07); `POST /verify` con
+    /// `type: 'recovery'` lo acepta solo si es el último enviado y está vigente (ET02, ET03, ET08). Auth no
+    /// distingue entre código incorrecto y vencido: decide la hora del envío (CA03, CA04). Con el código
+    /// correcto guarda la sesión de recuperación en memoria (CA01).
+    pub async fn recuperar_verificar(
+        &self,
+        params: AuthRecoveryVerifyParams,
+    ) -> Result<(), AppError> {
+        let codigo = params.code.trim();
+        if codigo.is_empty() {
+            return Err(error(
+                ErrorCode::CodeRequired,
+                messages::CAMPO_OBLIGATORIO,
+                Some("code"),
+            ));
+        }
+        let pendiente = self.recuperacion_o_vencida()?;
+        let vencido = self.reloj.ahora_ms() > pendiente.enviado_ms + VIGENCIA_DEL_CODIGO_MS;
+        let sesion = self
+            .auth
+            .verificar_recuperacion(&pendiente.correo, codigo)
+            .await
+            .map_err(|f| {
+                falla_comun(&f, messages::SIN_CONEXION_RECUPERAR).unwrap_or_else(|| {
+                    if vencido {
+                        error(
+                            ErrorCode::CodeExpired,
+                            messages::CODIGO_VENCIDO,
+                            Some("code"),
+                        )
+                    } else {
+                        error(
+                            ErrorCode::CodeIncorrect,
+                            messages::CODIGO_INCORRECTO,
+                            Some("code"),
+                        )
+                    }
+                })
+            })?;
+        self.fijar_recuperacion(Some(RecuperacionPendiente {
+            sesion: Some(sesion),
+            ..pendiente
+        }));
+        Ok(())
+    }
+
+    /// IPC-AUTH-10 `auth_recovery_resend` (HE-01-HU07): antes de 60 s desde el último envío responde
+    /// `code.resend_too_soon` con los segundos restantes (CA07, ET11); después pide otro código con
+    /// `POST /recover`, que invalida el anterior (CA06, ET05, ET06, ET10).
+    pub async fn recuperar_reenviar(&self) -> Result<ConMensaje<CodeSent>, AppError> {
+        let pendiente = self.recuperacion_o_vencida()?;
+        let faltan_ms = pendiente.enviado_ms + ESPERA_DE_REENVIO_MS - self.reloj.ahora_ms();
+        if faltan_ms > 0 {
+            let segundos = (faltan_ms + 999) / 1_000;
+            let texto = messages::REENVIO_EN_SEGUNDOS
+                .replace("<segundos restantes>", &segundos.to_string());
+            return Err(con_params(
+                error(ErrorCode::CodeResendTooSoon, &texto, None),
+                "seconds",
+                ErrorParamsValue::Number(segundos),
+            ));
+        }
+        self.auth
+            .recuperar(&pendiente.correo)
+            .await
+            .map_err(falla_de_recuperacion)?;
+        let enviado_ms = self.reloj.ahora_ms();
+        self.fijar_recuperacion(Some(RecuperacionPendiente {
+            correo: pendiente.correo,
+            enviado_ms,
+            sesion: None,
+        }));
+        Ok(ConMensaje {
+            valor: CodeSent {
+                resend_available_at: instante(enviado_ms + ESPERA_DE_REENVIO_MS),
+            },
+            mensaje: resultado("auth_recovery_resend", messages::CODIGO_REENVIADO),
         })
     }
 }

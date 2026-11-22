@@ -1,7 +1,6 @@
-import { useCallback, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useState, type FormEvent } from 'react';
 import { useEnvioUnico } from '@/reglas/envio';
 import { useMensajesDeCampo } from '@/reglas/formulario';
-import { EncabezadoDeRuta } from '@/reglas/ruta';
 import type { AppError } from '@/types';
 import { Aviso } from '@/ui/Aviso/Aviso';
 import { Boton } from '@/ui/Boton/Boton';
@@ -9,44 +8,18 @@ import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
 import { useNavegacion, useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { useConexion } from '../cuenta/conexion';
 import { MarcoDeCuenta } from '../cuenta/MarcoDeCuenta';
-import { TEXTOS } from '../cuenta/textos';
 import { validarCorreo } from '../cuenta/validaciones';
+import { DiligenciarCodigo } from './DiligenciarCodigo';
+import { PasoDeRecuperacion } from './PasoDeRecuperacion';
 
 // P-CTA-03 Recuperar contraseña (HE-01-HU06 a HU08). Tres pasos en este orden: Correo electrónico, Diligenciar
 // código y Nueva contraseña (HE-01-HU06-ET02). En todos, la miga de pan «Inicio de sesión > Recuperar
 // contraseña» y «Regresar» (ET03, RT-03).
 
-type Paso = 'correo' | 'codigo';
+type Paso = 'correo' | 'codigo' | 'nueva';
 
 const CAMPOS = ['email'] as const;
 const VALIDADORES = { email: validarCorreo };
-
-/** Paso de Recuperar contraseña con su encabezado de ruta y, sin conexión, el aviso arriba del paso. */
-function PasoDeRecuperacion({
-  nombre,
-  enLinea,
-  alRegresar,
-  children,
-}: {
-  nombre: string;
-  enLinea: boolean;
-  alRegresar: () => void;
-  children: ReactNode;
-}) {
-  const { abrirCuenta } = useNavegacion();
-  return (
-    <section className="wg-formulario" aria-label={nombre}>
-      {/* CA07, ET04: «Inicio de sesión» en la miga de pan abre Inicio de sesión sin cambiar la contraseña. */}
-      <EncabezadoDeRuta
-        niveles={[{ texto: 'Inicio de sesión', alElegir: () => abrirCuenta('sign_in') }, { texto: 'Recuperar contraseña' }]}
-        alRegresar={alRegresar}
-      />
-      {/* HE-01-HU06-ET11: sin conexión, el aviso va en la parte superior del paso. */}
-      {!enLinea && <Aviso texto={TEXTOS.SIN_CONEXION_RECUPERAR} />}
-      {children}
-    </section>
-  );
-}
 
 export function Recovery() {
   const { invocar } = useNucleo();
@@ -56,6 +29,7 @@ export function Recovery() {
   // Desde Inicio de sesión, «¿Olvidaste tu contraseña?» llega con el correo diligenciado (HE-01-HU04-CA11).
   const [correo, setCorreo] = useState(correoDeCuenta);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [reenvioDisponible, setReenvioDisponible] = useState('');
   const campos = useMensajesDeCampo(CAMPOS, VALIDADORES);
 
   const fallo = useCallback(
@@ -74,23 +48,39 @@ export function Recovery() {
     if (!r.ok) return fallo(r.error);
     // CA01, CA02: el mismo aviso exista o no la cuenta (ET09), en el paso Diligenciar código.
     setAviso(r.result_message?.message ?? null);
+    setReenvioDisponible(r.value.resend_available_at);
     setPaso('codigo');
   }, [campos, correo, fallo, invocar]);
   const envio = useEnvioUnico(enviar);
 
+  const alVerificar = useCallback(() => setPaso('nueva'), []);
+  const regresarAlCorreo = useCallback(() => {
+    setAviso(null);
+    setPaso('correo');
+  }, []);
+
+  if (paso === 'nueva') {
+    return (
+      <MarcoDeCuenta nombre="Recuperar contraseña">
+        {/* HE-01-HU07-CA01: el paso Nueva contraseña; su formulario es de HE-01-HU08. */}
+        <PasoDeRecuperacion nombre="Nueva contraseña" enLinea={enLinea} alRegresar={regresarAlCorreo}>
+          {null}
+        </PasoDeRecuperacion>
+      </MarcoDeCuenta>
+    );
+  }
+
   if (paso === 'codigo') {
     return (
       <MarcoDeCuenta nombre="Recuperar contraseña">
-        <PasoDeRecuperacion
-          nombre="Diligenciar código"
-          enLinea={enLinea}
-          alRegresar={() => {
-            setAviso(null);
-            setPaso('correo');
-          }}
-        >
-          {aviso && enLinea && <Aviso texto={aviso} />}
-        </PasoDeRecuperacion>
+        {/* HE-01-HU07-CA08, ET09: «Regresar» vuelve al paso Correo electrónico con el correo diligenciado.
+            DUDA: HE-01-HU07 sin IPC para invalidar el código al regresar (ver docs/DUDAS.md). */}
+        <DiligenciarCodigo
+          reenvioDisponible={reenvioDisponible}
+          avisoInicial={aviso}
+          alVerificar={alVerificar}
+          alRegresar={regresarAlCorreo}
+        />
       </MarcoDeCuenta>
     );
   }

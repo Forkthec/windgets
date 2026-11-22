@@ -259,6 +259,13 @@ const respuestas: Respuestas = {
     value: { resend_available_at: new Date(Date.now() + 60_000).toISOString() },
     result_message: { code: 'auth_recovery_request', message: textos.CODIGO_DE_RECUPERACION_ENVIADO },
   }),
+  // HE-01-HU07: cualquier código se acepta, como en el registro.
+  auth_recovery_verify: () => ({ ok: true, value: null }),
+  auth_recovery_resend: () => ({
+    ok: true,
+    value: { resend_available_at: new Date(Date.now() + ESPERA_DE_REENVIO_MS).toISOString() },
+    result_message: { code: 'auth_recovery_resend', message: textos.CODIGO_REENVIADO },
+  }),
   // HE-07-HU01: el simulado no tiene etiquetas y crea la tarjeta tal cual llega, al final de Por hacer.
   label_list: () => ({ ok: true, value: [] }),
   card_create: (p) => {

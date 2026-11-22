@@ -39,6 +39,8 @@ pub fn run() {
             puente_ipc::auth_google_start,
             puente_ipc::auth_google_cancel,
             puente_ipc::auth_recovery_request,
+            puente_ipc::auth_recovery_verify,
+            puente_ipc::auth_recovery_resend,
             puente_ipc::auth_get_session,
             puente_ipc::auth_get_sign_out_info,
             puente_ipc::auth_sign_out,

@@ -667,6 +667,8 @@ pub(crate) mod pruebas {
         pub google: Mutex<Option<crate::cliente_de_supabase::SesionDeGoogle>>,
         /// Correos a los que Supabase envió un código de recuperación.
         pub recuperaciones: Mutex<Vec<String>>,
+        /// Códigos de recuperación enviados, del primero al último: 100001, 100002…
+        pub codigos_de_recuperacion: Mutex<Vec<String>>,
     }
 
     impl AuthDePrueba {
@@ -777,8 +779,33 @@ pub(crate) mod pruebas {
                 .any(|v| v.eq_ignore_ascii_case(correo))
             {
                 self.recuperaciones.lock().unwrap().push(correo.to_string());
+                let n = self.recuperaciones.lock().unwrap().len();
+                self.codigos_de_recuperacion
+                    .lock()
+                    .unwrap()
+                    .push(format!("{:06}", 100_000 + n));
             }
             Ok(())
+        }
+
+        async fn verificar_recuperacion(
+            &self,
+            correo: &str,
+            codigo: &str,
+        ) -> Result<SesionDeAuth, FallaDeAuth> {
+            self.anotar(format!("verify recovery {correo} {codigo}"))?;
+            // Solo el último código enviado es válido (ET06, ET08); lo demás es otp_expired.
+            let ultimo = self.codigos_de_recuperacion.lock().unwrap().last().cloned();
+            if ultimo.as_deref() != Some(codigo) {
+                return Err(FallaDeAuth::Rechazo {
+                    estado: 403,
+                    codigo: "otp_expired".into(),
+                });
+            }
+            Ok(SesionDeAuth {
+                access_token: "acceso-recuperacion".into(),
+                ..Self::sesion("")
+            })
         }
 
         fn url_de_google(&self, desafio: &str, regreso: &str, permisos: &str) -> String {
