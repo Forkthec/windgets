@@ -132,9 +132,17 @@ for (const [id, paquete] of [
   ['poppins', 'poppins'],
   ['jetbrains-mono', 'jetbrains-mono'],
   ['nunito', 'nunito'],
+  ['rubik', 'rubik'], // docs/rediseno.md RD-06
 ]) {
   const origen = requerir.resolve(`@fontsource/${paquete}/files/${paquete}-latin-400-normal.woff2`);
   const destino = join(salida, `fonts/${id}.woff2`);
+  crear(destino);
+  copyFileSync(origen, destino);
+}
+// Pesos media y negrita de Rubik para las pantallas de cuenta (docs/rediseno.md RD-06); no van al catálogo.
+for (const peso of [500, 700]) {
+  const origen = requerir.resolve(`@fontsource/rubik/files/rubik-latin-${peso}-normal.woff2`);
+  const destino = join(salida, `fonts/rubik-${peso}.woff2`);
   crear(destino);
   copyFileSync(origen, destino);
 }

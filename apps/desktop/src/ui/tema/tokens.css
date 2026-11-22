@@ -31,6 +31,26 @@
   font-weight: 400;
   font-display: swap;
 }
+/* Rubik (docs/rediseno.md RD-06): la del catálogo es la regular; media y negrita solo las usan las pantallas de
+   cuenta. */
+@font-face {
+  font-family: 'Rubik';
+  src: url('../../../assets/fonts/rubik.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Rubik';
+  src: url('../../../assets/fonts/rubik-500.woff2') format('woff2');
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Rubik';
+  src: url('../../../assets/fonts/rubik-700.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
 @font-face {
   font-family: 'JetBrains Mono';
   src: url('../../../assets/fonts/jetbrains-mono.woff2') format('woff2');

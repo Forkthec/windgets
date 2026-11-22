@@ -83,8 +83,9 @@ impl ServicioDePersonalizacion {
                     .recursos
                     .join("assets/templates/default/background.jpg"),
             ),
-            AssetKind::CatalogFont if id == "nunito" => {
-                Some(carpetas.recursos.join("assets/fonts/nunito.woff2"))
+            // Nunito (D-198) y Rubik (docs/rediseno.md RD-06) viajan en el instalador.
+            AssetKind::CatalogFont if id == "nunito" || id == "rubik" => {
+                Some(carpetas.recursos.join(format!("assets/fonts/{id}.woff2")))
             }
             otro => {
                 let (clase, ref_id) = match otro {
