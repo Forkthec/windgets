@@ -1,6 +1,6 @@
 // EF-01 `windi-chat` (supabase/functions/windi-chat/logica.ts). La Edge Function corre en Deno; su lógica es TS
 // puro y se prueba aquí con Gemini simulado (plan, P19).
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   cuerpoParaGemini,
   ESPERA_MS,
@@ -15,7 +15,11 @@ import {
   MUY_LARGO,
   GUIA,
   diaYFecha,
+  BLOQUEO_DE_SEGURIDAD,
+  resumenDeGemini,
+  responderConGemini,
   type Contexto,
+  type Registro,
 } from '../../../../supabase/functions/windi-chat/logica';
 
 const CONTEXTO: Contexto = {
@@ -86,9 +90,110 @@ describe('EF-01 windi-chat · HE-14-HU01', () => {
       provider_error: 502,
       timeout: 504,
     });
-    // Sin texto (por ejemplo, un bloqueo de seguridad) es provider_error.
+    // Sin texto ni propuesta (candidato vacío) es provider_error; el bloqueo de seguridad tiene su respuesta (P27).
     expect(leerGemini({ candidates: [{ content: { parts: [] } }] })).toBe('provider_error');
     expect(leerGemini({})).toBe('provider_error');
+  });
+
+  it('P27 (C5) · MALFORMED_FUNCTION_CALL y el candidato vacío son provider_error', () => {
+    expect(leerGemini({ candidates: [{ finishReason: 'MALFORMED_FUNCTION_CALL' }] })).toBe('provider_error');
+    expect(leerGemini({ candidates: [{ finishReason: 'STOP', content: { parts: [] } }] })).toBe(
+      'provider_error',
+    );
+    expect(leerGemini({ candidates: [] })).toBe('provider_error');
+  });
+
+  it('P27 (C5) · el bloqueo de seguridad pide decirlo de otra forma, en el candidato o en promptFeedback', () => {
+    const esperada = { reply: BLOQUEO_DE_SEGURIDAD, intent: 'clarify', proposal: null };
+    expect(BLOQUEO_DE_SEGURIDAD).toBe('No puedo responder a ese mensaje. ¿Me lo dices de otra forma?');
+    expect(leerGemini({ candidates: [{ finishReason: 'SAFETY' }] })).toEqual(esperada);
+    expect(leerGemini({ promptFeedback: { blockReason: 'SAFETY' } })).toEqual(esperada);
+    // Los otros motivos de bloqueo siguen en provider_error (docs/DUDAS.md, P27).
+    expect(leerGemini({ promptFeedback: { blockReason: 'PROHIBITED_CONTENT' } })).toBe('provider_error');
+  });
+
+  it('P27 (C5) · el resumen para el log no lleva el texto ni los argumentos (D-196)', () => {
+    const gemini = {
+      candidates: [
+        {
+          finishReason: 'STOP',
+          content: {
+            parts: [
+              { text: 'Texto privado de la persona' },
+              { functionCall: { name: 'propose_create_cards', args: { cards: [{ title: 'Secreto' }] } } },
+            ],
+          },
+        },
+      ],
+    };
+    const resumen = resumenDeGemini(gemini);
+    expect(resumen).toEqual({
+      finishReason: 'STOP',
+      blockReason: null,
+      partes: 2,
+      llamadas: ['propose_create_cards'],
+    });
+    expect(JSON.stringify(resumen)).not.toMatch(/privado|Secreto/);
+    expect(resumenDeGemini(null)).toEqual({ finishReason: null, blockReason: null, partes: 0, llamadas: [] });
+  });
+
+  describe('P27 (C5) · responderConGemini', () => {
+    const vacia = { candidates: [{ finishReason: 'STOP', content: { parts: [] } }] };
+    const buena = { candidates: [{ finishReason: 'STOP', content: { parts: [{ text: 'Hola' }] } }] };
+    const respuesta = (cuerpo: unknown, estado = 200) =>
+      new Response(JSON.stringify(cuerpo), {
+        status: estado,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    const simulado = (...respuestas: Response[]) => {
+      const llamar = vi.fn<() => Promise<Response>>();
+      for (const r of respuestas) llamar.mockResolvedValueOnce(r);
+      return llamar;
+    };
+
+    it('reintenta una vez la respuesta vacía y gana la segunda', async () => {
+      const llamar = simulado(respuesta(vacia), respuesta(buena));
+      const registrar = vi.fn<Registro>();
+      expect(await responderConGemini(llamar, registrar)).toEqual({
+        reply: 'Hola',
+        intent: 'answer',
+        proposal: null,
+      });
+      expect(llamar).toHaveBeenCalledTimes(2);
+      expect(registrar.mock.calls.map(([nivel, datos]) => [nivel, datos.intento])).toEqual([
+        ['error', 1],
+        ['info', 2],
+      ]);
+    });
+
+    it('dos respuestas vacías son provider_error, sin un tercer intento', async () => {
+      const llamar = simulado(
+        respuesta(vacia),
+        respuesta({ candidates: [{ finishReason: 'MALFORMED_FUNCTION_CALL' }] }),
+      );
+      expect(await responderConGemini(llamar, vi.fn())).toBe('provider_error');
+      expect(llamar).toHaveBeenCalledTimes(2);
+    });
+
+    it('429 es quota_exceeded sin reintento', async () => {
+      const llamar = simulado(respuesta({}, 429));
+      const registrar = vi.fn<Registro>();
+      expect(await responderConGemini(llamar, registrar)).toBe('quota_exceeded');
+      expect(llamar).toHaveBeenCalledTimes(1);
+      expect(registrar).toHaveBeenCalledWith('error', {
+        evento: 'gemini_http',
+        intento: 1,
+        estado: 429,
+        codigo: 'quota_exceeded',
+      });
+    });
+
+    it('el bloqueo de seguridad no se reintenta', async () => {
+      const llamar = simulado(respuesta({ candidates: [{ finishReason: 'SAFETY' }] }));
+      const leida = await responderConGemini(llamar, vi.fn());
+      expect(leida).toEqual({ reply: BLOQUEO_DE_SEGURIDAD, intent: 'clarify', proposal: null });
+      expect(llamar).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('HE-14-HU01-CA02 · la respuesta de Gemini es la respuesta del agente', () => {
@@ -131,6 +236,24 @@ describe('EF-01 windi-chat · HE-14-HU02 (instrucción del sistema de INT-03)', 
   it('HE-14-HU02-CA05 · Mensaje ofensivo', () => {
     // ET11.
     expect(texto).toContain('mantienes la calma, no devuelves el tono ni juzgas');
+  });
+});
+
+describe('EF-01 windi-chat · P27 (instrucción del sistema)', () => {
+  const texto = instruccionDelSistema(CONTEXTO);
+
+  it('P27 (C6) · HE-14-HU05-CA11 · «de HH:00 a (HH+1):00» va directo a la propuesta', () => {
+    expect(texto).toContain(
+      'Un bloque «de HH:00 a (HH+1):00», como «de 15:00 a 16:00», es un bloque válido de una hora',
+    );
+    expect(texto).toContain('directamente con start_hour HH, sin preguntar');
+  });
+
+  it('P27 (C8) · HE-14-HU04 · los datos que no se pidieron no se envían', () => {
+    expect(texto).toContain('Al crear o al cambiar tarjetas solo envías los datos que la persona indicó');
+    expect(texto).toContain(
+      'descripción, etiquetas o bloque horario, no los envías y quedan vacíos o como estaban',
+    );
   });
 });
 
