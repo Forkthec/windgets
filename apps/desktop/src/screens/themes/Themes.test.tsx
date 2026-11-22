@@ -54,12 +54,23 @@ describe('HE-03-HU01 · Temas', () => {
     ]);
     // ET01, ET02: nombre, fecha de última modificación y «Aplicado», del más reciente al más antiguo.
     expect(filas()).toEqual(['Verano · 03/11/2026', 'Mi tema · 02/11/2026 · Aplicado']);
-    for (const li of within(screen.getByRole('list', { name: 'Lista de temas' })).getAllByRole('listitem')) {
+    // ET01: «Aplicar» y el botón de acciones «⋮» con «Renombrar» y «Eliminar» en cada tema (RT-02-ET10).
+    const lista = screen.getByRole('list', { name: 'Lista de temas' });
+    for (const [i, li] of within(lista).getAllByRole('listitem').entries()) {
+      const nombre = ['Verano', 'Mi tema'][i] as string;
       expect(
         within(li)
           .getAllByRole('button')
           .map((b) => b.textContent),
-      ).toEqual(['Aplicar', 'Renombrar', 'Eliminar']);
+      ).toEqual(['Aplicar', '⋮']);
+      fireEvent.click(within(li).getByRole('button', { name: `Acciones de ${nombre}` }));
+      const menu = screen.getByRole('menu', { name: `Acciones de ${nombre}` });
+      expect(
+        within(menu)
+          .getAllByRole('menuitem')
+          .map((o) => o.textContent),
+      ).toEqual(['Renombrar', 'Eliminar']);
+      fireEvent.keyDown(menu, { key: 'Escape' });
     }
     expect(screen.queryByText(AYUDA)).toBeNull();
   });
@@ -220,7 +231,9 @@ describe('HE-03-HU04 · Renombrar un tema', () => {
     const fila = within(screen.getByRole('list', { name: 'Lista de temas' })).getAllByRole(
       'listitem',
     )[1] as HTMLElement;
-    fireEvent.click(within(fila).getByRole('button', { name: 'Renombrar' }));
+    // HE-03-HU04-ET01: «Renombrar» en el botón de acciones «⋮» del tema.
+    fireEvent.click(within(fila).getByRole('button', { name: /^Acciones de / }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Renombrar' }));
     const ventana = await screen.findByRole('dialog', { name: 'Renombrar tema' });
     return { n, ventana, campo: within(ventana).getByLabelText('Nombre') as HTMLInputElement };
   }
@@ -310,7 +323,9 @@ describe('HE-03-HU05 · Eliminar un tema', () => {
 
   async function abrirEliminar(preparar?: (n: NucleoDelPlanificador) => void) {
     const n = await abrirTemas(TEMAS, preparar);
-    fireEvent.click(within(fila(0)).getByRole('button', { name: 'Eliminar' }));
+    // ET01: «Eliminar» en el botón de acciones «⋮» del tema.
+    fireEvent.click(within(fila(0)).getByRole('button', { name: 'Acciones de Verano' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Eliminar' }));
     const ventana = await screen.findByRole('dialog');
     return { n, ventana };
   }
@@ -334,10 +349,11 @@ describe('HE-03-HU05 · Eliminar un tema', () => {
 
   it('HE-03-HU05-CA02 · Intentar eliminar el tema aplicado', async () => {
     await abrirTemas(TEMAS);
-    // ET04: deshabilitada con el texto (RT-04).
-    const boton = within(fila(1)).getByRole('button', { name: 'Eliminar' }) as HTMLButtonElement;
+    // ET04: deshabilitada dentro del menú «⋮», con el texto al pasar el mouse (RT-04).
+    fireEvent.click(within(fila(1)).getByRole('button', { name: /^Acciones de / }));
+    const boton = screen.getByRole('menuitem', { name: 'Eliminar' }) as HTMLButtonElement;
     expect(boton.disabled).toBe(true);
-    expect(screen.getByText('No puedes eliminar el tema aplicado. Aplica otro tema primero.')).toBeTruthy();
+    expect(boton.title).toBe('No puedes eliminar el tema aplicado. Aplica otro tema primero.');
   });
 
   it('HE-03-HU05-CA03 · Cancelar la eliminación', async () => {
