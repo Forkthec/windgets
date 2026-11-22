@@ -823,6 +823,10 @@ button.wg-tarjeta__titulo:focus-visible {
 .wg-calendario__dia--hoy .wg-calendario__numero {
   font-weight: 700;
 }
+/* HE-10-HU03-ET01: toda la celda de un día abre el Panel del día. */
+.wg-calendario__celda {
+  cursor: pointer;
+}
 .wg-calendario__tarjetas {
   margin: var(--wg-unidad) 0 0;
   padding: 0;

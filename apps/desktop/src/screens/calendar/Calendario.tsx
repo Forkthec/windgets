@@ -50,20 +50,14 @@ function clasesDelDia(esHoy: boolean, estado: EstadoDelDia | undefined): string 
     .join(' ');
 }
 
-/** El número o el nombre del día, que abre el Panel del día, y el ícono de reloj con pendientes (ET17). */
-function EncabezadoDelDia({
-  texto,
-  estado,
-  alSeleccionar,
-}: {
-  texto: string;
-  estado: EstadoDelDia | undefined;
-  alSeleccionar: () => void;
-}) {
+/**
+ * El número o el nombre del día y el ícono de reloj con pendientes (ET17). El número es un botón para llegar con
+ * el teclado; su selección sube a la celda, que abre el Panel del día (HE-10-HU03-ET01, ET08).
+ */
+function EncabezadoDelDia({ texto, estado }: { texto: string; estado: EstadoDelDia | undefined }) {
   return (
     <span className="wg-fila wg-calendario__encabezado">
-      {/* HE-10-HU03-ET01, ET08: seleccionar el día abre el Panel del día. */}
-      <button type="button" className="wg-calendario__numero" onClick={alSeleccionar}>
+      <button type="button" className="wg-calendario__numero">
         {texto}
       </button>
       {estado?.has_pending && <IconoReloj />}
@@ -96,8 +90,13 @@ function DiaDelMes({
   alSeleccionar: () => void;
 }) {
   return (
-    <td className={clasesDelDia(esHoy, dia)} aria-current={esHoy ? 'date' : undefined}>
-      <EncabezadoDelDia texto={String(numero)} estado={dia} alSeleccionar={alSeleccionar} />
+    // HE-10-HU03-ET01, ET08: cualquier parte de la celda, con sus títulos y «+N más», abre el Panel del día.
+    <td
+      className={`${clasesDelDia(esHoy, dia)} wg-calendario__celda`}
+      aria-current={esHoy ? 'date' : undefined}
+      onClick={alSeleccionar}
+    >
+      <EncabezadoDelDia texto={String(numero)} estado={dia} />
       {dia && dia.preview.length > 0 && (
         <ul className="wg-calendario__tarjetas">
           {dia.preview.map((t) => (
@@ -127,17 +126,15 @@ function DiaDeLaSemana({
   alSeleccionar: () => void;
 }) {
   return (
+    // HE-10-HU03-ET08: también en la vista semanal, cualquier parte del día abre el Panel del día.
     <section
-      className={clasesDelDia(esHoy, dia)}
+      className={`${clasesDelDia(esHoy, dia)} wg-calendario__celda`}
       aria-label={`${nombre} ${fechaVisible(dia.date)}`}
       aria-current={esHoy ? 'date' : undefined}
+      onClick={alSeleccionar}
     >
       <h3>
-        <EncabezadoDelDia
-          texto={`${nombre} ${fechaVisible(dia.date)}`}
-          estado={dia}
-          alSeleccionar={alSeleccionar}
-        />
+        <EncabezadoDelDia texto={`${nombre} ${fechaVisible(dia.date)}`} estado={dia} />
       </h3>
       <Vencidas estado={dia} />
       {dia.cards.length > 0 && (
@@ -309,6 +306,7 @@ function VistaMensual({ vista, mes, hoyEs, titulo, alSeleccionar }: VistaMensual
         {semanasDelMes(vista.anio, vista.mes).map((semana, i) => (
           <tr key={i}>
             {semana.map((numero, j) => {
+              // HE-10-HU03-ET09: las celdas que no son de un día del mes no abren el Panel del día.
               if (numero === null) return <td key={j} />;
               const fecha = fechaIso(new Date(vista.anio, vista.mes, numero));
               return (
