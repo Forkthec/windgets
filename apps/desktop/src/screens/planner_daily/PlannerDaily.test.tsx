@@ -26,12 +26,12 @@ function abrir(tarjetas: Parameters<typeof abrirPantalla>[3] = []) {
   return abrirPantalla('planner_daily', 'Planificador diario', PlannerDaily, tarjetas);
 }
 
-/** Cada tarjeta de la lista como «título · hora · prioridad». */
+/** Cada tarjeta de la lista como «título · hora · prioridad» (sin la casilla ni la «i»). */
 function lista() {
   return within(screen.getByRole('list', { name: 'Tarjetas de hoy' }))
     .getAllByRole('listitem')
     .map((li) =>
-      Array.from(li.children)
+      Array.from(li.querySelector('label')?.children ?? [])
         .filter((h) => h.tagName !== 'INPUT')
         .map((h) => h.textContent)
         .join(' · '),
@@ -53,9 +53,10 @@ describe('HE-12-HU01 · Planificador diario', () => {
       'Estudiar redes · 10:00',
       'Pagar la luz · Alta',
     ]);
-    // Cada una con su casilla de completada.
+    // ET04: cada una con su casilla de completada y su botón de información «i».
     for (const titulo of ['Leer capítulo 3', 'Estudiar redes', 'Pagar la luz']) {
       expect(screen.getByRole('checkbox', { name: titulo })).toBeTruthy();
+      expect(screen.getByRole('button', { name: `Ver detalle de ${titulo}` }).textContent).toBe('i');
     }
   });
 
@@ -69,6 +70,7 @@ describe('HE-12-HU01 · Planificador diario', () => {
   it('HE-12-HU01-CA03 · Sin tarjetas para hoy', async () => {
     await abrir([tarjeta({ title: 'Otro día', due_date: '2026-11-20' })]);
     expect(screen.getByText('No tienes tarjetas para hoy.')).toBeTruthy(); // ET06
+    expect(screen.getByRole('button', { name: 'Nueva tarjeta' })).toBeTruthy(); // ET06, ET11
   });
 
   it('HE-12-HU01-CA04 · Tarjeta completada en el planificador diario', async () => {
@@ -85,12 +87,38 @@ describe('HE-12-HU01 · Planificador diario', () => {
     expect(lista()).toEqual(['Estudiar redes · 10:00']);
   });
 
-  it('el título de una tarjeta abre el Detalle de tarjeta (T-090)', async () => {
-    await abrir([tarjeta({ title: 'Pagar la luz', due_date: HOY })]);
+  it('HE-12-HU01-CA06 · Consultar el detalle con el botón de información', async () => {
+    // T-090 cambia con la v12: en el Planificador diario el detalle se abre con la «i», no con el título.
+    const nucleo = await abrir([tarjeta({ title: 'Pagar la luz', due_date: HOY })]);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Pagar la luz' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Ver detalle de Pagar la luz' }));
     });
+    // ET10: el Detalle de tarjeta sobre la pantalla, sin cambiar la casilla.
     expect(screen.getByRole('dialog', { name: 'Detalle de tarjeta' })).toBeTruthy();
+    expect(screen.getByRole('main', { name: 'Planificador diario' })).toBeTruthy();
+    expect(llamadasA(nucleo, 'card_set_completed')).toEqual([]);
+    expect(
+      (screen.getByRole('checkbox', { name: 'Pagar la luz', hidden: true }) as HTMLInputElement).checked,
+    ).toBe(false);
+  });
+
+  it('HE-12-HU01-CA07 · Crear una tarjeta desde el planificador diario', async () => {
+    const nucleo = await abrir();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Nueva tarjeta' }));
+    });
+    // ET11: el Formulario de tarjeta con la fecha límite de hoy diligenciada.
+    const formulario = screen.getByRole('dialog', { name: 'Formulario de tarjeta' });
+    expect((within(formulario).getByLabelText('Fecha límite') as HTMLInputElement).value).toBe('14/11/2026');
+    fireEvent.change(within(formulario).getByLabelText('Título'), { target: { value: 'Comprar pan' } });
+    await act(async () => {
+      fireEvent.click(within(formulario).getByRole('button', { name: 'Guardar' }));
+    });
+    // ET12 (D-214): se crea con las reglas de HE-07-HU01, en Por hacer, y aparece en la lista.
+    expect(llamadasA(nucleo, 'card_create')).toHaveLength(1);
+    expect(nucleo.tarjetas.find((t) => t.title === 'Comprar pan')?.column_id).toBe(POR_HACER.id);
+    expect(screen.getByRole('status').textContent).toContain('Tarjeta creada.');
+    expect(lista()).toEqual(['Comprar pan']);
   });
 });
 
@@ -155,6 +183,29 @@ describe('HE-12-HU02 · Casilla de completada en el planificador diario', () => 
     expect(pagar.column_id).toBe(POR_HACER.id);
     expect(tachada('Pagar la luz')).toBe(false);
   });
+
+  it('HE-12-HU02-ET01 · Seleccionar el título también alterna la casilla', async () => {
+    const pagar = tarjeta({ title: 'Pagar la luz', due_date: HOY, column_id: EN_PROGRESO.id });
+    const nucleo = await abrir([pagar]);
+    // ET01: cualquier parte de la tarjeta, salvo la «i», alterna la casilla; el título ya no abre el detalle.
+    await act(async () => {
+      fireEvent.click(screen.getByText('Pagar la luz'));
+    });
+    expect(llamadasA(nucleo, 'card_set_completed')).toEqual([{ card_id: pagar.id, completed: true }]);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('HE-12-HU02-CA04 · El botón de información no alterna la casilla', async () => {
+    const pagar = tarjeta({ title: 'Pagar la luz', due_date: HOY, column_id: EN_PROGRESO.id });
+    const nucleo = await abrir([pagar]);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Ver detalle de Pagar la luz' }));
+    });
+    // ET01: la «i» queda fuera de la casilla: no mueve la tarjeta y abre el Detalle de tarjeta.
+    expect(llamadasA(nucleo, 'card_set_completed')).toEqual([]);
+    expect(pagar.column_id).toBe(EN_PROGRESO.id);
+    expect(screen.getByRole('dialog', { name: 'Detalle de tarjeta' })).toBeTruthy();
+  });
 });
 
 describe('HE-12-HU03 · Resumen de avance del día', () => {
@@ -201,8 +252,9 @@ describe('HE-12-HU03 · Resumen de avance del día', () => {
 
   it('HE-12-HU03-CA05 · Sin tarjetas para hoy', async () => {
     await abrir([tarjeta({ title: 'Otro día', due_date: '2026-11-20' })]);
-    // ET06: solo el estado vacío.
+    // ET06: sin resumen; solo el estado vacío y «Nueva tarjeta» (HE-12-HU01-ET11).
     expect(screen.queryByRole('region', { name: 'Resumen de avance' })).toBeNull();
     expect(screen.getByText('No tienes tarjetas para hoy.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Nueva tarjeta' })).toBeTruthy();
   });
 });
