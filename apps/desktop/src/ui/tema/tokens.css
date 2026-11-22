@@ -353,12 +353,15 @@ body {
   outline-offset: calc(var(--wg-unidad) / 2);
 }
 
-/* Tablero Kanban (P-KAN-01, HE-09-HU01): columnas una al lado de otra, con desplazamiento horizontal. */
+/* Tablero Kanban (P-KAN-01, HE-09-HU01): columnas una al lado de otra, con desplazamiento horizontal. Su alto es
+   el de las columnas, así que no tiene barra vertical propia: la pantalla se desplaza, y los menús de las
+   tarjetas se dibujan fuera del tablero y no se recortan (HE-09-HU02-ET14, RT-02-ET12). */
 .wg-tablero {
   display: flex;
   align-items: stretch; /* columnas de la misma altura */
   gap: calc(var(--wg-unidad) * 4);
   overflow-x: auto;
+  overflow-y: hidden;
   padding-block: calc(var(--wg-unidad) * 4);
 }
 .wg-columna {
@@ -378,6 +381,7 @@ body {
 }
 /* Widget Kanban de la capa (HE-06-HU05): columnas que se reparten el ancho del widget. */
 .wg-tablero--widget {
+  overflow-y: visible; /* como antes de HE-09-HU02-ET14: el widget Kanban no cambia */
   padding-block: 0;
   gap: calc(var(--wg-unidad) * 2);
 }

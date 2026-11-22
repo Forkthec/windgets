@@ -19,5 +19,7 @@ export default defineConfig({
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],
     setupFiles: ['src/configuracionPruebas.ts'],
+    // Las pruebas que leen reglas de estilo (`tokens.css?raw`, HE-09-HU02-CA10) reciben el archivo real.
+    css: { include: [/tokens\.css/] },
   },
 });

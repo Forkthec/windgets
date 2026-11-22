@@ -27,7 +27,7 @@ import textos from '@/types/messages.es.json';
 import { FormularioColumna } from './FormularioColumna';
 import { useNucleo, useParametrosDeNavegacion } from '@/ventana_principal/VentanaPrincipal';
 import { fechaVisible } from '../tarjeta/fechas';
-import { MoverA } from '../tarjeta/MoverA';
+import { opcionesDeMoverA } from '../tarjeta/MoverA';
 import { NOMBRE_DE_PRIORIDAD, NOMBRE_DE_TIPO } from '../tarjeta/nombres';
 import { useVentanasDeTarjeta } from '../tarjeta/useVentanasDeTarjeta';
 import { ENCABEZADO, type LugarDeSoltar, movimientoDelArrastre, ordenDelArrastre } from './arrastre';
@@ -107,24 +107,22 @@ function Tarjeta({ tarjeta }: { tarjeta: Card }) {
           })}
         </ul>
       )}
-      <span className="wg-fila">
-        <MoverA
-          columnas={columnas}
-          actual={tarjeta.column_id}
-          alElegir={(columna) =>
-            alMover({ card_id: tarjeta.id, column_id: columna, placement: { kind: 'end' } })
-          }
-        />
-        {/* HE-07-HU04-ET22 (RT-02-ET10): las acciones de la tarjeta en su botón de acciones «⋮». */}
-        <MenuDeAcciones
-          nombre={tarjeta.title}
-          opciones={[
-            { etiqueta: 'Editar', alElegir: () => alEditarTarjeta(tarjeta.id) },
-            { etiqueta: 'Vista detallada', alElegir: () => alAbrir(tarjeta.id) },
-            { etiqueta: 'Eliminar', alElegir: () => alEliminarTarjeta(tarjeta.id) },
-          ]}
-        />
-      </span>
+      {/* HE-07-HU04-ET22 (RT-02-ET10): las acciones de la tarjeta en su botón de acciones «⋮». «Mover a» es la
+          alternativa sin drag-and-drop (HE-09-HU02-ET10): sus columnas reemplazan las opciones del menú. */}
+      <MenuDeAcciones
+        nombre={tarjeta.title}
+        opciones={[
+          { etiqueta: 'Editar', alElegir: () => alEditarTarjeta(tarjeta.id) },
+          {
+            etiqueta: 'Mover a',
+            submenu: opcionesDeMoverA(columnas, tarjeta.column_id, (columna) =>
+              alMover({ card_id: tarjeta.id, column_id: columna, placement: { kind: 'end' } }),
+            ),
+          },
+          { etiqueta: 'Vista detallada', alElegir: () => alAbrir(tarjeta.id) },
+          { etiqueta: 'Eliminar', alElegir: () => alEliminarTarjeta(tarjeta.id) },
+        ]}
+      />
     </li>
   );
 }
