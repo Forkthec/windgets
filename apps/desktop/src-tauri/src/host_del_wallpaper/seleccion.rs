@@ -8,7 +8,8 @@
 //! escala al dibujarlos, HE-05-HU02-ET07), así que el punto se compara con ellos antes de pasarlo a la capa.
 
 use crate::tipos::{
-    EventMapPointerForwarded, EventMapPointerForwardedButton, Monitor, WidgetRect, WidgetType,
+    EventMapPointerForwarded, EventMapPointerForwardedButton, EventMapPointerReleased, Monitor,
+    WidgetRect, WidgetType,
 };
 
 use serde::Serialize;
@@ -104,22 +105,44 @@ pub struct ArrastreReenviado {
     pub phase: FaseDelArrastre,
 }
 
+/// HE-06-HU08-ET08: si el puntero se movió más de estos píxeles de la capa desde que se presionó, soltar el botón
+/// no es una selección y no abre ninguna pantalla.
+pub const UMBRAL_DE_SELECCION: i64 = 4;
+
 /// Seguimiento del arrastre: empieza con una selección reenviada a la capa y termina al soltar el botón
 /// principal. Mientras dura, el punto se reenvía aunque salga del widget: soltar fuera de las columnas deja la
-/// tarjeta donde estaba (HE-06-HU06-ET05).
+/// tarjeta donde estaba (HE-06-HU06-ET05). Al soltar sin haberse alejado más de 4 píxeles, deja lista la
+/// selección soltada (EV-27, HE-06-HU08-ET08).
 #[derive(Debug, Default)]
 pub struct Arrastre {
     ultimo: Option<(i64, i64)>,
+    presionada: Option<EventMapPointerForwarded>,
+    se_alejo: bool,
+    soltada: Option<EventMapPointerReleased>,
 }
 
 impl Arrastre {
     pub const fn nuevo() -> Self {
-        Self { ultimo: None }
+        Self {
+            ultimo: None,
+            presionada: None,
+            se_alejo: false,
+            soltada: None,
+        }
     }
 
     /// Una selección reenviada (EV-18) empieza un arrastre en su punto.
     pub fn empezar(&mut self, seleccion: &EventMapPointerForwarded) {
         self.ultimo = Some((seleccion.x, seleccion.y));
+        self.presionada = Some(seleccion.clone());
+        self.se_alejo = false;
+        self.soltada = None;
+    }
+
+    /// EV-27 `pointer_released`: la selección soltada sin mover el puntero más de 4 píxeles, una sola vez. Sin
+    /// ella (arrastre o sin selección reenviada), `None`: la capa no abre ninguna pantalla (HE-06-HU08-CA10).
+    pub fn tomar_soltada(&mut self) -> Option<EventMapPointerReleased> {
+        self.soltada.take()
     }
 
     /// ¿Hay un arrastre en curso? Sin él, el movimiento del mouse no se mira.
@@ -131,6 +154,8 @@ impl Arrastre {
     /// cualquier arrastre anterior sin avisar a la capa.
     pub fn cancelar(&mut self) {
         self.ultimo = None;
+        self.presionada = None;
+        self.soltada = None;
     }
 
     /// Cada entrada del mouse mientras dura el arrastre. Devuelve lo que se reenvía: `up` al soltar el botón
@@ -145,8 +170,22 @@ impl Arrastre {
         let anterior = self.ultimo?;
         let (cx, cy) = en_la_capa(geometria, x, y);
         let punto = (cx.round() as i64, cy.round() as i64);
+        if let Some(p) = &self.presionada {
+            let (dx, dy) = (punto.0 - p.x, punto.1 - p.y);
+            self.se_alejo |= dx * dx + dy * dy > UMBRAL_DE_SELECCION * UMBRAL_DE_SELECCION;
+        }
         let phase = if soltado {
             self.ultimo = None;
+            if let Some(p) = self.presionada.take()
+                && !self.se_alejo
+            {
+                self.soltada = Some(EventMapPointerReleased {
+                    x: punto.0,
+                    y: punto.1,
+                    monitor_id: p.monitor_id,
+                    button: p.button,
+                });
+            }
             FaseDelArrastre::Up
         } else if punto == anterior {
             return None;
@@ -528,5 +567,48 @@ mod pruebas {
         arrastre.cancelar();
         assert!(!arrastre.en_curso());
         assert_eq!(arrastre.seguir(&geometria, (900, 100), false), None);
+    }
+
+    #[test]
+    fn ca_he_06_hu08_ca10() {
+        // HE-06-HU08-CA10 · Empezar un arrastre en el widget Kanban: presionar y mover el puntero más de 4 píxeles
+        // antes de soltarlo no deja ninguna selección soltada, así que la capa no abre la aplicación (ET08). Volver
+        // al punto de partida antes de soltar tampoco cuenta como selección.
+        let geometria = por_defecto();
+        let mut arrastre = Arrastre::nuevo();
+        arrastre.empezar(&seleccion_en_kanban());
+        arrastre.seguir(&geometria, (806, 100), false);
+        arrastre.seguir(&geometria, (800, 100), true);
+        assert_eq!(arrastre.tomar_soltada(), None);
+        // Sin una selección reenviada, soltar no deja nada.
+        let mut sin_seleccion = Arrastre::nuevo();
+        sin_seleccion.seguir(&geometria, (800, 100), true);
+        assert_eq!(sin_seleccion.tomar_soltada(), None);
+    }
+
+    #[test]
+    fn ca_he_06_hu08_et08() {
+        // HE-06-HU08-ET08 · El widget abre la pantalla al soltar el botón si el puntero no se movió más de 4
+        // píxeles desde que se presionó: EV-27 lleva el punto donde se soltó y el monitor de la selección, una vez.
+        let geometria = por_defecto();
+        let mut arrastre = Arrastre::nuevo();
+        arrastre.empezar(&seleccion_en_kanban());
+        arrastre.seguir(&geometria, (803, 102), false);
+        arrastre.seguir(&geometria, (804, 100), true);
+        assert_eq!(
+            arrastre.tomar_soltada(),
+            Some(EventMapPointerReleased {
+                x: 804,
+                y: 100,
+                monitor_id: "0".into(),
+                button: EventMapPointerForwardedButton::Primary,
+            })
+        );
+        assert_eq!(arrastre.tomar_soltada(), None);
+        // Una selección que no se reenvía cancela la anterior: no queda nada por soltar.
+        arrastre.empezar(&seleccion_en_kanban());
+        arrastre.cancelar();
+        arrastre.seguir(&geometria, (800, 100), true);
+        assert_eq!(arrastre.tomar_soltada(), None);
     }
 }

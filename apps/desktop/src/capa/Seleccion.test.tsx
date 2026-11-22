@@ -1,11 +1,12 @@
 // HE-06-HU01 · Seleccionar un widget interactivo directamente en el escritorio. Pruebas de la capa (C-02): recibe
-// EV-18 y entrega la selección al widget. Las reglas del Núcleo (íconos, otras ventanas, botón secundario, widgets
+// EV-18 al presionar y EV-27 al soltar sin mover el puntero, y solo entonces entrega la selección al widget
+// (HE-06-HU08-ET08). Las reglas del Núcleo (íconos, otras ventanas, botón secundario, widgets
 // no interactivos) tienen sus pruebas ca_he_06_hu01_* en host_del_wallpaper/seleccion.rs; Raw Input se prueba a
 // mano en Windows 11.
 import { act, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Escuchar } from '@/ipc/eventos';
-import type { EventMapPointerForwarded, Invoke, LayerInitialState, WidgetRect } from '@/types';
+import type { EventMapPointerReleased, Invoke, LayerInitialState, WidgetRect } from '@/types';
 import { Capa } from './Capa';
 
 const WIDGETS: WidgetRect[] = [
@@ -26,7 +27,7 @@ const ESTADO: LayerInitialState = {
   wallpaper_state: 'ok',
 };
 
-/** Pinta la capa y devuelve cómo emitir EV-18 `pointer_forwarded`. */
+/** Pinta la capa y devuelve cómo emitir EV-18 `pointer_forwarded` y EV-27 `pointer_released`. */
 async function pintar() {
   const invocar = ((comando: string) =>
     Promise.resolve(
@@ -36,16 +37,21 @@ async function pintar() {
           ? { ok: true, value: { url: '', state: 'unavailable' } }
           : { ok: false, error: { code: 'internal.unexpected', message: '' } },
     )) as unknown as Invoke;
-  const oyentes: Array<(carga: EventMapPointerForwarded) => void> = [];
-  const escuchar = ((evento: string, alRecibir: (carga: EventMapPointerForwarded) => void) => {
-    if (evento === 'pointer_forwarded') oyentes.push(alRecibir);
+  const oyentes = new Map<string, Array<(carga: EventMapPointerReleased) => void>>();
+  const escuchar = ((evento: string, alRecibir: (carga: EventMapPointerReleased) => void) => {
+    oyentes.set(evento, [...(oyentes.get(evento) ?? []), alRecibir]);
     return () => {};
   }) as unknown as Escuchar;
   render(<Capa invocar={invocar} escuchar={escuchar} />);
   const wallpaper = await screen.findByRole('main', { name: 'Wallpaper' });
-  const reenviar = (x: number, y: number) =>
-    act(() => oyentes.forEach((o) => o({ x, y, monitor_id: '0', button: 'primary' })));
-  return { wallpaper, reenviar };
+  const emitir = (evento: string, x: number, y: number) =>
+    act(() => (oyentes.get(evento) ?? []).forEach((o) => o({ x, y, monitor_id: '0', button: 'primary' })));
+  const presionar = (x: number, y: number) => emitir('pointer_forwarded', x, y);
+  const reenviar = async (x: number, y: number) => {
+    await presionar(x, y);
+    await emitir('pointer_released', x, y);
+  };
+  return { wallpaper, presionar, reenviar };
 }
 
 /** jsdom no calcula posiciones: el elemento en cada punto sale de los rectángulos de los widgets. */
@@ -62,13 +68,16 @@ afterEach(() => {
 
 describe('HE-06-HU01 · Selección de un widget interactivo', () => {
   it('HE-06-HU01-CA01 · Seleccionar un widget interactivo', async () => {
-    const { wallpaper, reenviar } = await pintar();
+    const { wallpaper, presionar, reenviar } = await pintar();
     document.elementFromPoint = elementoEn(wallpaper);
     const tareas = within(wallpaper).getByRole('region', { name: 'Tareas del día' });
     expect(tareas.dataset.interactivo).toBe('true');
     const seleccion = vi.fn();
     tareas.addEventListener('click', seleccion);
-    // ET03: la selección con el botón principal que reenvía el Núcleo llega al elemento del widget.
+    // HE-06-HU08-ET08: presionar (EV-18) todavía no selecciona; solo empieza un posible arrastre.
+    await presionar(400, 100);
+    expect(seleccion).not.toHaveBeenCalled();
+    // ET03: la selección con el botón principal que reenvía el Núcleo llega al elemento del widget al soltar.
     await reenviar(400, 100);
     expect(seleccion).toHaveBeenCalledTimes(1);
   });

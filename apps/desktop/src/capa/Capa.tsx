@@ -18,7 +18,7 @@ import { tokensDelTema } from '@/ui/tema/temaAplicado';
 import { aplicarTokens } from '@/ui/tema/tokens';
 import type {
   AssetResolveParams,
-  EventMapPointerForwarded,
+  EventMapPointerReleased,
   Invoke,
   LayerInitialState,
   Monitor,
@@ -58,11 +58,13 @@ export const INTERACTIVOS: readonly WidgetType[] = [
 ];
 
 /**
- * EV-18 `pointer_forwarded` (HE-06-HU01-CA01, ET03): la capa no recibe el mouse (está detrás de los íconos,
- * D-186); el Núcleo le reenvía la selección con el botón principal sobre un widget interactivo y la capa la
- * entrega al elemento del widget que está en ese punto. Fuera de un widget interactivo no hace nada (CA02).
+ * EV-27 `pointer_released` (HE-06-HU01-CA01, ET03; HE-06-HU08-ET08): la capa no recibe el mouse (está detrás de
+ * los íconos, D-186); el Núcleo le reenvía la selección con el botón principal sobre un widget interactivo, al
+ * soltarlo sin mover el puntero más de 4 píxeles, y la capa la entrega al elemento del widget que está en ese
+ * punto. Fuera de un widget interactivo no hace nada (CA02). EV-18 `pointer_forwarded`, al presionar, solo
+ * empieza el drag-and-drop del widget Kanban (HE-06-HU06).
  */
-export function entregarSeleccion({ x, y }: EventMapPointerForwarded, documento: Document = document) {
+export function entregarSeleccion({ x, y }: EventMapPointerReleased, documento: Document = document) {
   const elemento = documento.elementFromPoint(x, y);
   if (!(elemento instanceof HTMLElement) || !elemento.closest('[data-interactivo="true"]')) return;
   elemento.click();
@@ -154,7 +156,7 @@ export function Capa({
     const dejarWidgets = escuchar('widgets_changed', () => void leer());
     // EV-13: al guardar la distribución, los widgets se pintan en su nueva posición y tamaño (HE-05-HU04-CA01).
     const dejarDistribucion = escuchar('layout_changed', () => void leer());
-    const dejarSeleccion = escuchar('pointer_forwarded', (carga) => entregarSeleccion(carga));
+    const dejarSeleccion = escuchar('pointer_released', (carga) => entregarSeleccion(carga));
     return () => {
       vigente = false;
       dejarEstado();

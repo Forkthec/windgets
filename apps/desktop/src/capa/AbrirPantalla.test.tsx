@@ -1,12 +1,14 @@
 // HE-06-HU08 · Abrir la pantalla relacionada de la aplicación desde un widget interactivo. Cada CA se prueba en sus
 // dos lados: la capa (C-02) pide la pantalla con IPC-DESK-03 `app_open_screen`, y la ventana principal (C-01), al
 // recibir EV-23 `navigate_requested` con esa carga, abre la pantalla con el detalle, el panel o la vista. Las
-// selecciones llegan como las entrega la capa (HE-06-HU01, `entregarSeleccion`). Hoy es el 14/11/2026.
+// selecciones llegan como las entrega la capa (HE-06-HU01, `entregarSeleccion`): al soltar el botón sin mover el
+// puntero (EV-27 `pointer_released`, ET08). Hoy es el 14/11/2026.
 import { act, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ArrastreReenviado } from '@/ipc/arrastreReenviado';
 import { Calendario } from '@/screens/calendar/Calendario';
 import { Kanban } from '@/screens/kanban/Kanban';
+import { Labels } from '@/screens/labels/Labels';
 import { PlannerDaily } from '@/screens/planner_daily/PlannerDaily';
 import type { AppOpenScreenParams, Card, LayerInitialState } from '@/types';
 import { VentanaPrincipal } from '@/ventana_principal/VentanaPrincipal';
@@ -32,6 +34,8 @@ const ESTADO: LayerInitialState = {
   wallpaper_state: 'ok',
 };
 
+const PUNTO = { x: 50, y: 50, monitor_id: '0', button: 'primary' } as const;
+
 const elementFromPoint = document.elementFromPoint;
 beforeEach(() => {
   fijarHoy();
@@ -56,15 +60,24 @@ async function pintarCapa(tarjetas: Card[] = []) {
   await act(async () => {});
   const widget = (nombre: string) => screen.getByRole('region', { name: nombre });
 
-  /** La selección que reenvía el Núcleo sobre `elemento` (EV-18) y, si se pide, la soltada en el mismo punto. */
+  const arrastrar = async (a: ArrastreReenviado) => {
+    await act(async () => oyentes.forEach((o) => o(a)));
+  };
+  /**
+   * La selección que reenvía el Núcleo sobre `elemento`: EV-18 al presionar, el fin del arrastre en el mismo punto
+   * si se pide y EV-27 al soltar sin mover el puntero (ET08). Cada una llega 1 s después de la anterior, para que
+   * no cuente como selección repetida (CA09).
+   */
   const seleccionar = async (elemento: Element, soltar = false) => {
+    vi.setSystemTime(Date.now() + 1000);
     document.elementFromPoint = () => elemento;
-    n.nucleo.emitir('pointer_forwarded', { x: 50, y: 50, monitor_id: '0', button: 'primary' });
-    if (soltar) await act(async () => oyentes.forEach((o) => o({ x: 50, y: 50, phase: 'up' })));
+    n.nucleo.emitir('pointer_forwarded', PUNTO);
+    if (soltar) await arrastrar({ x: PUNTO.x, y: PUNTO.y, phase: 'up' });
+    n.nucleo.emitir('pointer_released', PUNTO);
     await act(async () => {});
   };
   const pedidas = () => llamadasA(n.nucleo, 'app_open_screen') as AppOpenScreenParams[];
-  return { ...n, widget, seleccionar, pedidas };
+  return { ...n, widget, seleccionar, arrastrar, pedidas };
 }
 
 /** Abre la ventana principal con sesión iniciada en el Planificador diario. */
@@ -74,7 +87,7 @@ async function abrirAplicacion(tarjetas: Card[] = []) {
     <VentanaPrincipal
       invocar={n.invocar}
       escuchar={n.escuchar}
-      pantallas={{ planner_daily: PlannerDaily, kanban: Kanban, calendar: Calendario }}
+      pantallas={{ planner_daily: PlannerDaily, kanban: Kanban, calendar: Calendario, labels: Labels }}
     />,
   );
   await screen.findByRole('main', { name: 'Planificador diario' });
@@ -152,7 +165,7 @@ describe('HE-06-HU08 · Abrir la pantalla relacionada desde un widget', () => {
     const capa = await pintarCapa([INFORME]);
     const titulo = within(capa.widget('Kanban')).getByText('Entregar informe');
     document.elementFromPoint = () => titulo;
-    capa.nucleo.emitir('pointer_forwarded', { x: 50, y: 50, monitor_id: '0', button: 'primary' });
+    capa.nucleo.emitir('pointer_forwarded', PUNTO);
     await act(async () => {});
     expect(capa.pedidas()).toEqual([]);
   });
@@ -220,5 +233,57 @@ describe('HE-06-HU08 · Abrir la pantalla relacionada desde un widget', () => {
     // Con la ventana en otra pantalla, EV-23 la lleva a la pantalla correspondiente.
     await app.navegar({ screen: 'kanban', params: { card_id: INFORME.id } });
     expect(screen.getByRole('main', { name: 'Tablero Kanban' })).toBeTruthy();
+  });
+
+  it('HE-06-HU08-CA08 · Aplicación ya abierta', async () => {
+    // ET09: la capa pide la pantalla al Núcleo, que pasa al frente la misma ventana principal; una segunda
+    // ejecución tampoco abre otra instancia (`ca_he_06_hu08_ca08`, puente_ipc.rs). La ventana al frente se
+    // comprueba a mano en Windows.
+    const capa = await pintarCapa([PAGAR]);
+    await capa.seleccionar(within(capa.widget('Tareas del día')).getByText('Pagar la luz'));
+    expect(capa.pedidas()).toEqual([{ screen: 'planner_daily', params: { card_id: PAGAR.id } }]);
+
+    document.body.innerHTML = '';
+    const app = await abrirAplicacion([PAGAR]);
+    await app.navegar({ screen: 'labels' });
+    expect(screen.getByRole('main', { name: 'Etiquetas' })).toBeTruthy();
+    // La misma ventana pasa a la pantalla Planificador diario con el Detalle de tarjeta de esa tarjeta.
+    await app.navegar({ screen: 'planner_daily', params: { card_id: PAGAR.id } });
+    expect(screen.getAllByRole('main').map((m) => m.getAttribute('aria-label'))).toEqual([
+      'Planificador diario',
+    ]);
+    const detalle = await screen.findByRole('dialog', { name: 'Detalle de tarjeta' });
+    expect(within(detalle).getByText('Pagar la luz')).toBeTruthy();
+  });
+
+  it('HE-06-HU08-CA09 · Selección repetida', async () => {
+    // ET08: dos selecciones en menos de 600 ms cuentan como una; pasado ese tiempo, la siguiente abre de nuevo.
+    const capa = await pintarCapa();
+    const encabezado = within(capa.widget('Kanban')).getByRole('heading', { name: /En progreso/ });
+    document.elementFromPoint = () => encabezado;
+    capa.nucleo.emitir('pointer_forwarded', PUNTO);
+    capa.nucleo.emitir('pointer_released', PUNTO);
+    vi.setSystemTime(Date.now() + 300);
+    capa.nucleo.emitir('pointer_forwarded', PUNTO);
+    capa.nucleo.emitir('pointer_released', PUNTO);
+    await act(async () => {});
+    expect(capa.pedidas()).toEqual([{ screen: 'kanban' }]);
+    vi.setSystemTime(Date.now() + 600);
+    capa.nucleo.emitir('pointer_released', PUNTO);
+    await act(async () => {});
+    expect(capa.pedidas()).toEqual([{ screen: 'kanban' }, { screen: 'kanban' }]);
+  });
+
+  it('HE-06-HU08-CA10 · Empezar un arrastre en el widget Kanban', async () => {
+    // ET08: presionar sobre el encabezado de una columna y mover el puntero antes de soltarlo es un arrastre: el
+    // Núcleo reenvía el movimiento y el soltar (HE-06-HU06) pero no EV-27 (`ca_he_06_hu08_ca10`, seleccion.rs),
+    // así que la capa no abre la aplicación. Presionar tampoco la abre: EV-18 no abre pantallas.
+    const capa = await pintarCapa();
+    const encabezado = within(capa.widget('Kanban')).getByRole('heading', { name: /En progreso/ });
+    document.elementFromPoint = () => encabezado;
+    capa.nucleo.emitir('pointer_forwarded', PUNTO);
+    await capa.arrastrar({ x: 90, y: 50, phase: 'move' });
+    await capa.arrastrar({ x: 90, y: 50, phase: 'up' });
+    expect(capa.pedidas()).toEqual([]);
   });
 });

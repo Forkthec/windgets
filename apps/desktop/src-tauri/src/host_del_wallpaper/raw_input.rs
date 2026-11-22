@@ -225,6 +225,10 @@ fn al_arrastrar(soltado: bool) {
     if let Some(evento) = arrastre.seguir(&nucleo.host.capa(), (punto.x, punto.y), soltado) {
         let _ = app.emit(seleccion::ARRASTRE_REENVIADO, evento);
     }
+    // EV-27 (HE-06-HU08-ET08): soltar sin mover el puntero más de 4 píxeles es la selección que abre una pantalla.
+    if let Some(soltada) = arrastre.tomar_soltada() {
+        let _ = app.emit("pointer_released", soltada);
+    }
 }
 
 /// La selección con el botón principal: si cae en un widget interactivo del escritorio sin un ícono encima, la

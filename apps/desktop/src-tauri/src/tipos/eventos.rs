@@ -155,6 +155,17 @@ pub struct EventMapPointerForwarded {
     pub button: EventMapPointerForwardedButton,
 }
 
+// EV-27 `pointer_released` (HE-06-HU08-ET08): soltar el botón principal después de EV-18 sin mover el puntero más
+// de 4 píxeles. En coordenadas de la capa, como EV-18.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
+pub struct EventMapPointerReleased {
+    pub x: i64,
+    pub y: i64,
+    pub monitor_id: String,
+    pub button: EventMapPointerForwardedButton,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "index.ts")]
 #[serde(untagged)]
@@ -244,6 +255,7 @@ pub struct EventMap {
     pub wallpaper_status_changed: EventMapWallpaperStatusChanged,
     pub monitors_changed: EventMapMonitorsChanged,
     pub pointer_forwarded: EventMapPointerForwarded,
+    pub pointer_released: EventMapPointerReleased,
     pub media_session_changed: MediaSession,
     pub widget_data_changed: EventMapWidgetDataChanged,
     pub animation_pause_changed: EventMapAnimationPauseChanged,

@@ -592,15 +592,36 @@ pub fn auth_google_cancel(
     correcto(())
 }
 
+/// Lo que pide una segunda ejecución de la aplicación (INT-10; HE-06-HU08-ET09).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SegundaEjecucion {
+    /// El regreso `windgets://auth/callback?…` del inicio con Google.
+    RegresoDeGoogle(String),
+    /// Volver a abrir la aplicación: la misma ventana pasa al frente, sin otra instancia ni otra ventana.
+    Abrir,
+}
+
+/// HE-06-HU08-ET09: con la dirección del regreso de Google la atiende la sesión; con cualquier otro argumento (o
+/// ninguno, como al abrir el acceso directo) la persona volvió a abrir la aplicación.
+pub fn segunda_ejecucion(argumentos: Vec<String>) -> SegundaEjecucion {
+    argumentos
+        .into_iter()
+        .find(|a| a.starts_with(crate::servicio_de_sesion::google::REGRESO))
+        .map_or(SegundaEjecucion::Abrir, SegundaEjecucion::RegresoDeGoogle)
+}
+
 /// INT-10: Windows abre `windgets://auth/callback?…` en una segunda ejecución; el plugin de instancia única
 /// entrega sus argumentos a esta instancia. Si es el regreso de la espera de Google, cambia el código por la
 /// sesión, emite EV-02 `auth_google_result` y, con la sesión iniciada, EV-01 `session_changed` (RT-01-CA02).
+/// Cualquier otra segunda ejecución pasa al frente la misma ventana principal, en la última pantalla visitada,
+/// como «Abrir» del ícono del área de notificación (HE-06-HU08-CA08, ET09; HE-17-HU02).
 pub fn atender_argumentos(app: &AppHandle, argumentos: Vec<String>) {
-    let Some(direccion) = argumentos
-        .into_iter()
-        .find(|a| a.starts_with(crate::servicio_de_sesion::google::REGRESO))
-    else {
-        return;
+    let direccion = match segunda_ejecucion(argumentos) {
+        SegundaEjecucion::RegresoDeGoogle(direccion) => direccion,
+        SegundaEjecucion::Abrir => {
+            crate::integracion_con_el_sistema::area_de_notificacion::abrir_ventana(app);
+            return;
+        }
     };
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
@@ -2943,6 +2964,28 @@ pub async fn card_unassign_time_block(
         avisar_tarjetas(&app, vec![quitada.valor.id.clone()], ChangeOp::Upsert);
     }
     Ok(con_mensaje(r))
+}
+
+#[cfg(test)]
+mod pruebas_de_la_segunda_ejecucion {
+    use super::*;
+
+    #[test]
+    fn ca_he_06_hu08_ca08() {
+        // HE-06-HU08-CA08 · Aplicación ya abierta (ET09): una segunda ejecución no abre otra instancia ni otra
+        // ventana (plugin de instancia única); sin el regreso de Google, pasa al frente la misma ventana principal.
+        // Que la ventana quede al frente en la pantalla del widget se prueba en AbrirPantalla.test.tsx y a mano.
+        assert_eq!(segunda_ejecucion(vec![]), SegundaEjecucion::Abrir);
+        assert_eq!(
+            segunda_ejecucion(vec!["C:\\Program Files\\Windgets\\windgets.exe".into()]),
+            SegundaEjecucion::Abrir
+        );
+        let regreso = "windgets://auth/callback?state=s1&code=c1".to_string();
+        assert_eq!(
+            segunda_ejecucion(vec!["windgets.exe".into(), regreso.clone()]),
+            SegundaEjecucion::RegresoDeGoogle(regreso)
+        );
+    }
 }
 
 #[cfg(test)]

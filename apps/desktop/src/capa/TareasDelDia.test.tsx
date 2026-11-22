@@ -164,9 +164,11 @@ describe('HE-06-HU03 · Casilla de completada en el widget', () => {
   it('HE-06-HU03-CA01 · Completar una tarjeta desde el widget', async () => {
     const pagar = tarjeta({ title: 'Pagar la luz', due_date: HOY, column_id: EN_PROGRESO.id });
     const { nucleo, widget } = await pintar([pagar]);
-    // La selección llega reenviada por el Núcleo (EV-18) y la capa la entrega a la casilla (HE-06-HU01).
+    // La selección llega reenviada por el Núcleo (EV-18 al presionar, EV-27 al soltar) y la capa la entrega a la
+    // casilla (HE-06-HU01; HE-06-HU08-ET08).
     document.elementFromPoint = () => casilla(widget, 'Pagar la luz');
     nucleo.emitir('pointer_forwarded', { x: 400, y: 60, monitor_id: '0', button: 'primary' });
+    nucleo.emitir('pointer_released', { x: 400, y: 60, monitor_id: '0', button: 'primary' });
     await act(async () => {});
     expect(llamadasA(nucleo, 'card_set_completed')).toEqual([{ card_id: pagar.id, completed: true }]);
     // ET01: en Hecho. ET04: tachada y con la casilla seleccionada. En el widget no hay mensaje.

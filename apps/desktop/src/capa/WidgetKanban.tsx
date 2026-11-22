@@ -21,7 +21,7 @@ interface Arrastre {
   origen: { x: number; y: number };
   punto: { x: number; y: number };
   lugar: LugarDeSoltar | undefined;
-  /** Si el puntero se desplazó desde que se tomó: sin moverla, soltarla abre su detalle (HE-06-HU08-ET05). */
+  /** Si el puntero se desplazó desde que se tomó: solo entonces la tarjeta sigue al puntero. */
   movido: boolean;
 }
 
@@ -62,9 +62,10 @@ function Columna({ columna, arrastre }: ColumnaProps) {
                 key={t.card_id}
                 className={clases.filter(Boolean).join(' ')}
                 data-tarjeta={t.card_id}
-                // La tarjeta sigue al puntero y no tapa el lugar donde se suelta.
+                // La tarjeta sigue al puntero y no tapa el lugar donde se suelta. Sin moverla, sigue siendo el
+                // elemento que recibe la selección al soltar (HE-06-HU08-ET05).
                 style={
-                  arrastrada
+                  arrastrada && arrastre.movido
                     ? {
                         transform: `translate(${arrastre.punto.x - arrastre.origen.x}px, ${
                           arrastre.punto.y - arrastre.origen.y
@@ -146,11 +147,9 @@ export function WidgetKanban({ invocar, escuchar, escucharArrastre }: WidgetKanb
         return;
       }
       cambiar(null);
-      // HE-06-HU08-CA03, ET05: seleccionada sin moverla, abre su detalle en el Tablero Kanban.
-      if (!tomada.movido && x === tomada.origen.x && y === tomada.origen.y) {
-        abrirPantalla(invocar, 'kanban', { card_id: tomada.id });
-        return;
-      }
+      // HE-06-HU08-ET05, ET08: seleccionada sin moverla no se mueve; su detalle lo abre la selección al soltar
+      // (EV-27), no el arrastre.
+      if (!tomada.movido && x === tomada.origen.x && y === tomada.origen.y) return;
       // HE-06-HU06-ET01, ET03, ET04: el Núcleo mueve la tarjeta y la completa o la saca de Hecho. Soltada fuera
       // de las columnas o sobre sí misma no cambia (ET05). El widget no se mueve ni cambia de tamaño (ET06).
       const movimiento = movimientoDelArrastre(tomada.id, lugar);
@@ -168,10 +167,12 @@ export function WidgetKanban({ invocar, escuchar, escucharArrastre }: WidgetKanb
     <div
       ref={raiz}
       style={{ width: '100%', height: '100%', overflow: 'auto' }}
-      // HE-06-HU08-CA04, ET04: el encabezado de una columna, «+N más» y los espacios sin tarjetas abren el tablero.
+      // HE-06-HU08-CA03, ET05: una tarjeta abre su detalle en el Tablero Kanban. CA04, ET04: el encabezado de una
+      // columna, «+N más» y los espacios sin tarjetas abren el tablero.
       onClick={(e) => {
-        if (e.target instanceof Element && !e.target.closest('[data-tarjeta]'))
-          abrirPantalla(invocar, 'kanban');
+        if (!(e.target instanceof Element)) return;
+        const id = e.target.closest<HTMLElement>('[data-tarjeta]')?.dataset.tarjeta;
+        abrirPantalla(invocar, 'kanban', id ? { card_id: id } : undefined);
       }}
     >
       {/* HE-06-HU05-CA04: las columnas vacías y el estado vacío del tablero (RT-04). */}

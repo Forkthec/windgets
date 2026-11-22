@@ -809,6 +809,8 @@ export interface EventMap {
   monitors_changed: { monitors: Monitor[] };
   /** Coordenadas en el sistema de la capa. */
   pointer_forwarded: { x: number; y: number; monitor_id: string; button: 'primary' };
+  /** EV-27: al soltar sin mover el puntero más de 4 px desde EV-18; coordenadas de la capa. */
+  pointer_released: { x: number; y: number; monitor_id: string; button: 'primary' };
   media_session_changed: MediaSession;
   widget_data_changed: { widget_id: Uuid; status: WidgetDataStatus; payload?: WeatherData | NewsData };
   animation_pause_changed: { widget_ids: Uuid[]; paused: boolean };

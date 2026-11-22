@@ -428,7 +428,7 @@ export type ErrorParams = { [key in string]: ErrorParamsValue };
 
 export type ErrorParamsValue = string | number;
 
-export type EventMap = { session_changed: EventMapSessionChanged, auth_google_result: EventMapAuthGoogleResult, connectivity_changed: EventMapConnectivityChanged, sync_status_changed: SyncStatus, sync_completed: EventMapSyncCompleted, sync_conflicts_resolved: EventMapSyncConflictsResolved, cards_changed: EntityChange, labels_changed: EntityChange, columns_changed: EntityChange, themes_changed: EntityChange, applied_theme_changed: EventMapAppliedThemeChanged, widgets_changed: EventMapWidgetsChanged, layout_changed: EventMapLayoutChanged, draft_changed: EventMapDraftChanged, layout_edit_state_changed: EventMapLayoutEditStateChanged, wallpaper_status_changed: EventMapWallpaperStatusChanged, monitors_changed: EventMapMonitorsChanged, pointer_forwarded: EventMapPointerForwarded, media_session_changed: MediaSession, widget_data_changed: EventMapWidgetDataChanged, animation_pause_changed: EventMapAnimationPauseChanged, day_changed: EventMapDayChanged, navigate_requested: EventMapNavigateRequested, exit_requested: EventMapExitRequested, catalog_updated: EventMapCatalogUpdated, preference_changed: EventMapPreferenceChanged, };
+export type EventMap = { session_changed: EventMapSessionChanged, auth_google_result: EventMapAuthGoogleResult, connectivity_changed: EventMapConnectivityChanged, sync_status_changed: SyncStatus, sync_completed: EventMapSyncCompleted, sync_conflicts_resolved: EventMapSyncConflictsResolved, cards_changed: EntityChange, labels_changed: EntityChange, columns_changed: EntityChange, themes_changed: EntityChange, applied_theme_changed: EventMapAppliedThemeChanged, widgets_changed: EventMapWidgetsChanged, layout_changed: EventMapLayoutChanged, draft_changed: EventMapDraftChanged, layout_edit_state_changed: EventMapLayoutEditStateChanged, wallpaper_status_changed: EventMapWallpaperStatusChanged, monitors_changed: EventMapMonitorsChanged, pointer_forwarded: EventMapPointerForwarded, pointer_released: EventMapPointerReleased, media_session_changed: MediaSession, widget_data_changed: EventMapWidgetDataChanged, animation_pause_changed: EventMapAnimationPauseChanged, day_changed: EventMapDayChanged, navigate_requested: EventMapNavigateRequested, exit_requested: EventMapExitRequested, catalog_updated: EventMapCatalogUpdated, preference_changed: EventMapPreferenceChanged, };
 
 export type EventMapAnimationPauseChanged = { widget_ids: Array<Uuid>, paused: boolean, };
 
@@ -459,6 +459,8 @@ export type EventMapNavigateRequested = { screen: ScreenId, params?: ScreenParam
 export type EventMapPointerForwarded = { x: number, y: number, monitor_id: string, button: EventMapPointerForwardedButton, };
 
 export type EventMapPointerForwardedButton = "primary";
+
+export type EventMapPointerReleased = { x: number, y: number, monitor_id: string, button: EventMapPointerForwardedButton, };
 
 export type EventMapPreferenceChanged = { board_card_view: EventMapPreferenceChangedBoardCardView, origin: OriginKind, };
 
