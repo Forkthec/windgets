@@ -144,6 +144,10 @@ pub async fn estado(base: &BaseLocal) -> Result<SyncStatus, sqlx::Error> {
             "syncing" => SyncState::Syncing,
             "offline" => SyncState::Offline,
             "error" => SyncState::Error,
+            // DUDA: P26 HE-15-HU01-ET03 con cambios en la cola, el indicador no puede decir «Sincronizado» (en la
+            // prueba manual lo decía mientras el cierre de sesión avisaba de cambios sin sincronizar). Valor usado:
+            // «Sincronizando…» hasta que la cola quede vacía.
+            _ if pendientes > 0 => SyncState::Syncing,
             _ => SyncState::Synced,
         },
         pending_count: pendientes,
@@ -759,6 +763,19 @@ mod pruebas {
         assert!(ciclo(&base, &nube, AHORA));
         assert_eq!(bloquear(estado(&base)).unwrap().status, SyncState::Synced);
         assert_eq!(bloquear(estado(&base)).unwrap().pending_count, 0);
+    }
+
+    #[test]
+    fn ca_he_15_hu01_ca01_no_dice_sincronizado_con_cambios_en_la_cola() {
+        // HE-15-HU01-CA01, ET03 (P26): un cambio recién guardado espera en la cola; el indicador dice «Sincronizando…»
+        // y no «Sincronizado» hasta que la nube lo recibe.
+        let base = base_con_cambio(AHORA);
+        let e = bloquear(estado(&base)).unwrap();
+        assert_eq!((e.status, e.pending_count), (SyncState::Syncing, 1));
+        let nube = NubeDePrueba::default();
+        assert!(ciclo(&base, &nube, AHORA + 5_000));
+        let e = bloquear(estado(&base)).unwrap();
+        assert_eq!((e.status, e.pending_count), (SyncState::Synced, 0));
     }
 
     #[test]
