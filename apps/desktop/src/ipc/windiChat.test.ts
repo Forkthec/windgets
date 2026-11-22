@@ -324,13 +324,13 @@ describe('EF-01 windi-chat · HE-14-HU05 (editar tarjetas)', () => {
 });
 
 describe('EF-01 windi-chat · HE-14-HU06 (mover tarjetas)', () => {
-  it('HE-14-HU06-CA01 · declara propose_move_card y convierte la llamada en una propuesta de movimiento', () => {
+  it('HE-14-HU06-CA01 · declara propose_move_cards y convierte la llamada en una propuesta de movimiento', () => {
     const gemini = {
       candidates: [
         {
           content: {
             parts: [
-              { functionCall: { name: 'propose_move_card', args: { card_id: 't1', column_id: 'c3' } } },
+              { functionCall: { name: 'propose_move_cards', args: { card_ids: ['t1'], column_id: 'c3' } } },
             ],
           },
         },
@@ -507,7 +507,7 @@ describe('EF-01 windi-chat · HE-14-HU03 (propuestas)', () => {
     const casos: [string, Record<string, unknown>, string][] = [
       ['propose_create_cards', { cards: [{ title: 'Pan', due_date: '2026-11-20' }] }, 'crear'],
       ['propose_edit_cards', { edits: [{ card_id: 't1', changes: { title: 'Otro' } }] }, 'cambiar'],
-      ['propose_move_card', { card_id: 't1', column_id: 'En progreso' }, 'mover'],
+      ['propose_move_cards', { card_ids: ['t1'], column_id: 'En progreso' }, 'mover'],
       ['propose_delete_cards', { card_ids: ['t1'] }, 'eliminar'],
     ];
     for (const [name, args, verbo] of casos) {
@@ -534,7 +534,7 @@ describe('EF-01 windi-chat · HE-14-HU03 (propuestas)', () => {
       leerGemini(
         conLlamadas(
           { name: 'responder', args: { text: 'Listo, ya lo moví y lo eliminé.' } },
-          { name: 'propose_move_card', args: { card_id: 't1', column_id: 'c2' } },
+          { name: 'propose_move_cards', args: { card_ids: ['t1'], column_id: 'c2' } },
           { name: 'propose_delete_cards', args: { card_ids: ['t2'] } },
         ),
       ),
@@ -543,8 +543,22 @@ describe('EF-01 windi-chat · HE-14-HU03 (propuestas)', () => {
   });
 
   it('HE-14-HU06-ET13 · la columna de destino puede ser su nombre', () => {
-    const mover = FUNCIONES.find((f) => f.name === 'propose_move_card');
+    const mover = FUNCIONES.find((f) => f.name === 'propose_move_cards');
     expect(JSON.stringify(mover)).toContain('El id o el nombre de una columna del tablero.');
+  });
+
+  it('HE-14-HU06-CA09 · mover varias tarjetas da una sola propuesta con todas (ET12)', () => {
+    expect(instruccionDelSistema(CONTEXTO)).toContain('Para mover una o varias tarjetas a otra columna');
+    const r = leerGemini(
+      conLlamadas({
+        name: 'propose_move_cards',
+        args: { card_ids: ['t1', 't2', 't3'], column_id: 'En progreso' },
+      }),
+    );
+    expect(typeof r === 'object' && r.proposal).toEqual({
+      action: 'move',
+      items: ['t1', 't2', 't3'].map((card_id) => ({ card_id, changes: { column_id: 'En progreso' } })),
+    });
   });
 });
 

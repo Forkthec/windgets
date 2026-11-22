@@ -196,8 +196,9 @@ export function instruccionDelSistema(contexto: Contexto): string {
     'Si la tarjeta está completada (tiene completed_on), avisas que está completada; si además pide que vuelva a',
     'estar pendiente, eso es mover la tarjeta, no editarla.',
     // HE-14-HU06: mover tarjetas.
-    'Para mover una tarjeta a otra columna llamas a propose_move_card con su id y el id o el nombre de la columna',
-    'de destino.',
+    'Para mover una o varias tarjetas a otra columna llamas a propose_move_cards con sus ids y el id o el nombre',
+    'de la columna de destino. Si piden mover varias, como todas las de una columna, las incluyes todas en una',
+    'sola llamada.',
     'Si dice que una tarjeta ya está completada o terminada, eso es moverla a la columna con función done (Hecho).',
     'Si pide que una tarjeta completada vuelva a estar pendiente, eso es moverla a otra columna; avisas que está',
     'completada antes de proponer.',
@@ -360,15 +361,19 @@ export const FUNCIONES = [
     },
   },
   {
-    name: 'propose_move_card',
-    description: 'Propone mover una tarjeta a otra columna. La persona confirma antes de moverla.',
+    name: 'propose_move_cards',
+    description: 'Propone mover una o varias tarjetas a otra columna. La persona confirma antes de moverlas.',
     parameters: {
       type: 'OBJECT',
       properties: {
-        card_id: { type: 'STRING', description: 'El id de una tarjeta de las relacionadas con el mensaje.' },
+        card_ids: {
+          type: 'ARRAY',
+          items: { type: 'STRING' },
+          description: 'Los ids de las tarjetas de las relacionadas con el mensaje.',
+        },
         column_id: { type: 'STRING', description: 'El id o el nombre de una columna del tablero.' },
       },
-      required: ['card_id', 'column_id'],
+      required: ['card_ids', 'column_id'],
     },
   },
   {
@@ -393,7 +398,7 @@ const ACCION: Record<string, Propuesta['action']> = {
   propose_create_cards: 'create',
   propose_edit_cards: 'edit',
   propose_label_cards: 'edit',
-  propose_move_card: 'move',
+  propose_move_cards: 'move',
   propose_delete_cards: 'delete',
 };
 
@@ -433,10 +438,11 @@ function elementos(nombre: string, args: Record<string, unknown>): Propuesta['it
     const ids = Array.isArray(args.card_ids) ? args.card_ids.filter((id) => typeof id === 'string') : [];
     return ids.map((id) => ({ card_id: id, changes: null }));
   }
-  if (nombre === 'propose_move_card') {
-    return typeof args.card_id === 'string' && typeof args.column_id === 'string'
-      ? [{ card_id: args.card_id, changes: { column_id: args.column_id } }]
-      : [];
+  // HE-14-HU06-ET12: una propuesta de movimiento puede incluir varias tarjetas.
+  if (nombre === 'propose_move_cards') {
+    const ids = Array.isArray(args.card_ids) ? args.card_ids.filter((id) => typeof id === 'string') : [];
+    const columna = args.column_id;
+    return typeof columna === 'string' ? ids.map((id) => ({ card_id: id, changes: { column_id: columna } })) : [];
   }
   const tarjetas = Array.isArray(args.cards) ? args.cards.filter(esObjeto) : [];
   return tarjetas.map((t) => ({ card_id: null, changes: t }));

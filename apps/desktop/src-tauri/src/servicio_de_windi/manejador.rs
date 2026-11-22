@@ -575,43 +575,64 @@ impl<C: Calendario> ManejadorDelPlanificador<'_, C> {
         Ok(despues)
     }
 
-    /// HE-14-HU06: mover una tarjeta a otra columna, que se reconoce por su id o por su nombre (ET13). Sin propuesta
-    /// si la tarjeta o la columna no existen (ET08, ET10) o si ya está en esa columna (ET11); el motivo va al chat.
+    /// HE-14-HU06: mover una o varias tarjetas (ET12) a otra columna, que se reconoce por su id o por su nombre (ET13). Sin propuesta
+    /// si una tarjeta o la columna no existen (ET08, ET10) o si ya está en esa columna (ET11); el motivo va al chat.
     /// `current` guarda el estado completo (HE-14-HU03-ET05) y los nombres de las columnas van en `changes` para
     /// mostrarlos (ET01).
     async fn preparar_movimiento(
         &self,
         propuesta: &WindiChatProposal,
     ) -> Result<WindiProposal, AppError> {
-        let [item] = propuesta.items.as_slice() else {
+        if propuesta.items.is_empty() {
             return Err(inesperado());
-        };
-        let tarjeta = self.buscar_tarjeta(item.card_id.as_ref()).await?;
-        let destino = item
-            .changes
-            .as_ref()
-            .and_then(|c| c.get("column_id"))
-            .and_then(Value::as_str)
-            .ok_or_else(inesperado)?;
-        let columnas = self.planificador.columnas(self.user_id).await?;
-        let llegada = buscar_columna(&columnas, destino)?;
-        let origen = columnas
-            .iter()
-            .find(|c| c.id.0.to_lowercase() == tarjeta.column_id.0.to_lowercase())
-            .ok_or_else(inesperado)?;
-        if origen.id == llegada.id {
-            return Err(motivo(
-                ErrorCode::WindiAlreadyInColumn,
-                &messages::WINDI_YA_ESTA_EN_LA_COLUMNA
-                    .replace("<título>", &tarjeta.title)
-                    .replace("<columna>", &llegada.name),
-            ));
         }
-        let sale_de_hecho = origen.role == ColumnRole::Done && llegada.role != ColumnRole::Done;
-        Ok(WindiProposal {
-            id: Uuid(uuid::Uuid::new_v4().to_string()),
-            action: ProposalAction::Move,
-            items: vec![WindiProposalItem {
+        let columnas = self.planificador.columnas(self.user_id).await?;
+        let mut items: Vec<WindiProposalItem> = Vec::new();
+        let mut motivos = Vec::new();
+        let mut sale_de_hecho = false;
+        for item in &propuesta.items {
+            let destino = item
+                .changes
+                .as_ref()
+                .and_then(|c| c.get("column_id"))
+                .and_then(Value::as_str)
+                .ok_or_else(inesperado)?;
+            // Una columna que no existe vale para toda la propuesta: el texto ya lista las que hay (ET10).
+            let llegada = buscar_columna(&columnas, destino)?;
+            let tarjeta = match self.buscar_tarjeta(item.card_id.as_ref()).await {
+                Ok(tarjeta) => tarjeta,
+                Err(e) if e.code == ErrorCode::InternalUnexpected => return Err(e),
+                Err(e) => {
+                    motivos.push((None, e));
+                    continue;
+                }
+            };
+            if items
+                .iter()
+                .any(|i| i.card_id.as_ref() == Some(&tarjeta.id))
+            {
+                continue;
+            }
+            let origen = columnas
+                .iter()
+                .find(|c| c.id.0.to_lowercase() == tarjeta.column_id.0.to_lowercase())
+                .ok_or_else(inesperado)?;
+            if origen.id == llegada.id {
+                // El texto ya nombra la tarjeta.
+                motivos.push((
+                    None,
+                    motivo(
+                        ErrorCode::WindiAlreadyInColumn,
+                        &messages::WINDI_YA_ESTA_EN_LA_COLUMNA
+                            .replace("<título>", &tarjeta.title)
+                            .replace("<columna>", &llegada.name),
+                    ),
+                ));
+                continue;
+            }
+            // ET02, ET12: el aviso si alguna sale de Hecho.
+            sale_de_hecho |= origen.role == ColumnRole::Done && llegada.role != ColumnRole::Done;
+            items.push(WindiProposalItem {
                 card_id: Some(tarjeta.id.clone()),
                 current: Some(estado_de_la_tarjeta(&tarjeta)),
                 changes: Some(json!({
@@ -620,7 +641,16 @@ impl<C: Calendario> ManejadorDelPlanificador<'_, C> {
                     "to_column": llegada.name,
                 })),
                 title: tarjeta.title.clone(),
-            }],
+            });
+        }
+        if !motivos.is_empty() {
+            let total = items.len() + motivos.len();
+            return Err(unir_motivos(motivos, total));
+        }
+        Ok(WindiProposal {
+            id: Uuid(uuid::Uuid::new_v4().to_string()),
+            action: ProposalAction::Move,
+            items,
             warnings: if sale_de_hecho {
                 vec![messages::WINDI_MOVER_COMPLETADA.to_string()]
             } else {
@@ -753,43 +783,61 @@ impl<C: Calendario> ManejadorDelPlanificador<'_, C> {
         tx: &mut sqlx::SqliteConnection,
         propuesta: &WindiProposal,
     ) -> Result<String, AppError> {
-        let item = propuesta.items.first().ok_or_else(inesperado)?;
-        let card_id = item.card_id.clone().ok_or_else(inesperado)?;
-        let cambios = item.changes.as_ref().ok_or_else(inesperado)?;
-        let destino = cambios["column_id"].as_str().ok_or_else(inesperado)?;
-        let estaba_completada = self
-            .planificador
-            .tarjeta_en(&mut *tx, self.user_id, &card_id.0)
-            .await?
-            .is_some_and(|t| t.is_completed);
-        let id = self
-            .planificador
-            .mover_tarjeta_en(
-                &mut *tx,
-                self.user_id,
-                CardMoveParams {
-                    card_id,
-                    column_id: Uuid(destino.to_string()),
-                    placement: Placement::Variant1(PlacementVariant1 {
-                        kind: PlacementVariant1Kind::End,
-                    }),
-                },
-            )
-            .await?;
-        let movida = self
-            .planificador
-            .tarjeta_en(&mut *tx, self.user_id, &id)
-            .await?
-            .ok_or_else(inesperado)?;
-        if movida.is_completed && !estaba_completada {
+        if propuesta.items.is_empty() {
+            return Err(inesperado());
+        }
+        // HE-14-HU06-ET12: se mueven todas, en el orden de la propuesta, al final de su columna de destino.
+        let mut completadas = 0;
+        let mut ultima: Option<(String, String)> = None;
+        for item in &propuesta.items {
+            let card_id = item.card_id.clone().ok_or_else(inesperado)?;
+            let cambios = item.changes.as_ref().ok_or_else(inesperado)?;
+            let destino = cambios["column_id"].as_str().ok_or_else(inesperado)?;
+            let estaba_completada = self
+                .planificador
+                .tarjeta_en(&mut *tx, self.user_id, &card_id.0)
+                .await?
+                .is_some_and(|t| t.is_completed);
+            let id = self
+                .planificador
+                .mover_tarjeta_en(
+                    &mut *tx,
+                    self.user_id,
+                    CardMoveParams {
+                        card_id,
+                        column_id: Uuid(destino.to_string()),
+                        placement: Placement::Variant1(PlacementVariant1 {
+                            kind: PlacementVariant1Kind::End,
+                        }),
+                    },
+                )
+                .await?;
+            let movida = self
+                .planificador
+                .tarjeta_en(&mut *tx, self.user_id, &id)
+                .await?
+                .ok_or_else(inesperado)?;
+            if movida.is_completed && !estaba_completada {
+                completadas += 1;
+            }
+            let columna = cambios["to_column"]
+                .as_str()
+                .unwrap_or_default()
+                .to_string();
+            ultima = Some((movida.title, columna));
+        }
+        // HE-14-HU02-CA02: completar alguna con el movimiento se celebra.
+        if completadas > 0 {
             return Ok(super::ServicioDeWindi::celebracion(self.alias));
         }
+        let (titulo, columna) = ultima.unwrap_or_default();
+        if propuesta.items.len() > 1 {
+            return Ok(messages::WINDI_TARJETAS_MOVIDAS
+                .replace("<cantidad>", &propuesta.items.len().to_string()));
+        }
         Ok(messages::WINDI_TARJETA_MOVIDA
-            .replace("<título>", &movida.title)
-            .replace(
-                "<columna>",
-                cambios["to_column"].as_str().unwrap_or_default(),
-            ))
+            .replace("<título>", &titulo)
+            .replace("<columna>", &columna))
     }
 
     /// Elimina las tarjetas con `card_delete` (ET05) y confirma con el título o la cantidad (CA01).

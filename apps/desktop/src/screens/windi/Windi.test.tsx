@@ -633,6 +633,34 @@ describe('HE-14-HU06 · Mover tarjetas con el agente de IA', () => {
     expect(within(p).getByText(aviso)).toBeTruthy();
     expect(boton(p, 'Confirmar').disabled).toBe(false);
   });
+
+  it('HE-14-HU06-CA09 · Mover varias tarjetas', async () => {
+    // ET12: una sola propuesta con cada tarjeta, su columna actual y la de destino.
+    const item = (card_id: string, title: string) => ({
+      card_id,
+      current: { column_id: 'c1' },
+      changes: {
+        column_id: 'c2',
+        from_column: 'Por hacer',
+        to_column: 'En progreso',
+      } as unknown as WindiProposal['items'][number]['changes'],
+      title,
+    });
+    await abrir(
+      proponer({
+        id: 'p1',
+        action: 'move',
+        items: [item('t1', 'Luz'), item('t2', 'Agua'), item('t3', 'Gas')],
+        warnings: [],
+        state: 'active',
+      }),
+    );
+    await pedir('Mueve todas las de Por hacer a En progreso');
+    expect(propuestas()).toHaveLength(1);
+    const p = propuestas()[0] as HTMLElement;
+    expect(within(p).getAllByText('Columna: Por hacer → En progreso')).toHaveLength(3);
+    for (const t of ['Luz', 'Agua', 'Gas']) expect(p.textContent).toContain(t);
+  });
 });
 
 describe('HE-14-HU07 · Eliminar tarjetas con el agente de IA', () => {

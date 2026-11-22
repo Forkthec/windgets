@@ -136,6 +136,7 @@
   "WINDI_SIN_CONEXION": "El agente de IA necesita conexión a internet. Podrás conversar con él cuando te reconectes.",
   "WINDI_SIN_CONEXION_AL_CONFIRMAR": "Se perdió la conexión. No se hizo ningún cambio.",
   "WINDI_TARJETAS_ACTUALIZADAS": "Listo, actualicé <cantidad> tarjetas.",
+  "WINDI_TARJETAS_MOVIDAS": "Listo, moví <cantidad> tarjetas.",
   "WINDI_TARJETA_CAMBIO": "«<título>» tiene otro valor en <campos>",
   "WINDI_TARJETA_NO_ENCONTRADA": "No encuentro una tarjeta llamada “<nombre>”. ¿Me das más detalles?",
   "WINDI_TARJETA_YA_NO_EXISTE": "«<título>» ya no existe",

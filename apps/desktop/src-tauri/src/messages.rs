@@ -424,6 +424,8 @@ pub const WINDI_TARJETAS_ACTUALIZADAS: &str = "Listo, actualicé <cantidad> tarj
 pub const WINDI_MOVER_COMPLETADA: &str = "Esta tarjeta está completada. Si la mueves, dejará de estar completada y se borrará su fecha de completado.";
 /// DUDA: HE-14-HU06 el texto no es literal («confirma el movimiento mencionando el título y la columna de destino»).
 pub const WINDI_TARJETA_MOVIDA: &str = "Listo, moví la tarjeta «<título>» a <columna>.";
+/// HE-14-HU06-CA09: la confirmación de un movimiento de varias tarjetas. DUDA: no es literal (docs/DUDAS.md).
+pub const WINDI_TARJETAS_MOVIDAS: &str = "Listo, moví <cantidad> tarjetas.";
 // HE-14-HU07 · Eliminar tarjetas con el agente de IA.
 /// Aviso en toda propuesta de eliminación (HE-14-HU07-CA01, ET01).
 pub const WINDI_ELIMINAR_SIN_DESHACER: &str = "Esta acción no se puede deshacer.";
@@ -681,6 +683,7 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("WINDI_FALTA_TITULO", WINDI_FALTA_TITULO),
     ("WINDI_FALTA_FECHA", WINDI_FALTA_FECHA),
     ("WINDI_TARJETAS_ACTUALIZADAS", WINDI_TARJETAS_ACTUALIZADAS),
+    ("WINDI_TARJETAS_MOVIDAS", WINDI_TARJETAS_MOVIDAS),
 ];
 
 #[cfg(test)]

@@ -2041,6 +2041,104 @@ fn ca_he_14_hu06_et13() {
     assert_eq!(columna_de(&planificador, &id), (EN_PROGRESO.into(), false));
 }
 
+fn mover_varias(
+    planificador: &Planificador,
+    windi: &ServicioDeWindi,
+    ids: &[String],
+    columna: &str,
+) -> Result<WindiSendMessageResult, AppError> {
+    let respuesta = WindiChatResponse {
+        reply: "Esto es lo que voy a mover. ¿Confirmas?".into(),
+        intent: WindiChatResponseIntent::Propose,
+        proposal: Some(WindiChatProposal {
+            action: crate::tipos::ProposalAction::Move,
+            items: ids
+                .iter()
+                .map(|id| WindiChatProposalItemsItem {
+                    card_id: Some(Uuid(id.clone())),
+                    changes: Some(serde_json::json!({ "column_id": columna })),
+                })
+                .collect(),
+        }),
+    };
+    let nube = WindiSimulado::responde(vec![Ok(respuesta)]);
+    enviar_con(
+        windi,
+        &nube,
+        &manejador_de(planificador),
+        "Mueve las tarjetas",
+        true,
+    )
+}
+
+#[test]
+fn ca_he_14_hu06_ca09() {
+    // HE-14-HU06-CA09 · Mover las 3 tarjetas de Por hacer a En progreso: una sola propuesta con las 3, su columna
+    // actual y la de destino (ET12); al confirmar se mueven las 3.
+    let planificador = con_semilla();
+    let ids: Vec<String> = ["Luz", "Agua", "Gas"]
+        .iter()
+        .zip([1024.0, 2048.0, 3072.0])
+        .map(|(t, p)| tarjeta_en(&planificador, POR_HACER, t, "2026-11-20", p))
+        .collect();
+    let windi = ServicioDeWindi::nuevo();
+    let propuesta = mover_varias(&planificador, &windi, &ids, "En progreso")
+        .unwrap()
+        .proposal
+        .unwrap();
+    assert_eq!(propuesta.items.len(), 3);
+    for item in &propuesta.items {
+        let cambios = item.changes.as_ref().unwrap();
+        assert_eq!(
+            (&cambios["from_column"], &cambios["to_column"]),
+            (&Value::from("Por hacer"), &Value::from("En progreso"))
+        );
+    }
+    assert!(propuesta.warnings.is_empty());
+    let r = confirmar(&windi, &manejador_de(&planificador), &propuesta, true).unwrap();
+    assert_eq!(r.reply.text, "Listo, moví 3 tarjetas.");
+    for id in &ids {
+        assert_eq!(columna_de(&planificador, id), (EN_PROGRESO.into(), false));
+    }
+}
+
+#[test]
+fn ca_he_14_hu06_et12() {
+    // HE-14-HU06-ET12 · Si alguna de las tarjetas está en Hecho, la propuesta muestra el aviso de CA06 y al
+    // confirmar las dos se mueven. Si alguna ya está en la columna de destino, no hay propuesta y Windi dice cuál.
+    let planificador = con_semilla();
+    let hecha = completada(&planificador);
+    let pendiente = tarjeta_en(&planificador, POR_HACER, "Agua", "2026-11-20", 2048.0);
+    let windi = ServicioDeWindi::nuevo();
+    let propuesta = mover_varias(
+        &planificador,
+        &windi,
+        &[hecha.clone(), pendiente.clone()],
+        EN_PROGRESO,
+    )
+    .unwrap()
+    .proposal
+    .unwrap();
+    assert_eq!(
+        propuesta.warnings,
+        vec!["Esta tarjeta está completada. Si la mueves, dejará de estar completada y se borrará su fecha de completado.".to_string()]
+    );
+    confirmar(&windi, &manejador_de(&planificador), &propuesta, true).unwrap();
+    assert_eq!(
+        columna_de(&planificador, &hecha),
+        (EN_PROGRESO.into(), false)
+    );
+    assert_eq!(
+        columna_de(&planificador, &pendiente),
+        (EN_PROGRESO.into(), false)
+    );
+
+    let otra = tarjeta_en(&planificador, POR_HACER, "Gas", "2026-11-20", 4096.0);
+    let r = mover_varias(&planificador, &windi, &[otra, pendiente], EN_PROGRESO).unwrap();
+    assert!(r.proposal.is_none());
+    assert_eq!(r.reply.text, "La tarjeta “Agua” ya está en En progreso.");
+}
+
 #[test]
 fn ca_he_14_hu06_ca08() {
     // HE-14-HU06-CA08 · Varias coinciden: Windi recibe el título, la fecha límite y la columna de cada una (ET07).
