@@ -13,6 +13,7 @@ use chrono::DateTime;
 
 use crate::cliente_de_supabase::FallaDeAuth;
 use crate::repositorios_y_archivos_locales::BaseLocal;
+pub mod cancelacion;
 pub mod catalogo;
 
 use crate::tipos::{

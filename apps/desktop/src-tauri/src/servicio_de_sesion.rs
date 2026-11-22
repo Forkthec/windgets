@@ -601,15 +601,35 @@ impl<A: AuthDeSupabase, R: Reloj> ServicioDeSesion<A, R> {
         &self,
         base: &BaseLocal,
         archivos: &std::path::Path,
-    ) -> ConMensaje<()> {
-        let _ = self.almacen.borrar();
+    ) -> Result<ConMensaje<()>, AppError> {
+        // HE-16-HU03-CA07, ET09: si el token no se borra, la sesión no se da por cerrada.
+        if !self.almacen.borrar() {
+            return Err(error(
+                ErrorCode::AuthSignOutFailed,
+                messages::NO_PUDIMOS_CERRAR_LA_SESION,
+                None,
+            ));
+        }
         self.fijar_pendiente(None);
-        let _ = base.borrar_todo().await;
-        let _ = borrar_archivos(archivos);
-        ConMensaje {
+        limpiar(base, archivos).await;
+        Ok(ConMensaje {
             valor: (),
             mensaje: resultado("auth_sign_out", messages::SESION_CERRADA),
+        })
+    }
+
+    /// HE-16-HU03-ET09: al abrir la aplicación, repite la limpieza que quedó pendiente al cerrar la sesión. Con una
+    /// sesión guardada no toca nada: es de otra cuenta que ya inició sesión. `true` si la repitió.
+    pub async fn repetir_limpieza_pendiente(
+        &self,
+        base: &BaseLocal,
+        archivos: &std::path::Path,
+    ) -> bool {
+        if self.almacen.leer().is_some() || !limpieza_pendiente(base).await {
+            return false;
         }
+        limpiar(base, archivos).await;
+        true
     }
 
     /// IPC-AUTH-04 `auth_register_cancel`: al «Regresar» al paso Formulario descarta el registro pendiente; el
@@ -617,6 +637,47 @@ impl<A: AuthDeSupabase, R: Reloj> ServicioDeSesion<A, R> {
     pub fn registrar_cancelar(&self) {
         self.fijar_pendiente(None);
     }
+}
+
+/// Borra la base y los archivos del usuario. Si algo no se borra, la sesión se cierra igual y queda la marca para
+/// repetir la limpieza al abrir la aplicación (HE-16-HU03-ET09).
+async fn limpiar(base: &BaseLocal, archivos: &std::path::Path) {
+    let base_vacia = base.borrar_todo().await.is_ok();
+    let sin_archivos = borrar_archivos(archivos);
+    if !(base_vacia && sin_archivos) {
+        marcar_limpieza_pendiente(base).await;
+    }
+}
+
+/// Marca de `device_setting`: la limpieza del cierre de sesión quedó pendiente (HE-16-HU03-ET09).
+const LIMPIEZA_PENDIENTE: &str = "sign_out_cleanup_pending";
+
+/// Deja la marca para repetir la limpieza al abrir. También se usa cuando el ciclo de sincronización no soltó su
+/// turno a tiempo y pudo escribir después de vaciar la base (HE-16-HU03-ET08).
+pub async fn marcar_limpieza_pendiente(base: &BaseLocal) {
+    let Ok(pool) = base.pool().await else {
+        return;
+    };
+    let _ = sqlx::query(
+        "INSERT INTO device_setting (key, value, updated_at) VALUES (?, 'true', ?)          ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
+    )
+    .bind(LIMPIEZA_PENDIENTE)
+    .bind(instante(chrono::Utc::now().timestamp_millis()).0)
+    .execute(pool)
+    .await;
+}
+
+async fn limpieza_pendiente(base: &BaseLocal) -> bool {
+    let Ok(pool) = base.pool().await else {
+        return false;
+    };
+    sqlx::query_scalar::<_, String>("SELECT value FROM device_setting WHERE key = ?")
+        .bind(LIMPIEZA_PENDIENTE)
+        .fetch_optional(pool)
+        .await
+        .ok()
+        .flatten()
+        .is_some()
 }
 
 #[cfg(test)]

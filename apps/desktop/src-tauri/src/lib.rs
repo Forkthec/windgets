@@ -136,6 +136,8 @@ pub fn run() {
             integracion_con_el_sistema::area_de_notificacion::crear_icono(app.handle())?;
             puente_ipc::vigilar_conexion(app.handle().clone());
             puente_ipc::vigilar_dia(app.handle().clone());
+            // HE-16-HU03-ET09: antes de sincronizar, la limpieza que quedó pendiente al cerrar la sesión.
+            puente_ipc::repetir_limpieza_pendiente(app.handle());
             puente_ipc::sincronizar(app.handle().clone());
             puente_ipc::vigilar_widgets_externos(app.handle().clone());
             puente_ipc::vigilar_carga(app.handle().clone());

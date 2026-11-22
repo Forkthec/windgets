@@ -65,11 +65,15 @@ export function Settings() {
   const abrir = useEnvioUnico(pedirCierre);
 
   // IPC-AUTH-14: el Núcleo cierra la sesión y oculta el wallpaper; la ventana abre Inicio de sesión y muestra
-  // «Sesión cerrada.» (CA01, CA04, ET06).
+  // «Sesión cerrada.» (CA01, CA04, ET06). Si no pudo borrar el token, la sesión sigue iniciada y se ve el aviso
+  // (CA07, ET09), sin «Sesión cerrada.».
   const cerrar = useCallback(async () => {
     const r = await invocar('auth_sign_out', {});
-    if (!r.ok) return;
     setConfirmar(null);
+    if (!r.ok) {
+      setAviso(r.error.message || textos.NO_PUDIMOS_CERRAR_LA_SESION);
+      return;
+    }
     sesionCerrada();
     mostrar(r.result_message?.message ?? textos.SESION_CERRADA);
   }, [invocar, mostrar, sesionCerrada]);
