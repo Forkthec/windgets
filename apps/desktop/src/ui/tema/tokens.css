@@ -264,7 +264,9 @@ body {
      de ensanchar la rejilla y empujar el menú principal. */
   grid-template-columns: auto minmax(0, 1fr);
   gap: calc(var(--wg-unidad) * 4);
-  min-height: 100vh;
+  /* RT-01 (P26): la ventana mide la pantalla y solo se desplaza el panel de la pantalla actual; con min-height, un
+     contenido alto (Agente de IA, Personalización) desplazaba toda la página, incluido el menú principal. */
+  height: 100vh;
   box-sizing: border-box;
   padding: calc(var(--wg-unidad) * 4);
   background: var(--wg-marco); /* WG-MK-01: el principal es el marco exterior */
@@ -274,6 +276,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: calc(var(--wg-unidad) * 4);
+  min-height: 0;
+  overflow-y: auto;
 }
 .wg-indicador-sincronizacion {
   display: flex;
@@ -283,6 +287,7 @@ body {
   color: var(--wg-texto);
 }
 .wg-ventana-principal__pantalla {
+  min-height: 0;
   overflow: auto;
   padding: calc(var(--wg-unidad) * 6);
   border: var(--wg-borde-ancho) solid var(--wg-borde);
