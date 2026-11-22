@@ -40,7 +40,7 @@ const TAREAS: WidgetRect = {
   is_active: true,
 };
 
-function capa(widgets: WidgetRect[]): LayerInitialState {
+function capa(widgets: WidgetRect[], escala = 1): LayerInitialState {
   return {
     applied: {
       template_id: 'default',
@@ -50,7 +50,7 @@ function capa(widgets: WidgetRect[]): LayerInitialState {
       font: { id: 'nunito', size: 'medium' },
     },
     widgets,
-    monitors: [{ id: '0', x: 0, y: 0, width: 1920, height: 1080, scale_factor: 1 }],
+    monitors: [{ id: '0', x: 0, y: 0, width: 1920, height: 1080, scale_factor: escala }],
     wallpaper_state: 'ok',
   };
 }
@@ -68,6 +68,7 @@ function nucleo(
       collided: boolean;
     };
   } = {},
+  escala = 1,
 ) {
   const llamadas: Array<{ comando: string; params: unknown }> = [];
   let cambios = false;
@@ -76,7 +77,7 @@ function nucleo(
     const ok = (value: unknown) => Promise.resolve({ ok: true, value });
     switch (comando) {
       case 'layer_get_initial_state':
-        return ok(capa(widgets));
+        return ok(capa(widgets, escala));
       case 'asset_resolve':
         return ok({ url: '', state: 'unavailable' });
       case 'catalog_list':
@@ -290,6 +291,91 @@ describe('HE-05-HU04 · Guardar la distribución (pantalla de edición)', () => 
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
     // ET01, ET02: el Núcleo guarda en el tema aplicado y cierra la pantalla de edición.
     await waitFor(() => expect(n.de('layout_edit_save')).toEqual([{}]));
+  });
+});
+
+describe('HE-05-HU02 a HU04 · Distribución a escala', () => {
+  it('HE-05-HU02-CA05 · Mover un widget a escala', async () => {
+    // ET07: a 125 %, las medidas son píxeles físicos y se dibujan divididas por la escala; el puntero se multiplica.
+    const n = nucleo(
+      [RELOJ, TAREAS],
+      { mover: ({ x, y }) => ({ rect: { ...RELOJ, x, y }, collided: false }) },
+      1.25,
+    );
+    await abrir(n);
+    expect([widget('Reloj').style.left, widget('Reloj').style.width]).toEqual(['32px', '256px']);
+    await arrastrar(widget('Reloj'), 0, 400);
+    await soltar(widget('Reloj'));
+    expect(n.de('layout_edit_move')).toEqual([{ widget_id: 'reloj', x: 40, y: 540 }]);
+    expect(widget('Reloj').style.top).toBe('432px');
+  });
+
+  it('HE-05-HU03-CA06 · Redimensionar un widget a escala', async () => {
+    const n = nucleo(
+      [RELOJ],
+      {
+        // ET03: el Núcleo lo detiene en el borde del área visible del monitor principal.
+        redimensionar: ({ width, height }) => ({
+          rect: { ...RELOJ, width: Math.min(width, 1880), height: Math.min(height, 1040) },
+          collided: false,
+        }),
+      },
+      1.25,
+    );
+    await abrir(n);
+    await arrastrar(esquina('reloj'), 80, 80);
+    await soltar(esquina('reloj'));
+    expect(n.de('layout_edit_resize')).toEqual([
+      { widget_id: 'reloj', x: 40, y: 40, width: 420, height: 260 },
+    ]);
+    expect([widget('Reloj').style.width, widget('Reloj').style.height]).toEqual(['336px', '208px']);
+  });
+
+  it('HE-05-HU04-CA05 · Guardar justo después de varios cambios', async () => {
+    const n = nucleo([RELOJ], { mover: ({ x, y }) => ({ rect: { ...RELOJ, x, y }, collided: false }) });
+    // El Núcleo tarda en responder el movimiento: «Guardar» lo espera (ET05).
+    let liberar: () => void = () => undefined;
+    const orden: string[] = [];
+    const invocar = ((comando: string, params: never) => {
+      orden.push(comando);
+      if (comando !== 'layout_edit_move') return n.invocar(comando as never, params);
+      return new Promise((listo) => {
+        liberar = () => listo(n.invocar(comando as never, params));
+      });
+    }) as unknown as Invoke;
+    render(<Edicion invocar={invocar} />);
+    await screen.findByRole('main', { name: 'Pantalla de edición' });
+    await arrastrar(widget('Reloj'), 0, 500);
+    await soltar(widget('Reloj'));
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(orden).not.toContain('layout_edit_save');
+    await act(async () => {
+      liberar();
+    });
+    await waitFor(() => expect(orden).toContain('layout_edit_save'));
+    expect(orden.indexOf('layout_edit_move')).toBeLessThan(orden.indexOf('layout_edit_save'));
+  });
+
+  it('HE-05-HU04-ET06 · Un widget que ya no existe muestra su mensaje y no cierra la edición', async () => {
+    const mensaje = 'Uno de los widgets ya no existe. Vuelve a abrir la pantalla de edición.';
+    const n = nucleo([RELOJ]);
+    const invocar = ((comando: string, params: never) =>
+      comando === 'layout_edit_move' || comando === 'layout_edit_save'
+        ? Promise.resolve({ ok: false, error: { code: 'layout.widget_missing', message: mensaje } })
+        : n.invocar(comando as never, params)) as unknown as Invoke;
+    render(<Edicion invocar={invocar} />);
+    await screen.findByRole('main', { name: 'Pantalla de edición' });
+    await arrastrar(widget('Reloj'), 0, 500);
+    await soltar(widget('Reloj'));
+    expect(screen.getByRole('alert').textContent).toBe(mensaje);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+    });
+    expect(screen.getByRole('alert').textContent).toBe(mensaje);
+    expect(screen.getByRole('main', { name: 'Pantalla de edición' })).toBeTruthy();
   });
 });
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { invocar as invocarNucleo } from '@/ipc/cliente';
 import { escuchar as escucharNucleo, type Escuchar } from '@/ipc/eventos';
 import { escucharArrastreReenviado, type EscucharArrastre } from '@/ipc/arrastreReenviado';
@@ -21,7 +21,9 @@ import type {
   EventMapPointerForwarded,
   Invoke,
   LayerInitialState,
+  Monitor,
   ThemeContent,
+  WidgetRect,
   WidgetType,
 } from '@/types';
 
@@ -81,6 +83,28 @@ export function recursoDelFondo(contenido: ThemeContent): AssetResolveParams | n
   }
 }
 
+/** El monitor principal, como en el Núcleo (`monitor_principal`): el que contiene el origen, o el primero. */
+export function monitorPrincipal(monitores: readonly Monitor[]): Monitor {
+  return (
+    monitores.find((m) => m.x <= 0 && 0 < m.x + m.width && m.y <= 0 && 0 < m.y + m.height) ??
+    monitores[0] ?? { id: '0', x: 0, y: 0, width: 1920, height: 1080, scale_factor: 1 }
+  );
+}
+
+/**
+ * HE-05-HU02-ET07: las medidas de los widgets están en píxeles físicos del monitor; la ventana las dibuja en
+ * píxeles de pantalla, divididos por la escala de Windows del monitor principal (100 %, 125 %, 150 %…).
+ */
+export function aEscala(w: WidgetRect, monitor: Monitor, origen = { x: 0, y: 0 }) {
+  const escala = monitor.scale_factor > 0 ? monitor.scale_factor : 1;
+  return {
+    left: (w.x - origen.x) / escala,
+    top: (w.y - origen.y) / escala,
+    width: w.width / escala,
+    height: w.height / escala,
+  };
+}
+
 interface Pintado {
   estado: LayerInitialState;
   imagen: string | null;
@@ -99,10 +123,14 @@ export function Capa({
   escucharArrastre = escucharArrastreReenviado,
 }: CapaProps) {
   const [pintado, setPintado] = useState<Pintado | null>(null);
+  // HE-05-HU04-ET05: varias lecturas pueden cruzarse (guardar la distribución avisa con EV-13 y otros eventos);
+  // solo la última pinta, para que una lectura vieja no deje los widgets donde estaban.
+  const lectura = useRef(0);
 
   useEffect(() => {
     let vigente = true;
     const leer = async () => {
+      const numero = ++lectura.current;
       const r = await invocar('layer_get_initial_state', {});
       if (!r.ok) return;
       let imagen: string | null = null;
@@ -113,7 +141,7 @@ export function Capa({
       }
       // HE-03-HU06-ET04: los widgets también toman los colores y la tipografía del tema aplicado.
       const tokens = await tokensDelTema(invocar, r.value.applied);
-      if (!vigente) return;
+      if (!vigente || numero !== lectura.current) return;
       aplicarTokens(tokens);
       setPintado({ estado: r.value, imagen });
     };
@@ -166,7 +194,7 @@ export function Capa({
           className="wg-widget"
           data-widget-id={w.widget_id}
           data-interactivo={INTERACTIVOS.includes(w.type)}
-          style={{ position: 'absolute', left: w.x, top: w.y, width: w.width, height: w.height }}
+          style={{ position: 'absolute', ...aEscala(w, monitorPrincipal(pintado.estado.monitors)) }}
         >
           {w.type === 'clock' && <Reloj />}
           {w.type === 'daily_tasks' && <TareasDelDia invocar={invocar} escuchar={escuchar} />}

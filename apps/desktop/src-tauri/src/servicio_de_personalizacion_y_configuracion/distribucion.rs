@@ -39,6 +39,15 @@ fn se_superponen(a: &WidgetRect, b: &WidgetRect) -> bool {
     a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
 }
 
+/// HE-05-HU04-ET06: «Uno de los widgets ya no existe. Vuelve a abrir la pantalla de edición.»
+fn widget_que_ya_no_existe() -> AppError {
+    error(
+        ErrorCode::LayoutWidgetMissing,
+        messages::WIDGET_YA_NO_EXISTE_EN_LA_EDICION,
+        None,
+    )
+}
+
 /// El monitor principal: el que contiene el origen, o el primero; sin monitores, 1920 × 1080.
 pub fn monitor_principal(monitores: &[Monitor]) -> Monitor {
     monitores
@@ -65,7 +74,8 @@ impl ServicioDePersonalizacion {
     }
 
     /// IPC-LAY-01 `layout_edit_open` (HE-05-HU01): los widgets activos del tema aplicado en su posición y tamaño
-    /// reales (ET02); sin widgets activos, ninguno (ET06; D-159).
+    /// reales (ET02); sin widgets activos, ninguno (ET06; D-159). Son los mismos rectángulos que muestra la capa,
+    /// ya ajustados al monitor principal, en píxeles físicos (HE-05-HU02-ET07, HE-05-HU04-ET05).
     pub async fn abrir_edicion(
         &self,
         base: &BaseLocal,
@@ -75,7 +85,7 @@ impl ServicioDePersonalizacion {
         let tema = Self::id_del_tema_aplicado(base, user_id)
             .await?
             .unwrap_or_default();
-        let widgets = Self::rectangulos_activos(base, user_id).await?;
+        let widgets = Self::rectangulos_ajustados(base, user_id, monitores).await?;
         let monitor = monitor_principal(monitores);
         self.con_edicion(|e| {
             *e = Some(Edicion {
@@ -88,15 +98,16 @@ impl ServicioDePersonalizacion {
         Ok(LayoutEditOpenResult { monitor, widgets })
     }
 
-    /// El widget en edición y los demás; un widget que no está en la distribución es `widget.not_found`.
+    /// El widget en edición y los demás. Un widget que no está en la distribución (por ejemplo, eliminado desde otro
+    /// computador) es `layout.widget_missing`, con su mensaje; la pantalla de edición no se cierra (HE-05-HU04-ET06).
     fn en_edicion(&self, widget_id: &str) -> Result<(Edicion, usize), AppError> {
         self.con_edicion(|e| {
-            let edicion = e.clone().ok_or_else(inesperado)?;
+            let edicion = e.clone().ok_or_else(widget_que_ya_no_existe)?;
             let i = edicion
                 .actual
                 .iter()
                 .position(|w| w.widget_id.0 == widget_id)
-                .ok_or_else(|| error(ErrorCode::WidgetNotFound, "", None))?;
+                .ok_or_else(widget_que_ya_no_existe)?;
             Ok((edicion, i))
         })
     }
@@ -212,19 +223,23 @@ impl ServicioDePersonalizacion {
 
     /// IPC-LAY-05 `layout_edit_save` (HE-05-HU04): escribe en el tema aplicado la posición y el tamaño de los
     /// widgets que cambiaron y los encola una sola vez (ET01, ET04). Sin cambios no escribe ni da mensaje (CA03,
-    /// ET03). Cierra la edición. Devuelve el tema y el mensaje, si lo hay.
+    /// ET03). Guarda también el tamaño del monitor como escritorio de referencia, para que la capa muestre los
+    /// widgets sin volver a escalarlos (ET05). Si un widget ya no existe, `layout.widget_missing` y la edición sigue
+    /// abierta (ET06). Cierra la edición. Devuelve el tema y el mensaje, si lo hay.
     pub async fn guardar_edicion(
         &self,
         base: &BaseLocal,
         user_id: &str,
         ahora_ms: i64,
     ) -> Result<Option<(String, ResultMessage)>, AppError> {
-        let Some(edicion) = self.con_edicion(Option::take) else {
+        let Some(edicion) = self.con_edicion(|e| e.clone()) else {
             return Ok(None);
         };
         if !edicion.dirty() {
+            self.con_edicion(|e| *e = None);
             return Ok(None);
         }
+        let (ref_ancho, ref_alto) = (edicion.monitor.width, edicion.monitor.height);
         let pool = base.pool().await.map_err(de_sqlx)?;
         let ahora = instante(ahora_ms).0;
         let mut tx = pool.begin().await.map_err(de_sqlx)?;
@@ -241,24 +256,28 @@ impl ServicioDePersonalizacion {
             .fetch_optional(&mut *tx)
             .await
             .map_err(de_sqlx)?
-            .ok_or_else(inesperado)?;
+            .ok_or_else(widget_que_ya_no_existe)?;
             let (fields, mods) = campos(
                 &[
                     ("x", Value::from(nuevo.x)),
                     ("y", Value::from(nuevo.y)),
                     ("width", Value::from(nuevo.width)),
                     ("height", Value::from(nuevo.height)),
+                    ("ref_width", Value::from(ref_ancho)),
+                    ("ref_height", Value::from(ref_alto)),
                 ],
                 &ahora,
             );
             sqlx::query(
-                "UPDATE theme_widget SET x = ?, y = ?, width = ?, height = ?, \
+                "UPDATE theme_widget SET x = ?, y = ?, width = ?, height = ?, ref_width = ?, ref_height = ?, \
                  field_mods = json_patch(field_mods, ?) WHERE id = ?",
             )
             .bind(nuevo.x)
             .bind(nuevo.y)
             .bind(nuevo.width)
             .bind(nuevo.height)
+            .bind(ref_ancho)
+            .bind(ref_alto)
             .bind(mods.to_string())
             .bind(&id)
             .execute(&mut *tx)
@@ -269,6 +288,7 @@ impl ServicioDePersonalizacion {
                 .map_err(de_sqlx)?;
         }
         tx.commit().await.map_err(de_sqlx)?;
+        self.con_edicion(|e| *e = None);
         Ok(Some((
             edicion.tema,
             resultado("layout_edit_save", messages::CAMBIOS_GUARDADOS),

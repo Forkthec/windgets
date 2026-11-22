@@ -4,7 +4,8 @@
 //!
 //! Coordenadas: el cursor llega en píxeles físicos de la pantalla (`GetCursorPos`); la capa cubre el escritorio
 //! virtual desde `origen` y dibuja en píxeles CSS, que son los físicos divididos por su `escala`. Los rectángulos
-//! de los widgets están en píxeles CSS de la capa (`WidgetRect`, como los pinta `Capa.tsx`).
+//! de los widgets están en píxeles físicos desde el origen de la capa (`WidgetRect`; `Capa.tsx` los divide por la
+//! escala al dibujarlos, HE-05-HU02-ET07), así que el punto se compara con ellos antes de pasarlo a la capa.
 
 use crate::tipos::{
     EventMapPointerForwarded, EventMapPointerForwardedButton, Monitor, WidgetRect, WidgetType,
@@ -161,6 +162,14 @@ impl Arrastre {
     }
 }
 
+/// El punto físico desde el origen de la capa, en píxeles físicos, como los rectángulos de los widgets.
+fn desde_el_origen(geometria: &GeometriaDeLaCapa, x: i32, y: i32) -> (f64, f64) {
+    (
+        f64::from(x - geometria.origen.0),
+        f64::from(y - geometria.origen.1),
+    )
+}
+
 /// El punto físico en píxeles CSS de la capa.
 fn en_la_capa(geometria: &GeometriaDeLaCapa, x: i32, y: i32) -> (f64, f64) {
     let escala = if geometria.escala > 0.0 {
@@ -203,16 +212,17 @@ pub fn decidir(
     if bajo_el_cursor != BajoElCursor::Escritorio {
         return None;
     }
-    let (cx, cy) = en_la_capa(geometria, x, y);
+    let (fx, fy) = desde_el_origen(geometria, x, y);
     geometria
         .widgets
         .iter()
         .rev() // el último pintado queda encima
-        .find(|w| w.is_active && contiene(w, cx, cy))
+        .find(|w| w.is_active && contiene(w, fx, fy))
         .filter(|w| es_interactivo(&w.r#type))?;
     if hay_icono() != Some(false) {
         return None;
     }
+    let (cx, cy) = en_la_capa(geometria, x, y);
     Some(EventMapPointerForwarded {
         x: cx.round() as i64,
         y: cy.round() as i64,
@@ -310,6 +320,30 @@ mod pruebas {
         .unwrap();
         assert_eq!((evento.x, evento.y), (400, 100));
         assert_eq!(evento.monitor_id, "1");
+        // HE-05-HU02-ET07: los rectángulos están en píxeles físicos y la capa los dibuja divididos por la escala.
+        // Al 125 %, el Kanban (760 a 1400 físicos) termina en 1120 CSS: el punto físico 1450 queda fuera, aunque
+        // en CSS (1160) caería dentro del rectángulo sin escalar; el 1300 sí está dentro y llega en CSS.
+        let a_escala = GeometriaDeLaCapa {
+            escala: 1.25,
+            ..por_defecto()
+        };
+        let fuera = decidir(
+            &a_escala,
+            &monitores(),
+            (1450, 100),
+            BajoElCursor::Escritorio,
+            sin_icono,
+        );
+        assert_eq!(fuera, None);
+        let dentro = decidir(
+            &a_escala,
+            &monitores(),
+            (1300, 100),
+            BajoElCursor::Escritorio,
+            sin_icono,
+        )
+        .unwrap();
+        assert_eq!((dentro.x, dentro.y), (1040, 80));
         // Todos los interactivos (ET01).
         for tipo in [
             WidgetType::DailyTasks,
