@@ -12,6 +12,9 @@ import {
   FUNCIONES,
   RESPALDO,
   UN_CAMBIO_A_LA_VEZ,
+  MUY_LARGO,
+  GUIA,
+  diaYFecha,
   type Contexto,
 } from '../../../../supabase/functions/windi-chat/logica';
 
@@ -48,7 +51,8 @@ describe('EF-01 windi-chat · HE-14-HU01', () => {
       { role: 'user', parts: [{ text: 't24' }] },
       { role: 'user', parts: [{ text: 'Hola' }] },
     ]);
-    expect(cuerpo.generationConfig).toEqual({ temperature: 0.4, maxOutputTokens: 600 });
+    // HE-14-HU07-ET07 (P24): sin el tope de 600 tokens de salida.
+    expect(cuerpo.generationConfig).toEqual({ temperature: 0.4, maxOutputTokens: 2048 });
   });
 
   it('HE-14-HU01-CA04 y CA05 · rechaza el mensaje vacío y el de más de 2000 caracteres (invalid_request, 400)', () => {
@@ -662,5 +666,128 @@ describe('EF-01 windi-chat · HE-14-HU05 (P24: varias tarjetas, etiquetas y bloq
     expect(typeof r === 'object' && r.proposal?.items[0]?.changes).toEqual({
       time_block: { date: '2026-11-15', start_hour: 10 },
     });
+  });
+});
+
+describe('EF-01 windi-chat · HE-14-HU09 (P24: contexto completo)', () => {
+  const sabado: Contexto = { ...CONTEXTO, today: '2026-11-21' };
+
+  it('HE-14-HU04-CA12 · conoce el día de la semana de hoy y de los próximos 7 días (ET14)', () => {
+    const texto = instruccionDelSistema(sabado);
+    expect(texto).toContain('Hoy es sábado 21/11/2026 (2026-11-21)');
+    expect(texto).toContain('en hora de Colombia (UTC-5)');
+    expect(texto).toContain('viernes 27/11/2026');
+    expect(texto).toContain('sábado 28/11/2026');
+    expect(diaYFecha('2026-12-31', 1)).toBe('viernes 01/01/2027');
+  });
+
+  it('HE-14-HU04-ET13 · las tarjetas nuevas se crean en Por hacer', () => {
+    expect(instruccionDelSistema(CONTEXTO)).toContain(
+      'explicas que las tarjetas nuevas se crean en Por hacer y propones crearla en Por hacer',
+    );
+  });
+
+  it('HE-14-HU08-CA03 · cómo asignar una tarjeta a un bloque horario, con los nombres de la aplicación', () => {
+    expect(GUIA).toContain('Menú principal > Planificador > Agenda diaria');
+    expect(GUIA).toContain('se arrastra (drag-and-drop)');
+    expect(GUIA).toContain('desde el panel Tarjetas sin horario');
+    expect(instruccionDelSistema(CONTEXTO)).toContain(`Guía de la aplicación: ${GUIA}`);
+  });
+
+  it('HE-14-HU08-ET04 · conoce todas las pantallas y opciones', () => {
+    for (const nombre of [
+      'Agenda diaria',
+      'Widgets',
+      '«Editar escritorio» abre la pantalla de edición',
+      'Personalización del wallpaper',
+      'Temas',
+      'Reportes',
+      'Menú principal > Configuración',
+      '«¿Olvidaste tu contraseña?»',
+    ]) {
+      expect(GUIA).toContain(nombre);
+    }
+  });
+
+  it('HE-14-HU09-CA05 · usa las cantidades del Núcleo sin contarlas (ET06)', () => {
+    const texto = instruccionDelSistema({
+      ...CONTEXTO,
+      labels: [{ id: 'l1', name: 'Estudio' }],
+      totals: { total: 250, overdue: 12, pending: 230, completed: 8 },
+      counts: {
+        by_column: [{ key: 'C1', count: 250 }],
+        by_label: [{ key: 'l1', count: 3 }],
+        by_priority: [
+          { key: 'high', count: 5 },
+          { key: 'none', count: 245 },
+        ],
+        completed_by_date: [{ key: '2026-11-13', count: 8 }],
+      },
+    });
+    expect(texto).toContain('nunca las cuentas tú');
+    expect(texto).toContain(
+      'Cantidades calculadas con todas sus tarjetas: total 250, vencidas 12, pendientes 230, completadas 8; ' +
+        'por columna: Por hacer 250; por etiqueta: Estudio 3; por prioridad: alta 5, sin prioridad 245; ' +
+        'completadas por fecha de completado: 13/11/2026 8.',
+    );
+  });
+
+  it('HE-14-HU09-CA06 · conoce el tipo, el bloque horario y la descripción de cada tarjeta (ET07)', () => {
+    const texto = instruccionDelSistema({
+      ...sabado,
+      cards: [
+        {
+          id: 't9',
+          type: 'event',
+          title: 'Reunión de equipo',
+          due_date: '2026-11-21',
+          completed_on: null,
+          column_id: 'c1',
+          priority: null,
+          label_ids: [],
+          scheduled_date: '2026-11-21',
+          scheduled_hour: 15,
+          description: `Con el equipo de diseño ${'x'.repeat(200)}`,
+        },
+      ],
+    });
+    expect(texto).toContain(
+      'Reunión de equipo (id t9, fecha límite 2026-11-21, pendiente, columna Por hacer, tipo evento, ' +
+        'bloque horario 2026-11-21 15:00 – 16:00, descripción «Con el equipo de diseño',
+    );
+    expect(texto).toContain('…»)');
+  });
+
+  it('HE-14-HU03 · la propuesta pendiente de confirmar va en la instrucción', () => {
+    const propuesta = { action: 'move', items: [{ card_id: 't1', changes: { column_id: 'c2' } }] };
+    expect(instruccionDelSistema({ ...CONTEXTO, active_proposal: propuesta })).toContain(
+      `Propuesta pendiente de confirmar: ${JSON.stringify(propuesta)}.`,
+    );
+    expect(instruccionDelSistema(CONTEXTO)).toContain('Propuesta pendiente de confirmar: ninguna.');
+  });
+
+  it('HE-14-HU07-ET07 · sin tokens de salida da un texto útil, no el error genérico', () => {
+    expect(
+      leerGemini({
+        candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: 'Tienes 3' }] } }],
+      }),
+    ).toEqual({ reply: MUY_LARGO, intent: 'clarify', proposal: null });
+    expect(MUY_LARGO).toBe('Tu pedido es muy largo para responderlo de una vez. ¿Lo hacemos por partes?');
+  });
+
+  it('HE-14-HU01 · con responder y partes de texto a la vez, la respuesta es un solo texto', () => {
+    const r = leerGemini({
+      candidates: [
+        {
+          content: {
+            parts: [
+              { text: 'Tienes 2 tarjetas vencidas.' },
+              { functionCall: { name: 'responder', args: { text: 'Tienes 2 tarjetas vencidas.' } } },
+            ],
+          },
+        },
+      ],
+    });
+    expect(r).toEqual({ reply: 'Tienes 2 tarjetas vencidas.', intent: 'answer', proposal: null });
   });
 });

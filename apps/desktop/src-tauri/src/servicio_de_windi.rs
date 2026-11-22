@@ -545,6 +545,7 @@ pub async fn contexto<C: Calendario>(
             pending: contar(&|t| !t.is_completed && !t.is_overdue),
             completed: contar(&|t| t.is_completed),
         },
+        counts: conteos(&tarjetas, &columnas, &etiquetas),
         columns: columnas
             .into_iter()
             .map(|c| crate::tipos::WindiChatContextColumnsItem {
@@ -560,14 +561,12 @@ pub async fn contexto<C: Calendario>(
                 name: e.name,
             })
             .collect(),
-        // DUDA: HE-14-HU05 EF-01 dice «solo las necesarias para la pregunta» sin definir cuáles; HE-14-HU09 pide
-        // contar tarjetas por estado, fecha, columna, etiqueta o prioridad igual que las vistas. Valor usado:
-        // primero las tarjetas cuyo título comparte una palabra de 3 letras o más con el mensaje y después las demás,
-        // hasta 200 (docs/DUDAS.md).
+        // DUDA: HE-14-HU05 EF-01 dice «solo las necesarias para la pregunta» sin definir cuáles. Valor usado:
+        // primero las tarjetas cuyo título se relaciona con el mensaje y después las demás, hasta 200; las
+        // cantidades van completas en `counts` (HE-14-HU09-ET06) (docs/DUDAS.md).
         cards: {
             let buscadas = palabras(mensaje);
-            let relacionada =
-                |t: &&&crate::tipos::Card| palabras(&t.title).iter().any(|p| buscadas.contains(p));
+            let relacionada = |t: &&&crate::tipos::Card| relacionada(&buscadas, &t.title);
             tarjetas
                 .iter()
                 .filter(relacionada)
@@ -595,7 +594,84 @@ pub async fn contexto<C: Calendario>(
 /// Cuántas tarjetas van como máximo en el contexto de `windi-chat`.
 const TARJETAS_EN_EL_CONTEXTO: usize = 200;
 
-/// Las palabras de 3 letras o más de un texto, en minúsculas y sin tildes, para buscar tarjetas por su título.
+/// HE-14-HU09-ET06: las cantidades por columna, etiqueta, prioridad y fecha de completado, con todas las tarjetas
+/// del usuario. Windi las usa sin contar él mismo; las de estado van en `totals`.
+fn conteos(
+    tarjetas: &[&crate::tipos::Card],
+    columnas: &[crate::tipos::Column],
+    etiquetas: &[crate::tipos::Label],
+) -> crate::tipos::WindiChatContextCounts {
+    use crate::tipos::WindiChatContextCount as Cantidad;
+    let cuantas = |f: &dyn Fn(&crate::tipos::Card) -> bool| {
+        i64::try_from(tarjetas.iter().filter(|t| f(t)).count()).unwrap_or(i64::MAX)
+    };
+    let mismo = |a: &crate::tipos::Uuid, b: &crate::tipos::Uuid| a.0.eq_ignore_ascii_case(&b.0);
+    let prioridad = |t: &crate::tipos::Card| {
+        t.priority
+            .as_ref()
+            .and_then(|p| serde_json::to_value(p).ok())
+            .and_then(|v| v.as_str().map(str::to_string))
+            .unwrap_or_else(|| "none".to_string())
+    };
+    let mut fechas: Vec<String> = tarjetas
+        .iter()
+        .filter_map(|t| t.completed_on.as_ref().map(|d| d.0.clone()))
+        .collect();
+    fechas.sort();
+    fechas.dedup();
+    crate::tipos::WindiChatContextCounts {
+        by_column: columnas
+            .iter()
+            .map(|c| Cantidad {
+                key: c.id.0.clone(),
+                count: cuantas(&|t| mismo(&t.column_id, &c.id)),
+            })
+            .collect(),
+        by_label: etiquetas
+            .iter()
+            .map(|e| Cantidad {
+                key: e.id.0.clone(),
+                count: cuantas(&|t| t.label_ids.iter().any(|l| mismo(l, &e.id))),
+            })
+            .collect(),
+        by_priority: ["high", "medium", "low", "none"]
+            .into_iter()
+            .map(|p| Cantidad {
+                key: p.to_string(),
+                count: cuantas(&|t| prioridad(t) == p),
+            })
+            .collect(),
+        completed_by_date: fechas
+            .into_iter()
+            .map(|d| Cantidad {
+                count: cuantas(&|t| t.completed_on.as_ref().is_some_and(|c| c.0 == d)),
+                key: d,
+            })
+            .collect(),
+    }
+}
+
+/// Palabras frecuentes que no sirven para buscar una tarjeta.
+const VACIAS: &[&str] = &[
+    "al", "con", "de", "del", "el", "en", "es", "la", "las", "lo", "los", "me", "mi", "mis",
+    "para", "por", "que", "se", "su", "sus", "tu", "tus", "un", "una", "uno", "unos", "unas", "ya",
+    "y", "a", "o",
+];
+
+/// Si el título se relaciona con las palabras del mensaje: una palabra del mensaje está dentro de una del título
+/// («TP» encuentra «TP final», «informe» encuentra «Informes»), o una del título de 3 letras o más está dentro de
+/// una del mensaje (HE-14-HU09-CA06).
+fn relacionada(buscadas: &[String], titulo: &str) -> bool {
+    let del_titulo = palabras(titulo);
+    buscadas.iter().any(|b| {
+        del_titulo
+            .iter()
+            .any(|p| p.contains(b.as_str()) || (p.chars().count() >= 3 && b.contains(p.as_str())))
+    })
+}
+
+/// Las palabras de un texto, en minúsculas y sin tildes, sin las palabras vacías, para buscar tarjetas por su
+/// título.
 fn palabras(texto: &str) -> Vec<String> {
     texto
         .to_lowercase()
@@ -610,7 +686,7 @@ fn palabras(texto: &str) -> Vec<String> {
         })
         .collect::<String>()
         .split(|c: char| !c.is_alphanumeric())
-        .filter(|p| p.chars().count() >= 3)
+        .filter(|p| p.chars().count() >= 2 && !VACIAS.contains(p))
         .map(str::to_string)
         .collect()
 }

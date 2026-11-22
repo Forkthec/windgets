@@ -566,6 +566,52 @@ describe('HE-14-HU05 · Editar tarjetas con el agente de IA', () => {
 });
 
 describe('HE-14-HU04 · Crear tarjetas con el agente de IA', () => {
+  it('HE-14-HU04-ET10 · La propuesta de creación muestra los datos de cada tarjeta', async () => {
+    await abrir(
+      proponer({
+        id: 'p1',
+        action: 'create',
+        items: [
+          {
+            card_id: null,
+            current: null,
+            changes: {
+              type: 'reminder',
+              title: 'Pagar la luz',
+              due_date: '2026-11-27',
+              priority: 'high',
+              label_ids: ['e2'],
+              description: 'Antes del mediodía',
+            },
+            title: 'Pagar la luz',
+          },
+          {
+            card_id: null,
+            current: null,
+            changes: { title: 'Comprar pan', due_date: '2026-11-20' },
+            title: 'Comprar pan',
+          },
+        ],
+        warnings: [],
+        state: 'active',
+      }),
+    );
+    await pedir('Crea Pagar la luz y Comprar pan');
+    const datos = (i: number) =>
+      within(within(propuestas()[0] as HTMLElement).getAllByRole('list', { name: 'Datos' })[i] as HTMLElement)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent);
+    expect(datos(0)).toEqual([
+      'Tipo: Recordatorio',
+      'Fecha límite: 27/11/2026',
+      'Prioridad: Alta',
+      'Etiquetas: Casa',
+      'Descripción: Antes del mediodía',
+    ]);
+    // Sin tipo, la tarjeta es Tarea (HE-14-HU04-ET02); lo que no tiene no se muestra.
+    expect(datos(1)).toEqual(['Tipo: Tarea', 'Fecha límite: 20/11/2026']);
+  });
+
   it('HE-14-HU04-CA10 · Crear una tarjeta con bloque horario', async () => {
     await abrir(
       proponer({

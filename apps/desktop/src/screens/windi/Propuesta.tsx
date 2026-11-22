@@ -12,6 +12,8 @@ const DATOS: Record<string, string> = {
   label_ids: 'Etiquetas',
   time_block: 'Bloque horario',
 };
+// HE-14-HU04-ET10: los datos de una tarjeta nueva, en este orden (el título va arriba).
+const DATOS_DE_CREACION = ['type', 'due_date', 'priority', 'label_ids', 'description', 'time_block'];
 // HE-14-HU05-ET12: cómo se lee un dato que se quita.
 const SIN_VALOR: Record<string, string> = {
   priority: 'Sin prioridad',
@@ -94,10 +96,26 @@ export function Propuesta({
                 ))}
               </ul>
             )}
-            {propuesta.action === 'create' &&
-              bloqueVisible((item.changes as Record<string, unknown> | null)?.time_block, true) && (
-                <p>{`Bloque horario: ${bloqueVisible((item.changes as Record<string, unknown> | null)?.time_block, true)}`}</p>
-              )}
+            {propuesta.action === 'create' && item.changes && (
+              // HE-14-HU04-ET10: el tipo, la fecha límite, la prioridad, las etiquetas, la descripción y el bloque
+              // horario de cada tarjeta, si los tiene.
+              <ul aria-label="Datos">
+                {DATOS_DE_CREACION.map((dato) => {
+                  const valor = (item.changes as Record<string, unknown>)[dato];
+                  const vacio =
+                    valor === null ||
+                    valor === undefined ||
+                    valor === '' ||
+                    (Array.isArray(valor) && !valor.length);
+                  if (vacio && dato !== 'type') return null;
+                  return (
+                    <li
+                      key={dato}
+                    >{`${DATOS[dato] ?? dato}: ${valorVisible(dato, valor ?? 'task', etiquetas, true)}`}</li>
+                  );
+                })}
+              </ul>
+            )}
             {propuesta.action === 'move' && item.changes && (
               <p>{`Columna: ${String((item.changes as Record<string, unknown>).from_column)} → ${String((item.changes as Record<string, unknown>).to_column)}`}</p>
             )}

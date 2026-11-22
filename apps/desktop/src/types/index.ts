@@ -852,11 +852,15 @@ export type WidgetSetActiveParams = { widget_id: Uuid, active: boolean, };
 
 export type WidgetType = "clock" | "calendar" | "daily_tasks" | "kanban" | "weather" | "news" | "music_player" | "animation" | "image_carousel" | "static_image" | "text";
 
-export type WindiChatContext = { alias: string, today: DateIso, now_hour: Hour, columns: Array<WindiChatContextColumnsItem>, labels: Array<WindiChatContextLabelsItem>, cards: Array<WindiChatContextCard>, totals: WindiChatContextTotals, active_proposal: WindiChatProposal | null, };
+export type WindiChatContext = { alias: string, today: DateIso, now_hour: Hour, columns: Array<WindiChatContextColumnsItem>, labels: Array<WindiChatContextLabelsItem>, cards: Array<WindiChatContextCard>, totals: WindiChatContextTotals, counts: WindiChatContextCounts, active_proposal: WindiChatProposal | null, };
 
 export type WindiChatContextCard = { id: Uuid, type: CardType, title: string, due_date: DateIso, priority: Priority | null, column_id: Uuid, label_ids: Array<Uuid>, completed_on: DateIso | null, scheduled_date: DateIso | null, scheduled_hour: Hour | null, description: string | null, };
 
 export type WindiChatContextColumnsItem = { id: Uuid, name: string, role: ColumnRole, };
+
+export type WindiChatContextCount = { key: string, count: number, };
+
+export type WindiChatContextCounts = { by_column: Array<WindiChatContextCount>, by_label: Array<WindiChatContextCount>, by_priority: Array<WindiChatContextCount>, completed_by_date: Array<WindiChatContextCount>, };
 
 export type WindiChatContextLabelsItem = { id: Uuid, name: string, };
 

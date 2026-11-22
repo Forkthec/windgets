@@ -67,6 +67,7 @@ pub(crate) fn contexto_vacio() -> WindiChatContext {
             pending: 0,
             completed: 0,
         },
+        counts: Default::default(),
         active_proposal: None,
     }
 }
@@ -2507,4 +2508,120 @@ fn ca_he_14_hu09_ca04() {
     )
     .unwrap();
     assert_eq!(bloquear(planificador.tablero(USUARIO)).unwrap(), antes);
+}
+
+#[test]
+fn ca_he_14_hu09_ca05() {
+    // HE-14-HU09-CA05 · Con 250 tarjetas, 12 vencidas, el Núcleo manda la cantidad exacta (ET06) aunque el contexto
+    // lleve solo 200 tarjetas.
+    let planificador = con_semilla();
+    for i in 0..250 {
+        let fecha = if i < 12 { "2026-11-10" } else { "2026-11-20" };
+        tarjeta_en(
+            &planificador,
+            POR_HACER,
+            &format!("Tarea {i}"),
+            fecha,
+            f64::from(i) * 1024.0,
+        );
+    }
+    let c = bloquear(contexto(
+        &planificador,
+        USUARIO,
+        "Prueba",
+        planificador.hoy(),
+        12,
+        "¿Cuántas tarjetas vencidas tengo?",
+    ))
+    .unwrap();
+    assert_eq!(c.cards.len(), 200);
+    assert_eq!((c.totals.total, c.totals.overdue), (250, 12));
+    let por_hacer = c
+        .counts
+        .by_column
+        .iter()
+        .find(|n| n.key.eq_ignore_ascii_case(POR_HACER))
+        .unwrap();
+    assert_eq!(por_hacer.count, 250);
+}
+
+#[test]
+fn ca_he_14_hu09_et06() {
+    // HE-14-HU09-ET06 · Las cantidades por columna, etiqueta, prioridad y fecha de completado salen de todas las
+    // tarjetas.
+    let planificador = con_semilla();
+    let estudio = etiqueta(&planificador, "Estudio", "blue");
+    let a = tarjeta_en(&planificador, POR_HACER, "Informe", "2026-11-20", 1024.0);
+    let b = tarjeta_en(&planificador, POR_HACER, "Examen", "2026-11-21", 2048.0);
+    tarjeta_en(&planificador, EN_PROGRESO, "Lectura", "2026-11-22", 1024.0);
+    poner_etiquetas(&planificador, &a, &[&estudio]);
+    bloquear(planificador.actualizar_tarjeta(
+        USUARIO,
+        crate::tipos::CardUpdateParams {
+            id: Uuid(b.clone()),
+            patch: serde_json::from_value(serde_json::json!({ "priority": "high" })).unwrap(),
+        },
+    ))
+    .unwrap();
+    bloquear(planificador.marcar_completada(
+        USUARIO,
+        crate::tipos::CardSetCompletedParams {
+            card_id: Uuid(b),
+            completed: true,
+        },
+    ))
+    .unwrap();
+    let c = bloquear(contexto(
+        &planificador,
+        USUARIO,
+        "Prueba",
+        planificador.hoy(),
+        12,
+        "¿Cuántas tengo?",
+    ))
+    .unwrap();
+    let cantidad = |lista: &[crate::tipos::WindiChatContextCount], clave: &str| {
+        lista
+            .iter()
+            .find(|n| n.key.eq_ignore_ascii_case(clave))
+            .map_or(0, |n| n.count)
+    };
+    assert_eq!(cantidad(&c.counts.by_column, EN_PROGRESO), 1);
+    assert_eq!(cantidad(&c.counts.by_label, &estudio), 1);
+    assert_eq!(
+        (
+            cantidad(&c.counts.by_priority, "high"),
+            cantidad(&c.counts.by_priority, "none")
+        ),
+        (1, 2)
+    );
+    assert_eq!(cantidad(&c.counts.completed_by_date, "2026-11-14"), 1);
+}
+
+#[test]
+fn ca_he_14_hu09_et07() {
+    // HE-14-HU09-ET07 · Con 201 tarjetas, la que se menciona por una sigla («TP» en «TP final») entra en las 200 del
+    // contexto, con su tipo, su bloque y su descripción.
+    let planificador = con_semilla();
+    for i in 0..200 {
+        tarjeta_en(
+            &planificador,
+            POR_HACER,
+            &format!("Tarea {i}"),
+            "2026-11-20",
+            f64::from(i) * 1024.0,
+        );
+    }
+    let tp = tarjeta_en(&planificador, EN_PROGRESO, "TP final", "2026-11-20", 1024.0);
+    let c = bloquear(contexto(
+        &planificador,
+        USUARIO,
+        "Prueba",
+        planificador.hoy(),
+        12,
+        "¿Para cuándo es el TP?",
+    ))
+    .unwrap();
+    assert_eq!(c.cards.len(), 200);
+    assert!(c.cards[0].id.0.eq_ignore_ascii_case(&tp));
 }

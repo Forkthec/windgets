@@ -987,6 +987,13 @@ export interface WindiChatContext {
   /** Solo las tarjetas necesarias para la pregunta, incluidos los cambios aún no sincronizados (D-193). */
   cards: WindiChatContextCard[];
   totals: { total: number; overdue: number; pending: number; completed: number };
+  /** HE-14-HU09-ET06: cantidades con todas las tarjetas; `key` es el id, la prioridad o la fecha de completado. */
+  counts: {
+    by_column: Array<{ key: string; count: number }>;
+    by_label: Array<{ key: string; count: number }>;
+    by_priority: Array<{ key: string; count: number }>;
+    completed_by_date: Array<{ key: string; count: number }>;
+  };
   active_proposal: WindiChatProposal | null;
 }
 export interface WindiChatRequest {
