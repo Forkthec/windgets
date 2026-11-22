@@ -931,6 +931,16 @@ button.wg-tarjeta__titulo:focus-visible {
 .wg-widget p {
   margin: 0;
 }
+/* HE-06-HU03-ET06: área de selección de la casilla de completada del widget Tareas del día. */
+.wg-widget__casilla {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 32px;
+  cursor: pointer;
+}
 .wg-widget button {
   font: inherit;
   color: inherit;

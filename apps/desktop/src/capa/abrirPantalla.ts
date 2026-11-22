@@ -5,8 +5,11 @@ import type { Invoke, ScreenId, ScreenParams } from '@/types';
 // (CA07, ET06), y le pide la pantalla con EV-23. La capa entrega la selección al soltar el botón sin mover el
 // puntero (EV-27 `pointer_released`, ET08), así que empezar un arrastre no abre la aplicación (CA10).
 
-/** Los controles propios de un widget (casilla, «⋮», menú «Mover a»): seleccionarlos no abre ninguna pantalla. */
-export const CONTROLES_DEL_WIDGET = 'input, button, [role="menu"]';
+/**
+ * Los controles propios de un widget (casilla y su área, «⋮», menú «Mover a»): seleccionarlos no abre ninguna
+ * pantalla (HE-06-HU03-ET06).
+ */
+export const CONTROLES_DEL_WIDGET = 'input, label, button, [role="menu"]';
 
 /** ¿La selección cayó en un control propio del widget? */
 export function esUnControl(objetivo: EventTarget | null): boolean {
