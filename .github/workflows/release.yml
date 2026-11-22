@@ -1,19 +1,86 @@
 name: release
 
-# Al crear una etiqueta v*: despliega las Edge Functions (job `funciones`, con la aprobación del environment
-# `produccion`) y después compila, genera el instalador NSIS y lo publica como Windgets-Setup.exe (nombre fijo,
-# D-194; la landing lo descarga, INT-12). El instalador espera a las funciones: no sale una app nueva que hable con
-# una función vieja. `workflow_dispatch` redespliega solo las funciones, a mano, desde Actions.
+# Publica lo último aprobado en `main` con un botón: Actions > release > «Run workflow» sobre `main` (INT-12).
+# Sin PR para subir la versión ni etiqueta manual:
+# - `preparar` comprueba que se lanzó sobre `main` y que el flujo `ci` de ese commit está en verde, calcula la
+#   versión siguiente desde la última release publicada (`menor`: X.(Y+1).0; `parche`: X.Y.(Z+1)) y comprueba que
+#   su etiqueta no existe.
+# - `funciones` despliega las Edge Functions con la aprobación del environment `produccion` (equipo `windgets`).
+# - `release` compila ese mismo commit con la versión calculada (sin commit: ningún código lee la versión),
+#   genera el instalador NSIS, lo publica como Windgets-Setup.exe (nombre fijo, D-194; la landing lo descarga) y
+#   crea la etiqueta vX.Y.Z sobre ese commit. Espera a las funciones: no sale una app nueva que hable con una
+#   función vieja.
+# `solo-funciones` redespliega las funciones sin publicar release.
 on:
-  push:
-    tags: ['v*']
   workflow_dispatch:
+    inputs:
+      tipo:
+        description: 'menor (0.4.0 → 0.5.0), parche (0.4.0 → 0.4.1) o solo-funciones (sin release)'
+        type: choice
+        options: [menor, parche, solo-funciones]
+        default: menor
+
+# Nunca dos releases a la vez: la segunda espera a la primera.
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
+  preparar:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      sha: ${{ github.sha }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SHA: ${{ github.sha }}
+      TIPO: ${{ inputs.tipo }}
+    steps:
+      - name: Solo desde main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::El release solo se lanza sobre main (se lanzó sobre ${GITHUB_REF}). Elige la rama main en «Run workflow»."
+          exit 1
+      - name: El CI de este commit está en verde
+        run: |
+          ok=$(gh run list --workflow ci --commit "$SHA" --json conclusion --jq '[.[] | select(.conclusion == "success")] | length')
+          if [ "$ok" -eq 0 ]; then
+            echo "::error::El flujo ci de ${SHA} no está en verde (o aún corre). Espera a que termine en verde y vuelve a lanzar el release."
+            exit 1
+          fi
+      - name: Calcular la versión siguiente
+        id: version
+        if: inputs.tipo != 'solo-funciones'
+        run: |
+          ultima=$(gh release view --json tagName --jq .tagName) || {
+            echo "::error::No se pudo leer la última release publicada."
+            exit 1
+          }
+          if ! [[ "$ultima" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::La última release (${ultima}) no tiene la forma vX.Y.Z."
+            exit 1
+          fi
+          mayor=${BASH_REMATCH[1]}; menor=${BASH_REMATCH[2]}; parche=${BASH_REMATCH[3]}
+          case "$TIPO" in
+            menor) version="${mayor}.$((menor + 1)).0" ;;
+            parche) version="${mayor}.${menor}.$((parche + 1))" ;;
+          esac
+          if gh api "repos/${GH_REPO}/git/ref/tags/v${version}" > /dev/null 2>&1; then
+            echo "::error::La etiqueta v${version} ya existe. Bórrala si no tiene release o elige otro tipo."
+            exit 1
+          fi
+          echo "Última release: ${ultima}. Nueva: v${version} sobre ${SHA}."
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
   funciones:
+    needs: preparar
     runs-on: ubuntu-24.04
     environment: produccion
     permissions:
@@ -24,25 +91,32 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
         with:
+          ref: ${{ needs.preparar.outputs.sha }}
           persist-credentials: false
       - uses: supabase/setup-cli@v3.2.0
         with:
           version: 3.2.0
       # Sin nombre despliega todas las funciones de supabase/functions/ (las carpetas que empiezan por `_` son
-      # código compartido) con el `verify_jwt = true` de supabase/config.toml (D-192).
+      # código compartido) con el `verify_jwt = true` de supabase/config.toml (D-192). `--yes` porque el CLI pide
+      # confirmación y en Actions no hay terminal: sin él no despliega nada y el job falla.
       - name: Desplegar las Edge Functions
-        run: supabase functions deploy --project-ref "$SUPABASE_PROJECT_ID"
+        run: supabase functions deploy --yes --project-ref "$SUPABASE_PROJECT_ID"
       - name: Dejar en el log las versiones desplegadas
         run: supabase functions list --project-ref "$SUPABASE_PROJECT_ID"
 
   release:
-    needs: funciones
-    if: github.event_name == 'push'
+    needs: [preparar, funciones]
+    if: inputs.tipo != 'solo-funciones'
     runs-on: windows-2025
     permissions:
       contents: write
+    env:
+      VERSION: ${{ needs.preparar.outputs.version }}
+      SHA: ${{ needs.preparar.outputs.sha }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.preparar.outputs.sha }}
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
@@ -51,18 +125,23 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Rust (versión de rust-toolchain.toml)
         run: rustup show
+      # La versión entra como parche de configuración de Tauri (JSON Merge Patch sobre tauri.conf.json), en un
+      # archivo para no depender de las comillas en Windows.
       - name: Generar el instalador
+        shell: bash
         env:
           WINDGETS_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           WINDGETS_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-        run: pnpm --filter desktop tauri build --bundles nsis
+        run: |
+          printf '{"version":"%s"}' "$VERSION" > "$RUNNER_TEMP/version.json"
+          pnpm --filter desktop tauri build --bundles nsis --config "$RUNNER_TEMP/version.json"
       - name: Renombrar a Windgets-Setup.exe y sellarlo (CD-02-HU01-CA12)
         shell: bash
         run: |
-          cp apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe Windgets-Setup.exe
+          cp apps/desktop/src-tauri/target/release/bundle/nsis/*_"$VERSION"_*-setup.exe Windgets-Setup.exe
           node installer/sellar.mjs Windgets-Setup.exe
-      - name: Publicar la release
+      - name: Publicar la release y crear la etiqueta sobre el commit compilado
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${{ github.ref_name }}" Windgets-Setup.exe --title "${{ github.ref_name }}" --generate-notes
+        run: gh release create "v$VERSION" Windgets-Setup.exe --target "$SHA" --title "v$VERSION" --generate-notes
