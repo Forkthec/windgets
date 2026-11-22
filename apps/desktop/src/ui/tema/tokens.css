@@ -508,14 +508,19 @@ button.wg-tarjeta__titulo:focus-visible {
   outline: calc(var(--wg-borde-ancho) * 2) solid var(--wg-accion);
 }
 
-/* «Mover a» (HE-09-HU02-ET10, ET11): la columna actual va marcada y deshabilitada (RT-04). */
-.wg-mover-a {
-  position: relative;
+/* Menú de acciones «⋮» (RT-02-ET10 a ET12) y «Mover a» (HE-09-HU02-ET10, ET11), que usa el mismo menú: se dibuja
+   fijo sobre el contenido, así que ningún contenedor lo recorta. La opción actual va marcada y deshabilitada, y
+   una opción deshabilitada se ve en gris (RT-04). */
+.wg-menu-acciones {
+  display: inline-flex;
 }
-.wg-mover-a__menu {
-  position: absolute;
-  z-index: 2;
-  margin: var(--wg-unidad) 0 0;
+.wg-menu-acciones__lista {
+  position: fixed;
+  z-index: 50;
+  min-width: calc(var(--wg-unidad) * 40);
+  max-height: calc(100vh - var(--wg-unidad) * 2);
+  overflow-y: auto;
+  margin: 0;
   padding: var(--wg-unidad);
   list-style: none;
   background: var(--wg-superficie);
@@ -523,7 +528,16 @@ button.wg-tarjeta__titulo:focus-visible {
   border-radius: var(--wg-radio);
   box-shadow: var(--wg-sombra);
 }
-.wg-mover-a__opcion {
+.wg-menu-acciones {
+  position: relative;
+}
+/* En los widgets de la capa el menú queda dentro del widget (HE-06-HU01). */
+.wg-menu-acciones__lista--en-lugar {
+  position: absolute;
+  top: 100%;
+  right: 0;
+}
+.wg-menu-acciones__opcion {
   display: block;
   width: 100%;
   padding: var(--wg-unidad) calc(var(--wg-unidad) * 2);
@@ -532,13 +546,18 @@ button.wg-tarjeta__titulo:focus-visible {
   color: inherit;
   font: inherit;
   text-align: left;
+  white-space: nowrap;
   cursor: pointer;
 }
-.wg-mover-a__opcion[aria-checked='true'] {
+.wg-menu-acciones__opcion:hover:not(:disabled),
+.wg-menu-acciones__opcion:focus-visible {
+  background: var(--wg-superficie-alta);
+}
+.wg-menu-acciones__opcion[aria-checked='true'] {
   font-weight: 700;
   text-decoration: underline;
 }
-.wg-mover-a__opcion:disabled {
+.wg-menu-acciones__opcion:disabled {
   color: var(--wg-borde);
   cursor: default;
 }

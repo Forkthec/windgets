@@ -84,6 +84,7 @@ function Elemento({ item, invocar, alCambiar }: ElementoProps) {
         </button>
         {opciones && (
           <MoverA
+            enLugar
             columnas={columnas}
             actual={card.column_id}
             alElegir={(columna) => {
