@@ -177,8 +177,18 @@ export function instruccionDelSistema(contexto: Contexto): string {
     'Si piden varias tarjetas en un mensaje, las propones todas en una sola llamada.',
     'Solo usas etiquetas que existen y nunca creas etiquetas. Si piden una que no existe, dices que no existe,',
     'mencionas las disponibles y preguntas si prefiere una de ellas o crear la tarjeta sin etiqueta.',
-    // HE-14-HU05: editar tarjetas.
-    'Para cambiar datos de una tarjeta llamas a propose_edit_card con su id y solo los datos que cambian.',
+    // HE-14-HU05: editar tarjetas (ET10 a ET14).
+    'Para cambiar datos de una o varias tarjetas llamas a propose_edit_cards con un elemento por tarjeta: su id y',
+    'solo los datos que cambian. Si piden el mismo cambio para varias tarjetas, como las vencidas, las incluyes',
+    'todas en una sola llamada.',
+    'Para quitar la prioridad, la descripción o el bloque horario, envías null en ese dato.',
+    'Para poner o quitar etiquetas llamas a propose_label_cards con el id de la tarjeta y los nombres de las',
+    'etiquetas que se agregan o se quitan; las demás etiquetas de la tarjeta se conservan. Una tarjeta tiene máximo',
+    '5 etiquetas.',
+    // HE-14-HU04-CA10; HE-14-HU05-CA11, CA12.
+    'El bloque horario dura una hora y se indica con su fecha y su hora de inicio, de 0 a 23: el bloque',
+    '«10:00 – 11:00» es start_hour 10. Si piden un bloque de más de una hora, explicas que los bloques son de una',
+    'hora y preguntas cuál. Al crear o al cambiar una tarjeta puedes asignar el bloque en time_block.',
     'Si no encuentras una tarjeta con el nombre que menciona, lo dices, pides más detalles y no propones.',
     'Si varias tarjetas coinciden, muestras el título y la fecha límite de cada una y preguntas a cuál se refiere',
     'antes de proponer.',
@@ -234,6 +244,18 @@ export function instruccionDelSistema(contexto: Contexto): string {
   return reglas.join(' ');
 }
 
+/** El bloque horario de una tarjeta: su fecha y su hora de inicio; dura una hora (HE-11-HU01). `null` lo quita. */
+const BLOQUE = {
+  type: 'OBJECT',
+  nullable: true,
+  description: 'El bloque horario de una hora; null para quitarlo.',
+  properties: {
+    date: { type: 'STRING', description: 'Fecha AAAA-MM-DD.' },
+    start_hour: { type: 'INTEGER', description: 'Hora de inicio, de 0 a 23.' },
+  },
+  required: ['date', 'start_hour'],
+};
+
 /**
  * Las funciones que Windi puede llamar (INT-03): `responder` lleva el texto de la respuesta y las demás proponen
  * cambios. DUDA (P23): INT-03 no define `responder`; con `mode: 'AUTO'` Gemini a veces anunciaba la propuesta en
@@ -267,6 +289,7 @@ export const FUNCIONES = [
               description: { type: 'STRING' },
               priority: { type: 'STRING', enum: ['high', 'medium', 'low'] },
               label_ids: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Solo ids de etiquetas que existen.' },
+              time_block: BLOQUE,
             },
             required: ['title', 'due_date'],
           },
@@ -276,27 +299,64 @@ export const FUNCIONES = [
     },
   },
   {
-    name: 'propose_edit_card',
-    description: 'Propone cambiar datos de una tarjeta. La persona confirma antes de cambiarla.',
+    name: 'propose_edit_cards',
+    description: 'Propone cambiar datos de una o varias tarjetas. La persona confirma antes de cambiarlas.',
     parameters: {
       type: 'OBJECT',
       properties: {
-        card_id: { type: 'STRING', description: 'El id de una tarjeta de las relacionadas con el mensaje.' },
-        changes: {
-          type: 'OBJECT',
-          description: 'Solo los datos que cambian.',
-          properties: {
-            type: { type: 'STRING', enum: ['task', 'reminder', 'event'] },
-            title: { type: 'STRING', description: 'De 1 a 100 caracteres.' },
-            due_date: { type: 'STRING', description: 'Fecha límite AAAA-MM-DD, no anterior a hoy.' },
-            // HE-14-HU05-ET12: `null` quita la descripción o la prioridad.
-            description: { type: 'STRING', nullable: true, description: 'null para quitarla.' },
-            priority: { type: 'STRING', enum: ['high', 'medium', 'low'], nullable: true, description: 'null para quitarla.' },
-            label_ids: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Solo ids de etiquetas que existen.' },
+        edits: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              card_id: { type: 'STRING', description: 'El id de una tarjeta de las relacionadas con el mensaje.' },
+              changes: {
+                type: 'OBJECT',
+                description: 'Solo los datos que cambian.',
+                properties: {
+                  type: { type: 'STRING', enum: ['task', 'reminder', 'event'] },
+                  title: { type: 'STRING', description: 'De 1 a 100 caracteres.' },
+                  due_date: { type: 'STRING', description: 'Fecha límite AAAA-MM-DD, no anterior a hoy.' },
+                  // HE-14-HU05-ET12: `null` quita la descripción, la prioridad o el bloque horario.
+                  description: { type: 'STRING', nullable: true, description: 'null para quitarla.' },
+                  priority: {
+                    type: 'STRING',
+                    enum: ['high', 'medium', 'low'],
+                    nullable: true,
+                    description: 'null para quitarla.',
+                  },
+                  time_block: BLOQUE,
+                },
+              },
+            },
+            required: ['card_id', 'changes'],
           },
         },
       },
-      required: ['card_id', 'changes'],
+      required: ['edits'],
+    },
+  },
+  {
+    name: 'propose_label_cards',
+    description:
+      'Propone agregar o quitar etiquetas de una o varias tarjetas, por su nombre. La persona confirma antes.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        edits: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              card_id: { type: 'STRING', description: 'El id de una tarjeta de las relacionadas con el mensaje.' },
+              add: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Nombres de etiquetas que se agregan.' },
+              remove: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Nombres de etiquetas que se quitan.' },
+            },
+            required: ['card_id'],
+          },
+        },
+      },
+      required: ['edits'],
     },
   },
   {
@@ -331,7 +391,8 @@ export const FUNCIONES = [
 /** La acción de la propuesta según la función que llamó Gemini. */
 const ACCION: Record<string, Propuesta['action']> = {
   propose_create_cards: 'create',
-  propose_edit_card: 'edit',
+  propose_edit_cards: 'edit',
+  propose_label_cards: 'edit',
   propose_move_card: 'move',
   propose_delete_cards: 'delete',
 };
@@ -352,9 +413,21 @@ export const UN_CAMBIO_A_LA_VEZ = 'Puedo preparar un tipo de cambio a la vez. ¿
 
 /** Los elementos de la propuesta a partir de los argumentos de la función (INT-03 → EF-01). */
 function elementos(nombre: string, args: Record<string, unknown>): Propuesta['items'] {
-  if (nombre === 'propose_edit_card') {
-    const cambios = esObjeto(args.changes) ? args.changes : null;
-    return typeof args.card_id === 'string' ? [{ card_id: args.card_id, changes: cambios }] : [];
+  const ediciones = Array.isArray(args.edits) ? args.edits.filter(esObjeto) : [];
+  if (nombre === 'propose_edit_cards') {
+    return ediciones
+      .filter((e) => typeof e.card_id === 'string')
+      .map((e) => ({ card_id: String(e.card_id), changes: esObjeto(e.changes) ? e.changes : null }));
+  }
+  // HE-14-HU05-CA09, ET11: las etiquetas van por su nombre; el Núcleo conserva las demás.
+  if (nombre === 'propose_label_cards') {
+    const nombres = (v: unknown) => (Array.isArray(v) ? v.filter((n) => typeof n === 'string') : []);
+    return ediciones
+      .filter((e) => typeof e.card_id === 'string')
+      .map((e) => ({
+        card_id: String(e.card_id),
+        changes: { add_labels: nombres(e.add), remove_labels: nombres(e.remove) },
+      }));
   }
   if (nombre === 'propose_delete_cards') {
     const ids = Array.isArray(args.card_ids) ? args.card_ids.filter((id) => typeof id === 'string') : [];
@@ -412,18 +485,19 @@ export function leerGemini(respuesta: unknown): RespuestaWindi | CodigoDeError {
     .join('')
     .trim();
   const propuestas = llamadas.filter((f) => typeof f.name === 'string' && f.name in ACCION);
-  if (new Set(propuestas.map((f) => f.name)).size > 1) {
+  const acciones = new Set(propuestas.map((f) => ACCION[String(f.name)]));
+  if (acciones.size > 1) {
     return { reply: UN_CAMBIO_A_LA_VEZ, intent: 'clarify', proposal: null };
   }
-  const llamada = propuestas[0];
-  const accion = llamada && typeof llamada.name === 'string' ? ACCION[llamada.name] : undefined;
-  if (llamada && accion) {
-    const args = esObjeto(llamada.args) ? llamada.args : {};
+  const [accion] = [...acciones];
+  if (accion) {
+    // HE-14-HU05-ET10: las llamadas de la misma acción se juntan en una sola propuesta.
+    const items = propuestas.flatMap((f) => elementos(String(f.name), esObjeto(f.args) ? f.args : {}));
     return {
       // DUDA: HE-14-HU04 Gemini puede llamar a la función sin texto. Valor usado: el texto de su acción (ET11).
       reply: reply || RESPALDO[accion],
       intent: 'propose',
-      proposal: { action: accion, items: elementos(String(llamada.name), args) },
+      proposal: { action: accion, items },
     };
   }
   if (!reply) return 'provider_error';

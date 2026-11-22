@@ -446,6 +446,152 @@ describe('HE-14-HU05 · Editar tarjetas con el agente de IA', () => {
     expect(within(p).getByText(aviso)).toBeTruthy();
     expect(boton(p, 'Confirmar').disabled).toBe(false);
   });
+
+  /** Una propuesta de edición con los elementos dados. */
+  const editar = (...items: WindiProposal['items']): WindiProposal => ({
+    id: 'p1',
+    action: 'edit',
+    items,
+    warnings: [],
+    state: 'active',
+  });
+  const cambiosDe = (i: number) =>
+    within(
+      within(propuestas()[0] as HTMLElement).getAllByRole('list', { name: 'Cambios' })[i] as HTMLElement,
+    );
+
+  it('HE-14-HU05-CA08 · Editar varias tarjetas en una propuesta', async () => {
+    // ET10: una sola propuesta con cada tarjeta, su valor actual y su valor nuevo.
+    await abrir(
+      proponer(
+        editar(
+          {
+            card_id: 't1',
+            current: { due_date: '2026-11-10' },
+            changes: { due_date: '2026-11-20' },
+            title: 'Luz',
+          },
+          {
+            card_id: 't2',
+            current: { due_date: '2026-11-12' },
+            changes: { due_date: '2026-11-20' },
+            title: 'Agua',
+          },
+        ),
+      ),
+    );
+    await pedir('Pasa mis vencidas al viernes');
+    expect(propuestas()).toHaveLength(1);
+    const texto = propuestas()[0]?.textContent ?? '';
+    expect(texto).toContain('Luz');
+    expect(texto).toContain('Agua');
+    expect(cambiosDe(0).getByText('Fecha límite: 10/11/2026 → 20/11/2026')).toBeTruthy();
+    expect(cambiosDe(1).getByText('Fecha límite: 12/11/2026 → 20/11/2026')).toBeTruthy();
+  });
+
+  it('HE-14-HU05-CA09 · Agregar una etiqueta', async () => {
+    // ET11: las etiquetas por su nombre (Estudio = e1, Casa = e2 en el Núcleo de prueba).
+    await abrir(
+      proponer(
+        editar({
+          card_id: 't1',
+          current: { label_ids: ['e1'] },
+          changes: { label_ids: ['e1', 'e2'] },
+          title: 'Informe',
+        }),
+      ),
+    );
+    await pedir('Ponle la etiqueta Casa al informe');
+    expect(cambiosDe(0).getByText('Etiquetas: Estudio → Estudio, Casa')).toBeTruthy();
+    expect(boton(propuestas()[0], 'Confirmar').disabled).toBe(false);
+    expect(boton(propuestas()[0], 'Rechazar').disabled).toBe(false);
+  });
+
+  it('HE-14-HU05-CA10 · Etiqueta que no existe', async () => {
+    // HE-14-HU03-ET10: el Núcleo responde el motivo sin propuesta.
+    const texto = 'No tienes la etiqueta “Viaje”. Tus etiquetas son: Estudio, Casa.';
+    await abrir(responde(texto));
+    await pedir('Ponle la etiqueta Viaje al informe');
+    expect(conversacion()).toContain(texto);
+    expect(propuestas()).toHaveLength(0);
+  });
+
+  it('HE-14-HU05-CA11 · Asignar el bloque horario', async () => {
+    await abrir(
+      proponer(
+        editar({
+          card_id: 't1',
+          current: { time_block: null } as never,
+          changes: { time_block: { date: '2026-11-15', start_hour: 10, end_hour: 11 } } as never,
+          title: 'Estudiar redes',
+        }),
+      ),
+    );
+    await pedir('Ponla mañana de 10 a 11');
+    expect(
+      cambiosDe(0).getByText('Bloque horario: Sin bloque horario → 10:00 – 11:00 del 15/11/2026'),
+    ).toBeTruthy();
+  });
+
+  it('HE-14-HU05-CA12 · Quitar el bloque horario', async () => {
+    await abrir(
+      proponer(
+        editar({
+          card_id: 't1',
+          current: { time_block: { date: '2026-11-15', start_hour: 10, end_hour: 11 } } as never,
+          changes: { time_block: null } as never,
+          title: 'Estudiar redes',
+        }),
+      ),
+    );
+    await pedir('Quítala del horario');
+    expect(cambiosDe(0).getByText('Bloque horario: 10:00 – 11:00 → Sin bloque horario')).toBeTruthy();
+  });
+
+  it('HE-14-HU05-ET12 · La prioridad y la descripción se pueden quitar', async () => {
+    await abrir(
+      proponer(
+        editar({
+          card_id: 't1',
+          current: { priority: 'high', description: 'Para el lunes' },
+          changes: { priority: null, description: null },
+          title: 'Informe',
+        }),
+      ),
+    );
+    await pedir('Quítale la prioridad y la descripción');
+    expect(cambiosDe(0).getByText('Prioridad: Alta → Sin prioridad')).toBeTruthy();
+    expect(cambiosDe(0).getByText('Descripción: Para el lunes → Sin descripción')).toBeTruthy();
+  });
+});
+
+describe('HE-14-HU04 · Crear tarjetas con el agente de IA', () => {
+  it('HE-14-HU04-CA10 · Crear una tarjeta con bloque horario', async () => {
+    await abrir(
+      proponer({
+        id: 'p1',
+        action: 'create',
+        items: [
+          {
+            card_id: null,
+            current: null,
+            changes: {
+              title: 'Estudiar redes',
+              due_date: '2026-11-15',
+              time_block: { date: '2026-11-15', start_hour: 10, end_hour: 11 },
+            } as never,
+            title: 'Estudiar redes',
+          },
+        ],
+        warnings: [],
+        state: 'active',
+      }),
+    );
+    await pedir('Crea Estudiar redes para mañana de 10 a 11');
+    expect(
+      within(propuestas()[0] as HTMLElement).getByText('Bloque horario: 10:00 – 11:00 del 15/11/2026'),
+    ).toBeTruthy();
+  });
 });
 
 describe('HE-14-HU06 · Mover tarjetas con el agente de IA', () => {

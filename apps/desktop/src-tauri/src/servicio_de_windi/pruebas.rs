@@ -1479,6 +1479,384 @@ fn ca_he_14_hu05_et12() {
     assert!(tarjeta.priority.is_none() && tarjeta.description.is_none());
 }
 
+// HE-14-HU05 (P24): varias tarjetas en una propuesta (ET10), etiquetas por nombre (ET11, ET14) y bloque horario
+// (ET13).
+
+fn propone_editar_varias(ediciones: Vec<(String, Value)>) -> WindiChatResponse {
+    WindiChatResponse {
+        reply: "Esto es lo que voy a cambiar. ¿Confirmas?".into(),
+        intent: WindiChatResponseIntent::Propose,
+        proposal: Some(WindiChatProposal {
+            action: crate::tipos::ProposalAction::Edit,
+            items: ediciones
+                .into_iter()
+                .map(|(id, cambios)| WindiChatProposalItemsItem {
+                    card_id: Some(Uuid(id)),
+                    changes: Some(cambios),
+                })
+                .collect(),
+        }),
+    }
+}
+
+fn etiqueta(planificador: &Planificador, nombre: &str, color: &str) -> String {
+    bloquear(planificador.crear_etiqueta(
+        USUARIO,
+        crate::tipos::LabelCreateParams {
+            name: nombre.into(),
+            color_id: color.into(),
+        },
+    ))
+    .unwrap()
+    .valor
+    .id
+    .0
+    .to_lowercase()
+}
+
+fn poner_etiquetas(planificador: &Planificador, id: &str, etiquetas: &[&str]) {
+    bloquear(planificador.actualizar_tarjeta(
+        USUARIO,
+        crate::tipos::CardUpdateParams {
+            id: Uuid(id.into()),
+            patch: serde_json::from_value(serde_json::json!({ "label_ids": etiquetas })).unwrap(),
+        },
+    ))
+    .unwrap();
+}
+
+fn etiquetas_de(planificador: &Planificador, id: &str) -> Vec<String> {
+    let mut ids: Vec<String> = bloquear(planificador.tarjeta(USUARIO, id))
+        .unwrap()
+        .unwrap()
+        .label_ids
+        .into_iter()
+        .map(|u| u.0.to_lowercase())
+        .collect();
+    ids.sort();
+    ids
+}
+
+fn bloque_de(planificador: &Planificador, id: &str) -> Option<(String, u8)> {
+    let t = bloquear(planificador.tarjeta(USUARIO, id))
+        .unwrap()
+        .unwrap();
+    t.scheduled_date
+        .map(|d| d.0)
+        .zip(t.scheduled_hour.map(|h| h.0))
+}
+
+fn pedir_varias(
+    planificador: &Planificador,
+    windi: &ServicioDeWindi,
+    ediciones: Vec<(String, Value)>,
+) -> WindiProposal {
+    let nube = WindiSimulado::responde(vec![Ok(propone_editar_varias(ediciones))]);
+    enviar_con(
+        windi,
+        &nube,
+        &manejador_de(planificador),
+        "Cambia las tarjetas",
+        true,
+    )
+    .unwrap()
+    .proposal
+    .unwrap()
+}
+
+#[test]
+fn ca_he_14_hu05_ca08() {
+    // HE-14-HU05-CA08 · Dos tarjetas en una propuesta (ET10): al confirmar se actualizan las dos y Windi dice cuántas.
+    let planificador = con_semilla();
+    let luz = tarjeta_en(
+        &planificador,
+        POR_HACER,
+        "Pagar la luz",
+        "2026-11-15",
+        1024.0,
+    );
+    let agua = tarjeta_en(
+        &planificador,
+        POR_HACER,
+        "Pagar el agua",
+        "2026-11-16",
+        2048.0,
+    );
+    let windi = ServicioDeWindi::nuevo();
+    let viernes = serde_json::json!({ "due_date": "2026-11-20" });
+    let propuesta = pedir_varias(
+        &planificador,
+        &windi,
+        vec![
+            (luz.clone(), viernes.clone()),
+            (agua.clone(), viernes.clone()),
+        ],
+    );
+    assert_eq!(propuesta.items.len(), 2);
+    assert!(
+        propuesta
+            .items
+            .iter()
+            .all(|i| i.changes.as_ref() == Some(&viernes))
+    );
+    let r = confirmar(&windi, &manejador_de(&planificador), &propuesta, true).unwrap();
+    assert_eq!(r.reply.text, "Listo, actualicé 2 tarjetas.");
+    for id in [&luz, &agua] {
+        let t = bloquear(planificador.tarjeta(USUARIO, id))
+            .unwrap()
+            .unwrap();
+        assert_eq!(t.due_date.0, "2026-11-20");
+    }
+}
+
+#[test]
+fn ca_he_14_hu05_ca09() {
+    // HE-14-HU05-CA09 · Agregar una etiqueta por su nombre conserva las demás (ET11).
+    let planificador = con_semilla();
+    let trabajo = etiqueta(&planificador, "Trabajo", "blue");
+    let urgente = etiqueta(&planificador, "Urgente", "green");
+    let id = tarjeta_en(&planificador, POR_HACER, "Informe", "2026-11-20", 1024.0);
+    poner_etiquetas(&planificador, &id, &[&trabajo]);
+    let windi = ServicioDeWindi::nuevo();
+    let propuesta = pedir_varias(
+        &planificador,
+        &windi,
+        vec![(
+            id.clone(),
+            serde_json::json!({ "add_labels": ["urgente"], "remove_labels": [] }),
+        )],
+    );
+    assert_eq!(
+        propuesta.items[0].changes,
+        Some(serde_json::json!({ "label_ids": [trabajo, urgente] }))
+    );
+    confirmar(&windi, &manejador_de(&planificador), &propuesta, true).unwrap();
+    let mut esperadas = vec![trabajo, urgente];
+    esperadas.sort();
+    assert_eq!(etiquetas_de(&planificador, &id), esperadas);
+}
+
+#[test]
+fn ca_he_14_hu05_ca10() {
+    // HE-14-HU05-CA10 · Una etiqueta que no existe: no hay propuesta y Windi dice las que hay (HE-14-HU03-ET10).
+    let planificador = con_semilla();
+    etiqueta(&planificador, "Trabajo", "blue");
+    let id = tarjeta_en(&planificador, POR_HACER, "Informe", "2026-11-20", 1024.0);
+    let windi = ServicioDeWindi::nuevo();
+    let nombres: Vec<String> = bloquear(planificador.etiquetas(USUARIO))
+        .unwrap()
+        .into_iter()
+        .map(|e| e.name)
+        .collect();
+    assert_eq!(
+        rechazo(
+            &planificador,
+            &windi,
+            propone_editar(&id, serde_json::json!({ "add_labels": ["Viaje"] }))
+        ),
+        (
+            ErrorCode::WindiLabelNotFound,
+            format!(
+                "No tienes la etiqueta “Viaje”. Tus etiquetas son: {}.",
+                nombres.join(", ")
+            )
+        )
+    );
+    assert!(etiquetas_de(&planificador, &id).is_empty());
+}
+
+#[test]
+fn ca_he_14_hu05_ca11() {
+    // HE-14-HU05-CA11 · Asignar el bloque de mañana de 10:00 a 11:00 (ET13): al confirmar la tarjeta queda en él.
+    let planificador = con_semilla();
+    let id = tarjeta_en(
+        &planificador,
+        POR_HACER,
+        "Estudiar redes",
+        "2026-11-20",
+        1024.0,
+    );
+    let windi = ServicioDeWindi::nuevo();
+    let propuesta = pedir_edicion(
+        &planificador,
+        &windi,
+        &id,
+        serde_json::json!({ "time_block": { "date": "2026-11-15", "start_hour": 10 } }),
+    )
+    .unwrap();
+    assert_eq!(
+        propuesta.items[0].changes,
+        Some(serde_json::json!({
+            "time_block": { "date": "2026-11-15", "start_hour": 10, "end_hour": 11 }
+        }))
+    );
+    assert_eq!(
+        propuesta.items[0].current.as_ref().unwrap()["time_block"],
+        Value::Null
+    );
+    confirmar(&windi, &manejador_de(&planificador), &propuesta, true).unwrap();
+    assert_eq!(
+        bloque_de(&planificador, &id),
+        Some(("2026-11-15".into(), 10))
+    );
+}
+
+#[test]
+fn ca_he_14_hu05_ca12() {
+    // HE-14-HU05-CA12 · Quitar el bloque horario (ET12, ET13): al confirmar la tarjeta queda sin bloque.
+    let planificador = con_semilla();
+    let id = tarjeta_en(
+        &planificador,
+        POR_HACER,
+        "Estudiar redes",
+        "2026-11-20",
+        1024.0,
+    );
+    let windi = ServicioDeWindi::nuevo();
+    let asignar = pedir_edicion(
+        &planificador,
+        &windi,
+        &id,
+        serde_json::json!({ "time_block": { "date": "2026-11-15", "start_hour": 10 } }),
+    )
+    .unwrap();
+    confirmar(&windi, &manejador_de(&planificador), &asignar, true).unwrap();
+    let quitar = pedir_edicion(
+        &planificador,
+        &windi,
+        &id,
+        serde_json::json!({ "time_block": null }),
+    )
+    .unwrap();
+    assert_eq!(
+        quitar.items[0].current.as_ref().unwrap()["time_block"],
+        serde_json::json!({ "date": "2026-11-15", "start_hour": 10, "end_hour": 11 })
+    );
+    assert_eq!(
+        quitar.items[0].changes,
+        Some(serde_json::json!({ "time_block": null }))
+    );
+    confirmar(&windi, &manejador_de(&planificador), &quitar, true).unwrap();
+    assert_eq!(bloque_de(&planificador, &id), None);
+}
+
+#[test]
+fn ca_he_14_hu05_et13() {
+    // HE-14-HU05-ET13 · El bloque cumple las reglas de HE-11-HU02: no uno que ya pasó ni uno después de la fecha
+    // límite que quedará. Sin propuesta, con el motivo de HE-11.
+    let planificador = con_semilla();
+    let id = tarjeta_en(
+        &planificador,
+        POR_HACER,
+        "Estudiar redes",
+        "2026-11-20",
+        1024.0,
+    );
+    let windi = ServicioDeWindi::nuevo();
+    let casos = [
+        (
+            serde_json::json!({ "time_block": { "date": "2026-11-13", "start_hour": 10 } }),
+            ErrorCode::TimeBlockPast,
+            "No puedes asignar tarjetas a un bloque horario que ya pasó.",
+        ),
+        (
+            serde_json::json!({ "time_block": { "date": "2026-11-21", "start_hour": 10 } }),
+            ErrorCode::TimeBlockAfterDueDate,
+            "No puedes programar la tarjeta después de su fecha límite.",
+        ),
+        (
+            // La fecha límite que quedará es la nueva.
+            serde_json::json!({
+                "due_date": "2026-11-16",
+                "time_block": { "date": "2026-11-18", "start_hour": 10 }
+            }),
+            ErrorCode::TimeBlockAfterDueDate,
+            "No puedes programar la tarjeta después de su fecha límite.",
+        ),
+    ];
+    for (cambios, codigo, texto) in casos {
+        assert_eq!(
+            rechazo(&planificador, &windi, propone_editar(&id, cambios)),
+            (codigo, texto.to_string())
+        );
+    }
+    assert_eq!(bloque_de(&planificador, &id), None);
+}
+
+#[test]
+fn ca_he_14_hu05_et14() {
+    // HE-14-HU05-ET14 · Una tarjeta tiene máximo 5 etiquetas: con más no hay propuesta y Windi da el motivo.
+    let planificador = con_semilla();
+    let nombres = ["Uno", "Dos", "Tres", "Cuatro", "Cinco", "Seis"];
+    for n in nombres {
+        etiqueta(&planificador, n, "blue");
+    }
+    let id = tarjeta_en(&planificador, POR_HACER, "Informe", "2026-11-20", 1024.0);
+    let windi = ServicioDeWindi::nuevo();
+    assert_eq!(
+        rechazo(
+            &planificador,
+            &windi,
+            propone_editar(&id, serde_json::json!({ "add_labels": nombres }))
+        ),
+        (
+            ErrorCode::LabelsTooMany,
+            "Puedes asignar máximo 5 etiquetas por tarjeta.".into()
+        )
+    );
+}
+
+#[test]
+fn ca_he_14_hu04_ca10() {
+    // HE-14-HU04-CA10 · Crear con bloque horario: la propuesta lo trae y al confirmar la tarjeta queda en él. Las
+    // reglas de HE-11-HU02 se aplican al preparar (ET11).
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    let propuesta = pedir_creacion(
+        &planificador,
+        &windi,
+        serde_json::json!([{
+            "title": "Estudiar redes",
+            "due_date": "2026-11-20",
+            "time_block": { "date": "2026-11-15", "start_hour": 10 }
+        }]),
+    )
+    .unwrap();
+    assert_eq!(
+        propuesta.items[0].changes.as_ref().unwrap()["time_block"],
+        serde_json::json!({ "date": "2026-11-15", "start_hour": 10, "end_hour": 11 })
+    );
+    confirmar(&windi, &manejador_de(&planificador), &propuesta, true).unwrap();
+    let tablero = bloquear(planificador.tablero(USUARIO)).unwrap();
+    let creada = tablero
+        .columns
+        .iter()
+        .flat_map(|c| &c.cards)
+        .find(|t| t.title == "Estudiar redes")
+        .unwrap()
+        .id
+        .0
+        .clone();
+    assert_eq!(
+        bloque_de(&planificador, &creada),
+        Some(("2026-11-15".into(), 10))
+    );
+    assert_eq!(
+        rechazo(
+            &planificador,
+            &windi,
+            propone_crear(serde_json::json!([{
+                "title": "Otra", "due_date": "2026-11-16",
+                "time_block": { "date": "2026-11-17", "start_hour": 10 }
+            }]))
+        ),
+        (
+            ErrorCode::TimeBlockAfterDueDate,
+            "No puedes programar la tarjeta después de su fecha límite.".into()
+        )
+    );
+}
+
 // HE-14-HU06 · Mover tarjetas con el agente de IA. Lo que dice Windi (columna inexistente, varias coinciden) lo
 // produce `windi-chat`; el Núcleo vuelve a aplicar las reglas y sin un movimiento válido no muestra la propuesta.
 

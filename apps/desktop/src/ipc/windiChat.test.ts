@@ -273,7 +273,8 @@ describe('EF-01 windi-chat · HE-14-HU05 (editar tarjetas)', () => {
     ],
   };
 
-  it('HE-14-HU05-CA01 · declara propose_edit_card y convierte la llamada en una propuesta de edición', () => {
+  // P24 (INT-03): `propose_edit_card` pasa a ser `propose_edit_cards { edits }` (HE-14-HU05-CA08, ET10).
+  it('HE-14-HU05-CA01 · declara propose_edit_cards y convierte la llamada en una propuesta de edición', () => {
     const gemini = {
       candidates: [
         {
@@ -282,8 +283,8 @@ describe('EF-01 windi-chat · HE-14-HU05 (editar tarjetas)', () => {
               { text: 'Esto es lo que voy a cambiar. ¿Confirmas?' },
               {
                 functionCall: {
-                  name: 'propose_edit_card',
-                  args: { card_id: 't1', changes: { title: 'Pagar la luz ya' } },
+                  name: 'propose_edit_cards',
+                  args: { edits: [{ card_id: 't1', changes: { title: 'Pagar la luz ya' } }] },
                 },
               },
             ],
@@ -505,7 +506,7 @@ describe('EF-01 windi-chat · HE-14-HU03 (propuestas)', () => {
   it('HE-14-HU03-ET11 · el texto de respaldo corresponde a la acción de la propuesta', () => {
     const casos: [string, Record<string, unknown>, string][] = [
       ['propose_create_cards', { cards: [{ title: 'Pan', due_date: '2026-11-20' }] }, 'crear'],
-      ['propose_edit_card', { card_id: 't1', changes: { title: 'Otro' } }, 'cambiar'],
+      ['propose_edit_cards', { edits: [{ card_id: 't1', changes: { title: 'Otro' } }] }, 'cambiar'],
       ['propose_move_card', { card_id: 't1', column_id: 'En progreso' }, 'mover'],
       ['propose_delete_cards', { card_ids: ['t1'] }, 'eliminar'],
     ];
@@ -545,13 +546,107 @@ describe('EF-01 windi-chat · HE-14-HU03 (propuestas)', () => {
     const mover = FUNCIONES.find((f) => f.name === 'propose_move_card');
     expect(JSON.stringify(mover)).toContain('El id o el nombre de una columna del tablero.');
   });
+});
 
-  it('HE-14-HU05-ET12 · la prioridad y la descripción se pueden quitar con null', () => {
-    const editar = FUNCIONES.find((f) => f.name === 'propose_edit_card') as unknown as {
-      parameters: { properties: { changes: { properties: Record<string, { nullable?: boolean }> } } };
+/** Los datos que acepta `changes` en `propose_edit_cards`. */
+function datosDeEdicion() {
+  const editar = FUNCIONES.find((f) => f.name === 'propose_edit_cards') as unknown as {
+    parameters: {
+      properties: {
+        edits: { items: { properties: { changes: { properties: Record<string, { nullable?: boolean }> } } } };
+      };
     };
-    const datos = editar.parameters.properties.changes.properties;
+  };
+  return editar.parameters.properties.edits.items.properties.changes.properties;
+}
+
+/** Una respuesta de Gemini con las llamadas dadas y sin texto. */
+function llamadas(...lista: { name: string; args: Record<string, unknown> }[]) {
+  return { candidates: [{ content: { parts: lista.map((functionCall) => ({ functionCall })) } }] };
+}
+
+describe('EF-01 windi-chat · HE-14-HU05 (P24: varias tarjetas, etiquetas y bloque horario)', () => {
+  it('HE-14-HU05-ET12 · la prioridad, la descripción y el bloque horario se pueden quitar con null', () => {
+    const datos = datosDeEdicion();
     expect(datos.priority?.nullable).toBe(true);
     expect(datos.description?.nullable).toBe(true);
+    expect(datos.time_block?.nullable).toBe(true);
+    expect(instruccionDelSistema(CONTEXTO)).toContain(
+      'Para quitar la prioridad, la descripción o el bloque horario, envías null en ese dato.',
+    );
+  });
+
+  it('HE-14-HU05-CA08 · editar varias tarjetas en una propuesta: las llamadas se juntan', () => {
+    const r = leerGemini(
+      llamadas(
+        {
+          name: 'propose_edit_cards',
+          args: { edits: [{ card_id: 't1', changes: { due_date: '2026-11-20' } }] },
+        },
+        {
+          name: 'propose_edit_cards',
+          args: { edits: [{ card_id: 't2', changes: { due_date: '2026-11-20' } }] },
+        },
+      ),
+    );
+    expect(r).toEqual({
+      reply: 'Esto es lo que voy a cambiar. ¿Confirmas?',
+      intent: 'propose',
+      proposal: {
+        action: 'edit',
+        items: [
+          { card_id: 't1', changes: { due_date: '2026-11-20' } },
+          { card_id: 't2', changes: { due_date: '2026-11-20' } },
+        ],
+      },
+    });
+    expect(instruccionDelSistema(CONTEXTO)).toContain('Si piden el mismo cambio para varias tarjetas');
+  });
+
+  it('HE-14-HU05-CA09 · agregar una etiqueta por su nombre con propose_label_cards', () => {
+    const r = leerGemini(
+      llamadas({ name: 'propose_label_cards', args: { edits: [{ card_id: 't1', add: ['Urgente'] }] } }),
+    );
+    expect(r).toEqual({
+      reply: 'Esto es lo que voy a cambiar. ¿Confirmas?',
+      intent: 'propose',
+      proposal: {
+        action: 'edit',
+        items: [{ card_id: 't1', changes: { add_labels: ['Urgente'], remove_labels: [] } }],
+      },
+    });
+    // Etiquetar y editar son la misma acción: van en una sola propuesta.
+    const juntas = leerGemini(
+      llamadas(
+        { name: 'propose_label_cards', args: { edits: [{ card_id: 't1', remove: ['Casa'] }] } },
+        { name: 'propose_edit_cards', args: { edits: [{ card_id: 't1', changes: { priority: 'high' } }] } },
+      ),
+    );
+    expect(typeof juntas === 'object' && juntas.proposal?.items).toHaveLength(2);
+  });
+
+  it('HE-14-HU05-CA10 · no crea etiquetas: las etiquetas van por su nombre y el Núcleo las busca', () => {
+    expect(JSON.stringify(FUNCIONES.find((f) => f.name === 'propose_label_cards'))).toContain(
+      'Nombres de etiquetas que se agregan.',
+    );
+    expect(instruccionDelSistema(CONTEXTO)).toContain(
+      'Solo usas etiquetas que existen y nunca creas etiquetas.',
+    );
+  });
+
+  it('HE-14-HU05-CA11, CA12 y HE-14-HU04-CA10 · el bloque horario va con su fecha y su hora de inicio', () => {
+    expect(datosDeEdicion().time_block).toBeTruthy();
+    const crear = FUNCIONES.find((f) => f.name === 'propose_create_cards');
+    expect(JSON.stringify(crear)).toContain('"time_block"');
+    expect(instruccionDelSistema(CONTEXTO)).toContain('«10:00 – 11:00» es start_hour 10');
+    const r = leerGemini(
+      llamadas({
+        name: 'propose_edit_cards',
+        args: { edits: [{ card_id: 't1', changes: { time_block: { date: '2026-11-15', start_hour: 10 } } }] },
+      }),
+    );
+    expect(typeof r === 'object' && r.proposal?.items[0]?.changes).toEqual({
+      time_block: { date: '2026-11-15', start_hour: 10 },
+    });
   });
 });

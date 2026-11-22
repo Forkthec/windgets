@@ -93,7 +93,7 @@ fn nombre_del_campo(campo: &str) -> &str {
         "type" => "el tipo",
         "description" => "la descripción",
         "label_ids" => "las etiquetas",
-        "scheduled_date" | "scheduled_hour" => "el bloque horario",
+        "scheduled_date" | "scheduled_hour" | "time_block" => "el bloque horario",
         "completed_on" => "la fecha de completado",
         otro => otro,
     }
@@ -419,7 +419,12 @@ impl ServicioDeWindi {
                         .unwrap_or_default();
                     if !campos.is_empty() {
                         let mut campos = campos;
-                        campos.dedup();
+                        let mut vistos = Vec::new();
+                        campos.retain(|c| {
+                            let nuevo = !vistos.contains(c);
+                            vistos.push(*c);
+                            nuevo
+                        });
                         diferencias.push(
                             messages::WINDI_TARJETA_CAMBIO
                                 .replace("<título>", &item.title)

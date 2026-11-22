@@ -37,12 +37,87 @@ pub fn estado_de_la_tarjeta(tarjeta: &Card) -> Value {
         "label_ids": tarjeta.label_ids,
         "scheduled_date": tarjeta.scheduled_date,
         "scheduled_hour": tarjeta.scheduled_hour,
+        "time_block": match (&tarjeta.scheduled_date, &tarjeta.scheduled_hour) {
+            (Some(dia), Some(hora)) => bloque_visible(&dia.0, hora.0),
+            _ => Value::Null,
+        },
         "completed_on": tarjeta.completed_on,
     })
 }
 
+/// El bloque horario como lo muestra la propuesta (WindiProposal, contratos.md): `{ date, start_hour, end_hour }`.
+/// Cada bloque dura una hora (HE-11-HU01).
+fn bloque_visible(dia: &str, hora: u8) -> Value {
+    json!({ "date": dia, "start_hour": hora, "end_hour": (hora + 1) % 24 })
+}
+
+/// El bloque horario pedido por Windi: `null` lo quita y `{ date, start_hour }` lo asigna (HE-14-HU04-CA10;
+/// HE-14-HU05-CA11, CA12). Un bloque que no se entiende es una propuesta inválida.
+fn bloque_pedido(valor: &Value) -> Result<Option<(chrono::NaiveDate, u8)>, AppError> {
+    if valor.is_null() {
+        return Ok(None);
+    }
+    let dia = valor
+        .get("date")
+        .and_then(Value::as_str)
+        .and_then(crate::servicio_del_planificador::fecha)
+        .ok_or_else(inesperado)?;
+    let hora = valor
+        .get("start_hour")
+        .and_then(Value::as_u64)
+        .and_then(|h| u8::try_from(h).ok())
+        .filter(|h| *h <= 23)
+        .ok_or_else(inesperado)?;
+    if valor
+        .get("end_hour")
+        .and_then(Value::as_u64)
+        .is_some_and(|fin| fin != u64::from((hora + 1) % 24))
+    {
+        return Err(inesperado());
+    }
+    Ok(Some((dia, hora)))
+}
+
 fn motivo(code: ErrorCode, texto: &str) -> MotivoDeRechazo {
     error(code, texto, None)
+}
+
+/// Asigna o quita el bloque horario con las reglas de `card_assign_time_block` y `card_unassign_time_block`
+/// (HE-11-HU02, HE-11-HU03), dentro de la transacción de la propuesta.
+async fn aplicar_bloque<C: Calendario>(
+    planificador: &ServicioDelPlanificador<C>,
+    tx: &mut sqlx::SqliteConnection,
+    user_id: &str,
+    id: &str,
+    bloque: &Value,
+) -> Result<(), AppError> {
+    match bloque_pedido(bloque)? {
+        Some((dia, hora)) => {
+            planificador
+                .asignar_bloque_en(
+                    tx,
+                    user_id,
+                    crate::tipos::CardAssignTimeBlockParams {
+                        card_id: Uuid(id.to_string()),
+                        date: crate::tipos::DateIso(dia.format("%Y-%m-%d").to_string()),
+                        hour: crate::tipos::Hour(hora),
+                    },
+                )
+                .await?;
+        }
+        None => {
+            planificador
+                .quitar_bloque_en(
+                    tx,
+                    user_id,
+                    crate::tipos::CardUnassignTimeBlockParams {
+                        card_id: Uuid(id.to_string()),
+                    },
+                )
+                .await?;
+        }
+    }
+    Ok(())
 }
 
 /// La columna por su id o por su nombre, sin distinguir mayúsculas ni tildes (HE-14-HU06-ET13). Si no existe,
@@ -272,7 +347,7 @@ impl<C: Calendario> ManejadorDelPlanificador<'_, C> {
                 ));
                 continue;
             }
-            let mapa = match normalizar(cambios, &etiquetas) {
+            let mut mapa = match normalizar(cambios, &etiquetas) {
                 Ok(mapa) => mapa,
                 Err(e) if e.code == ErrorCode::InternalUnexpected => return Err(e),
                 Err(e) => {
@@ -280,16 +355,37 @@ impl<C: Calendario> ManejadorDelPlanificador<'_, C> {
                     continue;
                 }
             };
+            let bloque = mapa.remove("time_block").unwrap_or(Value::Null);
             let params = datos_de_creacion(Some(&Value::Object(mapa)))?;
             if let Some(primero) = validar_creacion(&params, hoy).into_iter().next() {
                 motivos.push((Some(titulo), primero));
                 continue;
             }
+            // HE-14-HU04-ET11: el bloque horario cumple las reglas de HE-11-HU02.
+            let bloque = match bloque_pedido(&bloque)? {
+                Some((dia, hora)) => {
+                    if let Some(e) = self
+                        .planificador
+                        .validar_bloque(dia, hora, &params.due_date.0)
+                    {
+                        motivos.push((Some(titulo), e));
+                        continue;
+                    }
+                    bloque_visible(&dia.format("%Y-%m-%d").to_string(), hora)
+                }
+                None => Value::Null,
+            };
+            let mut datos = serde_json::to_value(&params).map_err(|_| inesperado())?;
+            if !bloque.is_null()
+                && let Some(datos) = datos.as_object_mut()
+            {
+                datos.insert("time_block".to_string(), bloque);
+            }
             items.push(WindiProposalItem {
                 card_id: None,
                 current: None,
                 title: params.title.trim().to_string(),
-                changes: Some(serde_json::to_value(&params).map_err(|_| inesperado())?),
+                changes: Some(datos),
             });
         }
         if !motivos.is_empty() {
@@ -307,25 +403,116 @@ impl<C: Calendario> ManejadorDelPlanificador<'_, C> {
         })
     }
 
-    /// HE-14-HU05: la propuesta de editar una tarjeta con el valor actual y el nuevo de cada dato que cambia (ET01).
-    /// Sin propuesta si la tarjeta no existe (ET08), si ningún dato cambia (ET09) o si un dato no cumple las reglas
-    /// de HE-07-HU04 (ET04, ET07); el motivo va al chat (HE-14-HU03-ET10). La prioridad y la descripción se pueden
-    /// quitar (ET12). `current` guarda el estado completo (HE-14-HU03-ET05). Una tarjeta completada lleva el aviso
-    /// de ET05.
+    /// HE-14-HU05: la propuesta de editar una o varias tarjetas (ET10), cada una con el valor actual y el nuevo de
+    /// cada dato que cambia (ET01). Sin propuesta si una tarjeta no existe (ET08), si ningún dato cambia (ET09) o si
+    /// un dato no cumple las reglas de HE-07-HU04 (ET04, ET07) o de HE-11 (ET13); el motivo va al chat
+    /// (HE-14-HU03-ET10). La prioridad, la descripción y el bloque horario se pueden quitar (ET12). Agregar o quitar
+    /// etiquetas conserva las demás (ET11). `current` guarda el estado completo (HE-14-HU03-ET05). Una tarjeta
+    /// completada lleva el aviso de ET05.
     async fn preparar_edicion(
         &self,
         propuesta: &WindiChatProposal,
     ) -> Result<WindiProposal, AppError> {
-        let [item] = propuesta.items.as_slice() else {
+        // Las llamadas sobre la misma tarjeta (por ejemplo, editar y etiquetar) se juntan.
+        let mut pedidos: Vec<(Uuid, Map<String, Value>)> = Vec::new();
+        for item in &propuesta.items {
+            let referencia = item.card_id.clone().ok_or_else(inesperado)?;
+            let cambios = item
+                .changes
+                .as_ref()
+                .and_then(Value::as_object)
+                .cloned()
+                .ok_or_else(inesperado)?;
+            match pedidos.iter_mut().find(|(r, _)| *r == referencia) {
+                Some((_, previos)) => previos.extend(cambios),
+                None => pedidos.push((referencia, cambios)),
+            }
+        }
+        if pedidos.is_empty() {
             return Err(inesperado());
-        };
-        let tarjeta = self.buscar_tarjeta(item.card_id.as_ref()).await?;
+        }
         let etiquetas = self.planificador.etiquetas(self.user_id).await?;
-        let mapa = normalizar(item.changes.as_ref(), &etiquetas)?;
+        let mut items = Vec::new();
+        let mut motivos = Vec::new();
+        let mut alguna_completada = false;
+        for (referencia, cambios) in pedidos {
+            let tarjeta = match self.buscar_tarjeta(Some(&referencia)).await {
+                Ok(tarjeta) => tarjeta,
+                Err(e) if e.code == ErrorCode::InternalUnexpected => return Err(e),
+                Err(e) => {
+                    motivos.push((None, e));
+                    continue;
+                }
+            };
+            match self.editar_una(&tarjeta, cambios, &etiquetas) {
+                Ok(despues) => {
+                    alguna_completada |= tarjeta.is_completed;
+                    items.push(WindiProposalItem {
+                        card_id: Some(tarjeta.id.clone()),
+                        current: Some(estado_de_la_tarjeta(&tarjeta)),
+                        changes: Some(Value::Object(despues)),
+                        title: tarjeta.title.clone(),
+                    });
+                }
+                Err(e) if e.code == ErrorCode::InternalUnexpected => return Err(e),
+                // El texto de «ya tiene ese valor» ya nombra la tarjeta.
+                Err(e) if e.code == ErrorCode::WindiSameValue => motivos.push((None, e)),
+                Err(e) => motivos.push((Some(tarjeta.title.clone()), e)),
+            }
+        }
+        if !motivos.is_empty() {
+            let total = items.len() + motivos.len();
+            return Err(unir_motivos(motivos, total));
+        }
+        Ok(WindiProposal {
+            id: Uuid(uuid::Uuid::new_v4().to_string()),
+            action: ProposalAction::Edit,
+            items,
+            warnings: if alguna_completada {
+                vec![messages::WINDI_EDITAR_COMPLETADA.to_string()]
+            } else {
+                Vec::new()
+            },
+            state: ProposalState::Active,
+        })
+    }
+
+    /// Los datos que cambian en una tarjeta, ya validados (HE-14-HU05-ET01, ET04, ET07, ET11 a ET14).
+    fn editar_una(
+        &self,
+        tarjeta: &Card,
+        mut cambios: Map<String, Value>,
+        etiquetas: &[Label],
+    ) -> Result<Map<String, Value>, AppError> {
+        // ET11: agregar o quitar etiquetas por su nombre conserva las demás.
+        let agregar = cambios.remove("add_labels");
+        let quitar = cambios.remove("remove_labels");
+        if agregar.is_some() || quitar.is_some() {
+            let mut ids: Vec<Value> = tarjeta
+                .label_ids
+                .iter()
+                .map(|u| Value::from(u.0.to_lowercase()))
+                .collect();
+            if let Some(quitar) = quitar {
+                let quitar = resolver_etiquetas(etiquetas, &quitar)?;
+                ids.retain(|id| !quitar.as_array().is_some_and(|q| q.contains(id)));
+            }
+            if let Some(agregar) = agregar {
+                let agregar = resolver_etiquetas(etiquetas, &agregar)?;
+                for id in agregar.as_array().into_iter().flatten() {
+                    if !ids.contains(id) {
+                        ids.push(id.clone());
+                    }
+                }
+            }
+            cambios.insert("label_ids".to_string(), Value::Array(ids));
+        }
+        let bloque = cambios.remove("time_block");
+        let mapa = normalizar(Some(&Value::Object(cambios)), etiquetas)?;
         let patch: CardPatch =
             serde_json::from_value(Value::Object(mapa)).map_err(|_| inesperado())?;
         // Solo los datos que cambian.
-        let actual = estado_de_la_tarjeta(&tarjeta);
+        let actual = estado_de_la_tarjeta(tarjeta);
         let pedido = serde_json::to_value(&patch).map_err(|_| inesperado())?;
         let mut despues = Map::new();
         for (campo, valor) in pedido.as_object().into_iter().flatten() {
@@ -337,14 +524,25 @@ impl<C: Calendario> ManejadorDelPlanificador<'_, C> {
                 despues.insert(campo.clone(), valor);
             }
         }
+        if let Some(bloque) = bloque {
+            let pedido = match bloque_pedido(&bloque)? {
+                Some((dia, hora)) => bloque_visible(&dia.format("%Y-%m-%d").to_string(), hora),
+                None => Value::Null,
+            };
+            if actual["time_block"] != pedido {
+                despues.insert("time_block".to_string(), pedido);
+            }
+        }
         if despues.is_empty() {
             return Err(motivo(
                 ErrorCode::WindiSameValue,
                 &messages::WINDI_MISMO_VALOR.replace("<título>", &tarjeta.title),
             ));
         }
+        let mut sin_bloque = despues.clone();
+        let bloque = sin_bloque.remove("time_block");
         let patch: CardPatch =
-            serde_json::from_value(Value::Object(despues.clone())).map_err(|_| inesperado())?;
+            serde_json::from_value(Value::Object(sin_bloque)).map_err(|_| inesperado())?;
         let hoy = self.planificador.hoy();
         let errores = [
             patch.title.as_deref().and_then(validar_titulo),
@@ -364,22 +562,17 @@ impl<C: Calendario> ManejadorDelPlanificador<'_, C> {
         if let Some(primero) = errores.into_iter().flatten().next() {
             return Err(primero);
         }
-        Ok(WindiProposal {
-            id: Uuid(uuid::Uuid::new_v4().to_string()),
-            action: ProposalAction::Edit,
-            items: vec![WindiProposalItem {
-                card_id: Some(tarjeta.id.clone()),
-                current: Some(actual),
-                changes: Some(Value::Object(despues)),
-                title: tarjeta.title.clone(),
-            }],
-            warnings: if tarjeta.is_completed {
-                vec![messages::WINDI_EDITAR_COMPLETADA.to_string()]
-            } else {
-                Vec::new()
-            },
-            state: ProposalState::Active,
-        })
+        // ET13: el bloque horario cumple las reglas de HE-11-HU02 con la fecha límite que quedará.
+        if let Some((dia, hora)) = bloque.as_ref().map(bloque_pedido).transpose()?.flatten() {
+            let limite = patch
+                .due_date
+                .as_ref()
+                .map_or(tarjeta.due_date.0.as_str(), |f| f.0.as_str());
+            if let Some(e) = self.planificador.validar_bloque(dia, hora, limite) {
+                return Err(e);
+            }
+        }
+        Ok(despues)
     }
 
     /// HE-14-HU06: mover una tarjeta a otra columna, que se reconoce por su id o por su nombre (ET13). Sin propuesta
@@ -489,9 +682,19 @@ impl<C: Calendario> ManejadorDelPlanificador<'_, C> {
         for item in &propuesta.items {
             let params = datos_de_creacion(item.changes.as_ref())?;
             let titulo = params.title.trim().to_string();
-            self.planificador
+            let id = self
+                .planificador
                 .crear_tarjeta_en(&mut *tx, self.user_id, params)
                 .await?;
+            // HE-14-HU04-CA10: el bloque horario con las reglas de HE-11-HU02-CA01.
+            if let Some(bloque) = item
+                .changes
+                .as_ref()
+                .and_then(|c| c.get("time_block"))
+                .filter(|b| !b.is_null())
+            {
+                aplicar_bloque(self.planificador, &mut *tx, self.user_id, &id, bloque).await?;
+            }
             titulos.push(titulo);
         }
         Ok(match titulos.as_slice() {
@@ -502,32 +705,45 @@ impl<C: Calendario> ManejadorDelPlanificador<'_, C> {
         })
     }
 
-    /// Actualiza la tarjeta con `card_update` (ET02, ET07) y confirma mencionando el título (CA01).
+    /// Actualiza cada tarjeta con `card_update` (ET02, ET07) y su bloque horario con las reglas de HE-11 (CA11,
+    /// CA12), y confirma mencionando el título o la cantidad (CA01, CA08).
     async fn aplicar_edicion(
         &self,
         tx: &mut sqlx::SqliteConnection,
         propuesta: &WindiProposal,
     ) -> Result<String, AppError> {
-        let mut titulo = String::new();
+        let mut titulos = Vec::new();
         for item in &propuesta.items {
             let id = item.card_id.clone().ok_or_else(inesperado)?;
-            let patch: CardPatch = item
+            let mut cambios = item
                 .changes
-                .clone()
-                .and_then(|c| serde_json::from_value(c).ok())
+                .as_ref()
+                .and_then(Value::as_object)
+                .cloned()
                 .ok_or_else(inesperado)?;
+            let bloque = cambios.remove("time_block");
+            let patch: CardPatch =
+                serde_json::from_value(Value::Object(cambios)).map_err(|_| inesperado())?;
             let (id, _) = self
                 .planificador
                 .actualizar_tarjeta_en(&mut *tx, self.user_id, CardUpdateParams { id, patch })
                 .await?;
-            titulo = self
+            if let Some(bloque) = &bloque {
+                aplicar_bloque(self.planificador, &mut *tx, self.user_id, &id, bloque).await?;
+            }
+            let titulo = self
                 .planificador
                 .tarjeta_en(&mut *tx, self.user_id, &id)
                 .await?
                 .ok_or_else(inesperado)?
                 .title;
+            titulos.push(titulo);
         }
-        Ok(messages::WINDI_TARJETA_ACTUALIZADA.replace("<título>", &titulo))
+        Ok(match titulos.as_slice() {
+            [titulo] => messages::WINDI_TARJETA_ACTUALIZADA.replace("<título>", titulo),
+            varios => messages::WINDI_TARJETAS_ACTUALIZADAS
+                .replace("<cantidad>", &varios.len().to_string()),
+        })
     }
 
     /// Mueve la tarjeta al final de la columna con `card_move` (ET09), que la completa al llegar a Hecho (ET02) y la

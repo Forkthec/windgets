@@ -417,6 +417,8 @@ pub const WINDI_EDITAR_COMPLETADA: &str =
     "Esta tarjeta está completada. Editarla no cambia su columna.";
 /// DUDA: HE-14-HU05 el texto no es literal («confirma el cambio mencionando el título»).
 pub const WINDI_TARJETA_ACTUALIZADA: &str = "Listo, actualicé la tarjeta «<título>».";
+/// HE-14-HU05-CA08: la confirmación de una edición de varias tarjetas. DUDA: no es literal (docs/DUDAS.md).
+pub const WINDI_TARJETAS_ACTUALIZADAS: &str = "Listo, actualicé <cantidad> tarjetas.";
 // HE-14-HU06 · Mover tarjetas con el agente de IA.
 /// Aviso en la propuesta de mover una tarjeta completada (HE-14-HU06-CA06, ET05).
 pub const WINDI_MOVER_COMPLETADA: &str = "Esta tarjeta está completada. Si la mueves, dejará de estar completada y se borrará su fecha de completado.";
@@ -678,6 +680,7 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("WINDI_NO_PUDE_APLICAR", WINDI_NO_PUDE_APLICAR),
     ("WINDI_FALTA_TITULO", WINDI_FALTA_TITULO),
     ("WINDI_FALTA_FECHA", WINDI_FALTA_FECHA),
+    ("WINDI_TARJETAS_ACTUALIZADAS", WINDI_TARJETAS_ACTUALIZADAS),
 ];
 
 #[cfg(test)]

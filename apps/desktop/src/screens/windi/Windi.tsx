@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useState, type KeyboardEvent } from 'react';
-import type { WindiMessage, WindiProposal } from '@/types';
+import type { Label, WindiMessage, WindiProposal } from '@/types';
 import textos from '@/types/messages.es.json';
 import { Aviso } from '@/ui/Aviso/Aviso';
 import { Boton } from '@/ui/Boton/Boton';
@@ -53,9 +53,14 @@ export function Windi() {
   const [sinConexionAlConfirmar, setSinConexionAlConfirmar] = useState(false);
   // HE-14-HU03-CA07, ET12: «Confirmar» falló; la propuesta sigue con «Confirmar» y «Rechazar» habilitadas.
   const [avisoAlConfirmar, setAvisoAlConfirmar] = useState<string | null>(null);
+  // HE-14-HU05-ET11: la propuesta muestra las etiquetas por su nombre.
+  const [etiquetas, setEtiquetas] = useState<Label[]>([]);
   const idCampo = useId();
 
   const leer = useCallback(async () => {
+    void invocar('label_list', {}).then((e) => {
+      if (e.ok) setEtiquetas(e.value);
+    });
     const r = await invocar('windi_get_conversation', {});
     if (!r.ok) return;
     setMensajes(r.value.messages);
@@ -179,6 +184,7 @@ export function Windi() {
                   habilitada={enLinea && !escribiendo && !sinConexionAlConfirmar}
                   alConfirmar={() => void confirmar(propuesta)}
                   alRechazar={() => void rechazar(propuesta)}
+                  etiquetas={etiquetas}
                 />
               ))}
           </li>
