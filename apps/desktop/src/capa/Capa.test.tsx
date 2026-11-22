@@ -193,6 +193,18 @@ describe('HE-05-HU04 · La capa muestra la distribución guardada', () => {
     ]);
   });
 
+  it('HE-05-HU02-CA05 · Al cambiar la escala de Windows la capa la vuelve a leer', async () => {
+    // RNF-34, ET07: de 125 % a 200 % con la aplicación abierta llega EV-17 y el widget se dibuja con la escala nueva.
+    const n = nucleo(escritorio(1800, 1.25), {});
+    render(<Capa invocar={n.invocar} escuchar={n.escuchar} />);
+    expect((await screen.findByRole('region', { name: 'Reloj' })).style.left).toBe('1440px');
+    await n.cambiar(escritorio(1800, 2), 'monitors_changed');
+    await waitFor(() => {
+      const reloj = screen.getByRole('region', { name: 'Reloj' });
+      expect([reloj.style.left, reloj.style.width]).toEqual(['900px', '200px']);
+    });
+  });
+
   it('HE-05-HU04-CA05 · Una lectura vieja que llega tarde no deshace lo guardado', async () => {
     // ET05: la primera lectura (antes de guardar) responde después de la segunda (después de guardar).
     let primera: (v: unknown) => void = () => undefined;

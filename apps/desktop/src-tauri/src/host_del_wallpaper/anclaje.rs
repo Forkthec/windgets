@@ -257,6 +257,11 @@ pub fn reubicar(app: &AppHandle) {
     }
 }
 
+/// Los monitores de Windows ya no son los que guardó el host (otra resolución, otra escala u otro monitor).
+pub fn monitores_cambiaron(app: &AppHandle) -> bool {
+    monitores_del_contrato(&monitores()) != app.state::<Nucleo>().host.monitores()
+}
+
 /// Muestra la capa con la sesión iniciada y la oculta sin ella (HE-02-HU01-CA01, CA05). Sin activarla: el foco
 /// sigue donde estaba.
 pub fn mostrar(app: &AppHandle, visible: bool) {

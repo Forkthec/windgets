@@ -156,6 +156,9 @@ export function Capa({
     const dejarWidgets = escuchar('widgets_changed', () => void leer());
     // EV-13: al guardar la distribución, los widgets se pintan en su nueva posición y tamaño (HE-05-HU04-CA01).
     const dejarDistribucion = escuchar('layout_changed', () => void leer());
+    // EV-17: al cambiar un monitor o la escala de Windows, la capa vuelve a leer los monitores y dibuja los widgets
+    // con la escala nueva, sin reiniciar la aplicación (RNF-34, HE-05-HU02-ET07; P26).
+    const dejarMonitores = escuchar('monitors_changed', () => void leer());
     const dejarSeleccion = escuchar('pointer_released', (carga) => entregarSeleccion(carga));
     return () => {
       vigente = false;
@@ -163,6 +166,7 @@ export function Capa({
       dejarTema();
       dejarWidgets();
       dejarDistribucion();
+      dejarMonitores();
       dejarSeleccion();
     };
   }, [escuchar, invocar]);

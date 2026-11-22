@@ -155,6 +155,25 @@ pub fn bordes_sin_cubrir(cliente: Rect, escritorio: Rect) -> Option<[i32; 4]> {
     (bordes != [0; 4]).then_some(bordes)
 }
 
+/// Los mensajes de Windows que llevan a reubicar la capa (`winuser.h`).
+pub mod mensajes {
+    pub const WM_SETTINGCHANGE: u32 = 0x001A;
+    pub const WM_DISPLAYCHANGE: u32 = 0x007E;
+    pub const WM_DPICHANGED: u32 = 0x02E0;
+}
+
+/// RNF-34, HE-05-HU02-ET07 (P26): ¿la capa se vuelve a ubicar y avisa EV-17 tras este mensaje? Siempre con
+/// `WM_DISPLAYCHANGE` y `WM_DPICHANGED`; con `WM_SETTINGCHANGE` (al cambiar la escala, Windows no siempre envía
+/// `WM_DPICHANGED` a una ventana oculta) solo si los monitores cambiaron, para no repintar con cada ajuste.
+pub fn reubicar_tras(mensaje: u32, monitores_cambiaron: impl FnOnce() -> bool) -> bool {
+    use mensajes::*;
+    match mensaje {
+        WM_DISPLAYCHANGE | WM_DPICHANGED => true,
+        WM_SETTINGCHANGE => monitores_cambiaron(),
+        _ => false,
+    }
+}
+
 #[cfg(test)]
 mod pruebas {
     use super::*;
@@ -221,6 +240,20 @@ mod pruebas {
             ..virtual_
         };
         assert_eq!(bordes_sin_cubrir(corrida, virtual_), Some([9, 0, 0, 0]));
+    }
+
+    #[test]
+    fn rnf_34_la_capa_se_reubica_al_cambiar_la_escala() {
+        // RNF-34 · HE-05-HU02-ET07: con el cambio de pantalla o de escala la capa se reubica y avisa EV-17.
+        use mensajes::*;
+        assert!(reubicar_tras(WM_DISPLAYCHANGE, || false));
+        assert!(reubicar_tras(WM_DPICHANGED, || false));
+        assert!(reubicar_tras(WM_SETTINGCHANGE, || true));
+        assert!(!reubicar_tras(WM_SETTINGCHANGE, || false));
+        // Otro mensaje no lee los monitores.
+        assert!(!reubicar_tras(0x0200, || panic!(
+            "no debía leer los monitores"
+        )));
     }
 
     fn monitor(izquierda: i32, arriba: i32, ancho: i32, alto: i32, escala: f64) -> Monitor {
