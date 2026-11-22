@@ -141,6 +141,20 @@ pub fn estilo_extendido_de_la_capa(estilo: u32) -> u32 {
     estilo & !(WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE)
 }
 
+/// HE-02-HU01-ET13 (CA07): lo que le falta al área cliente de la capa, ya en coordenadas de pantalla, para cubrir el
+/// escritorio virtual: `None` si lo cubre exacto, o los bordes `[izquierda, arriba, derecha, abajo]` en píxeles
+/// físicos. En la prueba manual del 22-nov (P26) la ventana medía todo el escritorio, pero tao restaba el borde de
+/// la sombra (9, 1, 9 y 9 px) y quedaban franjas del fondo de Windows.
+pub fn bordes_sin_cubrir(cliente: Rect, escritorio: Rect) -> Option<[i32; 4]> {
+    let bordes = [
+        cliente.izquierda - escritorio.izquierda,
+        cliente.arriba - escritorio.arriba,
+        escritorio.derecha - cliente.derecha,
+        escritorio.abajo - cliente.abajo,
+    ];
+    (bordes != [0; 4]).then_some(bordes)
+}
+
 #[cfg(test)]
 mod pruebas {
     use super::*;
@@ -176,6 +190,37 @@ mod pruebas {
                 | 0x0000_0080,
         );
         assert_eq!(extendido, 0x0000_0080);
+    }
+
+    #[test]
+    fn ca_he_02_hu01_ca07_el_area_cliente_cubre_el_escritorio() {
+        // HE-02-HU01-CA07 · Lo medido en la prueba manual del 22-nov (125 %): ventana de 1920×1080 en (0, 0) con el
+        // área cliente de 1902×1070 en (9, 1) por la sombra de tao. Eso deja franjas; sin sombra, el cliente es todo.
+        let escritorio = monitor(0, 0, 1920, 1080, 1.25).rect;
+        let con_sombra = Rect {
+            izquierda: 9,
+            arriba: 1,
+            derecha: 1911,
+            abajo: 1071,
+        };
+        assert_eq!(
+            bordes_sin_cubrir(con_sombra, escritorio),
+            Some([9, 1, 9, 9])
+        );
+        assert_eq!(bordes_sin_cubrir(escritorio, escritorio), None);
+        // Dos monitores, el secundario a la izquierda: el origen es negativo y se compara igual.
+        let virtual_ = Rect {
+            izquierda: -1280,
+            arriba: -200,
+            derecha: 1920,
+            abajo: 1080,
+        };
+        assert_eq!(bordes_sin_cubrir(virtual_, virtual_), None);
+        let corrida = Rect {
+            izquierda: -1271,
+            ..virtual_
+        };
+        assert_eq!(bordes_sin_cubrir(corrida, virtual_), Some([9, 0, 0, 0]));
     }
 
     fn monitor(izquierda: i32, arriba: i32, ancho: i32, alto: i32, escala: f64) -> Monitor {

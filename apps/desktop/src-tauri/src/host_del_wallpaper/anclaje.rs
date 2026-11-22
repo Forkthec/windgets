@@ -72,6 +72,10 @@ fn crear_y_anclar(app: &AppHandle, virtual_: Rect) -> Result<f64, String> {
     WebviewWindowBuilder::new(app, CAPA, WebviewUrl::App("capa.html".into()))
         .title("Windgets · capa del wallpaper")
         .decorations(false)
+        // HE-02-HU01-ET13 (CA07): sin sombra. Con la sombra de una ventana sin decoraciones, tao resta en
+        // WM_NCCALCSIZE el borde invisible de redimensionado y el área cliente (y el WebView2) queda 9 px más
+        // adentro a los lados y abajo: franjas del fondo de Windows y la capa corrida (prueba manual, 22-nov).
+        .shadow(false)
         .skip_taskbar(true)
         .resizable(false)
         .focused(false)
@@ -358,20 +362,36 @@ fn posicionar(capa: HWND, workerw: HWND, virtual_: Rect) -> Result<(), String> {
     }
     .map_err(|error| format!("SetWindowPos falló: {error}"))?;
 
-    // ET13: el área cliente debe ser todo el escritorio virtual; si no, se registra para la prueba manual.
+    // ET13: el área cliente, en pantalla, debe ser todo el escritorio virtual; si no, se registra para la prueba
+    // manual con los bordes que faltan.
     let mut cliente = RECT::default();
     // SAFETY: `cliente` es un RECT local válido durante la llamada.
-    if unsafe { GetClientRect(capa, &mut cliente) }.is_ok()
-        && (cliente.right - cliente.left, cliente.bottom - cliente.top)
-            != (virtual_.ancho(), virtual_.alto())
-    {
-        eprintln!(
-            "La capa del wallpaper no cubre el escritorio: área cliente {}×{}, escritorio {}×{}.",
-            cliente.right - cliente.left,
-            cliente.bottom - cliente.top,
-            virtual_.ancho(),
-            virtual_.alto()
-        );
+    if unsafe { GetClientRect(capa, &mut cliente) }.is_ok() {
+        let mut esquinas = [
+            POINT {
+                x: cliente.left,
+                y: cliente.top,
+            },
+            POINT {
+                x: cliente.right,
+                y: cliente.bottom,
+            },
+        ];
+        // SAFETY: `esquinas` es un arreglo local válido durante la llamada; `capa` existe.
+        unsafe { MapWindowPoints(Some(capa), None, &mut esquinas) };
+        let en_pantalla = Rect {
+            izquierda: esquinas[0].x,
+            arriba: esquinas[0].y,
+            derecha: esquinas[1].x,
+            abajo: esquinas[1].y,
+        };
+        if let Some([izquierda, arriba, derecha, abajo]) =
+            geometria::bordes_sin_cubrir(en_pantalla, virtual_)
+        {
+            eprintln!(
+                "La capa del wallpaper no cubre el escritorio: faltan {izquierda} px a la izquierda, {arriba} arriba,                  {derecha} a la derecha y {abajo} abajo."
+            );
+        }
     }
 
     Ok(())
