@@ -1,6 +1,6 @@
 // HE-08-HU01 · Consultar las etiquetas creadas. Una prueba por CA en la vista; las reglas del Núcleo tienen su
 // prueba ca_he_08_hu01_* en servicio_del_planificador/pruebas_de_etiquetas.rs.
-import { within } from '@testing-library/react';
+import { fireEvent, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Label } from '@/types';
 import { abrirPantalla, fijarHoy, screen } from '../kanban/pruebas';
@@ -29,11 +29,21 @@ describe('HE-08-HU01 · Etiquetas', () => {
     await abrir([etiqueta('Casa', 1), etiqueta('Estudio', 2)]);
     const lista = await screen.findByRole('list', { name: 'Lista de etiquetas' });
     const filas = within(lista).getAllByRole('listitem');
-    // ET02: nombre, color, «Editar» y «Eliminar» en cada una; ET03: «Nueva etiqueta».
-    for (const fila of filas) {
+    // ET02: nombre, color y el botón de acciones «⋮» con «Editar» y «Eliminar» en cada una (RT-02-ET10);
+    // ET03: «Nueva etiqueta».
+    for (const [i, fila] of filas.entries()) {
+      const nombre = ['Casa', 'Estudio'][i] as string;
       expect(fila.querySelector('.wg-muestra-color')).toBeTruthy();
-      expect(within(fila).getByRole('button', { name: 'Editar' })).toBeTruthy();
-      expect(within(fila).getByRole('button', { name: 'Eliminar' })).toBeTruthy();
+      const acciones = within(fila).getByRole('button', { name: `Acciones de ${nombre}` });
+      expect(acciones.textContent).toBe('⋮');
+      fireEvent.click(acciones);
+      const menu = screen.getByRole('menu', { name: `Acciones de ${nombre}` });
+      expect(
+        within(menu)
+          .getAllByRole('menuitem')
+          .map((o) => o.textContent),
+      ).toEqual(['Editar', 'Eliminar']);
+      fireEvent.keyDown(menu, { key: 'Escape' });
     }
     expect(screen.getByRole('button', { name: 'Nueva etiqueta' })).toBeTruthy();
   });
@@ -55,7 +65,7 @@ describe('HE-08-HU01 · Etiquetas', () => {
     expect(
       within(lista)
         .getAllByRole('listitem')
-        .map((li) => li.textContent?.replace('EditarEliminar', '')),
+        .map((li) => li.querySelector('.wg-lista__nombre')?.textContent),
     ).toEqual(['casa', 'Estudio', 'Trabajo']);
   });
 });
