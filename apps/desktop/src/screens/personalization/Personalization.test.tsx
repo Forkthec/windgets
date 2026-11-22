@@ -50,7 +50,11 @@ const MENSAJE_M04 =
   'Tienes cambios sin guardar en el tema “Mi tema”. ¿Deseas cambiar de tema sin guardarlos?';
 
 /** Abre la pantalla con «Mi tema» (aplicado) y «Verano»; con `conCambios`, el Núcleo avisa al cambiar de tema. */
-async function abrir(conCambios = false, primerInicio = false) {
+async function abrir(
+  conCambios = false,
+  primerInicio = false,
+  preparar?: (n: NucleoDelPlanificador) => void,
+) {
   const nucleo = await abrirPantalla(
     'personalization',
     'Personalización del wallpaper',
@@ -150,6 +154,7 @@ async function abrir(conCambios = false, primerInicio = false) {
               : { ok: false, error: { code: 'image.unreadable', message: textos.IMAGEN_ILEGIBLE } },
       );
       n.responder('theme_draft_open', () => ({ ok: true, value: vista('t1', 'Mi tema', conCambios) }));
+      preparar?.(n);
       // HE-02-HU09-ET03: los widgets activos del escritorio y su monitor principal (1920 × 1080).
       n.responder('layer_get_initial_state', () => ({
         ok: true,
@@ -378,6 +383,38 @@ describe('HE-02-HU03 · Imagen de fondo', () => {
       expect(vistaPrevia().style.backgroundImage).toBe('');
     },
   );
+
+  it('HE-02-HU03-CA09 · Ver la imagen de fondo en el escritorio', async () => {
+    // Al volver a abrir la aplicación, el tema en edición ya tiene una imagen propia: la vista previa la toma de la
+    // carpeta de archivos de la aplicación (ET11), aunque no se haya importado en esta sesión.
+    const nucleo = await abrir(false, false, (n) => {
+      n.responder('theme_draft_open', () => ({
+        ok: true,
+        value: {
+          ...vista('t1', 'Mi tema'),
+          content: {
+            ...CONTENIDO,
+            background: { source: 'own', catalog_image_id: null, uploaded_image_id: 'img-9' },
+          },
+        },
+      }));
+      n.responder('asset_resolve', ({ kind, id }) => ({
+        ok: true,
+        value: { url: `C:/Users/Prueba/AppData/Roaming/Windgets/files/${kind}-${id}.png`, state: 'ready' },
+      }));
+    });
+    await waitFor(() =>
+      expect(vistaPrevia().style.backgroundImage).toContain('Windgets/files/uploaded_image-img-9.png'),
+    );
+    expect(llamadasA(nucleo, 'asset_resolve')).toContainEqual({ kind: 'uploaded_image', id: 'img-9' });
+    // ET11: también la imagen del catálogo, desde la carpeta de archivos y no solo su miniatura.
+    fireEvent.click(within(seccion()).getByRole('button', { name: 'Catálogo de imágenes' }));
+    const catalogo = await screen.findByRole('list', { name: 'Catálogo de imágenes' });
+    fireEvent.click(within(catalogo).getByRole('button', { name: 'Mar' }));
+    await waitFor(() =>
+      expect(vistaPrevia().style.backgroundImage).toContain('Windgets/files/catalog_image-mar.png'),
+    );
+  });
 
   it('HE-02-HU03-CA08 · Cancelar la selección de archivo', async () => {
     const nucleo = await abrir();

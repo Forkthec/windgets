@@ -2963,3 +2963,41 @@ mod pruebas_de_la_personalizacion_sincronizada {
         assert!(se_reanudo(Some(1_000), 1_001 + REPOSO_MS));
     }
 }
+
+#[cfg(test)]
+mod pruebas_del_alcance_de_archivos {
+    use super::*;
+
+    #[test]
+    fn ca_he_02_hu03_ca09() {
+        // HE-02-HU03-CA09, ET11 · Las ventanas muestran la imagen de fondo desde la carpeta de archivos de la
+        // aplicación con el protocolo de assets: el alcance de `tauri.conf.json` debe cubrir la carpeta donde el
+        // Núcleo la guarda (`%APPDATA%\Windgets\files`). En Windows `$DATA` es `%APPDATA%`; `$APPDATA` es
+        // `%APPDATA%\<identificador>` y no la cubre.
+        let conf: serde_json::Value = serde_json::from_str(include_str!("../tauri.conf.json"))
+            .expect("tauri.conf.json válido");
+        let alcance: Vec<&str> = conf["app"]["security"]["assetProtocol"]["scope"]
+            .as_array()
+            .expect("alcance del protocolo de assets")
+            .iter()
+            .filter_map(serde_json::Value::as_str)
+            .collect();
+        assert!(alcance.contains(&"$DATA/Windgets/files/**"), "{alcance:?}");
+        let carpeta = carpeta_de_archivos();
+        let mut partes = carpeta.components().rev();
+        assert_eq!(
+            partes.next().map(|p| p.as_os_str().to_owned()),
+            Some("files".into())
+        );
+        assert_eq!(
+            partes.next().map(|p| p.as_os_str().to_owned()),
+            Some("Windgets".into())
+        );
+        if let Some(appdata) = std::env::var_os("APPDATA") {
+            assert_eq!(
+                carpeta.parent().and_then(|p| p.parent()),
+                Some(std::path::Path::new(&appdata))
+            );
+        }
+    }
+}
