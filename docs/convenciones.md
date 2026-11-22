@@ -139,7 +139,7 @@ El `dist` se publica en Vercel (carpeta de salida `apps/landing/dist`, sin funci
 
 - Un archivo SQL numerado por cambio en `supabase/migrations/` (`0005_<tema>.sql`, …); nunca se edita uno aplicado. Todo cambio de esquema tiene su equivalente en `local/` y sus pruebas en `docs/pruebas/`.
 - Local: `supabase db reset`. Remoto: `supabase link --project-ref <ref>` y `supabase db push`. Orden: `0001` a `0004` y `seed.sql`.
-- Edge Functions: salen con cada release. El job `funciones` de `.github/workflows/release.yml` corre con la etiqueta `v*`, espera la aprobación del environment `produccion` y ejecuta `supabase functions deploy --project-ref "$SUPABASE_PROJECT_ID"`, que despliega todas las funciones de `supabase/functions/` con el `verify_jwt = true` de `supabase/config.toml`, y luego `supabase functions list`. El instalador se publica solo después (`needs: funciones`), para que una app nueva no hable con una función vieja. Para redesplegar sin release: Actions > release > «Run workflow» (`workflow_dispatch`, también con la aprobación). El despliegue manual (`supabase functions deploy <nombre>`) queda solo para emergencias y se anota en `.trabajo/ESTADO.md`. Secretos de las funciones con `supabase secrets set`; el despliegue no los toca.
+- Edge Functions: salen con cada release. El job `funciones` de `.github/workflows/release.yml` espera la aprobación del environment `produccion` y ejecuta `supabase functions deploy --yes --project-ref "$SUPABASE_PROJECT_ID"` (`--yes` porque en Actions no hay terminal para confirmar), que despliega todas las funciones de `supabase/functions/` con el `verify_jwt = true` de `supabase/config.toml`, y luego `supabase functions list`. El instalador se publica solo después (`needs: funciones`), para que una app nueva no hable con una función vieja. Para redesplegar sin release: Actions > release > «Run workflow» sobre `main` con `tipo` = `solo-funciones` (también con la aprobación). El despliegue manual (`supabase functions deploy <nombre>`) queda solo para emergencias y se anota en `.trabajo/ESTADO.md`. Secretos de las funciones con `supabase secrets set`; el despliegue no los toca.
 - Los catálogos (imágenes, plantillas, tipografías, animaciones) se cargan al bucket `catalog` con las rutas de `seed.sql`.
 
 ## CI con GitHub Actions
@@ -147,7 +147,7 @@ El `dist` se publica en Vercel (carpeta de salida `apps/landing/dist`, sin funci
 | Flujo | Cuándo | Qué hace |
 |---|---|---|
 | `ci.yml` | Cada push y pull request | `pnpm install`, lint (ESLint, `cargo fmt --check`, `cargo clippy -D warnings`), `cargo test`, Vitest, Playwright de la landing, pruebas SQL. |
-| `release.yml` | Al crear una etiqueta `v*` | Compila el Núcleo y las vistas, genera el instalador NSIS, lo renombra a `Windgets-Setup.exe` y lo publica como activo de la release. |
+| `release.yml` | A mano: Actions > release > «Run workflow» sobre `main`, con `tipo` = `menor` (0.4.0 → 0.5.0), `parche` (0.4.0 → 0.4.1) o `solo-funciones` | Comprueba que corre sobre `main`, que el `ci` de ese commit está en verde y que la etiqueta nueva no existe; calcula la versión desde la última release publicada; despliega las Edge Functions con la aprobación de `produccion`; compila ese commit con esa versión (sin commit de versión), genera el instalador NSIS, lo renombra a `Windgets-Setup.exe` y lo publica en la release `vX.Y.Z`, cuya etiqueta crea sobre ese commit. No se crean etiquetas `v*` a mano. |
 | `keepalive.yml` | Una vez al día (D-197) | Llama a la RPC `keepalive` y falla si la respuesta no es `{ ok: true }`. |
 
 `keepalive.yml`:
