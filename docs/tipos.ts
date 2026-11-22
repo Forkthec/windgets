@@ -71,7 +71,7 @@ export type ErrorCode =
   | 'carousel.too_few' | 'carousel.too_many'
   | 'interval.out_of_range' | 'interval.required'
   // escritorio y sistema
-  | 'url.not_allowed' | 'autostart.failed'
+  | 'url.not_allowed' | 'autostart.failed' | 'browser.open_failed'
   // música
   | 'media.no_session' | 'media.action_unsupported'
   // agente de IA
