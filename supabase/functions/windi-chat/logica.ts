@@ -1,7 +1,7 @@
 // EF-01 `windi-chat` (contratos.md): la lógica pura de la Edge Function, sin Deno, para probarla con Vitest
 // (`apps/desktop/src/ipc/windiChat.test.ts`). `index.ts` la sirve. La función no hace cambios: solo propone (D-047).
 // Llama a Gemini (INT-03) con la instrucción del sistema de Windi. No registra el contenido de las tarjetas ni de
-// los mensajes (D-196).
+// los mensajes (D-196): del log solo sale el resumen de cada respuesta de Gemini (P27, `resumenDeGemini`).
 
 /** Largo de un mensaje válido (HE-14-HU01-ET03). */
 export const LARGO_MAXIMO = 2000;
@@ -251,6 +251,9 @@ export function instruccionDelSistema(contexto: Contexto): string {
     'entiendes; si falta el título y no se puede deducir, preguntas qué título ponerle. No propones hasta tenerlos.',
     'La fecha límite no puede ser anterior a hoy: si lo es, lo explicas y pides otra fecha, sin proponer.',
     'Si piden varias tarjetas en un mensaje, las propones todas en una sola llamada.',
+    // P27 (C8): no se inventan datos que la persona no pidió.
+    'Al crear o al cambiar tarjetas solo envías los datos que la persona indicó: si no pidió prioridad,',
+    'descripción, etiquetas o bloque horario, no los envías y quedan vacíos o como estaban.',
     // HE-14-HU04-ET13.
     'Las tarjetas nuevas siempre se crean en la columna Por hacer: si piden crearla en otra columna, explicas que',
     'las tarjetas nuevas se crean en Por hacer y propones crearla en Por hacer.',
@@ -268,6 +271,9 @@ export function instruccionDelSistema(contexto: Contexto): string {
     'El bloque horario dura una hora y se indica con su fecha y su hora de inicio, de 0 a 23: el bloque',
     '«10:00 – 11:00» es start_hour 10. Si piden un bloque de más de una hora, explicas que los bloques son de una',
     'hora y preguntas cuál. Al crear o al cambiar una tarjeta puedes asignar el bloque en time_block.',
+    // P27 (C6): «de 15:00 a 16:00» ya es un bloque de una hora.
+    'Un bloque «de HH:00 a (HH+1):00», como «de 15:00 a 16:00», es un bloque válido de una hora: lo propones',
+    'directamente con start_hour HH, sin preguntar.',
     'En la aplicación el bloque horario se asigna en Agenda diaria; tú solo lo propones en time_block y nunca',
     'prometes asignarlo sin la propuesta.',
     'Si no encuentras una tarjeta con el nombre que menciona, lo dices, pides más detalles y no propones.',
@@ -519,6 +525,65 @@ export const UN_CAMBIO_A_LA_VEZ = 'Puedo preparar un tipo de cambio a la vez. ¿
  */
 export const MUY_LARGO = 'Tu pedido es muy largo para responderlo de una vez. ¿Lo hacemos por partes?';
 
+/**
+ * P27 (C5): si Gemini bloquea la respuesta por seguridad (`finishReason` o `promptFeedback.blockReason` `SAFETY`),
+ * Windi lo dice y pide otra forma en vez de dar el error genérico. DUDA: INT-03 lleva el bloqueo de seguridad a
+ * `provider_error`; Paula decidió una respuesta propia, y ningún CA define el texto (docs/DUDAS.md, P27).
+ */
+export const BLOQUEO_DE_SEGURIDAD = 'No puedo responder a ese mensaje. ¿Me lo dices de otra forma?';
+
+/** Lo que se registra de una respuesta de Gemini (P27, C5): nunca el texto ni los argumentos (D-196). */
+export interface ResumenDeGemini {
+  finishReason: string | null;
+  blockReason: string | null;
+  partes: number;
+  llamadas: string[];
+}
+
+/** El resumen de una respuesta de Gemini para el log: el motivo de cierre, la cantidad de partes y las funciones. */
+export function resumenDeGemini(respuesta: unknown): ResumenDeGemini {
+  const candidato = esObjeto(respuesta) && Array.isArray(respuesta.candidates) ? respuesta.candidates[0] : null;
+  const contenido = esObjeto(candidato) && esObjeto(candidato.content) ? candidato.content : null;
+  const lista: unknown[] = contenido && Array.isArray(contenido.parts) ? contenido.parts : [];
+  const retro = esObjeto(respuesta) && esObjeto(respuesta.promptFeedback) ? respuesta.promptFeedback : null;
+  return {
+    finishReason: esObjeto(candidato) && typeof candidato.finishReason === 'string' ? candidato.finishReason : null,
+    blockReason: retro && typeof retro.blockReason === 'string' ? retro.blockReason : null,
+    partes: lista.length,
+    llamadas: lista
+      .map((p) => (esObjeto(p) && esObjeto(p.functionCall) ? p.functionCall.name : null))
+      .filter((n): n is string => typeof n === 'string'),
+  };
+}
+
+/** Escribe una línea en el log de la función. */
+export type Registro = (nivel: 'info' | 'error', datos: Record<string, unknown>) => void;
+
+/**
+ * P27 (C5): llama a Gemini y lee su respuesta. Si Gemini responde 200 pero sin nada que mostrar (candidato vacío o
+ * `MALFORMED_FUNCTION_CALL`), reintenta una sola vez; `llamar` usa la misma señal de corte, así que el reintento
+ * cabe en los 13 s (RNF-11). Cada respuesta deja una línea en el log con su resumen (`resumenDeGemini`). Los errores
+ * de red y el corte los lanza `llamar`; los atiende quien la usa.
+ */
+export async function responderConGemini(
+  llamar: () => Promise<Response>,
+  registrar: Registro,
+): Promise<RespuestaWindi | CodigoDeError> {
+  for (let intento = 1; ; intento++) {
+    const respuesta = await llamar();
+    if (!respuesta.ok) {
+      const codigo = errorDeGemini(respuesta.status);
+      registrar('error', { evento: 'gemini_http', intento, estado: respuesta.status, codigo });
+      return codigo;
+    }
+    const cuerpo: unknown = await respuesta.json().catch(() => null);
+    const leida = leerGemini(cuerpo);
+    const fallo = leida === 'provider_error';
+    registrar(fallo ? 'error' : 'info', { evento: 'gemini', intento, ...resumenDeGemini(cuerpo) });
+    if (!fallo || intento >= 2) return leida;
+  }
+}
+
 /** Los elementos de la propuesta a partir de los argumentos de la función (INT-03 → EF-01). */
 function elementos(nombre: string, args: Record<string, unknown>): Propuesta['items'] {
   const ediciones = Array.isArray(args.edits) ? args.edits.filter(esObjeto) : [];
@@ -573,11 +638,16 @@ export function errorDeGemini(estado: number): CodigoDeError {
 }
 
 /**
- * La respuesta de EF-01 a partir de la de Gemini. Sin texto (por ejemplo, un bloqueo de seguridad) es
- * `provider_error` (INT-03).
+ * La respuesta de EF-01 a partir de la de Gemini. Sin texto ni propuesta (candidato vacío o
+ * `MALFORMED_FUNCTION_CALL`) es `provider_error` (INT-03); el bloqueo de seguridad tiene su respuesta (P27).
  * La intención llega en `responder` (HE-14-HU01-ET25); `propose` llega con las propuestas (HE-14-HU03).
  */
 export function leerGemini(respuesta: unknown): RespuestaWindi | CodigoDeError {
+  const resumen = resumenDeGemini(respuesta);
+  // P27 (C5): el bloqueo de seguridad es previsible; Windi pide decirlo de otra forma y la propuesta activa sigue.
+  if (resumen.finishReason === 'SAFETY' || resumen.blockReason === 'SAFETY') {
+    return { reply: BLOQUEO_DE_SEGURIDAD, intent: 'clarify', proposal: null };
+  }
   const partes = esObjeto(respuesta) && Array.isArray(respuesta.candidates) ? respuesta.candidates[0] : null;
   // La respuesta se cortó por el tope de tokens: lo que llegó está incompleto (HE-14-HU07-ET07).
   if (esObjeto(partes) && partes.finishReason === 'MAX_TOKENS') {

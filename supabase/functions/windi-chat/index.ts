@@ -1,15 +1,16 @@
 // EF-01 `windi-chat` (contratos.md; HE-14). Exige el JWT del usuario (`verify_jwt = true` en config.toml) y lee
 // `GEMINI_API_KEY` y `GEMINI_MODEL` de los secretos de Supabase: el ejecutable no tiene la clave (D-192). Corta a
-// los 13 s (RNF-11; D-172). No habilita CORS (la llama el Núcleo) ni registra el contenido (D-196).
+// los 13 s (RNF-11; D-172). No habilita CORS (la llama el Núcleo) ni registra el contenido (D-196): el log lleva
+// solo el resumen de cada respuesta de Gemini y reintenta una vez la que llega vacía (P27, `responderConGemini`).
 import {
   type CodigoDeError,
   cuerpoParaGemini,
   ESPERA_MS,
   ESTADO_DEL_ERROR,
-  errorDeGemini,
-  leerGemini,
   leerPeticion,
   MODELO_POR_DEFECTO,
+  type Registro,
+  responderConGemini,
 } from './logica.ts';
 
 declare const Deno: {
@@ -32,6 +33,10 @@ function json(estado: number, cuerpo: unknown): Response {
   });
 }
 
+// Una línea JSON por respuesta de Gemini, sin el texto de la persona (D-196).
+const registrar: Registro = (nivel, datos) =>
+  (nivel === 'error' ? console.error : console.log)(JSON.stringify({ funcion: 'windi-chat', ...datos }));
+
 const fallo = (codigo: CodigoDeError) =>
   json(ESTADO_DEL_ERROR[codigo], { error: { code: codigo, message: MENSAJES[codigo] } });
 
@@ -45,17 +50,17 @@ Deno.serve(async (peticion) => {
   const tiempo = new AbortController();
   const corte = setTimeout(() => tiempo.abort(), ESPERA_MS);
   try {
-    const respuesta = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': clave },
-        body: JSON.stringify(cuerpoParaGemini(cuerpo)),
-        signal: tiempo.signal,
-      },
+    const cuerpoGemini = JSON.stringify(cuerpoParaGemini(cuerpo));
+    const leida = await responderConGemini(
+      () =>
+        fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': clave },
+          body: cuerpoGemini,
+          signal: tiempo.signal,
+        }),
+      registrar,
     );
-    if (!respuesta.ok) return fallo(errorDeGemini(respuesta.status));
-    const leida = leerGemini(await respuesta.json());
     return typeof leida === 'string' ? fallo(leida) : json(200, leida);
   } catch {
     return fallo(tiempo.signal.aborted ? 'timeout' : 'provider_error');

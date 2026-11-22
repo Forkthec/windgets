@@ -1805,6 +1805,66 @@ fn ca_he_14_hu05_et13() {
 }
 
 #[test]
+fn p27_c7_la_fecha_anterior_al_bloque_lo_quita_en_la_propuesta() {
+    // P27 (C7) · HE-14-HU05-CA08 con HE-11 ET12, ET13: una fecha límite anterior al bloque lo quita al aplicar, y la
+    // propuesta lo muestra («Bloque horario: 10:00 – 11:00 → Sin bloque horario»). Igual o posterior: no lo toca.
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    let con_bloque = |titulo: &str| {
+        let id = tarjeta_en(&planificador, POR_HACER, titulo, "2026-11-20", 1024.0);
+        let asignar = pedir_edicion(
+            &planificador,
+            &windi,
+            &id,
+            serde_json::json!({ "time_block": { "date": "2026-11-18", "start_hour": 10 } }),
+        )
+        .unwrap();
+        confirmar(&windi, &manejador_de(&planificador), &asignar, true).unwrap();
+        id
+    };
+
+    let anterior = con_bloque("Estudiar redes");
+    let propuesta = pedir_edicion(
+        &planificador,
+        &windi,
+        &anterior,
+        serde_json::json!({ "due_date": "2026-11-17" }),
+    )
+    .unwrap();
+    assert_eq!(
+        propuesta.items[0].changes,
+        Some(serde_json::json!({ "due_date": "2026-11-17", "time_block": null }))
+    );
+    assert_eq!(
+        propuesta.items[0].current.as_ref().unwrap()["time_block"],
+        serde_json::json!({ "date": "2026-11-18", "start_hour": 10, "end_hour": 11 })
+    );
+    confirmar(&windi, &manejador_de(&planificador), &propuesta, true).unwrap();
+    assert_eq!(bloque_de(&planificador, &anterior), None);
+
+    for (titulo, fecha) in [("Leer", "2026-11-18"), ("Escribir", "2026-11-19")] {
+        let id = con_bloque(titulo);
+        let propuesta = pedir_edicion(
+            &planificador,
+            &windi,
+            &id,
+            serde_json::json!({ "due_date": fecha }),
+        )
+        .unwrap();
+        assert_eq!(
+            propuesta.items[0].changes,
+            Some(serde_json::json!({ "due_date": fecha })),
+            "fecha {fecha}"
+        );
+        confirmar(&windi, &manejador_de(&planificador), &propuesta, true).unwrap();
+        assert_eq!(
+            bloque_de(&planificador, &id),
+            Some(("2026-11-18".into(), 10))
+        );
+    }
+}
+
+#[test]
 fn ca_he_14_hu05_et14() {
     // HE-14-HU05-ET14 · Una tarjeta tiene máximo 5 etiquetas: con más no hay propuesta y Windi da el motivo.
     let planificador = con_semilla();
