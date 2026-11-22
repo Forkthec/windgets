@@ -791,3 +791,34 @@ describe('EF-01 windi-chat · HE-14-HU09 (P24: contexto completo)', () => {
     expect(r).toEqual({ reply: 'Tienes 2 tarjetas vencidas.', intent: 'answer', proposal: null });
   });
 });
+
+describe('EF-01 windi-chat · HE-14-HU01 (P24: intención de cada respuesta)', () => {
+  const responder = (args: Record<string, unknown>) => ({
+    candidates: [{ content: { parts: [{ functionCall: { name: 'responder', args } }] } }],
+  });
+
+  it('HE-14-HU01-ET25 · responder declara la intención y leerGemini la conserva', () => {
+    const declarada = JSON.stringify(FUNCIONES.find((f) => f.name === 'responder'));
+    expect(declarada).toContain('"enum":["answer","clarify","out_of_scope"]');
+    for (const intent of ['answer', 'clarify', 'out_of_scope'] as const) {
+      expect(leerGemini(responder({ text: 'Hola', intent }))).toEqual({
+        reply: 'Hola',
+        intent,
+        proposal: null,
+      });
+    }
+    // Sin una intención válida, es answer.
+    expect(leerGemini(responder({ text: 'Hola', intent: 'otra' }))).toEqual({
+      reply: 'Hola',
+      intent: 'answer',
+      proposal: null,
+    });
+  });
+
+  it('HE-14-HU01-CA06 y CA09 · la instrucción pide out_of_scope fuera del alcance y clarify al aclarar', () => {
+    const texto = instruccionDelSistema(CONTEXTO);
+    expect(texto).toContain('llamas a responder con intent out_of_scope');
+    expect(texto).toContain('clarify cuando preguntas por un dato que falta');
+    expect(texto).toContain('Aclarar no descarta la propuesta pendiente.');
+  });
+});

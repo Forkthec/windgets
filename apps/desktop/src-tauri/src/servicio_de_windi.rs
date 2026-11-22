@@ -16,9 +16,9 @@ use crate::servicio_del_planificador::{Calendario, ServicioDelPlanificador, erro
 use crate::tipos::{
     AppError, ErrorCode, ProposalState, Uuid, WindiChatContext, WindiChatProposal,
     WindiChatProposalItemsItem, WindiChatRequest, WindiChatRequestHistoryItem,
-    WindiChatRequestHistoryItemRole, WindiChatResponse, WindiConfirmProposalResult,
-    WindiConfirmProposalResultOutcome, WindiConversation, WindiMessage, WindiMessageRole,
-    WindiProposal, WindiRejectProposalResult, WindiSendMessageResult,
+    WindiChatRequestHistoryItemRole, WindiChatResponse, WindiChatResponseIntent,
+    WindiConfirmProposalResult, WindiConfirmProposalResultOutcome, WindiConversation, WindiMessage,
+    WindiMessageRole, WindiProposal, WindiRejectProposalResult, WindiSendMessageResult,
 };
 use serde_json::Value;
 
@@ -304,7 +304,13 @@ impl ServicioDeWindi {
         let mut estado = self.estado.lock().unwrap_or_else(|e| e.into_inner());
         match respuesta {
             Ok(respuesta) => {
-                let texto = motivo.as_deref().unwrap_or(&respuesta.reply);
+                // HE-14-HU01-ET26: fuera de alcance, el mensaje es fijo. ET25: aclarar y fuera de alcance no traen
+                // propuesta, así que la activa sigue activa.
+                let texto = match (&motivo, &respuesta.intent) {
+                    (Some(motivo), _) => motivo.as_str(),
+                    (None, WindiChatResponseIntent::OutOfScope) => messages::WINDI_FUERA_DE_ALCANCE,
+                    (None, _) => respuesta.reply.as_str(),
+                };
                 let reply = mensaje(WindiMessageRole::Assistant, texto, ahora_ms);
                 estado.mensajes.push(reply.clone());
                 // ET03, ET04: una sola propuesta activa; la anterior sin confirmar ni rechazar queda «Descartada».

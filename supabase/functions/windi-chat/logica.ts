@@ -213,8 +213,11 @@ export function instruccionDelSistema(contexto: Contexto): string {
     `(${contexto.today}) y son las ${contexto.now_hour}:00 en su computador, en hora de Colombia (UTC-5).`,
     `Los próximos 7 días: ${Array.from({ length: 7 }, (_, i) => diaYFecha(contexto.today, i + 1)).join(', ')}.`,
     'Alcance: solo hablas de las tarjetas de esta persona y del funcionamiento de Windgets. Ante cualquier otro',
-    'tema, mantienes la calma, dices con amabilidad que solo puedes ayudar con sus tarjetas y con la aplicación,',
-    'no respondes la consulta y propones algo en lo que sí puedes ayudar.',
+    'tema no respondes la consulta y llamas a responder con intent out_of_scope: la aplicación muestra un mensaje',
+    'fijo que ofrece algo en lo que sí puedes ayudar (HE-14-HU01-ET26).',
+    // HE-14-HU01-ET25: cada respuesta tiene su intención.
+    'En responder indicas la intención: answer cuando respondes, clarify cuando preguntas por un dato que falta y',
+    'out_of_scope cuando el tema no es de sus tarjetas ni de Windgets. Aclarar no descarta la propuesta pendiente.',
     'Si no entiendes qué acción quiere ni sobre qué tarjeta, haces una sola pregunta concreta para aclararlo y',
     'no propones cambios hasta tener la respuesta.',
     'Si no puedes hacer algo, lo dices y ofreces una alternativa.',
@@ -355,8 +358,16 @@ export const FUNCIONES = [
       'Envía a la persona el texto de tu respuesta. Lo llamas siempre, solo o junto a una función de propuesta.',
     parameters: {
       type: 'OBJECT',
-      properties: { text: { type: 'STRING', description: 'El texto que ve la persona.' } },
-      required: ['text'],
+      properties: {
+        text: { type: 'STRING', description: 'El texto que ve la persona.' },
+        // HE-14-HU01-ET25.
+        intent: {
+          type: 'STRING',
+          enum: ['answer', 'clarify', 'out_of_scope'],
+          description: 'answer al responder, clarify al pedir un dato que falta, out_of_scope fuera del alcance.',
+        },
+      },
+      required: ['text', 'intent'],
     },
   },
   {
@@ -564,8 +575,7 @@ export function errorDeGemini(estado: number): CodigoDeError {
 /**
  * La respuesta de EF-01 a partir de la de Gemini. Sin texto (por ejemplo, un bloqueo de seguridad) es
  * `provider_error` (INT-03).
- * DUDA: HE-14-HU01 EF-01 devuelve `intent`, pero Gemini solo da texto. Valor usado: `answer` para el texto
- * (`propose` llega con las propuestas, HE-14-HU03) (docs/DUDAS.md).
+ * La intención llega en `responder` (HE-14-HU01-ET25); `propose` llega con las propuestas (HE-14-HU03).
  */
 export function leerGemini(respuesta: unknown): RespuestaWindi | CodigoDeError {
   const partes = esObjeto(respuesta) && Array.isArray(respuesta.candidates) ? respuesta.candidates[0] : null;
@@ -607,5 +617,9 @@ export function leerGemini(respuesta: unknown): RespuestaWindi | CodigoDeError {
     };
   }
   if (!reply) return 'provider_error';
-  return { reply, intent: 'answer', proposal: null };
+  // HE-14-HU01-ET25: la intención la indica Gemini en `responder`; sin una válida, es `answer`.
+  const indicada = llamadas
+    .map((f) => (f.name === 'responder' && esObjeto(f.args) ? f.args.intent : null))
+    .find((i): i is Intencion => i === 'answer' || i === 'clarify' || i === 'out_of_scope');
+  return { reply, intent: indicada ?? 'answer', proposal: null };
 }

@@ -203,13 +203,30 @@ describe('HE-14-HU01 · Conversar con el agente de IA', () => {
   });
 
   it('HE-14-HU01-CA06 · Consulta fuera del alcance', async () => {
-    const amable =
-      'Solo puedo ayudarte con tus tarjetas y con la aplicación. ¿Revisamos lo que tienes para hoy?';
-    await abrir(responde(amable));
+    // v12, ET26: el mensaje fijo (lo pone el Núcleo); ET25: la propuesta activa sigue activa.
+    const fijo =
+      'Solo puedo ayudarte con tus tarjetas y con Windgets. Por ejemplo, puedo crear una tarjeta o contarte qué tienes para hoy.';
+    let n = 0;
+    const activa: WindiProposal = {
+      id: 'p1',
+      action: 'edit',
+      items: [{ card_id: 't1', current: null, changes: { title: 'Informe final' }, title: 'Informe' }],
+      warnings: [],
+      state: 'active',
+    };
+    await abrir((m) => {
+      n += 1;
+      return n === 1 ? proponer(activa)(m) : responde(fijo)(m);
+    });
+    await escribir('Cambia el informe');
+    await seleccionar(enviar());
     await escribir('¿Quién ganó el partido?');
     await seleccionar(enviar());
-    // ET22, ET23: la respuesta del agente se muestra tal cual; el alcance lo fija windi-chat.
-    expect(conversacion().at(-1)).toBe(amable);
+    expect(conversacion().at(-1)).toBe(fijo);
+    const propuesta = screen.getAllByRole('region', { name: 'Propuesta' })[0] as HTMLElement;
+    expect((within(propuesta).getByRole('button', { name: 'Confirmar' }) as HTMLButtonElement).disabled).toBe(
+      false,
+    );
   });
 
   it('HE-14-HU01-CA07 · Agente de IA sin conexión', async () => {

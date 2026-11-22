@@ -264,16 +264,24 @@ fn ca_he_14_hu01_ca05() {
 
 #[test]
 fn ca_he_14_hu01_ca06() {
-    // HE-14-HU01-CA06 · Consulta fuera del alcance: el Núcleo muestra la respuesta del agente tal como llega (el
-    // alcance lo fija la instrucción del sistema de windi-chat, ET22, ET23) y no hay propuesta.
+    // HE-14-HU01-CA06 (v12) · Consulta fuera del alcance: el mensaje es fijo (ET26), sea cual sea el texto de
+    // windi-chat, no hay propuesta y la propuesta activa sigue activa (ET25).
     let windi = ServicioDeWindi::nuevo();
-    let nube = WindiSimulado::responde(vec![Ok(respuesta(
-        "Solo puedo ayudarte con tus tarjetas y con la aplicación. ¿Revisamos lo que tienes para hoy?",
-        WindiChatResponseIntent::OutOfScope,
-    ))]);
+    let nube = WindiSimulado::responde(vec![
+        Ok(propone_mover("t1", "c2")),
+        Ok(respuesta(
+            "No sé de fútbol, pero puedo ayudarte con tus tarjetas.",
+            WindiChatResponseIntent::OutOfScope,
+        )),
+    ]);
+    enviar(&windi, &nube, "Mueve el informe", true).unwrap();
+    assert_eq!(estado_de_la_propuesta(&windi), Some(ProposalState::Active));
     let r = enviar(&windi, &nube, "¿Quién ganó el partido?", true).unwrap();
-    assert!(r.reply.text.starts_with("Solo puedo ayudarte"));
+    assert_eq!(r.reply.text, messages::WINDI_FUERA_DE_ALCANCE);
+    let literal = "Solo puedo ayudarte con tus tarjetas y con Windgets. Por ejemplo, puedo crear una tarjeta o contarte qué tienes para hoy.";
+    assert_eq!(messages::WINDI_FUERA_DE_ALCANCE, literal);
     assert!(r.proposal.is_none());
+    assert_eq!(estado_de_la_propuesta(&windi), Some(ProposalState::Active));
 }
 
 #[test]
@@ -357,8 +365,8 @@ fn ca_he_14_hu01_ca08() {
 
 #[test]
 fn ca_he_14_hu01_ca09() {
-    // HE-14-HU01-CA09 · Solicitud ambigua: el agente pregunta (intent `clarify`, ET21) y no hay propuesta hasta tener
-    // la respuesta.
+    // HE-14-HU01-CA09 (v12) · Solicitud ambigua: el agente pregunta (intent `clarify`, ET21) y no hay propuesta hasta
+    // tener la respuesta; la propuesta activa, si la hay, sigue activa (ET25).
     let windi = ServicioDeWindi::nuevo();
     let nube = WindiSimulado::responde(vec![Ok(respuesta(
         "¿Qué tarjeta quieres cambiar?",
@@ -368,6 +376,18 @@ fn ca_he_14_hu01_ca09() {
     assert_eq!(r.reply.text, "¿Qué tarjeta quieres cambiar?");
     assert!(r.proposal.is_none());
     assert!(windi.conversacion("Prueba", true, AHORA).proposal.is_none());
+
+    let nube = WindiSimulado::responde(vec![
+        Ok(propone_mover("t1", "c2")),
+        Ok(respuesta(
+            "¿A qué columna la muevo?",
+            WindiChatResponseIntent::Clarify,
+        )),
+    ]);
+    enviar(&windi, &nube, "Mueve el informe", true).unwrap();
+    let r = enviar(&windi, &nube, "Y la otra también", true).unwrap();
+    assert_eq!(r.reply.text, "¿A qué columna la muevo?");
+    assert_eq!(estado_de_la_propuesta(&windi), Some(ProposalState::Active));
 }
 
 #[test]
