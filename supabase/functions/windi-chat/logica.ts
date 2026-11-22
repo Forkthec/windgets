@@ -1,7 +1,7 @@
 // EF-01 `windi-chat` (contratos.md): la lógica pura de la Edge Function, sin Deno, para probarla con Vitest
 // (`apps/desktop/src/ipc/windiChat.test.ts`). `index.ts` la sirve. La función no hace cambios: solo propone (D-047).
 // Llama a Gemini (INT-03) con la instrucción del sistema de Windi. No registra el contenido de las tarjetas ni de
-// los mensajes (D-196).
+// los mensajes (D-196): del log solo sale el resumen de cada respuesta de Gemini (P27, `resumenDeGemini`).
 
 /** Largo de un mensaje válido (HE-14-HU01-ET03). */
 export const LARGO_MAXIMO = 2000;
@@ -519,6 +519,65 @@ export const UN_CAMBIO_A_LA_VEZ = 'Puedo preparar un tipo de cambio a la vez. ¿
  */
 export const MUY_LARGO = 'Tu pedido es muy largo para responderlo de una vez. ¿Lo hacemos por partes?';
 
+/**
+ * P27 (C5): si Gemini bloquea la respuesta por seguridad (`finishReason` o `promptFeedback.blockReason` `SAFETY`),
+ * Windi lo dice y pide otra forma en vez de dar el error genérico. DUDA: INT-03 lleva el bloqueo de seguridad a
+ * `provider_error`; Paula decidió una respuesta propia, y ningún CA define el texto (docs/DUDAS.md, P27).
+ */
+export const BLOQUEO_DE_SEGURIDAD = 'No puedo responder a ese mensaje. ¿Me lo dices de otra forma?';
+
+/** Lo que se registra de una respuesta de Gemini (P27, C5): nunca el texto ni los argumentos (D-196). */
+export interface ResumenDeGemini {
+  finishReason: string | null;
+  blockReason: string | null;
+  partes: number;
+  llamadas: string[];
+}
+
+/** El resumen de una respuesta de Gemini para el log: el motivo de cierre, la cantidad de partes y las funciones. */
+export function resumenDeGemini(respuesta: unknown): ResumenDeGemini {
+  const candidato = esObjeto(respuesta) && Array.isArray(respuesta.candidates) ? respuesta.candidates[0] : null;
+  const contenido = esObjeto(candidato) && esObjeto(candidato.content) ? candidato.content : null;
+  const lista: unknown[] = contenido && Array.isArray(contenido.parts) ? contenido.parts : [];
+  const retro = esObjeto(respuesta) && esObjeto(respuesta.promptFeedback) ? respuesta.promptFeedback : null;
+  return {
+    finishReason: esObjeto(candidato) && typeof candidato.finishReason === 'string' ? candidato.finishReason : null,
+    blockReason: retro && typeof retro.blockReason === 'string' ? retro.blockReason : null,
+    partes: lista.length,
+    llamadas: lista
+      .map((p) => (esObjeto(p) && esObjeto(p.functionCall) ? p.functionCall.name : null))
+      .filter((n): n is string => typeof n === 'string'),
+  };
+}
+
+/** Escribe una línea en el log de la función. */
+export type Registro = (nivel: 'info' | 'error', datos: Record<string, unknown>) => void;
+
+/**
+ * P27 (C5): llama a Gemini y lee su respuesta. Si Gemini responde 200 pero sin nada que mostrar (candidato vacío o
+ * `MALFORMED_FUNCTION_CALL`), reintenta una sola vez; `llamar` usa la misma señal de corte, así que el reintento
+ * cabe en los 13 s (RNF-11). Cada respuesta deja una línea en el log con su resumen (`resumenDeGemini`). Los errores
+ * de red y el corte los lanza `llamar`; los atiende quien la usa.
+ */
+export async function responderConGemini(
+  llamar: () => Promise<Response>,
+  registrar: Registro,
+): Promise<RespuestaWindi | CodigoDeError> {
+  for (let intento = 1; ; intento++) {
+    const respuesta = await llamar();
+    if (!respuesta.ok) {
+      const codigo = errorDeGemini(respuesta.status);
+      registrar('error', { evento: 'gemini_http', intento, estado: respuesta.status, codigo });
+      return codigo;
+    }
+    const cuerpo: unknown = await respuesta.json().catch(() => null);
+    const leida = leerGemini(cuerpo);
+    const fallo = leida === 'provider_error';
+    registrar(fallo ? 'error' : 'info', { evento: 'gemini', intento, ...resumenDeGemini(cuerpo) });
+    if (!fallo || intento >= 2) return leida;
+  }
+}
+
 /** Los elementos de la propuesta a partir de los argumentos de la función (INT-03 → EF-01). */
 function elementos(nombre: string, args: Record<string, unknown>): Propuesta['items'] {
   const ediciones = Array.isArray(args.edits) ? args.edits.filter(esObjeto) : [];
@@ -573,11 +632,16 @@ export function errorDeGemini(estado: number): CodigoDeError {
 }
 
 /**
- * La respuesta de EF-01 a partir de la de Gemini. Sin texto (por ejemplo, un bloqueo de seguridad) es
- * `provider_error` (INT-03).
+ * La respuesta de EF-01 a partir de la de Gemini. Sin texto ni propuesta (candidato vacío o
+ * `MALFORMED_FUNCTION_CALL`) es `provider_error` (INT-03); el bloqueo de seguridad tiene su respuesta (P27).
  * La intención llega en `responder` (HE-14-HU01-ET25); `propose` llega con las propuestas (HE-14-HU03).
  */
 export function leerGemini(respuesta: unknown): RespuestaWindi | CodigoDeError {
+  const resumen = resumenDeGemini(respuesta);
+  // P27 (C5): el bloqueo de seguridad es previsible; Windi pide decirlo de otra forma y la propuesta activa sigue.
+  if (resumen.finishReason === 'SAFETY' || resumen.blockReason === 'SAFETY') {
+    return { reply: BLOQUEO_DE_SEGURIDAD, intent: 'clarify', proposal: null };
+  }
   const partes = esObjeto(respuesta) && Array.isArray(respuesta.candidates) ? respuesta.candidates[0] : null;
   // La respuesta se cortó por el tope de tokens: lo que llegó está incompleto (HE-14-HU07-ET07).
   if (esObjeto(partes) && partes.finishReason === 'MAX_TOKENS') {
