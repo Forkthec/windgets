@@ -139,6 +139,22 @@ body {
 .wg-campo__mensaje {
   color: var(--wg-tinta);
 }
+/* docs/rediseno.md RD-10 y RD-11: etiqueta con contador a la derecha, ayuda fija y marca de obligatorio. La « *» no
+   tiene texto alternativo: el nombre del campo sigue siendo el del CA. */
+.wg-campo__cabecera {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--wg-unidad) * 2);
+}
+.wg-campo__contador,
+.wg-campo__ayuda {
+  color: var(--wg-texto);
+  font-size: 0.875em;
+}
+.wg-campo__etiqueta--obligatoria::after {
+  content: ' *' / '';
+}
 
 .wg-interruptor {
   width: calc(var(--wg-unidad) * 11);
