@@ -2844,16 +2844,22 @@ pub async fn windi_confirm_proposal(
     };
     let user_id = sesion.user_id.to_lowercase();
     let cliente = nucleo.sesion.auth();
-    let en_linea = {
+    // HE-14-HU03-ET13: sin conexión, como en CA02; con conexión y una descarga fallida, como en ET12.
+    let consulta = {
         let _ciclo = nucleo.ciclo.lock().await;
         let credenciales = motor_de_sincronizacion::Credenciales {
             user_id: &user_id,
             token: &sesion.access_token,
         };
-        let _ =
+        let descarga =
             motor_de_sincronizacion::descargar(nucleo.planificador.base(), cliente, &credenciales)
                 .await;
-        cliente.comprobar_conexion().await
+        let fallo = !descarga.is_ok_and(|ciclo| !ciclo.fallo);
+        match (cliente.comprobar_conexion().await, fallo) {
+            (false, _) => crate::servicio_de_windi::ConsultaALaNube::SinConexion,
+            (true, true) => crate::servicio_de_windi::ConsultaALaNube::Fallida,
+            (true, false) => crate::servicio_de_windi::ConsultaALaNube::Lista,
+        }
     };
     let manejador = crate::servicio_de_windi::manejador::ManejadorDelPlanificador {
         planificador: &nucleo.planificador,
@@ -2865,7 +2871,7 @@ pub async fn windi_confirm_proposal(
         .confirmar(
             &manejador,
             &params.proposal_id,
-            en_linea,
+            consulta,
             chrono::Utc::now().timestamp_millis(),
         )
         .await;

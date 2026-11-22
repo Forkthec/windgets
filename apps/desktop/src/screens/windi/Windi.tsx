@@ -51,6 +51,8 @@ export function Windi() {
   const [fallido, setFallido] = useState<string | null>(null);
   // HE-14-HU03-CA02: se perdió la conexión al confirmar.
   const [sinConexionAlConfirmar, setSinConexionAlConfirmar] = useState(false);
+  // HE-14-HU03-CA07, ET12: «Confirmar» falló; la propuesta sigue con «Confirmar» y «Rechazar» habilitadas.
+  const [avisoAlConfirmar, setAvisoAlConfirmar] = useState<string | null>(null);
   const idCampo = useId();
 
   const leer = useCallback(async () => {
@@ -108,6 +110,7 @@ export function Windi() {
 
   const confirmar = async (propuesta: WindiProposal) => {
     setEscribiendo(true);
+    setAvisoAlConfirmar(null);
     const r = await invocar('windi_confirm_proposal', { proposal_id: propuesta.id });
     setEscribiendo(false);
     if (r.ok) {
@@ -123,6 +126,8 @@ export function Windi() {
       setSinConexionAlConfirmar(true);
     } else if (r.error.code === 'proposal.discarded') {
       setPropuestas((lista) => conEstado(lista, propuesta.id, 'discarded'));
+    } else {
+      setAvisoAlConfirmar(r.error.message || textos.WINDI_NO_PUDE_APLICAR);
     }
     await leer();
   };
@@ -158,6 +163,7 @@ export function Windi() {
       {/* ET13: sin conexión, el aviso (RT-04); el historial sigue visible. */}
       {!enLinea && <Aviso texto={textos.WINDI_SIN_CONEXION} />}
       {sinConexionAlConfirmar && <Aviso texto={textos.WINDI_SIN_CONEXION_AL_CONFIRMAR} />}
+      {avisoAlConfirmar !== null && <Aviso texto={avisoAlConfirmar} />}
       {/* ET01: el área de conversación. */}
       <ol className="wg-windi__conversacion" aria-label="Conversación" aria-live="polite">
         {(mensajes ?? []).map((m) => (

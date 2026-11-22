@@ -69,6 +69,8 @@ pub struct Ciclo {
     pub conflictos_de_tarjetas: i64,
     /// Filas locales que cambió lo recibido: `(entity_kind, entity_id, eliminada)`.
     pub cambiadas: Vec<(String, String, bool)>,
+    /// La descarga no terminó porque `sync_pull` falló (HE-14-HU03-ET13).
+    pub fallo: bool,
 }
 
 /// Un instante en el formato del contrato (`AAAA-MM-DDTHH:MM:SS.mmmZ`, UTC).
@@ -358,6 +360,7 @@ pub async fn descargar<N: NubeDeSincronizacion>(
                     "error"
                 };
                 poner_estado(base, estado).await?;
+                ciclo.fallo = true;
                 return Ok(ciclo);
             }
         };

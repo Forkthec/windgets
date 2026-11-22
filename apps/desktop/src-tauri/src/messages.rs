@@ -461,6 +461,11 @@ pub const WINDI_MISMO_VALOR: &str = "La tarjeta “<título>” ya tiene ese val
 pub const WINDI_YA_ESTA_EN_LA_COLUMNA: &str = "La tarjeta “<título>” ya está en <columna>.";
 /// `windi.apply_failed`: la propuesta no se pudo aplicar completa (HE-14-HU03-CA07, ET12, ET13).
 pub const WINDI_NO_PUDE_APLICAR: &str = "No pude aplicar los cambios. No se hizo ningún cambio.";
+/// `title.required` en una propuesta de creación de Windi. DUDA: HE-14-HU04 no define el texto (docs/DUDAS.md).
+pub const WINDI_FALTA_TITULO: &str = "Falta el título de una de las tarjetas. ¿Cómo se llama?";
+/// `due_date.required` en una propuesta de creación de Windi. DUDA: HE-14-HU04 no define el texto (docs/DUDAS.md).
+pub const WINDI_FALTA_FECHA: &str =
+    "A la tarjeta “<título>” le falta la fecha límite. ¿Para cuándo es?";
 
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
@@ -671,6 +676,8 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("WINDI_MISMO_VALOR", WINDI_MISMO_VALOR),
     ("WINDI_YA_ESTA_EN_LA_COLUMNA", WINDI_YA_ESTA_EN_LA_COLUMNA),
     ("WINDI_NO_PUDE_APLICAR", WINDI_NO_PUDE_APLICAR),
+    ("WINDI_FALTA_TITULO", WINDI_FALTA_TITULO),
+    ("WINDI_FALTA_FECHA", WINDI_FALTA_FECHA),
 ];
 
 #[cfg(test)]

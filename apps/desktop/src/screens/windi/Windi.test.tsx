@@ -374,6 +374,28 @@ describe('HE-14-HU03 · Confirmar una propuesta del agente de IA', () => {
     // Solo se aplica la nueva.
     expect(llamadasA(nucleo, 'windi_confirm_proposal')).toEqual([{ proposal_id: 'p2' }]);
   });
+
+  it('HE-14-HU03-CA07 · No se puede aplicar la propuesta', async () => {
+    const { nucleo } = await abrir(proponer(propuesta('p1', 'Informe final')), {
+      confirmar: () => ({
+        ok: false,
+        error: {
+          code: 'windi.apply_failed',
+          message: 'No pude aplicar los cambios. No se hizo ningún cambio.',
+        },
+      }),
+    });
+    await pedir('Cambia el título del informe');
+    await seleccionar(boton(propuestas()[0], 'Confirmar'));
+    // ET12 (RT-04): el aviso, y «Confirmar» y «Rechazar» siguen habilitadas; no hay respuesta de cambio hecho.
+    expect(screen.getByText('No pude aplicar los cambios. No se hizo ningún cambio.')).toBeTruthy();
+    expect(boton(propuestas()[0], 'Confirmar').disabled).toBe(false);
+    expect(boton(propuestas()[0], 'Rechazar').disabled).toBe(false);
+    expect(conversacion()).not.toContain('Listo, ya hice el cambio.');
+    // Se puede volver a confirmar.
+    await seleccionar(boton(propuestas()[0], 'Confirmar'));
+    expect(llamadasA(nucleo, 'windi_confirm_proposal')).toHaveLength(2);
+  });
 });
 
 describe('HE-14-HU05 · Editar tarjetas con el agente de IA', () => {

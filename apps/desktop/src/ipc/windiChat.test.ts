@@ -9,6 +9,9 @@ import {
   instruccionDelSistema,
   leerGemini,
   leerPeticion,
+  FUNCIONES,
+  RESPALDO,
+  UN_CAMBIO_A_LA_VEZ,
   type Contexto,
 } from '../../../../supabase/functions/windi-chat/logica';
 
@@ -490,5 +493,65 @@ describe('EF-01 windi-chat · HE-14-HU09 (preguntas por las tarjetas)', () => {
     );
     const r = leerGemini({ candidates: [{ content: { parts: [{ text: 'Tienes 2 tarjetas vencidas.' }] } }] });
     expect(r).toEqual({ reply: 'Tienes 2 tarjetas vencidas.', intent: 'answer', proposal: null });
+  });
+});
+
+describe('EF-01 windi-chat · HE-14-HU03 (propuestas)', () => {
+  /** Una respuesta de Gemini con las llamadas dadas y sin texto. */
+  const conLlamadas = (...llamadas: { name: string; args: Record<string, unknown> }[]) => ({
+    candidates: [{ content: { parts: llamadas.map((functionCall) => ({ functionCall })) } }],
+  });
+
+  it('HE-14-HU03-ET11 · el texto de respaldo corresponde a la acción de la propuesta', () => {
+    const casos: [string, Record<string, unknown>, string][] = [
+      ['propose_create_cards', { cards: [{ title: 'Pan', due_date: '2026-11-20' }] }, 'crear'],
+      ['propose_edit_card', { card_id: 't1', changes: { title: 'Otro' } }, 'cambiar'],
+      ['propose_move_card', { card_id: 't1', column_id: 'En progreso' }, 'mover'],
+      ['propose_delete_cards', { card_ids: ['t1'] }, 'eliminar'],
+    ];
+    for (const [name, args, verbo] of casos) {
+      const r = leerGemini(conLlamadas({ name, args }));
+      expect(typeof r === 'object' && r.reply).toBe(`Esto es lo que voy a ${verbo}. ¿Confirmas?`);
+    }
+    expect(Object.values(RESPALDO)).toHaveLength(4);
+  });
+
+  it('HE-14-HU03-CA05 · ante «sí» pide seleccionar «Confirmar» y nunca dice que hizo el cambio (ET09)', () => {
+    const instruccion = instruccionDelSistema(CONTEXTO);
+    expect(instruccion).toContain(
+      'Si la persona escribe «sí», «confirmo» o algo parecido para aceptar una propuesta',
+    );
+    expect(instruccion).toContain('le pides que seleccione «Confirmar» en la propuesta');
+    expect(instruccion).toContain('Nunca dices que hiciste, creaste, cambiaste, moviste o eliminaste algo');
+  });
+
+  it('HE-14-HU03-ET10 · nunca anuncia un cambio sin la propuesta; dos tipos de cambio se piden en dos pasos', () => {
+    expect(instruccionDelSistema(CONTEXTO)).toContain(
+      'Nunca anuncias un cambio con texto sin llamar en la misma respuesta a la función de la propuesta.',
+    );
+    expect(
+      leerGemini(
+        conLlamadas(
+          { name: 'responder', args: { text: 'Listo, ya lo moví y lo eliminé.' } },
+          { name: 'propose_move_card', args: { card_id: 't1', column_id: 'c2' } },
+          { name: 'propose_delete_cards', args: { card_ids: ['t2'] } },
+        ),
+      ),
+    ).toEqual({ reply: UN_CAMBIO_A_LA_VEZ, intent: 'clarify', proposal: null });
+    expect(UN_CAMBIO_A_LA_VEZ).toBe('Puedo preparar un tipo de cambio a la vez. ¿Cuál hacemos primero?');
+  });
+
+  it('HE-14-HU06-ET13 · la columna de destino puede ser su nombre', () => {
+    const mover = FUNCIONES.find((f) => f.name === 'propose_move_card');
+    expect(JSON.stringify(mover)).toContain('El id o el nombre de una columna del tablero.');
+  });
+
+  it('HE-14-HU05-ET12 · la prioridad y la descripción se pueden quitar con null', () => {
+    const editar = FUNCIONES.find((f) => f.name === 'propose_edit_card') as unknown as {
+      parameters: { properties: { changes: { properties: Record<string, { nullable?: boolean }> } } };
+    };
+    const datos = editar.parameters.properties.changes.properties;
+    expect(datos.priority?.nullable).toBe(true);
+    expect(datos.description?.nullable).toBe(true);
   });
 });

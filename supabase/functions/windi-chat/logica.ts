@@ -146,6 +146,13 @@ export function instruccionDelSistema(contexto: Contexto): string {
     'no propones cambios hasta tener la respuesta.',
     'Si no puedes hacer algo, lo dices y ofreces una alternativa.',
     'Nunca haces cambios por tu cuenta: solo propones y la persona confirma.',
+    // HE-14-HU03: CA05, ET09 y ET10.
+    'Nunca dices que hiciste, creaste, cambiaste, moviste o eliminaste algo: los cambios solo se aplican cuando la',
+    'persona selecciona «Confirmar» en la propuesta.',
+    'Si la persona escribe «sí», «confirmo» o algo parecido para aceptar una propuesta, le pides que seleccione',
+    '«Confirmar» en la propuesta; no llamas ninguna función de propuesta y no dices que hiciste el cambio.',
+    'Nunca anuncias un cambio con texto sin llamar en la misma respuesta a la función de la propuesta.',
+    'En cada respuesta propones un solo tipo de cambio: crear, cambiar, mover o eliminar.',
     // HE-14-HU02: personalidad (ET01), trato (ET02, ET03), lenguaje (ET04) y formato (ET05 a ET07).
     'Personalidad: eres un compañero de organización cercano, relajado y optimista, cálido sin exagerar.',
     'Tratas a la persona de tú y la llamas por su nombre al saludarla y al celebrar un logro.',
@@ -179,7 +186,8 @@ export function instruccionDelSistema(contexto: Contexto): string {
     'Si la tarjeta está completada (tiene completed_on), avisas que está completada; si además pide que vuelva a',
     'estar pendiente, eso es mover la tarjeta, no editarla.',
     // HE-14-HU06: mover tarjetas.
-    'Para mover una tarjeta a otra columna llamas a propose_move_card con su id y el id de la columna de destino.',
+    'Para mover una tarjeta a otra columna llamas a propose_move_card con su id y el id o el nombre de la columna',
+    'de destino.',
     'Si dice que una tarjeta ya está completada o terminada, eso es moverla a la columna con función done (Hecho).',
     'Si pide que una tarjeta completada vuelva a estar pendiente, eso es moverla a otra columna; avisas que está',
     'completada antes de proponer.',
@@ -281,8 +289,9 @@ export const FUNCIONES = [
             type: { type: 'STRING', enum: ['task', 'reminder', 'event'] },
             title: { type: 'STRING', description: 'De 1 a 100 caracteres.' },
             due_date: { type: 'STRING', description: 'Fecha límite AAAA-MM-DD, no anterior a hoy.' },
-            description: { type: 'STRING' },
-            priority: { type: 'STRING', enum: ['high', 'medium', 'low'] },
+            // HE-14-HU05-ET12: `null` quita la descripción o la prioridad.
+            description: { type: 'STRING', nullable: true, description: 'null para quitarla.' },
+            priority: { type: 'STRING', enum: ['high', 'medium', 'low'], nullable: true, description: 'null para quitarla.' },
             label_ids: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Solo ids de etiquetas que existen.' },
           },
         },
@@ -297,7 +306,7 @@ export const FUNCIONES = [
       type: 'OBJECT',
       properties: {
         card_id: { type: 'STRING', description: 'El id de una tarjeta de las relacionadas con el mensaje.' },
-        column_id: { type: 'STRING', description: 'El id de una columna del tablero.' },
+        column_id: { type: 'STRING', description: 'El id o el nombre de una columna del tablero.' },
       },
       required: ['card_id', 'column_id'],
     },
@@ -326,6 +335,20 @@ const ACCION: Record<string, Propuesta['action']> = {
   propose_move_card: 'move',
   propose_delete_cards: 'delete',
 };
+
+/** HE-14-HU03-ET11: el texto que acompaña una propuesta corresponde a su acción. */
+export const RESPALDO: Record<Propuesta['action'], string> = {
+  create: 'Esto es lo que voy a crear. ¿Confirmas?',
+  edit: 'Esto es lo que voy a cambiar. ¿Confirmas?',
+  move: 'Esto es lo que voy a mover. ¿Confirmas?',
+  delete: 'Esto es lo que voy a eliminar. ¿Confirmas?',
+};
+
+/**
+ * Si Gemini llama a funciones de propuesta distintas en una respuesta, Windi pide hacerlo en dos pasos. DUDA:
+ * HE-14-HU03 no define el texto (docs/DUDAS.md).
+ */
+export const UN_CAMBIO_A_LA_VEZ = 'Puedo preparar un tipo de cambio a la vez. ¿Cuál hacemos primero?';
 
 /** Los elementos de la propuesta a partir de los argumentos de la función (INT-03 → EF-01). */
 function elementos(nombre: string, args: Record<string, unknown>): Propuesta['items'] {
@@ -388,13 +411,17 @@ export function leerGemini(respuesta: unknown): RespuestaWindi | CodigoDeError {
   ]
     .join('')
     .trim();
-  const llamada = llamadas.find((f) => typeof f.name === 'string' && f.name in ACCION);
+  const propuestas = llamadas.filter((f) => typeof f.name === 'string' && f.name in ACCION);
+  if (new Set(propuestas.map((f) => f.name)).size > 1) {
+    return { reply: UN_CAMBIO_A_LA_VEZ, intent: 'clarify', proposal: null };
+  }
+  const llamada = propuestas[0];
   const accion = llamada && typeof llamada.name === 'string' ? ACCION[llamada.name] : undefined;
   if (llamada && accion) {
     const args = esObjeto(llamada.args) ? llamada.args : {};
     return {
-      // DUDA: HE-14-HU04 Gemini puede llamar a la función sin texto. Valor usado: el texto del ejemplo de INT-03.
-      reply: reply || 'Esto es lo que voy a crear. ¿Confirmas?',
+      // DUDA: HE-14-HU04 Gemini puede llamar a la función sin texto. Valor usado: el texto de su acción (ET11).
+      reply: reply || RESPALDO[accion],
       intent: 'propose',
       proposal: { action: accion, items: elementos(String(llamada.name), args) },
     };
