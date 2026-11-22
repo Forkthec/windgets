@@ -609,8 +609,12 @@ button.wg-tarjeta__titulo:focus-visible {
 
 /* Planificador diario (P-PLA-01, HE-12-HU01-ET07): una tarjeta completada va tachada (y con la casilla marcada:
    no depende solo del estilo). */
+/* HE-12-HU01-ET04: la tarjeta es una fila (casilla, título, hora y prioridad) con la «i» a la derecha; sin esto,
+   `.wg-tarjeta` la dejaba en columna con la «i» debajo del título (P26). */
 .wg-planificador .wg-tarjeta {
+  flex-direction: row;
   align-items: center;
+  cursor: pointer;
 }
 .wg-tachada .wg-tarjeta__titulo {
   text-decoration: line-through;

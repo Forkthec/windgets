@@ -33,7 +33,14 @@ function Elemento({ item, alAbrir, alCompletar }: ElementoProps) {
   const { card, hour } = item;
   return (
     // ET07 y HE-12-HU02-ET05: una tarjeta en Hecho va tachada y con la casilla marcada.
-    <li className={`wg-tarjeta wg-fila${card.is_completed ? ' wg-tachada' : ''}`}>
+    // HE-12-HU02-ET01 (P26): un clic en el borde vacío de la tarjeta, fuera de la casilla y de la «i», también la
+    // alterna. La casilla sigue siendo el control del teclado.
+    <li
+      className={`wg-tarjeta wg-fila${card.is_completed ? ' wg-tachada' : ''}`}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) alCompletar(card.id, !card.is_completed);
+      }}
+    >
       <label className="wg-fila wg-planificador__casilla">
         {/* HE-12-HU02-ET01; ET10: la casilla conserva como nombre accesible el título de la tarjeta. */}
         <input

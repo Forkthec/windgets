@@ -195,6 +195,18 @@ describe('HE-12-HU02 · Casilla de completada en el planificador diario', () => 
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
+  it('HE-12-HU02-CA01 · Un clic en la parte vacía de la tarjeta la marca', async () => {
+    const pagar = tarjeta({ title: 'Pagar la luz', due_date: HOY, column_id: EN_PROGRESO.id });
+    const nucleo = await abrir([pagar]);
+    // ET01: el clic cae en la tarjeta, fuera del título, la casilla y la «i» (prueba manual del 22-nov, P26).
+    const elemento = screen.getByRole('checkbox', { name: 'Pagar la luz' }).closest('li');
+    await act(async () => {
+      fireEvent.click(elemento as HTMLElement);
+    });
+    expect(llamadasA(nucleo, 'card_set_completed')).toEqual([{ card_id: pagar.id, completed: true }]);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
   it('HE-12-HU02-CA04 · El botón de información no alterna la casilla', async () => {
     const pagar = tarjeta({ title: 'Pagar la luz', due_date: HOY, column_id: EN_PROGRESO.id });
     const nucleo = await abrir([pagar]);
