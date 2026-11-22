@@ -29,6 +29,17 @@ Construir Windgets completo: la aplicación de escritorio para Windows (wallpape
 9. **Respeta la identidad visual** (`interfaz.md`): sin transparencias apiladas, desenfoque ni vidrio; el significado nunca depende solo del color.
 10. **Cambios al esquema**: solo con una migración nueva en `supabase/migrations/` y su equivalente en `local/`; nunca edites una migración ya aplicada.
 
+## Rediseño visual (desde el 22-nov-2026)
+
+El equipo está rediseñando la interfaz a partir del Figma «Windgets». Mientras dure:
+
+1. `rediseno.md` es spec: lo que dice gana sobre la HU, la ET, `interfaz.md` y `producto.md` que contradiga, solo en
+   ese punto, y cuenta para la regla 1 de «Reglas duras».
+2. Todo cambio del rediseño, desde cualquier cuenta y en cualquier paso, se anota como decisión nueva (RD-nn) en
+   `rediseno.md`, con lo que contradice en «Pendiente para la edición final». No se editan las HU ni los modelos uno
+   por uno: se hace una sola edición al terminar el rediseño.
+3. Los commits del rediseño usan `rediseno: <verbo y objeto>`.
+
 ## Cómo tratar «NO DEFINIDO»
 
 «NO DEFINIDO» significa que el backlog y los modelos no fijan ese dato. No lo inventes con criterio propio:
