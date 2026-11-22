@@ -95,4 +95,29 @@ describe('HE-07-HU03 · Detalle de tarjeta', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.getByText('Esta tarjeta ya no existe.')).toBeTruthy();
   });
+
+  it('otro error al leer la tarjeta cierra el detalle con su mensaje, sin dejarlo vacío', async () => {
+    const nucleo = await abrirPantalla('kanban', 'Tablero Kanban', Kanban, [tarjeta({ title: 'Simple' })]);
+    nucleo.responder('card_get', () => ({
+      ok: false,
+      error: { code: 'internal.unexpected', message: 'Ocurrió un error. Intenta de nuevo.' },
+    }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Simple' }));
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByText('Ocurrió un error. Intenta de nuevo.')).toBeTruthy();
+  });
+
+  it('HE-07-HU03-CA05 · Abrir el detalle desde el menú de la tarjeta', async () => {
+    await abrirPantalla('kanban', 'Tablero Kanban', Kanban, [tarjeta({ title: 'Entregar informe' })]);
+    // ET02: «Vista detallada» del botón de acciones «⋮» abre el mismo Detalle de tarjeta que el título.
+    fireEvent.click(screen.getByRole('button', { name: 'Acciones de Entregar informe' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Vista detallada' }));
+    });
+    const detalle = screen.getByRole('dialog', { name: 'Detalle de tarjeta' });
+    expect(within(detalle).getByText('Entregar informe')).toBeTruthy();
+    expect(within(detalle).getByRole('button', { name: 'Editar' })).toBeTruthy();
+  });
 });

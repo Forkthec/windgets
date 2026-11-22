@@ -21,6 +21,7 @@ import type {
 import { Boton } from '@/ui/Boton/Boton';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
+import { MenuDeAcciones } from '@/ui/MenuDeAcciones/MenuDeAcciones';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import textos from '@/types/messages.es.json';
 import { FormularioColumna } from './FormularioColumna';
@@ -38,6 +39,9 @@ import { ENCABEZADO, type LugarDeSoltar, movimientoDelArrastre, ordenDelArrastre
 interface AccionesDelTablero {
   columnas: readonly Column[];
   alAbrir: (id: string) => void;
+  /** «Editar» y «Eliminar» del botón de acciones «⋮» de una tarjeta (HE-07-HU04-ET22). */
+  alEditarTarjeta: (id: string) => void;
+  alEliminarTarjeta: (id: string) => void;
   alMover: (movimiento: CardMoveParams) => void;
   /** HE-09-HU07: la vista de las tarjetas y las etiquetas para mostrar sus nombres en la vista expandida. */
   vista: PreferenceBoardCardView;
@@ -60,7 +64,7 @@ function useTablero(): AccionesDelTablero {
  * Se arrastra a otra columna o a otra posición (HE-09-HU02-ET01) y tiene «Mover a» (ET10).
  */
 function Tarjeta({ tarjeta }: { tarjeta: Card }) {
-  const { columnas, alAbrir, alMover, vista, etiquetas } = useTablero();
+  const { columnas, alAbrir, alEditarTarjeta, alEliminarTarjeta, alMover, vista, etiquetas } = useTablero();
   const expandida = vista === 'expanded';
   const arrastre = useDraggable({ id: tarjeta.id });
   const lugar: LugarDeSoltar = { columna: tarjeta.column_id, tarjeta: tarjeta.id };
@@ -103,13 +107,24 @@ function Tarjeta({ tarjeta }: { tarjeta: Card }) {
           })}
         </ul>
       )}
-      <MoverA
-        columnas={columnas}
-        actual={tarjeta.column_id}
-        alElegir={(columna) =>
-          alMover({ card_id: tarjeta.id, column_id: columna, placement: { kind: 'end' } })
-        }
-      />
+      <span className="wg-fila">
+        <MoverA
+          columnas={columnas}
+          actual={tarjeta.column_id}
+          alElegir={(columna) =>
+            alMover({ card_id: tarjeta.id, column_id: columna, placement: { kind: 'end' } })
+          }
+        />
+        {/* HE-07-HU04-ET22 (RT-02-ET10): las acciones de la tarjeta en su botón de acciones «⋮». */}
+        <MenuDeAcciones
+          nombre={tarjeta.title}
+          opciones={[
+            { etiqueta: 'Editar', alElegir: () => alEditarTarjeta(tarjeta.id) },
+            { etiqueta: 'Vista detallada', alElegir: () => alAbrir(tarjeta.id) },
+            { etiqueta: 'Eliminar', alElegir: () => alEliminarTarjeta(tarjeta.id) },
+          ]}
+        />
+      </span>
     </li>
   );
 }
@@ -285,7 +300,7 @@ export function Kanban() {
     },
     [columnas, mover, reordenar],
   );
-  const { abrirDetalle } = tarjetas;
+  const { abrirDetalle, abrirEdicion, abrirEliminacion } = tarjetas;
   // HE-06-HU08-CA03: desde el widget Kanban, el Detalle de tarjeta de la tarjeta seleccionada.
   useParametrosDeNavegacion(
     'kanban',
@@ -300,11 +315,13 @@ export function Kanban() {
     () => ({
       columnas: columnas?.map((c) => c.column) ?? [],
       alAbrir: abrirDetalle,
+      alEditarTarjeta: abrirEdicion,
+      alEliminarTarjeta: abrirEliminacion,
       alMover: (m) => void mover(m),
       vista,
       etiquetas,
     }),
-    [abrirDetalle, columnas, etiquetas, mover, vista],
+    [abrirDetalle, abrirEdicion, abrirEliminacion, columnas, etiquetas, mover, vista],
   );
 
   /** Columnas del tablero, contadas las tres por defecto (HE-09-HU03-ET07, D-167). */
