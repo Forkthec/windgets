@@ -103,9 +103,80 @@ pub fn widget_en(widgets: &[WidgetDePrueba], x: i32, y: i32) -> Option<WidgetDeP
         .find(|widget| widget.rect.contiene(x, y))
 }
 
+// ---------------------------------------------------------------- Capa sin marco (HE-02-HU01-ET13)
+
+/// Bits de estilo de `winuser.h` que usa la capa. Se repiten aquí para probar la regla en cualquier sistema.
+pub mod estilos {
+    pub const WS_POPUP: u32 = 0x8000_0000;
+    pub const WS_CHILD: u32 = 0x4000_0000;
+    pub const WS_BORDER: u32 = 0x0080_0000;
+    pub const WS_DLGFRAME: u32 = 0x0040_0000;
+    pub const WS_SYSMENU: u32 = 0x0008_0000;
+    pub const WS_THICKFRAME: u32 = 0x0004_0000;
+    pub const WS_MINIMIZEBOX: u32 = 0x0002_0000;
+    pub const WS_MAXIMIZEBOX: u32 = 0x0001_0000;
+    pub const WS_EX_DLGMODALFRAME: u32 = 0x0000_0001;
+    pub const WS_EX_WINDOWEDGE: u32 = 0x0000_0100;
+    pub const WS_EX_CLIENTEDGE: u32 = 0x0000_0200;
+    pub const WS_EX_STATICEDGE: u32 = 0x0002_0000;
+}
+
+/// HE-02-HU01-ET13: el estilo de la capa como hija de WorkerW, sin ventana emergente, título, marco ni botones,
+/// para que el área cliente sea todo el rectángulo y no queden franjas del fondo de Windows (CA07).
+pub fn estilo_de_la_capa(estilo: u32) -> u32 {
+    use estilos::*;
+    let quitar = WS_POPUP
+        | WS_BORDER
+        | WS_DLGFRAME
+        | WS_SYSMENU
+        | WS_THICKFRAME
+        | WS_MINIMIZEBOX
+        | WS_MAXIMIZEBOX;
+    (estilo & !quitar) | WS_CHILD
+}
+
+/// HE-02-HU01-ET13: el estilo extendido de la capa sin ningún borde (marco de diálogo, borde 3D ni borde estático).
+pub fn estilo_extendido_de_la_capa(estilo: u32) -> u32 {
+    use estilos::*;
+    estilo & !(WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE)
+}
+
 #[cfg(test)]
 mod pruebas {
     use super::*;
+
+    #[test]
+    fn ca_he_02_hu01_ca07() {
+        // HE-02-HU01-CA07 · Wallpaper en toda la pantalla: la capa queda sin marco ni bordes, así que su área
+        // cliente es todo el escritorio virtual con cualquier escala (ET13). La captura a 100, 125 y 150 % es manual.
+        use estilos::*;
+        // Una ventana de Tauri sin decoraciones todavía trae marco redimensionable, menú y botones.
+        let de_tauri =
+            WS_POPUP | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | 0x1000_0000;
+        let capa = estilo_de_la_capa(de_tauri);
+        assert_eq!(capa & WS_CHILD, WS_CHILD);
+        for bit in [
+            WS_POPUP,
+            WS_BORDER,
+            WS_DLGFRAME,
+            WS_SYSMENU,
+            WS_THICKFRAME,
+            WS_MINIMIZEBOX,
+            WS_MAXIMIZEBOX,
+        ] {
+            assert_eq!(capa & bit, 0, "{bit:#x}");
+        }
+        // WS_VISIBLE (0x1000_0000) y los demás bits no se tocan.
+        assert_eq!(capa & 0x1000_0000, 0x1000_0000);
+        let extendido = estilo_extendido_de_la_capa(
+            WS_EX_DLGMODALFRAME
+                | WS_EX_WINDOWEDGE
+                | WS_EX_CLIENTEDGE
+                | WS_EX_STATICEDGE
+                | 0x0000_0080,
+        );
+        assert_eq!(extendido, 0x0000_0080);
+    }
 
     fn monitor(izquierda: i32, arriba: i32, ancho: i32, alto: i32, escala: f64) -> Monitor {
         Monitor {

@@ -24,10 +24,10 @@ use windows::Win32::Graphics::Gdi::{
 };
 use windows::Win32::UI::HiDpi::{GetDpiForMonitor, MDT_EFFECTIVE_DPI};
 use windows::Win32::UI::WindowsAndMessaging::{
-    EnumWindows, FindWindowExW, FindWindowW, GWL_STYLE, GetParent, GetWindowLongPtrW, IsWindow,
-    IsWindowVisible, SMTO_NORMAL, SW_HIDE, SW_SHOWNOACTIVATE, SWP_NOACTIVATE, SWP_NOZORDER,
-    SendMessageTimeoutW, SetParent, SetWindowLongPtrW, SetWindowPos, ShowWindow, WS_CAPTION,
-    WS_CHILD, WS_POPUP, WS_THICKFRAME,
+    EnumWindows, FindWindowExW, FindWindowW, GWL_EXSTYLE, GWL_STYLE, GetClientRect, GetParent,
+    GetWindowLongPtrW, IsWindow, IsWindowVisible, SMTO_NORMAL, SW_HIDE, SW_SHOWNOACTIVATE,
+    SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOZORDER, SendMessageTimeoutW, SetParent,
+    SetWindowLongPtrW, SetWindowPos, ShowWindow,
 };
 use windows::core::{BOOL, PCWSTR, w};
 
@@ -307,11 +307,22 @@ fn anclar(capa: HWND, virtual_: Rect) -> Result<(), String> {
     let workerw = buscar_workerw(progman)
         .ok_or_else(|| "No se encontró la ventana WorkerW detrás de los íconos.".to_string())?;
 
+    // HE-02-HU01-ET13 (CA07): hija de WorkerW sin marco ni bordes, para que el área cliente sea todo el rectángulo.
+    // Antes solo se quitaban WS_POPUP, WS_CAPTION y WS_THICKFRAME y quedaban franjas del fondo de Windows.
     // SAFETY: `capa` es la ventana de nivel superior de este proceso; solo se cambian bits de estilo.
     unsafe {
-        let estilo = GetWindowLongPtrW(capa, GWL_STYLE);
-        let quitar = (WS_POPUP | WS_CAPTION | WS_THICKFRAME).0 as isize;
-        SetWindowLongPtrW(capa, GWL_STYLE, (estilo & !quitar) | WS_CHILD.0 as isize);
+        let estilo = GetWindowLongPtrW(capa, GWL_STYLE) as u32;
+        SetWindowLongPtrW(
+            capa,
+            GWL_STYLE,
+            geometria::estilo_de_la_capa(estilo) as isize,
+        );
+        let extendido = GetWindowLongPtrW(capa, GWL_EXSTYLE) as u32;
+        SetWindowLongPtrW(
+            capa,
+            GWL_EXSTYLE,
+            geometria::estilo_extendido_de_la_capa(extendido) as isize,
+        );
     }
 
     // SAFETY: ambas ventanas existen; SetParent no recibe punteros.
@@ -332,7 +343,8 @@ fn posicionar(capa: HWND, workerw: HWND, virtual_: Rect) -> Result<(), String> {
     unsafe { MapWindowPoints(None, Some(workerw), &mut esquina) };
 
     // SAFETY: `capa` existe; los números son el tamaño del escritorio virtual en píxeles físicos. Sin
-    // SWP_SHOWWINDOW: la capa sigue oculta hasta que haya sesión.
+    // SWP_SHOWWINDOW: la capa sigue oculta hasta que haya sesión. SWP_FRAMECHANGED aplica el estilo sin marco
+    // (HE-02-HU01-ET13): sin él, Windows conserva el marco calculado antes y el área cliente queda más chica.
     unsafe {
         SetWindowPos(
             capa,
@@ -341,10 +353,26 @@ fn posicionar(capa: HWND, workerw: HWND, virtual_: Rect) -> Result<(), String> {
             esquina[0].y,
             virtual_.ancho(),
             virtual_.alto(),
-            SWP_NOZORDER | SWP_NOACTIVATE,
+            SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
         )
     }
     .map_err(|error| format!("SetWindowPos falló: {error}"))?;
+
+    // ET13: el área cliente debe ser todo el escritorio virtual; si no, se registra para la prueba manual.
+    let mut cliente = RECT::default();
+    // SAFETY: `cliente` es un RECT local válido durante la llamada.
+    if unsafe { GetClientRect(capa, &mut cliente) }.is_ok()
+        && (cliente.right - cliente.left, cliente.bottom - cliente.top)
+            != (virtual_.ancho(), virtual_.alto())
+    {
+        eprintln!(
+            "La capa del wallpaper no cubre el escritorio: área cliente {}×{}, escritorio {}×{}.",
+            cliente.right - cliente.left,
+            cliente.bottom - cliente.top,
+            virtual_.ancho(),
+            virtual_.alto()
+        );
+    }
 
     Ok(())
 }
