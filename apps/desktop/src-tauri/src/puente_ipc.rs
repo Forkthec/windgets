@@ -57,9 +57,10 @@ pub struct Nucleo {
     pub planificador: ServicioDelPlanificador<CalendarioDelSistema>,
     pub personalizacion: ServicioDePersonalizacion,
     pub host: EstadoDelHost,
-    /// Un ciclo de sincronización a la vez con el cierre de sesión (HE-16-HU03): el cierre espera a que termine
-    /// el ciclo en curso antes de vaciar la base.
+    /// Un ciclo de sincronización a la vez con el cierre de sesión (HE-16-HU03): el cierre detiene el ciclo en
+    /// curso y toma su turno antes de vaciar la base, sin esperar más de 5 s (CA06, ET08).
     pub ciclo: tokio::sync::Mutex<()>,
+    pub cancelacion: motor_de_sincronizacion::cancelacion::Cancelacion,
     /// El registro de Windows para el inicio automático (INT-08).
     pub arranque: Box<dyn crate::integracion_con_el_sistema::inicio_automatico::RegistroDeArranque>,
     /// La conversación con Windi, en memoria mientras la aplicación está abierta (HE-14-HU01-ET14).
@@ -81,6 +82,7 @@ impl Nucleo {
             personalizacion: ServicioDePersonalizacion::nuevo(),
             host: EstadoDelHost::default(),
             ciclo: tokio::sync::Mutex::new(()),
+            cancelacion: Default::default(),
             arranque:
                 crate::integracion_con_el_sistema::inicio_automatico::registro_de_la_aplicacion(),
             windi: crate::servicio_de_windi::ServicioDeWindi::nuevo(),
@@ -195,6 +197,10 @@ pub fn sincronizar(app: AppHandle) {
             std::thread::sleep(REVISION_DE_LA_COLA);
             let nucleo = app.state::<Nucleo>();
             let _ciclo = nucleo.ciclo.blocking_lock();
+            // HE-16-HU03-ET08: mientras se cierra la sesión no empieza otro ciclo.
+            if nucleo.cancelacion.pedida() {
+                continue;
+            }
             let Some(sesion) = tauri::async_runtime::block_on(sesion_para_la_nube(&app, &nucleo))
             else {
                 // Tras cerrar sesión (HE-16-HU03), la próxima sesión empieza como al abrir la aplicación: con la
@@ -224,49 +230,55 @@ pub fn sincronizar(app: AppHandle) {
                 tauri::async_runtime::block_on(motor_de_sincronizacion::estado(base)),
                 Ok(e) if e.pending_count > 0
             );
-            let resultado = tauri::async_runtime::block_on(async {
-                if reconectado {
-                    motor_de_sincronizacion::calibrar(base, cliente, &credenciales, ahora).await?;
-                }
-                let envio = motor_de_sincronizacion::enviar(
-                    base,
-                    cliente,
-                    &credenciales,
-                    antes,
-                    reconectado,
-                    ahora,
-                )
-                .await?;
-                let consultar = cliente.en_linea()
-                    && (reconectado
-                        || envio.llamo
-                        || ahora - ultima_consulta >= CONSULTA_PERIODICA_MS);
-                // HE-02-HU01-CA01: los catálogos van antes que `sync_pull`, porque los temas y la copia aplicada
-                // que llegan los referencian.
-                let catalogos = if consultar {
-                    motor_de_sincronizacion::catalogo::descargar_catalogo(
+            // HE-16-HU03-CA06: el cierre de sesión puede detener el ciclo; sus transacciones se revierten.
+            let Some(resultado) =
+                tauri::async_runtime::block_on(nucleo.cancelacion.hasta_que_se_cancele(async {
+                    if reconectado {
+                        motor_de_sincronizacion::calibrar(base, cliente, &credenciales, ahora)
+                            .await?;
+                    }
+                    let envio = motor_de_sincronizacion::enviar(
                         base,
                         cliente,
                         &credenciales,
+                        antes,
+                        reconectado,
                         ahora,
                     )
-                    .await?
-                } else {
-                    Vec::new()
-                };
-                if !catalogos.is_empty() {
-                    let _ = app.emit(
-                        "catalog_updated",
-                        EventMapCatalogUpdated { kinds: catalogos },
-                    );
-                }
-                let descarga = if consultar {
-                    motor_de_sincronizacion::descargar(base, cliente, &credenciales).await?
-                } else {
-                    motor_de_sincronizacion::Ciclo::default()
-                };
-                Ok::<_, sqlx::Error>((envio, descarga))
-            });
+                    .await?;
+                    let consultar = cliente.en_linea()
+                        && (reconectado
+                            || envio.llamo
+                            || ahora - ultima_consulta >= CONSULTA_PERIODICA_MS);
+                    // HE-02-HU01-CA01: los catálogos van antes que `sync_pull`, porque los temas y la copia aplicada
+                    // que llegan los referencian.
+                    let catalogos = if consultar {
+                        motor_de_sincronizacion::catalogo::descargar_catalogo(
+                            base,
+                            cliente,
+                            &credenciales,
+                            ahora,
+                        )
+                        .await?
+                    } else {
+                        Vec::new()
+                    };
+                    if !catalogos.is_empty() {
+                        let _ = app.emit(
+                            "catalog_updated",
+                            EventMapCatalogUpdated { kinds: catalogos },
+                        );
+                    }
+                    let descarga = if consultar {
+                        motor_de_sincronizacion::descargar(base, cliente, &credenciales).await?
+                    } else {
+                        motor_de_sincronizacion::Ciclo::default()
+                    };
+                    Ok::<_, sqlx::Error>((envio, descarga))
+                }))
+            else {
+                continue;
+            };
             en_linea_antes = Some(cliente.en_linea());
             // HE-15-HU02-ET05: un envío que no encuentra la red avisa que se perdió la conexión (EV-03).
             avisar_conectividad(&app, antes);
@@ -452,6 +464,14 @@ pub fn connectivity_get(nucleo: State<'_, Nucleo>, params: NoParams) -> IpcResul
     })
 }
 
+/// IPC-DESK-14 `system_time_format_get` (HE-04-HU03-CA02, CA03, ET02): el formato de hora corta de Windows para
+/// el widget Reloj; si no se puede leer, 24 horas.
+#[tauri::command]
+pub fn system_time_format_get(params: NoParams) -> IpcResult<crate::tipos::TimeFormat> {
+    let _ = params;
+    correcto(crate::integracion_con_el_sistema::formato_de_hora::leer())
+}
+
 /// IPC-AUTH-01 `auth_register_start` (HE-01-HU01, HE-01-HU02).
 #[tauri::command]
 pub async fn auth_register_start(
@@ -592,15 +612,36 @@ pub fn auth_google_cancel(
     correcto(())
 }
 
+/// Lo que pide una segunda ejecución de la aplicación (INT-10; HE-06-HU08-ET09).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SegundaEjecucion {
+    /// El regreso `windgets://auth/callback?…` del inicio con Google.
+    RegresoDeGoogle(String),
+    /// Volver a abrir la aplicación: la misma ventana pasa al frente, sin otra instancia ni otra ventana.
+    Abrir,
+}
+
+/// HE-06-HU08-ET09: con la dirección del regreso de Google la atiende la sesión; con cualquier otro argumento (o
+/// ninguno, como al abrir el acceso directo) la persona volvió a abrir la aplicación.
+pub fn segunda_ejecucion(argumentos: Vec<String>) -> SegundaEjecucion {
+    argumentos
+        .into_iter()
+        .find(|a| a.starts_with(crate::servicio_de_sesion::google::REGRESO))
+        .map_or(SegundaEjecucion::Abrir, SegundaEjecucion::RegresoDeGoogle)
+}
+
 /// INT-10: Windows abre `windgets://auth/callback?…` en una segunda ejecución; el plugin de instancia única
 /// entrega sus argumentos a esta instancia. Si es el regreso de la espera de Google, cambia el código por la
 /// sesión, emite EV-02 `auth_google_result` y, con la sesión iniciada, EV-01 `session_changed` (RT-01-CA02).
+/// Cualquier otra segunda ejecución pasa al frente la misma ventana principal, en la última pantalla visitada,
+/// como «Abrir» del ícono del área de notificación (HE-06-HU08-CA08, ET09; HE-17-HU02).
 pub fn atender_argumentos(app: &AppHandle, argumentos: Vec<String>) {
-    let Some(direccion) = argumentos
-        .into_iter()
-        .find(|a| a.starts_with(crate::servicio_de_sesion::google::REGRESO))
-    else {
-        return;
+    let direccion = match segunda_ejecucion(argumentos) {
+        SegundaEjecucion::RegresoDeGoogle(direccion) => direccion,
+        SegundaEjecucion::Abrir => {
+            crate::integracion_con_el_sistema::area_de_notificacion::abrir_ventana(app);
+            return;
+        }
     };
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
@@ -2474,8 +2515,10 @@ pub async fn auth_get_sign_out_info(
     ))
 }
 
-/// IPC-AUTH-14 `auth_sign_out` (HE-16-HU03-CA01, CA04; D-190; RNF-19). Espera a que termine el ciclo de
-/// sincronización en curso, para que no escriba en la base recién vaciada; borra el token, la base y los archivos;
+/// IPC-AUTH-14 `auth_sign_out` (HE-16-HU03-CA01, CA04; D-190; RNF-19). Detiene el ciclo de sincronización en curso
+/// y toma su turno, sin esperar más de 5 s (CA06, ET08), para que no escriba en la base recién vaciada; si no lo
+/// suelta a tiempo, deja la limpieza pendiente para el próximo inicio. Borra el token, la base y los archivos; si el
+/// token no se borra responde `auth.sign_out_failed` y la sesión sigue iniciada (CA07, ET09);
 /// oculta la capa, con lo que se ve de nuevo el fondo original de Windows (ET03), y emite `session_changed` con
 /// `reason: 'sign_out'` (EV-01): la ventana principal abre Inicio de sesión (ET06).
 #[tauri::command]
@@ -2486,12 +2529,26 @@ pub async fn auth_sign_out(
 ) -> Result<IpcResult<()>, ()> {
     let _ = params;
     let r = {
-        let _ciclo = nucleo.ciclo.lock().await;
-        nucleo
+        let turno = nucleo
+            .cancelacion
+            .tomar_el_turno(
+                &nucleo.ciclo,
+                motor_de_sincronizacion::cancelacion::PLAZO_DEL_CIERRE,
+            )
+            .await;
+        let r = nucleo
             .sesion
             .cerrar_sesion(nucleo.planificador.base(), &carpeta_de_archivos())
-            .await
+            .await;
+        if r.is_ok() && turno.is_none() {
+            crate::servicio_de_sesion::marcar_limpieza_pendiente(nucleo.planificador.base()).await;
+        }
+        nucleo.cancelacion.terminar();
+        r
     };
+    if r.is_err() {
+        return Ok(con_mensaje(r));
+    }
     nucleo.personalizacion.olvidar_borrador();
     nucleo.windi.olvidar();
     avisar_wallpaper(&app).await;
@@ -2503,7 +2560,17 @@ pub async fn auth_sign_out(
             reason: EventMapSessionChangedReason::SignOut,
         },
     );
-    Ok(con_mensaje(Ok(r)))
+    Ok(con_mensaje(r))
+}
+
+/// HE-16-HU03-ET09: al abrir la aplicación, repite la limpieza que quedó pendiente al cerrar la sesión.
+pub fn repetir_limpieza_pendiente(app: &AppHandle) {
+    let nucleo = app.state::<Nucleo>();
+    tauri::async_runtime::block_on(
+        nucleo
+            .sesion
+            .repetir_limpieza_pendiente(nucleo.planificador.base(), &carpeta_de_archivos()),
+    );
 }
 
 /// IPC-DESK-10 `autostart_get` (HE-16-HU02-CA03, ET06): el estado que tiene Windows.
@@ -2815,16 +2882,22 @@ pub async fn windi_confirm_proposal(
     };
     let user_id = sesion.user_id.to_lowercase();
     let cliente = nucleo.sesion.auth();
-    let en_linea = {
+    // HE-14-HU03-ET13: sin conexión, como en CA02; con conexión y una descarga fallida, como en ET12.
+    let consulta = {
         let _ciclo = nucleo.ciclo.lock().await;
         let credenciales = motor_de_sincronizacion::Credenciales {
             user_id: &user_id,
             token: &sesion.access_token,
         };
-        let _ =
+        let descarga =
             motor_de_sincronizacion::descargar(nucleo.planificador.base(), cliente, &credenciales)
                 .await;
-        cliente.comprobar_conexion().await
+        let fallo = !descarga.is_ok_and(|ciclo| !ciclo.fallo);
+        match (cliente.comprobar_conexion().await, fallo) {
+            (false, _) => crate::servicio_de_windi::ConsultaALaNube::SinConexion,
+            (true, true) => crate::servicio_de_windi::ConsultaALaNube::Fallida,
+            (true, false) => crate::servicio_de_windi::ConsultaALaNube::Lista,
+        }
     };
     let manejador = crate::servicio_de_windi::manejador::ManejadorDelPlanificador {
         planificador: &nucleo.planificador,
@@ -2836,7 +2909,7 @@ pub async fn windi_confirm_proposal(
         .confirmar(
             &manejador,
             &params.proposal_id,
-            en_linea,
+            consulta,
             chrono::Utc::now().timestamp_millis(),
         )
         .await;
@@ -2946,6 +3019,28 @@ pub async fn card_unassign_time_block(
 }
 
 #[cfg(test)]
+mod pruebas_de_la_segunda_ejecucion {
+    use super::*;
+
+    #[test]
+    fn ca_he_06_hu08_ca08() {
+        // HE-06-HU08-CA08 · Aplicación ya abierta (ET09): una segunda ejecución no abre otra instancia ni otra
+        // ventana (plugin de instancia única); sin el regreso de Google, pasa al frente la misma ventana principal.
+        // Que la ventana quede al frente en la pantalla del widget se prueba en AbrirPantalla.test.tsx y a mano.
+        assert_eq!(segunda_ejecucion(vec![]), SegundaEjecucion::Abrir);
+        assert_eq!(
+            segunda_ejecucion(vec!["C:\\Program Files\\Windgets\\windgets.exe".into()]),
+            SegundaEjecucion::Abrir
+        );
+        let regreso = "windgets://auth/callback?state=s1&code=c1".to_string();
+        assert_eq!(
+            segunda_ejecucion(vec!["windgets.exe".into(), regreso.clone()]),
+            SegundaEjecucion::RegresoDeGoogle(regreso)
+        );
+    }
+}
+
+#[cfg(test)]
 mod pruebas_de_la_personalizacion_sincronizada {
     use super::*;
 
@@ -2961,5 +3056,43 @@ mod pruebas_de_la_personalizacion_sincronizada {
     fn ca_he_15_hu04_ca07() {
         // HE-15-HU04-CA07 · Tras más de 30 s sin vueltas (suspendido), una consulta inmediata (ET08).
         assert!(se_reanudo(Some(1_000), 1_001 + REPOSO_MS));
+    }
+}
+
+#[cfg(test)]
+mod pruebas_del_alcance_de_archivos {
+    use super::*;
+
+    #[test]
+    fn ca_he_02_hu03_ca09() {
+        // HE-02-HU03-CA09, ET11 · Las ventanas muestran la imagen de fondo desde la carpeta de archivos de la
+        // aplicación con el protocolo de assets: el alcance de `tauri.conf.json` debe cubrir la carpeta donde el
+        // Núcleo la guarda (`%APPDATA%\Windgets\files`). En Windows `$DATA` es `%APPDATA%`; `$APPDATA` es
+        // `%APPDATA%\<identificador>` y no la cubre.
+        let conf: serde_json::Value = serde_json::from_str(include_str!("../tauri.conf.json"))
+            .expect("tauri.conf.json válido");
+        let alcance: Vec<&str> = conf["app"]["security"]["assetProtocol"]["scope"]
+            .as_array()
+            .expect("alcance del protocolo de assets")
+            .iter()
+            .filter_map(serde_json::Value::as_str)
+            .collect();
+        assert!(alcance.contains(&"$DATA/Windgets/files/**"), "{alcance:?}");
+        let carpeta = carpeta_de_archivos();
+        let mut partes = carpeta.components().rev();
+        assert_eq!(
+            partes.next().map(|p| p.as_os_str().to_owned()),
+            Some("files".into())
+        );
+        assert_eq!(
+            partes.next().map(|p| p.as_os_str().to_owned()),
+            Some("Windgets".into())
+        );
+        if let Some(appdata) = std::env::var_os("APPDATA") {
+            assert_eq!(
+                carpeta.parent().and_then(|p| p.parent()),
+                Some(std::path::Path::new(&appdata))
+            );
+        }
     }
 }

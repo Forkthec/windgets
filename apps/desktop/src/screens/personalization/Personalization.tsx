@@ -1,5 +1,6 @@
 import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useEffect, useState } from 'react';
+import { recursoDelFondo } from '@/capa/Capa';
 import { urlDeArchivo } from '@/ipc/archivos';
 import textos from '@/types/messages.es.json';
 import type {
@@ -64,6 +65,7 @@ export function Personalization() {
   // y el rechazo del último archivo elegido.
   const [imagenes, setImagenes] = useState<CatalogItem[] | null>(null);
   const [vistasPropias, setVistasPropias] = useState<Record<string, string>>({});
+  const [imagenResuelta, setImagenResuelta] = useState<{ clave: string; url: string } | null>(null);
   const [rechazo, setRechazo] = useState('');
   const [pendiente, setPendiente] = useState<{ id: string; mensaje: string } | null>(null);
   // M-15: el mensaje del Núcleo al aplicar con cambios sin guardar (HE-02-HU12-CA02).
@@ -113,6 +115,26 @@ export function Personalization() {
 
   // Los temas guardados cambian al guardar, crear o eliminar uno (EV-12 `themes_changed`).
   useEffect(() => escuchar('themes_changed', () => void leerTemas()), [escuchar, leerTemas]);
+
+  // HE-02-HU03-ET11: la ruta local de la imagen de fondo propia o del catálogo del tema en edición.
+  const recursoDeImagen =
+    borrador && borrador.content.background.source !== 'template_default'
+      ? recursoDelFondo(borrador.content)
+      : null;
+  const claveDelFondo = recursoDeImagen ? `${recursoDeImagen.kind}:${recursoDeImagen.id}` : '';
+  useEffect(() => {
+    if (!recursoDeImagen) return;
+    let vigente = true;
+    void invocar('asset_resolve', recursoDeImagen).then((r) => {
+      if (vigente && r.ok && r.value.state === 'ready')
+        setImagenResuelta({ clave: claveDelFondo, url: urlDeArchivo(r.value.url) });
+    });
+    return () => {
+      vigente = false;
+    };
+    // Se vuelve a resolver solo cuando cambia la imagen (la clave), no en cada render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claveDelFondo, invocar]);
 
   // HE-15-HU04-CA08 (ET11, ET12): llega una personalización más reciente de otro computador con cambios sin guardar
   // en la vista previa: el escritorio la aplica, la vista previa conserva los cambios y se muestra el aviso.
@@ -272,11 +294,16 @@ export function Personalization() {
   const aviso = borrador ? avisoDeContraste(borrador.legibility) : null;
 
   const fondo = borrador?.content.background;
+  // HE-02-HU03-ET11: la imagen propia o del catálogo se muestra desde la carpeta de archivos de la aplicación
+  // (asset_resolve), también en un tema guardado antes o al volver a abrir la aplicación. Mientras se resuelve,
+  // la imagen recién importada o la miniatura del catálogo.
+  const resuelta = imagenResuelta && imagenResuelta.clave === claveDelFondo ? imagenResuelta.url : undefined;
   const imagenDeFondo =
     fondo?.source === 'own' && fondo.uploaded_image_id
-      ? vistasPropias[fondo.uploaded_image_id]
+      ? (resuelta ?? vistasPropias[fondo.uploaded_image_id])
       : fondo?.source === 'catalog'
-        ? imagenes?.find((i) => i.id === fondo.catalog_image_id)?.thumbnail_url
+        ? (resuelta ??
+          urlDeArchivo(imagenes?.find((i) => i.id === fondo.catalog_image_id)?.thumbnail_url ?? ''))
         : undefined;
   // HE-02-HU06: la fuente y el tamaño de los textos de la vista previa.
   const nombreDeLaFuente = fuentes.find((f) => f.id === borrador?.content.font.id)?.name;
@@ -369,7 +396,7 @@ export function Personalization() {
                               void cambiar({ background: { source: 'catalog', catalog_image_id: i.id } })
                             }
                           >
-                            <img src={i.thumbnail_url} alt="" width={96} height={54} />
+                            <img src={urlDeArchivo(i.thumbnail_url)} alt="" width={96} height={54} />
                             <span>{i.name}</span>
                           </button>
                         </li>

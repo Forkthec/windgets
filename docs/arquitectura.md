@@ -38,12 +38,12 @@ Los niveles 1 a 4 y la vista de despliegue están descritos al final de este arc
 
 El Núcleo tiene las reglas de negocio, las validaciones definitivas, SQLite, la sincronización, los reportes, la cuenta y la integración con Windows. React dibuja las pantallas y repite solo las validaciones de campo para mostrar el mensaje al instante; el Núcleo vuelve a validar. Los tipos se definen en Rust y se generan con ts-rs. La tabla completa por responsabilidad está más abajo («Responsabilidades de Rust y de React»).
 
-## Decisiones D-185 a D-200 (y D-203, D-207)
+## Decisiones D-185 a D-200 (y D-203, D-207, D-214, D-215)
 
 | ID | Decisión (resumen operativo) |
 |---|---|
 | D-185 | Tres vistas WebView2: principal, capa del wallpaper (WorkerW) y ventana de edición temporal a pantalla completa. |
-| D-186 | Entrada del mouse en widgets interactivos: el Núcleo registra Raw Input con `RIDEV_INPUTSINK` y reenvía a la capa la selección solo si la ventana bajo el cursor es el escritorio (SysListView32 de SHELLDLL_DefView), el punto cae en el rectángulo de un widget interactivo y `LVM_HITTEST` no encuentra un ícono. Si hay ícono, el evento queda para el escritorio. Se valida en el spike (HE-02-HU01-ET11). |
+| D-186 | Entrada del mouse en widgets interactivos: el Núcleo registra Raw Input con `RIDEV_INPUTSINK` y reenvía a la capa la selección solo si la ventana bajo el cursor es el escritorio (SysListView32 de SHELLDLL_DefView), el punto cae en el rectángulo de un widget interactivo y `LVM_HITTEST` no encuentra un ícono. Si hay ícono, el evento queda para el escritorio. Se valida en el spike (HE-02-HU01-ET11). Actualización v12 (D-214, D-215): la selección que abre una pantalla se entrega al soltar el botón, solo si el puntero no se movió más de 4 píxeles desde que se presionó (`pointer_released`, HE-06-HU08-ET08); el drag-and-drop sigue empezando al presionar (`pointer_forwarded`). Un gancho de mouse de bajo nivel evita que Windows reciba el presionar y el soltar dentro del rectángulo de un widget interactivo sin ícono (D-215, HE-06-HU06-ET07). |
 | D-187 | Una sola ventana de capa cubre el escritorio virtual; el Núcleo entrega rectángulos y escalas de cada monitor y la vista dibuja la misma configuración en cada uno. |
 | D-188 | Reglas, validaciones definitivas, SQLite, sincronización, reportes e integración con Windows en el Núcleo; tipos compartidos generados con ts-rs. |
 | D-189 | Combinación de cambios solo en el servidor (RPC `sync_push`, `sync_pull`, hora por campo corregida con la del servidor). El cliente envía 2 s después de guardar (agrupado), consulta al abrir, al recuperar la conexión y cada 60 s, y nunca con el computador suspendido. Sin Supabase Realtime. |
@@ -61,6 +61,8 @@ El Núcleo tiene las reglas de negocio, las validaciones definitivas, SQLite, la
 | D-203 | El indicador de sincronización está siempre visible en la ventana principal, junto al menú principal. |
 | D-207 | Soporte solo para Windows 11 (compilación 22000 o posterior), de 64 bits (x64), por decisión del equipo del 15-nov-2026. Windows 10 22H2 deja de ser requisito mínimo y de probarse. |
 | D-208 | Con D-207, D-050 (requisitos del sistema), D-057 (Windows 10 22H2 como mínimo) y D-131 (técnica WorkerW en Windows 10 y 11) se reducen a Windows 11: los textos literales de la landing y del instalador, la comprobación del instalador (compilación 22000 o posterior; la 19045 deja de pasar) y los modelos dicen «Windows 11». Decidido por Paula el 15-nov-2026, sin Jira. |
+| D-214 | v12 (21-nov-2026): correcciones de P24 de las pruebas de usuario. Rige para RT-02, RT-04, HE-02, HE-03, HE-04-HU03, HE-05, HE-06, HE-07, HE-08, HE-09, HE-10-HU03, HE-12, HE-14 y HE-16-HU03. |
+| D-215 | Gancho de mouse de bajo nivel (`WH_MOUSE_LL`) sobre los widgets interactivos, para que Windows no inicie la selección del escritorio. Se valida antes con un spike en Windows 11 (RNF-35; HE-06-HU06). |
 
 Decisiones anteriores que también rigen: D-048 (conflictos por campo, gana la hora más reciente), D-049 (primero lo guardado; máximo una consulta por minuto), D-050 (requisitos del sistema; D-208), D-131 (WorkerW; D-208), D-132 y D-180 (Gemini y Supabase como backend), D-135 (una configuración para todos los monitores), D-164 (trabajo sin conexión), D-175 (SMTC).
 
@@ -789,7 +791,7 @@ Cada flujo se resume aquí; el detalle paso a paso está en los diagramas de sec
 
 ## C4 · Dudas y propuestas
 
-- Las decisiones D-185 a D-200, D-203 y D-207 están ratificadas; un cambio se registra como decisión nueva antes de modificar el modelo.
+- Las decisiones D-185 a D-200, D-203, D-207, D-214 y D-215 están ratificadas; un cambio se registra como decisión nueva antes de modificar el modelo.
 - Los proveedores de clima (Open-Meteo) y de noticias (GNews) son una propuesta; el backlog no los nombra.
 - Cada contenedor con estructura interna modelada (Núcleo, Ventana principal, Capa del wallpaper y los widgets, Ventana de edición de la distribución, API de datos y Edge Functions) tiene su vista de componentes; Supabase Auth, la base de datos en la nube, el almacenamiento de archivos, la landing page y el instalador no se descomponen porque no tienen estructura propia que modelar (la purga programada con pg_cron es parte de la base de datos en la nube).
 - Cada ventana WebView2 carga su propia instancia del Cliente IPC tipado; por eso aparece en las vistas 3d y 3e con el mismo nombre y el mismo código fuente.

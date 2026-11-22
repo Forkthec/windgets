@@ -42,7 +42,7 @@ export type ErrorCode =
   | 'password.required' | 'password.invalid' | 'password.same_as_current'
   | 'password_confirmation.required' | 'password_confirmation.mismatch'
   | 'code.required' | 'code.incorrect' | 'code.expired' | 'code.resend_too_soon'
-  | 'auth.rate_limited' | 'auth.invalid_credentials'
+  | 'auth.rate_limited' | 'auth.invalid_credentials' | 'auth.sign_out_failed'
   // tarjetas, agenda y planificador
   | 'title.required' | 'title.too_long'
   | 'due_date.required' | 'due_date.invalid' | 'due_date.in_past'
@@ -59,13 +59,13 @@ export type ErrorCode =
   | 'range.start_after_end' | 'range.too_long'
   // temas y personalización
   | 'draft.unsaved_changes' | 'draft.unsaved_changes_on_apply' | 'draft.no_changes'
-  | 'theme.limit_reached' | 'theme.already_applied' | 'theme.applied_not_deletable'
+  | 'theme.limit_reached' | 'theme.already_applied' | 'theme.applied_not_deletable' | 'theme.content_duplicate'
   | 'background.already_default'
   | 'template.not_found' | 'font.not_found' | 'image.not_found'
   // imágenes y catálogos
   | 'image.format_not_allowed' | 'image.too_large' | 'image.unreadable' | 'asset.unavailable'
   // widgets
-  | 'widget.not_found' | 'widget.already_added' | 'widget.default_not_deletable'
+  | 'widget.not_found' | 'widget.already_added' | 'widget.default_not_deletable' | 'layout.widget_missing'
   | 'city.not_found' | 'city.duplicate' | 'city.too_long'
   | 'text.too_long'
   | 'carousel.too_few' | 'carousel.too_many'
@@ -75,7 +75,8 @@ export type ErrorCode =
   // música
   | 'media.no_session' | 'media.action_unsupported'
   // agente de IA
-  | 'message.too_long' | 'windi.unavailable' | 'proposal.discarded';
+  | 'message.too_long' | 'windi.unavailable' | 'proposal.discarded' | 'windi.card_not_found' | 'windi.column_not_found' | 'windi.label_not_found'
+  | 'windi.same_value' | 'windi.already_in_column' | 'windi.apply_failed';
 
 /** Parámetros con los que el Núcleo sustituye los marcadores del mensaje (contratos.md, 1.4). */
 export type ErrorParams = Record<string, string | number>;
@@ -650,6 +651,12 @@ export interface WindiRejectProposalResult { reply: WindiMessage }
 type NoParams = Record<string, never>;
 type Void = null;
 
+/** Formato de hora corta de Windows (`LOCALE_SSHORTTIME`) para el widget Reloj (HE-04-HU03-ET02). */
+export interface TimeFormat {
+  hour_cycle: 'h12' | 'h23';
+  two_digit_hour: boolean;
+}
+
 export interface CommandMap {
   // a.1 cuenta y sesión
   auth_register_start: { params: AuthRegisterStartParams; result: AuthRegisterStartResult };
@@ -751,6 +758,8 @@ export interface CommandMap {
   preference_get: { params: NoParams; result: Preference };
   preference_set: { params: Preference; result: Void };
   connectivity_get: { params: NoParams; result: Connectivity };
+  /** IPC-DESK-14: formato de hora corta de Windows; 24 horas si no se puede leer (HE-04-HU03-ET02). */
+  system_time_format_get: { params: NoParams; result: TimeFormat };
   // a.11 música
   media_get_session: { params: NoParams; result: MediaSession };
   media_toggle_play_pause: { params: NoParams; result: Void };
@@ -808,6 +817,8 @@ export interface EventMap {
   monitors_changed: { monitors: Monitor[] };
   /** Coordenadas en el sistema de la capa. */
   pointer_forwarded: { x: number; y: number; monitor_id: string; button: 'primary' };
+  /** EV-27: al soltar sin mover el puntero más de 4 px desde EV-18; coordenadas de la capa. */
+  pointer_released: { x: number; y: number; monitor_id: string; button: 'primary' };
   media_session_changed: MediaSession;
   widget_data_changed: { widget_id: Uuid; status: WidgetDataStatus; payload?: WeatherData | NewsData };
   animation_pause_changed: { widget_ids: Uuid[]; paused: boolean };
@@ -816,6 +827,8 @@ export interface EventMap {
   exit_requested: { requires_confirmation: boolean };
   catalog_updated: { kinds: CatalogKind[] };
   preference_changed: { board_card_view: 'compact' | 'expanded'; origin: OriginKind };
+  /** EV-28: el formato de hora corta de Windows cambió (HE-04-HU03-CA04). */
+  time_format_changed: TimeFormat;
 }
 
 export type EventName = keyof EventMap;
@@ -974,6 +987,13 @@ export interface WindiChatContext {
   /** Solo las tarjetas necesarias para la pregunta, incluidos los cambios aún no sincronizados (D-193). */
   cards: WindiChatContextCard[];
   totals: { total: number; overdue: number; pending: number; completed: number };
+  /** HE-14-HU09-ET06: cantidades con todas las tarjetas; `key` es el id, la prioridad o la fecha de completado. */
+  counts: {
+    by_column: Array<{ key: string; count: number }>;
+    by_label: Array<{ key: string; count: number }>;
+    by_priority: Array<{ key: string; count: number }>;
+    completed_by_date: Array<{ key: string; count: number }>;
+  };
   active_proposal: WindiChatProposal | null;
 }
 export interface WindiChatRequest {

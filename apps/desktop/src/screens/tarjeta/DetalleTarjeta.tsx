@@ -39,7 +39,9 @@ export function DetalleTarjeta({ id, alCerrar, alNoExistir, alEditar, alEliminar
     void invocar('card_get', { id }).then((r) => {
       if (!vigente) return;
       if (r.ok) setDetalle(r.value);
-      else if (r.error.code === 'card.not_found') alNoExistir(r.error.message);
+      // DP-04: «Esta tarjeta ya no existe.»; cualquier otro error también cierra el detalle con su mensaje, para
+      // que no quede una ventana vacía sin explicación.
+      else alNoExistir(r.error.message);
     });
     return () => {
       vigente = false;

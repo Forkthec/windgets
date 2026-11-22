@@ -314,18 +314,20 @@ impl ServicioDePersonalizacion {
         Self::id_del_tema_aplicado(base, user_id).await
     }
 
-    /// HE-15-HU04-CA05: los widgets activos ajustados a la pantalla principal (el primer monitor) desde el
-    /// escritorio de referencia con que se guardó cada uno. Sin monitores, tal como se guardaron.
-    /// DUDA: HE-15-HU04 con varios monitores no se define en cuál se ajusta. Valor usado: el primero.
+    /// HE-15-HU04-CA05: los widgets activos ajustados al monitor principal desde el escritorio de referencia con
+    /// que se guardó cada uno. Sin monitores, tal como se guardaron. Con varios monitores, el principal, el mismo
+    /// de la pantalla de edición (HE-05-HU02-ET07; antes el primero de la lista).
     pub async fn rectangulos_ajustados(
         base: &BaseLocal,
         user_id: &str,
         monitores: &[crate::tipos::Monitor],
     ) -> Result<Vec<WidgetRect>, AppError> {
         let rects = Self::rectangulos_activos(base, user_id).await?;
-        let Some(pantalla) = monitores.first().map(|m| (m.width, m.height)) else {
+        if monitores.is_empty() {
             return Ok(rects);
-        };
+        }
+        let principal = super::distribucion::monitor_principal(monitores);
+        let pantalla = (principal.width, principal.height);
         let Some(tema) = Self::id_del_tema_aplicado(base, user_id).await? else {
             return Ok(rects);
         };

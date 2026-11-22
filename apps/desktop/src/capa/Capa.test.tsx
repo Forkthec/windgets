@@ -162,3 +162,60 @@ describe('HE-15-HU04 · Personalización desde otro computador en la capa', () =
     await waitFor(() => expect(screen.getByRole('region', { name: 'Reloj' }).style.left).toBe('500px'));
   });
 });
+
+describe('HE-05-HU04 · La capa muestra la distribución guardada', () => {
+  const RELOJ = {
+    widget_id: 'reloj',
+    type: 'clock' as const,
+    x: 1800,
+    y: 1000,
+    width: 400,
+    height: 200,
+    is_active: true,
+  };
+  const escritorio = (x: number, escala: number): LayerInitialState => ({
+    applied: POR_DEFECTO,
+    widgets: [{ ...RELOJ, x }],
+    monitors: [{ id: '0', x: 0, y: 0, width: 2560, height: 1440, scale_factor: escala }],
+    wallpaper_state: 'ok',
+  });
+
+  it('HE-05-HU02-CA05 · La capa dibuja a escala los píxeles físicos guardados', async () => {
+    // HE-05-HU02-ET07: a 125 %, 1800 px físicos son 1440 px de pantalla, igual que en la pantalla de edición.
+    const n = nucleo(escritorio(1800, 1.25), {});
+    render(<Capa invocar={n.invocar} escuchar={n.escuchar} />);
+    const reloj = await screen.findByRole('region', { name: 'Reloj' });
+    expect([reloj.style.left, reloj.style.top, reloj.style.width, reloj.style.height]).toEqual([
+      '1440px',
+      '800px',
+      '320px',
+      '160px',
+    ]);
+  });
+
+  it('HE-05-HU04-CA05 · Una lectura vieja que llega tarde no deshace lo guardado', async () => {
+    // ET05: la primera lectura (antes de guardar) responde después de la segunda (después de guardar).
+    let primera: (v: unknown) => void = () => undefined;
+    let llamada = 0;
+    const oyentes: Array<() => void> = [];
+    const invocar = ((comando: string) => {
+      if (comando !== 'layer_get_initial_state')
+        return Promise.resolve({ ok: false, error: { code: 'internal.unexpected' } });
+      llamada += 1;
+      if (llamada === 1)
+        return new Promise((listo) => {
+          primera = listo;
+        });
+      return Promise.resolve({ ok: true, value: escritorio(1000, 1) });
+    }) as unknown as Invoke;
+    const escuchar = ((evento: string, alRecibir: () => void) => {
+      if (evento === 'layout_changed') oyentes.push(alRecibir);
+      return () => {};
+    }) as unknown as Escuchar;
+    render(<Capa invocar={invocar} escuchar={escuchar} />);
+    await act(async () => oyentes.forEach((o) => o()));
+    await act(async () => primera({ ok: true, value: escritorio(1800, 1) }));
+    const reloj = await screen.findByRole('region', { name: 'Reloj' });
+    expect(reloj.style.left).toBe('1000px');
+  });
+});

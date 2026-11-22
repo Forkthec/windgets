@@ -1,9 +1,25 @@
-import { useEffect, useId, useRef, useState } from 'react';
 import type { Column } from '@/types';
-import { Boton } from '@/ui/Boton/Boton';
+import { MenuDeAcciones } from '@/ui/MenuDeAcciones/MenuDeAcciones';
+import type { OpcionDeMenu } from '@/ui/MenuDeAcciones/MenuDeAcciones';
 
 // «Mover a» (HE-09-HU02-ET10, ET11): la alternativa sin drag-and-drop para cambiar una tarjeta de columna.
 // Muestra todas las columnas del tablero en su orden, con la columna actual marcada y deshabilitada (RT-04).
+// Usa el menú de acciones común (RT-02-ET11, ET12): Esc, selección fuera, flechas y sin recorte.
+
+/** Las columnas como opciones de «Mover a»: la actual, marcada y deshabilitada. */
+export function opcionesDeMoverA(
+  columnas: readonly Column[],
+  actual: string,
+  alElegir: (columna: string) => void,
+): OpcionDeMenu[] {
+  return columnas.map((c) => ({
+    etiqueta: c.name,
+    marcada: c.id === actual,
+    deshabilitada: c.id === actual,
+    // ET12: la tarjeta va al final de la columna elegida.
+    alElegir: () => alElegir(c.id),
+  }));
+}
 
 export interface MoverAProps {
   columnas: readonly Column[];
@@ -11,61 +27,19 @@ export interface MoverAProps {
   actual: string;
   /** Columna elegida: la tarjeta va al final de ella (ET12). */
   alElegir: (columna: string) => void;
+  /** Menú dentro del widget de la capa (ver `MenuDeAcciones`). */
+  enLugar?: boolean;
 }
 
-export function MoverA({ columnas, actual, alElegir }: MoverAProps) {
-  const [abierto, setAbierto] = useState(false);
-  const idMenu = useId();
-  const menu = useRef<HTMLUListElement>(null);
-
-  // Esc cierra el menú; al abrirlo, el foco va a la primera columna que se puede elegir (RNF-30).
-  useEffect(() => {
-    if (!abierto) return;
-    menu.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
-    const alTeclear = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        setAbierto(false);
-      }
-    };
-    document.addEventListener('keydown', alTeclear, true);
-    return () => document.removeEventListener('keydown', alTeclear, true);
-  }, [abierto]);
-
+export function MoverA({ columnas, actual, alElegir, enLugar = false }: MoverAProps) {
   return (
-    <div className="wg-mover-a">
-      <Boton
-        aria-haspopup="menu"
-        aria-expanded={abierto}
-        aria-controls={idMenu}
-        onClick={() => setAbierto((a) => !a)}
-      >
-        Mover a
-      </Boton>
-      {abierto && (
-        <ul ref={menu} id={idMenu} role="menu" aria-label="Mover a" className="wg-mover-a__menu">
-          {columnas.map((c) => {
-            const esActual = c.id === actual;
-            return (
-              <li key={c.id} role="none">
-                <button
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={esActual}
-                  disabled={esActual}
-                  className="wg-mover-a__opcion"
-                  onClick={() => {
-                    setAbierto(false);
-                    alElegir(c.id);
-                  }}
-                >
-                  {c.name}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
+    <MenuDeAcciones
+      nombre="Mover a"
+      etiqueta="Mover a"
+      boton="Mover a"
+      className="wg-mover-a"
+      enLugar={enLugar}
+      opciones={opcionesDeMoverA(columnas, actual, alElegir)}
+    />
   );
 }

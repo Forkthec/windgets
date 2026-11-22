@@ -3,6 +3,7 @@ import type { ThemeSummary } from '@/types';
 import textos from '@/types/messages.es.json';
 import { Boton } from '@/ui/Boton/Boton';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
+import { MenuDeAcciones } from '@/ui/MenuDeAcciones/MenuDeAcciones';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { escribirFecha } from '../tarjeta/fechas';
@@ -109,15 +110,20 @@ export function Themes() {
                 >
                   Aplicar
                 </Boton>
-                <Boton onClick={() => setPorRenombrar(t)}>Renombrar</Boton>
-                {/* HE-03-HU05-ET04: deshabilitada en el tema aplicado (D-037). */}
-                <Boton
-                  disabled={t.is_applied}
-                  motivo={textos.TEMA_APLICADO_NO_SE_ELIMINA}
-                  onClick={() => setPorEliminar(t)}
-                >
-                  Eliminar
-                </Boton>
+                {/* ET01 (RT-02-ET10): «Renombrar» y «Eliminar» en el botón de acciones «⋮» del tema. «Eliminar»
+                    está deshabilitada en el tema aplicado, con su texto al pasar el mouse (HE-03-HU05-ET04, D-037). */}
+                <MenuDeAcciones
+                  nombre={t.name}
+                  opciones={[
+                    { etiqueta: 'Renombrar', alElegir: () => setPorRenombrar(t) },
+                    {
+                      etiqueta: 'Eliminar',
+                      deshabilitada: t.is_applied,
+                      motivo: textos.TEMA_APLICADO_NO_SE_ELIMINA,
+                      alElegir: () => setPorEliminar(t),
+                    },
+                  ]}
+                />
               </li>
             ))}
           </ul>

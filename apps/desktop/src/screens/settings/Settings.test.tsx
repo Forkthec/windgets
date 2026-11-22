@@ -176,4 +176,21 @@ describe('HE-16-HU02 · Alternar el inicio automático en la pantalla Configurac
     // ET09: el interruptor conserva el estado que tiene Windows.
     expect(interruptor.getAttribute('aria-checked')).toBe('false');
   });
+
+  it('HE-16-HU03-CA07 · No se pudo cerrar la sesión', async () => {
+    const nucleo = await abrirConfiguracion(0);
+    const aviso = 'No pudimos cerrar la sesión. Cierra la aplicación y vuelve a intentarlo.';
+    nucleo.responder('auth_sign_out', () => ({
+      ok: false,
+      error: { code: 'auth.sign_out_failed', message: aviso },
+    }));
+    const dialogo = await seleccionarCerrarSesion();
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Cerrar sesión' }));
+    // ET09: el aviso (RT-04), la sesión sigue iniciada y no aparece «Sesión cerrada.».
+    expect(await screen.findByText(aviso)).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('main', { name: 'Configuración' })).toBeTruthy();
+    expect(screen.getByRole('navigation', { name: 'Menú principal' })).toBeTruthy();
+    expect(screen.queryByText('Sesión cerrada.')).toBeNull();
+  });
 });

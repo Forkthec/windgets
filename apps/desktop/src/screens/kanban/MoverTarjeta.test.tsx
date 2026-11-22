@@ -6,6 +6,7 @@
 import { act, fireEvent, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CardMoveParams } from '@/types';
+import estilos from '@/ui/tema/tokens.css?raw';
 import { movimientoDelArrastre } from './arrastre';
 import { Kanban } from './Kanban';
 import {
@@ -51,9 +52,18 @@ function tarjetaEnTablero(titulo: string) {
   return screen.getByRole('button', { name: titulo }).closest('li') as HTMLElement;
 }
 
+/** Abre «Mover a» en el botón de acciones «⋮» de la tarjeta (ET10). */
+async function abrirMoverA(titulo: string) {
+  fireEvent.click(within(tarjetaEnTablero(titulo)).getByRole('button', { name: `Acciones de ${titulo}` }));
+  await act(async () => {
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Mover a' }));
+  });
+  return screen.getByRole('menu', { name: 'Mover a' });
+}
+
 /** «Mover a» de la tarjeta y la columna elegida. */
 async function moverA(titulo: string, destino: string) {
-  fireEvent.click(within(tarjetaEnTablero(titulo)).getByRole('button', { name: 'Mover a' }));
+  await abrirMoverA(titulo);
   await act(async () => {
     fireEvent.click(screen.getByRole('menuitemradio', { name: destino }));
   });
@@ -177,14 +187,38 @@ describe('HE-09-HU02 · Mover una tarjeta', () => {
 
   it('HE-09-HU02-CA09 · Columna actual en la opción «Mover a»', async () => {
     const nucleo = await abrirPantalla('kanban', 'Tablero Kanban', Kanban, [tarjeta({ title: ENTREGAR })]);
-    fireEvent.click(within(tarjetaEnTablero(ENTREGAR)).getByRole('button', { name: 'Mover a' }));
     // ET11: todas las columnas en su orden, con la actual marcada y deshabilitada.
-    const opciones = within(screen.getByRole('menu', { name: 'Mover a' })).getAllByRole('menuitemradio');
+    const opciones = within(await abrirMoverA(ENTREGAR)).getAllByRole('menuitemradio');
     expect(opciones.map((o) => o.textContent)).toEqual(['Por hacer', 'En progreso', 'Hecho']);
     const [actual] = opciones;
     expect(actual?.getAttribute('aria-checked')).toBe('true');
     expect((actual as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(actual as HTMLElement);
     expect(llamadasA(nucleo, 'card_move')).toHaveLength(0);
+  });
+
+  it('HE-09-HU02-CA10 · «Mover a» en la última tarjeta de una columna', async () => {
+    await abrirPantalla('kanban', 'Tablero Kanban', Kanban, [
+      tarjeta({ title: ENTREGAR }),
+      tarjeta({ title: 'Llamar al cliente' }),
+    ]);
+    expect(titulosDe('Por hacer').at(-1)).toBe('Llamar al cliente');
+    const menu = await abrirMoverA('Llamar al cliente');
+    // ET14 (RT-02-ET12): la lista completa se dibuja fuera del tablero, que no la recorta.
+    expect(
+      within(menu)
+        .getAllByRole('menuitemradio')
+        .map((o) => o.textContent),
+    ).toEqual(['Por hacer', 'En progreso', 'Hecho']);
+    const tablero = document.querySelector('.wg-tablero') as HTMLElement;
+    expect(tablero.contains(menu)).toBe(false);
+    expect(menu.parentElement).toBe(document.body);
+    // ET14: el tablero de la pantalla no tiene barra vertical propia; el widget Kanban no cambia.
+    const reglaDelTablero = /\.wg-tablero \{([^}]*)\}/.exec(estilos)?.[1] ?? '';
+    expect(reglaDelTablero).toContain('overflow-x: auto;');
+    expect(reglaDelTablero).toContain('overflow-y: hidden;');
+    expect(tablero.classList.contains('wg-tablero--widget')).toBe(false);
+    const reglaDelWidget = /\.wg-tablero--widget \{([^}]*)\}/.exec(estilos)?.[1] ?? '';
+    expect(reglaDelWidget).toContain('overflow-y: visible;');
   });
 });

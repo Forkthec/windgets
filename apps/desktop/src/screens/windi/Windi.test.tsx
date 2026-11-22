@@ -203,13 +203,30 @@ describe('HE-14-HU01 · Conversar con el agente de IA', () => {
   });
 
   it('HE-14-HU01-CA06 · Consulta fuera del alcance', async () => {
-    const amable =
-      'Solo puedo ayudarte con tus tarjetas y con la aplicación. ¿Revisamos lo que tienes para hoy?';
-    await abrir(responde(amable));
+    // v12, ET26: el mensaje fijo (lo pone el Núcleo); ET25: la propuesta activa sigue activa.
+    const fijo =
+      'Solo puedo ayudarte con tus tarjetas y con Windgets. Por ejemplo, puedo crear una tarjeta o contarte qué tienes para hoy.';
+    let n = 0;
+    const activa: WindiProposal = {
+      id: 'p1',
+      action: 'edit',
+      items: [{ card_id: 't1', current: null, changes: { title: 'Informe final' }, title: 'Informe' }],
+      warnings: [],
+      state: 'active',
+    };
+    await abrir((m) => {
+      n += 1;
+      return n === 1 ? proponer(activa)(m) : responde(fijo)(m);
+    });
+    await escribir('Cambia el informe');
+    await seleccionar(enviar());
     await escribir('¿Quién ganó el partido?');
     await seleccionar(enviar());
-    // ET22, ET23: la respuesta del agente se muestra tal cual; el alcance lo fija windi-chat.
-    expect(conversacion().at(-1)).toBe(amable);
+    expect(conversacion().at(-1)).toBe(fijo);
+    const propuesta = screen.getAllByRole('region', { name: 'Propuesta' })[0] as HTMLElement;
+    expect((within(propuesta).getByRole('button', { name: 'Confirmar' }) as HTMLButtonElement).disabled).toBe(
+      false,
+    );
   });
 
   it('HE-14-HU01-CA07 · Agente de IA sin conexión', async () => {
@@ -374,6 +391,28 @@ describe('HE-14-HU03 · Confirmar una propuesta del agente de IA', () => {
     // Solo se aplica la nueva.
     expect(llamadasA(nucleo, 'windi_confirm_proposal')).toEqual([{ proposal_id: 'p2' }]);
   });
+
+  it('HE-14-HU03-CA07 · No se puede aplicar la propuesta', async () => {
+    const { nucleo } = await abrir(proponer(propuesta('p1', 'Informe final')), {
+      confirmar: () => ({
+        ok: false,
+        error: {
+          code: 'windi.apply_failed',
+          message: 'No pude aplicar los cambios. No se hizo ningún cambio.',
+        },
+      }),
+    });
+    await pedir('Cambia el título del informe');
+    await seleccionar(boton(propuestas()[0], 'Confirmar'));
+    // ET12 (RT-04): el aviso, y «Confirmar» y «Rechazar» siguen habilitadas; no hay respuesta de cambio hecho.
+    expect(screen.getByText('No pude aplicar los cambios. No se hizo ningún cambio.')).toBeTruthy();
+    expect(boton(propuestas()[0], 'Confirmar').disabled).toBe(false);
+    expect(boton(propuestas()[0], 'Rechazar').disabled).toBe(false);
+    expect(conversacion()).not.toContain('Listo, ya hice el cambio.');
+    // Se puede volver a confirmar.
+    await seleccionar(boton(propuestas()[0], 'Confirmar'));
+    expect(llamadasA(nucleo, 'windi_confirm_proposal')).toHaveLength(2);
+  });
 });
 
 describe('HE-14-HU05 · Editar tarjetas con el agente de IA', () => {
@@ -424,6 +463,198 @@ describe('HE-14-HU05 · Editar tarjetas con el agente de IA', () => {
     expect(within(p).getByText(aviso)).toBeTruthy();
     expect(boton(p, 'Confirmar').disabled).toBe(false);
   });
+
+  /** Una propuesta de edición con los elementos dados. */
+  const editar = (...items: WindiProposal['items']): WindiProposal => ({
+    id: 'p1',
+    action: 'edit',
+    items,
+    warnings: [],
+    state: 'active',
+  });
+  const cambiosDe = (i: number) =>
+    within(
+      within(propuestas()[0] as HTMLElement).getAllByRole('list', { name: 'Cambios' })[i] as HTMLElement,
+    );
+
+  it('HE-14-HU05-CA08 · Editar varias tarjetas en una propuesta', async () => {
+    // ET10: una sola propuesta con cada tarjeta, su valor actual y su valor nuevo.
+    await abrir(
+      proponer(
+        editar(
+          {
+            card_id: 't1',
+            current: { due_date: '2026-11-10' },
+            changes: { due_date: '2026-11-20' },
+            title: 'Luz',
+          },
+          {
+            card_id: 't2',
+            current: { due_date: '2026-11-12' },
+            changes: { due_date: '2026-11-20' },
+            title: 'Agua',
+          },
+        ),
+      ),
+    );
+    await pedir('Pasa mis vencidas al viernes');
+    expect(propuestas()).toHaveLength(1);
+    const texto = propuestas()[0]?.textContent ?? '';
+    expect(texto).toContain('Luz');
+    expect(texto).toContain('Agua');
+    expect(cambiosDe(0).getByText('Fecha límite: 10/11/2026 → 20/11/2026')).toBeTruthy();
+    expect(cambiosDe(1).getByText('Fecha límite: 12/11/2026 → 20/11/2026')).toBeTruthy();
+  });
+
+  it('HE-14-HU05-CA09 · Agregar una etiqueta', async () => {
+    // ET11: las etiquetas por su nombre (Estudio = e1, Casa = e2 en el Núcleo de prueba).
+    await abrir(
+      proponer(
+        editar({
+          card_id: 't1',
+          current: { label_ids: ['e1'] },
+          changes: { label_ids: ['e1', 'e2'] },
+          title: 'Informe',
+        }),
+      ),
+    );
+    await pedir('Ponle la etiqueta Casa al informe');
+    expect(cambiosDe(0).getByText('Etiquetas: Estudio → Estudio, Casa')).toBeTruthy();
+    expect(boton(propuestas()[0], 'Confirmar').disabled).toBe(false);
+    expect(boton(propuestas()[0], 'Rechazar').disabled).toBe(false);
+  });
+
+  it('HE-14-HU05-CA10 · Etiqueta que no existe', async () => {
+    // HE-14-HU03-ET10: el Núcleo responde el motivo sin propuesta.
+    const texto = 'No tienes la etiqueta “Viaje”. Tus etiquetas son: Estudio, Casa.';
+    await abrir(responde(texto));
+    await pedir('Ponle la etiqueta Viaje al informe');
+    expect(conversacion()).toContain(texto);
+    expect(propuestas()).toHaveLength(0);
+  });
+
+  it('HE-14-HU05-CA11 · Asignar el bloque horario', async () => {
+    await abrir(
+      proponer(
+        editar({
+          card_id: 't1',
+          current: { time_block: null } as never,
+          changes: { time_block: { date: '2026-11-15', start_hour: 10, end_hour: 11 } } as never,
+          title: 'Estudiar redes',
+        }),
+      ),
+    );
+    await pedir('Ponla mañana de 10 a 11');
+    expect(
+      cambiosDe(0).getByText('Bloque horario: Sin bloque horario → 10:00 – 11:00 del 15/11/2026'),
+    ).toBeTruthy();
+  });
+
+  it('HE-14-HU05-CA12 · Quitar el bloque horario', async () => {
+    await abrir(
+      proponer(
+        editar({
+          card_id: 't1',
+          current: { time_block: { date: '2026-11-15', start_hour: 10, end_hour: 11 } } as never,
+          changes: { time_block: null } as never,
+          title: 'Estudiar redes',
+        }),
+      ),
+    );
+    await pedir('Quítala del horario');
+    expect(cambiosDe(0).getByText('Bloque horario: 10:00 – 11:00 → Sin bloque horario')).toBeTruthy();
+  });
+
+  it('HE-14-HU05-ET12 · La prioridad y la descripción se pueden quitar', async () => {
+    await abrir(
+      proponer(
+        editar({
+          card_id: 't1',
+          current: { priority: 'high', description: 'Para el lunes' },
+          changes: { priority: null, description: null },
+          title: 'Informe',
+        }),
+      ),
+    );
+    await pedir('Quítale la prioridad y la descripción');
+    expect(cambiosDe(0).getByText('Prioridad: Alta → Sin prioridad')).toBeTruthy();
+    expect(cambiosDe(0).getByText('Descripción: Para el lunes → Sin descripción')).toBeTruthy();
+  });
+});
+
+describe('HE-14-HU04 · Crear tarjetas con el agente de IA', () => {
+  it('HE-14-HU04-ET10 · La propuesta de creación muestra los datos de cada tarjeta', async () => {
+    await abrir(
+      proponer({
+        id: 'p1',
+        action: 'create',
+        items: [
+          {
+            card_id: null,
+            current: null,
+            changes: {
+              type: 'reminder',
+              title: 'Pagar la luz',
+              due_date: '2026-11-27',
+              priority: 'high',
+              label_ids: ['e2'],
+              description: 'Antes del mediodía',
+            },
+            title: 'Pagar la luz',
+          },
+          {
+            card_id: null,
+            current: null,
+            changes: { title: 'Comprar pan', due_date: '2026-11-20' },
+            title: 'Comprar pan',
+          },
+        ],
+        warnings: [],
+        state: 'active',
+      }),
+    );
+    await pedir('Crea Pagar la luz y Comprar pan');
+    const datos = (i: number) =>
+      within(within(propuestas()[0] as HTMLElement).getAllByRole('list', { name: 'Datos' })[i] as HTMLElement)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent);
+    expect(datos(0)).toEqual([
+      'Tipo: Recordatorio',
+      'Fecha límite: 27/11/2026',
+      'Prioridad: Alta',
+      'Etiquetas: Casa',
+      'Descripción: Antes del mediodía',
+    ]);
+    // Sin tipo, la tarjeta es Tarea (HE-14-HU04-ET02); lo que no tiene no se muestra.
+    expect(datos(1)).toEqual(['Tipo: Tarea', 'Fecha límite: 20/11/2026']);
+  });
+
+  it('HE-14-HU04-CA10 · Crear una tarjeta con bloque horario', async () => {
+    await abrir(
+      proponer({
+        id: 'p1',
+        action: 'create',
+        items: [
+          {
+            card_id: null,
+            current: null,
+            changes: {
+              title: 'Estudiar redes',
+              due_date: '2026-11-15',
+              time_block: { date: '2026-11-15', start_hour: 10, end_hour: 11 },
+            } as never,
+            title: 'Estudiar redes',
+          },
+        ],
+        warnings: [],
+        state: 'active',
+      }),
+    );
+    await pedir('Crea Estudiar redes para mañana de 10 a 11');
+    expect(
+      within(propuestas()[0] as HTMLElement).getByText('Bloque horario: 10:00 – 11:00 del 15/11/2026'),
+    ).toBeTruthy();
+  });
 });
 
 describe('HE-14-HU06 · Mover tarjetas con el agente de IA', () => {
@@ -464,6 +695,34 @@ describe('HE-14-HU06 · Mover tarjetas con el agente de IA', () => {
     const p = propuestas()[0] as HTMLElement;
     expect(within(p).getByText(aviso)).toBeTruthy();
     expect(boton(p, 'Confirmar').disabled).toBe(false);
+  });
+
+  it('HE-14-HU06-CA09 · Mover varias tarjetas', async () => {
+    // ET12: una sola propuesta con cada tarjeta, su columna actual y la de destino.
+    const item = (card_id: string, title: string) => ({
+      card_id,
+      current: { column_id: 'c1' },
+      changes: {
+        column_id: 'c2',
+        from_column: 'Por hacer',
+        to_column: 'En progreso',
+      } as unknown as WindiProposal['items'][number]['changes'],
+      title,
+    });
+    await abrir(
+      proponer({
+        id: 'p1',
+        action: 'move',
+        items: [item('t1', 'Luz'), item('t2', 'Agua'), item('t3', 'Gas')],
+        warnings: [],
+        state: 'active',
+      }),
+    );
+    await pedir('Mueve todas las de Por hacer a En progreso');
+    expect(propuestas()).toHaveLength(1);
+    const p = propuestas()[0] as HTMLElement;
+    expect(within(p).getAllByText('Columna: Por hacer → En progreso')).toHaveLength(3);
+    for (const t of ['Luz', 'Agua', 'Gas']) expect(p.textContent).toContain(t);
   });
 });
 

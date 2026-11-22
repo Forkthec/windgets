@@ -15,6 +15,7 @@ import {
   tarjeta,
   type NucleoDelPlanificador,
 } from '../screens/kanban/pruebas';
+import estilos from '@/ui/tema/tokens.css?raw';
 import { Capa } from './Capa';
 
 const ESTADO: LayerInitialState = {
@@ -164,9 +165,11 @@ describe('HE-06-HU03 · Casilla de completada en el widget', () => {
   it('HE-06-HU03-CA01 · Completar una tarjeta desde el widget', async () => {
     const pagar = tarjeta({ title: 'Pagar la luz', due_date: HOY, column_id: EN_PROGRESO.id });
     const { nucleo, widget } = await pintar([pagar]);
-    // La selección llega reenviada por el Núcleo (EV-18) y la capa la entrega a la casilla (HE-06-HU01).
+    // La selección llega reenviada por el Núcleo (EV-18 al presionar, EV-27 al soltar) y la capa la entrega a la
+    // casilla (HE-06-HU01; HE-06-HU08-ET08).
     document.elementFromPoint = () => casilla(widget, 'Pagar la luz');
     nucleo.emitir('pointer_forwarded', { x: 400, y: 60, monitor_id: '0', button: 'primary' });
+    nucleo.emitir('pointer_released', { x: 400, y: 60, monitor_id: '0', button: 'primary' });
     await act(async () => {});
     expect(llamadasA(nucleo, 'card_set_completed')).toEqual([{ card_id: pagar.id, completed: true }]);
     // ET01: en Hecho. ET04: tachada y con la casilla seleccionada. En el widget no hay mensaje.
@@ -214,6 +217,23 @@ describe('HE-06-HU03 · Casilla de completada en el widget', () => {
     await seleccionar(casilla(widget, 'Pagar la luz'));
     expect(llamadasA(nucleo, 'card_set_completed')).toEqual([{ card_id: pagar.id, completed: true }]);
     expect(tachada(widget, 'Pagar la luz')).toBe(true);
+  });
+
+  it('HE-06-HU03-CA05 · Seleccionar la casilla cerca del borde', async () => {
+    // ET06: la casilla tiene un área de selección de al menos 32 × 32 píxeles. Seleccionar el borde de esa área
+    // (la etiqueta que envuelve la casilla) la alterna y no abre la aplicación.
+    const pagar = tarjeta({ title: 'Pagar la luz', due_date: HOY, column_id: EN_PROGRESO.id });
+    const { nucleo, widget } = await pintar([pagar]);
+    const area = casilla(widget, 'Pagar la luz').closest('label') as HTMLLabelElement;
+    expect(area.classList.contains('wg-widget__casilla')).toBe(true);
+    const regla = /\.wg-widget__casilla \{([^}]*)\}/.exec(estilos)?.[1] ?? '';
+    expect(regla).toContain('min-width: 32px;');
+    expect(regla).toContain('min-height: 32px;');
+    await seleccionar(area);
+    expect(llamadasA(nucleo, 'card_set_completed')).toEqual([{ card_id: pagar.id, completed: true }]);
+    expect(pagar.column_id).toBe(HECHO.id);
+    expect(tachada(widget, 'Pagar la luz')).toBe(true);
+    expect(llamadasA(nucleo, 'app_open_screen')).toEqual([]);
   });
 });
 

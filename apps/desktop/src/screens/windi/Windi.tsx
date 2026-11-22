@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useState, type KeyboardEvent } from 'react';
-import type { WindiMessage, WindiProposal } from '@/types';
+import type { Label, WindiMessage, WindiProposal } from '@/types';
 import textos from '@/types/messages.es.json';
 import { Aviso } from '@/ui/Aviso/Aviso';
 import { Boton } from '@/ui/Boton/Boton';
@@ -51,9 +51,16 @@ export function Windi() {
   const [fallido, setFallido] = useState<string | null>(null);
   // HE-14-HU03-CA02: se perdió la conexión al confirmar.
   const [sinConexionAlConfirmar, setSinConexionAlConfirmar] = useState(false);
+  // HE-14-HU03-CA07, ET12: «Confirmar» falló; la propuesta sigue con «Confirmar» y «Rechazar» habilitadas.
+  const [avisoAlConfirmar, setAvisoAlConfirmar] = useState<string | null>(null);
+  // HE-14-HU05-ET11: la propuesta muestra las etiquetas por su nombre.
+  const [etiquetas, setEtiquetas] = useState<Label[]>([]);
   const idCampo = useId();
 
   const leer = useCallback(async () => {
+    void invocar('label_list', {}).then((e) => {
+      if (e.ok) setEtiquetas(e.value);
+    });
     const r = await invocar('windi_get_conversation', {});
     if (!r.ok) return;
     setMensajes(r.value.messages);
@@ -108,6 +115,7 @@ export function Windi() {
 
   const confirmar = async (propuesta: WindiProposal) => {
     setEscribiendo(true);
+    setAvisoAlConfirmar(null);
     const r = await invocar('windi_confirm_proposal', { proposal_id: propuesta.id });
     setEscribiendo(false);
     if (r.ok) {
@@ -123,6 +131,8 @@ export function Windi() {
       setSinConexionAlConfirmar(true);
     } else if (r.error.code === 'proposal.discarded') {
       setPropuestas((lista) => conEstado(lista, propuesta.id, 'discarded'));
+    } else {
+      setAvisoAlConfirmar(r.error.message || textos.WINDI_NO_PUDE_APLICAR);
     }
     await leer();
   };
@@ -158,6 +168,7 @@ export function Windi() {
       {/* ET13: sin conexión, el aviso (RT-04); el historial sigue visible. */}
       {!enLinea && <Aviso texto={textos.WINDI_SIN_CONEXION} />}
       {sinConexionAlConfirmar && <Aviso texto={textos.WINDI_SIN_CONEXION_AL_CONFIRMAR} />}
+      {avisoAlConfirmar !== null && <Aviso texto={avisoAlConfirmar} />}
       {/* ET01: el área de conversación. */}
       <ol className="wg-windi__conversacion" aria-label="Conversación" aria-live="polite">
         {(mensajes ?? []).map((m) => (
@@ -173,6 +184,7 @@ export function Windi() {
                   habilitada={enLinea && !escribiendo && !sinConexionAlConfirmar}
                   alConfirmar={() => void confirmar(propuesta)}
                   alRechazar={() => void rechazar(propuesta)}
+                  etiquetas={etiquetas}
                 />
               ))}
           </li>

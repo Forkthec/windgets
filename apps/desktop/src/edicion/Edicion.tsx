@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as EventoDePuntero } from 'react';
-import { NOMBRE_DEL_WIDGET, recursoDelFondo } from '@/capa/Capa';
+import { aEscala, monitorPrincipal, NOMBRE_DEL_WIDGET, recursoDelFondo } from '@/capa/Capa';
 import { urlDeArchivo } from '@/ipc/archivos';
 import { invocar as invocarNucleo } from '@/ipc/cliente';
 import { escuchar as escucharNucleo, type Escuchar } from '@/ipc/eventos';
@@ -11,15 +11,9 @@ import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 // C-03 Pantalla de edición de la distribución (HE-05): a pantalla completa sobre el escritorio, sin menú principal
 // (HE-05-HU01-ET01). Pinta el wallpaper y los widgets activos en su posición y tamaño reales (ET02), cada uno con
 // un borde que indica que se puede mover y redimensionar (ET03), y la barra superior (ET04). Las reglas de mover y
-// redimensionar (área visible, sin superponerse, 100 × 100) viven en el Núcleo (IPC-LAY-02, 03).
-
-/** El monitor principal, como en el Núcleo (`monitor_principal`). */
-function principal(monitores: Monitor[]): Monitor {
-  return (
-    monitores.find((m) => m.x <= 0 && 0 < m.x + m.width && m.y <= 0 && 0 < m.y + m.height) ??
-    monitores[0] ?? { id: '0', x: 0, y: 0, width: 1920, height: 1080, scale_factor: 1 }
-  );
-}
+// redimensionar (área visible, sin superponerse, 100 × 100) viven en el Núcleo (IPC-LAY-02, 03). La pantalla
+// representa a escala el monitor principal: las medidas son píxeles físicos y se dibujan divididas por la escala de
+// Windows; el puntero se multiplica por ella (HE-05-HU02-ET07, HE-05-HU03-CA06).
 
 const seSuperponen = (a: WidgetRect, b: WidgetRect) =>
   a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
@@ -47,6 +41,8 @@ export function Edicion({ invocar = invocarNucleo, escuchar = escucharNucleo }: 
   const [salida, setSalida] = useState(false);
   // HE-15-HU04-CA08: aviso al recibir una distribución más reciente de otro computador con cambios sin guardar.
   const [avisoRemoto, setAvisoRemoto] = useState(false);
+  // HE-05-HU04-ET06: el mensaje de un cambio que no se pudo aplicar; la pantalla de edición no se cierra.
+  const [rechazo, setRechazo] = useState('');
   useEffect(
     () =>
       escuchar('layout_changed', (carga) => {
@@ -72,7 +68,7 @@ export function Edicion({ invocar = invocarNucleo, escuchar = escucharNucleo }: 
         if (archivo.ok && archivo.value.state === 'ready') imagen = urlDeArchivo(archivo.value.url);
       }
       if (!vigente) return;
-      setEstado({ monitor: principal(capa.monitors), imagen, fondo: capa.applied.colors.primary });
+      setEstado({ monitor: monitorPrincipal(capa.monitors), imagen, fondo: capa.applied.colors.primary });
       setWidgets(capa.widgets.filter((w) => w.is_active));
     })();
     return () => {
@@ -105,6 +101,8 @@ export function Edicion({ invocar = invocarNucleo, escuchar = escucharNucleo }: 
   // esto cada `pointermove` hacía su propia llamada y se acumulaban (arrastre lento en las pruebas manuales, P23).
   const enVuelo = useRef(false);
   const siguiente = useRef<{ a: Arrastre; pedido: WidgetRect } | null>(null);
+  // HE-05-HU04-ET05: la cola en curso; «Guardar» la espera para incluir el último cambio.
+  const cola = useRef<Promise<void>>(Promise.resolve());
 
   const enviar = async () => {
     enVuelo.current = true;
@@ -122,7 +120,10 @@ export function Edicion({ invocar = invocarNucleo, escuchar = escucharNucleo }: 
                 width: pedido.width,
                 height: pedido.height,
               });
-        if (!r.ok) continue;
+        if (!r.ok) {
+          setRechazo(r.error.message);
+          continue;
+        }
         // Con un movimiento más nuevo esperando, el widget sigue al puntero; si no, queda donde lo dejó el Núcleo.
         if (!siguiente.current) {
           setWidgets((ws) => ws.map((w) => (w.widget_id === a.widgetId ? r.value.rect : w)));
@@ -146,8 +147,10 @@ export function Edicion({ invocar = invocarNucleo, escuchar = escucharNucleo }: 
   const seguir = (e: EventoDePuntero<HTMLElement>) => {
     const a = arrastre.current;
     if (!a) return;
-    const dx = e.clientX - a.inicioX;
-    const dy = e.clientY - a.inicioY;
+    // ET07: el puntero se mueve en píxeles de pantalla; el Núcleo trabaja en píxeles físicos.
+    const escala = estado && estado.monitor.scale_factor > 0 ? estado.monitor.scale_factor : 1;
+    const dx = Math.round((e.clientX - a.inicioX) * escala);
+    const dy = Math.round((e.clientY - a.inicioY) * escala);
     const pedido: WidgetRect =
       a.modo === 'mover'
         ? { ...a.rect, x: a.rect.x + dx, y: a.rect.y + dy }
@@ -156,7 +159,17 @@ export function Edicion({ invocar = invocarNucleo, escuchar = escucharNucleo }: 
     // 100) las aplica la respuesta del Núcleo.
     setWidgets((ws) => ws.map((w) => (w.widget_id === a.widgetId ? pedido : w)));
     siguiente.current = { a, pedido };
-    if (!enVuelo.current) void enviar();
+    if (!enVuelo.current) cola.current = enviar();
+  };
+
+  // HE-05-HU04-ET05 (CA05): «Guardar» espera los movimientos y redimensionamientos en curso y guarda todos los
+  // cambios hechos hasta ese momento. Si un cambio no se puede guardar, se muestra su mensaje y la pantalla de
+  // edición sigue abierta (ET06).
+  const guardar = async () => {
+    arrastre.current = null;
+    await cola.current;
+    const r = await invocar('layout_edit_save', {});
+    if (!r.ok) setRechazo(r.error.message);
   };
 
   // Al soltar, el widget queda donde lo dejó el Núcleo: su última posición libre (HE-05-HU02-ET03).
@@ -186,6 +199,11 @@ export function Edicion({ invocar = invocarNucleo, escuchar = escucharNucleo }: 
       onPointerMove={seguir}
       onPointerUp={soltar}
     >
+      {rechazo && (
+        <p role="alert" className="wg-edicion__aviso">
+          {rechazo}
+        </p>
+      )}
       {avisoRemoto && (
         <p role="status" className="wg-edicion__aviso">
           {textos.PERSONALIZACION_REMOTA_CON_CAMBIOS}
@@ -194,7 +212,7 @@ export function Edicion({ invocar = invocarNucleo, escuchar = escucharNucleo }: 
       {/* ET04: la barra superior con el texto y las opciones «Guardar» y «Cancelar». */}
       <div className="wg-edicion__barra wg-fila" role="toolbar" aria-label="Barra de edición">
         <span>{textos.INSTRUCCION_DE_EDICION}</span>
-        <Boton principal onClick={() => void invocar('layout_edit_save', {})}>
+        <Boton principal onClick={() => void guardar()}>
           Guardar
         </Boton>
         <Boton onClick={() => void cancelar()}>Cancelar</Boton>
@@ -206,13 +224,7 @@ export function Edicion({ invocar = invocarNucleo, escuchar = escucharNucleo }: 
           aria-label={NOMBRE_DEL_WIDGET[w.type]}
           data-widget-id={w.widget_id}
           className={`wg-edicion__widget${choques.includes(w.widget_id) ? ' wg-edicion__widget--choque' : ''}`}
-          style={{
-            position: 'absolute',
-            left: w.x - monitor.x,
-            top: w.y - monitor.y,
-            width: w.width,
-            height: w.height,
-          }}
+          style={{ position: 'absolute', ...aEscala(w, monitor, monitor) }}
           onPointerDown={empezar(w, 'mover')}
         >
           {NOMBRE_DEL_WIDGET[w.type]}

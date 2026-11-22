@@ -24,7 +24,9 @@ async function abrir(preparar?: (n: NucleoDelPlanificador) => void) {
 
 async function editar(preparar?: (n: NucleoDelPlanificador) => void) {
   const { nucleo, fila } = await abrir(preparar);
-  fireEvent.click(within(fila).getByRole('button', { name: 'Editar' }));
+  // HE-08-HU03-ET01: «Editar» en el botón de acciones «⋮» de la etiqueta.
+  fireEvent.click(within(fila).getByRole('button', { name: /^Acciones de / }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Editar' }));
   const ventana = await screen.findByRole('dialog', { name: 'Editar etiqueta' });
   await within(ventana).findByRole('radio', { name: 'Verde' });
   return { nucleo, ventana };
@@ -126,7 +128,9 @@ describe('HE-08-HU04 · Eliminar una etiqueta', () => {
       }));
       preparar?.(n);
     });
-    fireEvent.click(within(fila).getByRole('button', { name: 'Eliminar' }));
+    // HE-08-HU04-ET01: «Eliminar» en el botón de acciones «⋮» de la etiqueta.
+    fireEvent.click(within(fila).getByRole('button', { name: /^Acciones de / }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Eliminar' }));
     const ventana = await screen.findByRole('dialog');
     return { nucleo, ventana };
   }

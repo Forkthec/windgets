@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { invocar as invocarNucleo } from '@/ipc/cliente';
 import { escuchar as escucharNucleo, type Escuchar } from '@/ipc/eventos';
 import { escucharArrastreReenviado, type EscucharArrastre } from '@/ipc/arrastreReenviado';
@@ -18,10 +18,12 @@ import { tokensDelTema } from '@/ui/tema/temaAplicado';
 import { aplicarTokens } from '@/ui/tema/tokens';
 import type {
   AssetResolveParams,
-  EventMapPointerForwarded,
+  EventMapPointerReleased,
   Invoke,
   LayerInitialState,
+  Monitor,
   ThemeContent,
+  WidgetRect,
   WidgetType,
 } from '@/types';
 
@@ -56,11 +58,13 @@ export const INTERACTIVOS: readonly WidgetType[] = [
 ];
 
 /**
- * EV-18 `pointer_forwarded` (HE-06-HU01-CA01, ET03): la capa no recibe el mouse (está detrás de los íconos,
- * D-186); el Núcleo le reenvía la selección con el botón principal sobre un widget interactivo y la capa la
- * entrega al elemento del widget que está en ese punto. Fuera de un widget interactivo no hace nada (CA02).
+ * EV-27 `pointer_released` (HE-06-HU01-CA01, ET03; HE-06-HU08-ET08): la capa no recibe el mouse (está detrás de
+ * los íconos, D-186); el Núcleo le reenvía la selección con el botón principal sobre un widget interactivo, al
+ * soltarlo sin mover el puntero más de 4 píxeles, y la capa la entrega al elemento del widget que está en ese
+ * punto. Fuera de un widget interactivo no hace nada (CA02). EV-18 `pointer_forwarded`, al presionar, solo
+ * empieza el drag-and-drop del widget Kanban (HE-06-HU06).
  */
-export function entregarSeleccion({ x, y }: EventMapPointerForwarded, documento: Document = document) {
+export function entregarSeleccion({ x, y }: EventMapPointerReleased, documento: Document = document) {
   const elemento = documento.elementFromPoint(x, y);
   if (!(elemento instanceof HTMLElement) || !elemento.closest('[data-interactivo="true"]')) return;
   elemento.click();
@@ -81,6 +85,28 @@ export function recursoDelFondo(contenido: ThemeContent): AssetResolveParams | n
   }
 }
 
+/** El monitor principal, como en el Núcleo (`monitor_principal`): el que contiene el origen, o el primero. */
+export function monitorPrincipal(monitores: readonly Monitor[]): Monitor {
+  return (
+    monitores.find((m) => m.x <= 0 && 0 < m.x + m.width && m.y <= 0 && 0 < m.y + m.height) ??
+    monitores[0] ?? { id: '0', x: 0, y: 0, width: 1920, height: 1080, scale_factor: 1 }
+  );
+}
+
+/**
+ * HE-05-HU02-ET07: las medidas de los widgets están en píxeles físicos del monitor; la ventana las dibuja en
+ * píxeles de pantalla, divididos por la escala de Windows del monitor principal (100 %, 125 %, 150 %…).
+ */
+export function aEscala(w: WidgetRect, monitor: Monitor, origen = { x: 0, y: 0 }) {
+  const escala = monitor.scale_factor > 0 ? monitor.scale_factor : 1;
+  return {
+    left: (w.x - origen.x) / escala,
+    top: (w.y - origen.y) / escala,
+    width: w.width / escala,
+    height: w.height / escala,
+  };
+}
+
 interface Pintado {
   estado: LayerInitialState;
   imagen: string | null;
@@ -99,10 +125,14 @@ export function Capa({
   escucharArrastre = escucharArrastreReenviado,
 }: CapaProps) {
   const [pintado, setPintado] = useState<Pintado | null>(null);
+  // HE-05-HU04-ET05: varias lecturas pueden cruzarse (guardar la distribución avisa con EV-13 y otros eventos);
+  // solo la última pinta, para que una lectura vieja no deje los widgets donde estaban.
+  const lectura = useRef(0);
 
   useEffect(() => {
     let vigente = true;
     const leer = async () => {
+      const numero = ++lectura.current;
       const r = await invocar('layer_get_initial_state', {});
       if (!r.ok) return;
       let imagen: string | null = null;
@@ -113,7 +143,7 @@ export function Capa({
       }
       // HE-03-HU06-ET04: los widgets también toman los colores y la tipografía del tema aplicado.
       const tokens = await tokensDelTema(invocar, r.value.applied);
-      if (!vigente) return;
+      if (!vigente || numero !== lectura.current) return;
       aplicarTokens(tokens);
       setPintado({ estado: r.value, imagen });
     };
@@ -126,7 +156,7 @@ export function Capa({
     const dejarWidgets = escuchar('widgets_changed', () => void leer());
     // EV-13: al guardar la distribución, los widgets se pintan en su nueva posición y tamaño (HE-05-HU04-CA01).
     const dejarDistribucion = escuchar('layout_changed', () => void leer());
-    const dejarSeleccion = escuchar('pointer_forwarded', (carga) => entregarSeleccion(carga));
+    const dejarSeleccion = escuchar('pointer_released', (carga) => entregarSeleccion(carga));
     return () => {
       vigente = false;
       dejarEstado();
@@ -166,9 +196,9 @@ export function Capa({
           className="wg-widget"
           data-widget-id={w.widget_id}
           data-interactivo={INTERACTIVOS.includes(w.type)}
-          style={{ position: 'absolute', left: w.x, top: w.y, width: w.width, height: w.height }}
+          style={{ position: 'absolute', ...aEscala(w, monitorPrincipal(pintado.estado.monitors)) }}
         >
-          {w.type === 'clock' && <Reloj />}
+          {w.type === 'clock' && <Reloj invocar={invocar} escuchar={escuchar} />}
           {w.type === 'daily_tasks' && <TareasDelDia invocar={invocar} escuchar={escuchar} />}
           {w.type === 'kanban' && (
             <WidgetKanban invocar={invocar} escuchar={escuchar} escucharArrastre={escucharArrastre} />

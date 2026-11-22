@@ -605,6 +605,13 @@ pub struct CommandMapSystemOpenUrl {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "index.ts")]
+pub struct CommandMapSystemTimeFormatGet {
+    pub params: NoParams,
+    pub result: TimeFormat,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
 pub struct CommandMapAutostartGet {
     pub params: NoParams,
     pub result: AutostartState,
@@ -789,6 +796,7 @@ pub struct CommandMap {
     pub app_request_exit: CommandMapAppRequestExit,
     pub app_exit: CommandMapAppExit,
     pub system_open_url: CommandMapSystemOpenUrl,
+    pub system_time_format_get: CommandMapSystemTimeFormatGet,
     pub autostart_get: CommandMapAutostartGet,
     pub autostart_set: CommandMapAutostartSet,
     pub preference_get: CommandMapPreferenceGet,

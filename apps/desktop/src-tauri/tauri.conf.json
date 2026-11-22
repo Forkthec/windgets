@@ -24,7 +24,7 @@
       "csp": null,
       "assetProtocol": {
         "enable": true,
-        "scope": ["$APPDATA/Windgets/files/**", "$RESOURCE/assets/**"]
+        "scope": ["$DATA/Windgets/files/**", "$RESOURCE/assets/**"]
       }
     }
   },

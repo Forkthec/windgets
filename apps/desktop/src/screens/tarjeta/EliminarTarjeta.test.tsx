@@ -70,4 +70,35 @@ describe('HE-07-HU05 · Eliminar una tarjeta', () => {
     expect(screen.queryByText(PREGUNTA)).toBeNull();
     expect(screen.getByRole('button', { name: 'Informe', hidden: true })).toBeTruthy();
   });
+
+  it('HE-07-HU05-CA04 · Eliminar desde el menú de la tarjeta', async () => {
+    const nucleo = await abrirPantalla('kanban', 'Tablero Kanban', Kanban, [tarjeta({ title: 'Informe' })]);
+    fireEvent.click(screen.getByRole('button', { name: 'Acciones de Informe' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Eliminar' }));
+    });
+    // ET01: el mismo mensaje de confirmación de CA01, sin el detalle debajo; la tarjeta sigue hasta confirmar.
+    const confirmacion = screen.getByRole('dialog');
+    expect(within(confirmacion).getByText(PREGUNTA)).toBeTruthy();
+    expect(screen.queryByRole('dialog', { name: 'Detalle de tarjeta' })).toBeNull();
+    expect(llamadasA(nucleo, 'card_delete')).toHaveLength(0);
+    // ET05: «Cancelar» deja al usuario en el tablero, con la tarjeta.
+    await act(async () => {
+      fireEvent.click(within(confirmacion).getByRole('button', { name: 'Cancelar' }));
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Informe' })).toBeTruthy();
+    // ET05: al confirmar, se elimina y el usuario sigue en el tablero.
+    fireEvent.click(screen.getByRole('button', { name: 'Acciones de Informe' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Eliminar' }));
+    });
+    await act(async () => {
+      fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Eliminar' }));
+    });
+    expect(llamadasA(nucleo, 'card_delete')).toHaveLength(1);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('main', { name: 'Tablero Kanban' })).toBeTruthy();
+    expect(screen.getByText('Tarjeta eliminada.')).toBeTruthy();
+  });
 });

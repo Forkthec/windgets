@@ -177,4 +177,30 @@ describe('HE-07-HU04 · Editar una tarjeta', () => {
     expect(screen.queryByRole('button', { name: 'Informe' })).toBeNull();
     expect(screen.getByText('Esta tarjeta ya no existe.')).toBeTruthy();
   });
+
+  it('HE-07-HU04-CA12 · Editar desde el menú de la tarjeta', async () => {
+    const nucleo = await abrirPantalla('kanban', 'Tablero Kanban', Kanban, [tarjeta(INFORME)]);
+    // ET22: «Editar» del botón de acciones «⋮» abre el Formulario de tarjeta con los datos actuales.
+    fireEvent.click(screen.getByRole('button', { name: 'Acciones de Informe' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Editar' }));
+    });
+    screen.getByRole('dialog', { name: 'Formulario de tarjeta' });
+    expect((screen.getByLabelText('Título') as HTMLInputElement).value).toBe('Informe');
+    // ET23: al cancelar, sigue en el Tablero Kanban, sin el detalle.
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    // ET23: al guardar, también vuelve al tablero.
+    fireEvent.click(screen.getByRole('button', { name: 'Acciones de Informe' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Editar' }));
+    });
+    escribir('Título', 'Informe final');
+    await guardar();
+    expect(llamadasA(nucleo, 'card_update')).toHaveLength(1);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('main', { name: 'Tablero Kanban' })).toBeTruthy();
+  });
 });

@@ -12,6 +12,8 @@
 pub const CAPA: &str = "capa";
 
 pub mod estado;
+#[cfg(any(test, all(windows, not(feature = "spike"))))]
+pub mod gancho;
 #[cfg(any(test, windows))]
 pub mod geometria;
 pub mod seleccion;

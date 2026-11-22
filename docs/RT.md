@@ -133,10 +133,10 @@ INT-01, IPC-AUTH-02, IPC-AUTH-05. Detalle en `contratos.md`.
 
 ---
 
-## RT-02 · Ventanas emergentes
+## RT-02 · Ventanas emergentes y menús de acciones
 
-- **Regla.** La aplicación debe abrir como ventanas emergentes, sobre la pantalla actual, el detalle de tarjeta, el formulario de tarjeta, los formularios de etiqueta, columna y tema, y los mensajes de confirmación; al cerrarlas, el usuario sigue en la misma pantalla.
-- **Aplica a.** HE-03-HU02 y HE-03-HU04; HE-07-HU01 a HE-07-HU05; HE-08-HU02 a HE-08-HU04; HE-09-HU03, HE-09-HU04 y HE-09-HU06; HE-10-HU03 y HE-10-HU04; HE-06-HU08; y todos los mensajes de confirmación (HE-02-HU12, HE-02-HU13, HE-03-HU03, HE-03-HU05, HE-03-HU06, HE-04-HU13, HE-07-HU05, HE-08-HU04, HE-09-HU06 y HE-16-HU03).
+- **Regla.** La aplicación debe abrir como ventanas emergentes, sobre la pantalla actual, el detalle de tarjeta, el formulario de tarjeta, los formularios de etiqueta, columna y tema, y los mensajes de confirmación; al cerrarlas, el usuario sigue en la misma pantalla. Las acciones de cada elemento de una lista se agrupan en un menú de acciones, que no es una ventana emergente: no bloquea el fondo.
+- **Aplica a.** HE-03-HU02 y HE-03-HU04; HE-07-HU01 a HE-07-HU05; HE-08-HU02 a HE-08-HU04; HE-09-HU03, HE-09-HU04 y HE-09-HU06; HE-10-HU03 y HE-10-HU04; HE-06-HU08; y todos los mensajes de confirmación (HE-02-HU12, HE-02-HU13, HE-03-HU03, HE-03-HU05, HE-03-HU06, HE-04-HU13, HE-07-HU05, HE-08-HU04, HE-09-HU06 y HE-16-HU03); y menús de acciones (HE-03-HU01, HE-03-HU04, HE-03-HU05, HE-07-HU03 a HE-07-HU05, HE-08-HU01, HE-08-HU03, HE-08-HU04, HE-09-HU02, HE-09-HU04 y HE-09-HU06).
 - **Depende de:** RT-01
 - **Prioridad:** Alta · **Puntos:** 2 · **Orden en el Backlog:** 44
 
@@ -148,14 +148,14 @@ INT-01, IPC-AUTH-02, IPC-AUTH-05. Detalle en `contratos.md`.
 | P-TAR-02 | Formulario de tarjeta | tengo abierta la ventana emergente Formulario de tarjeta; tengo abierta la ventana emergente Formulario de tarjeta en modo edición | C-01 |
 | P-KAN-01 | Tablero Kanban | Menú principal > Planificador > Tablero Kanban | C-01 |
 
-### Criterios de aceptación (9)
+### Criterios de aceptación (10)
 
 **RT-02-CA01 · Abrir el detalle de una tarjeta**
 
 - Dado que he iniciado sesión, me encuentro en Menú principal > Planificador > Tablero Kanban y el tablero tiene al menos una tarjeta
 - Cuando selecciono el título de una tarjeta
 - Entonces el sistema abre la ventana emergente Detalle de tarjeta sobre la pantalla Tablero Kanban, que permanece visible de fondo (según HE-07-HU03-CA01)
-- Nota. Se verifica también en Calendario, Agenda diaria y Planificador diario (RT-02-ET03). Parte compartida con HE-07-HU03.
+- Nota. Se verifica también en Calendario, Agenda diaria y Planificador diario (RT-02-ET03); en el Planificador diario, con el botón «i». Parte compartida con HE-07-HU03.
 - ET que lo verifican: ET01, ET02, ET03, ET09
 
 **RT-02-CA02 · Cerrar el detalle de una tarjeta**
@@ -217,17 +217,27 @@ INT-01, IPC-AUTH-02, IPC-AUTH-05. Detalle en `contratos.md`.
 - Entonces el sistema no abre la pantalla elegida y la ventana emergente permanece abierta
 - ET que lo verifican: —
 
-### Especificaciones técnicas (9), lista de verificación
+**RT-02-CA10 · Agrupar las acciones de un elemento**
+
+- Dado que he iniciado sesión, me encuentro en Menú principal > Planificador > Etiquetas y tengo la etiqueta «Trabajo»
+- Cuando selecciono el botón de acciones «⋮» de la etiqueta «Trabajo»
+- Entonces puedo ver el menú con las opciones «Editar» y «Eliminar», y el menú se cierra al seleccionar Esc o fuera de él
+- ET que lo verifican: ET10, ET11, ET12
+
+### Especificaciones técnicas (12), lista de verificación
 
 - [ ] **ET01** (Interfaz): Son ventanas emergentes el Detalle de tarjeta, el Formulario de tarjeta, los formularios de etiqueta, columna y tema, y los mensajes de confirmación. — verificada por CA01
 - [ ] **ET02** (Interfaz): Una ventana emergente se abre sobre la pantalla actual y esta permanece visible de fondo. — verificada por CA01
-- [ ] **ET03** (Interacción): Seleccionar el título de una tarjeta en Tablero Kanban, Calendario, Agenda diaria o Planificador diario abre la ventana emergente Detalle de tarjeta. — verificada por CA01
+- [ ] **ET03** (Interacción): Seleccionar el título de una tarjeta en Tablero Kanban, Panel del día del Calendario o Agenda diaria abre la ventana emergente Detalle de tarjeta. En el Tablero Kanban también lo abre la opción «Vista detallada» del botón de acciones «⋮», y en el Planificador diario lo abre el botón de información «i» (HE-12-HU01-ET10). — verificada por CA01
 - [ ] **ET04** (Interacción): «Cerrar» cierra el Detalle de tarjeta y «Cancelar» cierra los formularios y los mensajes de confirmación, sin guardar cambios ni ejecutar la acción. — verificada por CA02
 - [ ] **ET05** (Interacción): La tecla Esc del teclado equivale a «Cerrar» en el Detalle de tarjeta y a «Cancelar» en los formularios y los mensajes de confirmación. — verificada por CA04
 - [ ] **ET06** (Datos y reglas): Al cerrar una ventana emergente, el usuario sigue en la misma pantalla, con el mismo contenido y la misma posición de desplazamiento que tenía. — verificada por CA02
 - [ ] **ET07** (Interacción): «Editar» en el Detalle de tarjeta reemplaza el detalle por el Formulario de tarjeta en modo edición; al guardar o cancelar se regresa al Detalle de tarjeta. — verificada por CA05
 - [ ] **ET08** (Interacción): Mientras hay una ventana emergente abierta, la pantalla de fondo y el menú principal no responden a la selección. — verificada por CA08
 - [ ] **ET09** (Decisiones y trazabilidad): D-015 (Resuelta): las ventanas emergentes se abren sobre la pantalla actual y al cerrarse el usuario sigue en la misma pantalla. Decisión del equipo del 29/09/2026. Requerimiento R2. — verificada por CA01
+- [ ] **ET10** (Interfaz): En el Tablero Kanban (columnas y tarjetas), Etiquetas y Temas, las acciones de cada elemento se agrupan en el botón de acciones «⋮», cuyo nombre accesible es «Acciones de <nombre del elemento>». La acción principal de la fila queda fuera del menú: «Aplicar» en Temas. — verificada por CA10
+- [ ] **ET11** (Interacción): El menú de acciones se cierra con la tecla Esc, al seleccionar una opción o al seleccionar fuera de él. Se recorre con las flechas arriba y abajo, y al cerrarse el foco vuelve al botón «⋮». Una opción deshabilitada se ve en gris y muestra su motivo al pasar el mouse (según RT-04). — verificada por CA10
+- [ ] **ET12** (Interfaz): El menú de acciones y la lista de «Mover a» se muestran completos por encima del contenido. El contenedor no los recorta y no agregan una barra de desplazamiento vertical. — verificada por CA10
 
 ---
 
@@ -394,7 +404,7 @@ INT-01, IPC-AUTH-02, IPC-AUTH-05. Detalle en `contratos.md`.
 **RT-04-CA08 · Mensaje de confirmación**
 
 - Dado que he iniciado sesión, me encuentro en Menú principal > Personalización > Temas y tengo un tema que no es el tema aplicado
-- Cuando elimino el tema seleccionando «Eliminar»
+- Cuando elimino el tema seleccionando «Eliminar» en el botón de acciones «⋮» del tema
 - Entonces el sistema abre como ventana emergente (según RT-02) el mensaje «¿Deseas eliminar el tema “<nombre del tema>”? Esta acción no se puede deshacer.», con la opción principal «Eliminar» y la opción «Cancelar», y el tema sigue en la lista hasta que confirmo
 - Nota. El instalador (CD-02-HU03) es la única excepción: su mensaje de confirmación ofrece «Seguir instalando» en lugar de «Cancelar».
 - ET que lo verifican: ET17, ET18
@@ -549,6 +559,7 @@ IPC-WID-04. Detalle en `contratos.md`.
 | P-WAL-01 | «Tienes cambios sin guardar en el tema “<nombre del tema en edición>”. ¿Deseas cambiar de tema sin guardarlos?» | aviso | HE-02-HU10-CA03 |
 | P-WAL-01 | «Tienes cambios sin guardar en el tema “<nombre del tema>”. ¿Qué deseas hacer?» | confirmación | HE-02-HU12-CA02 |
 | P-WAL-01 | «Tienes cambios sin guardar. ¿Deseas salir sin guardarlos?» | confirmación | HE-02-HU13-CA02, RT-01-CA08 |
+| P-WAL-01 | «Ya tienes el tema “<nombre del tema>” con estas mismas propiedades.» | resultado | HE-02-HU11-CA06 |
 | P-TEM-01 | «Este tema ya está aplicado.» | opción deshabilitada | HE-03-HU03-CA03 |
 | P-TEM-01 | «Guarda otra personalización con “Guardar como tema” para tener más temas.» | campo | HE-03-HU01-CA02 |
 | P-TEM-01 | «No puedes eliminar el tema aplicado. Aplica otro tema primero.» | opción deshabilitada | HE-03-HU05-CA02 |
@@ -560,6 +571,7 @@ IPC-WID-04. Detalle en `contratos.md`.
 | P-TEM-02 | «El nombre no puede superar los 40 caracteres.» | campo | HE-03-HU02-CA03 |
 | P-TEM-02 | «Tema “<nombre del tema>” guardado.» | resultado | HE-03-HU02-CA01 |
 | P-TEM-02 | «Ya existe un tema con ese nombre. Elige otro.» | resultado | HE-03-HU02-CA04 |
+| P-TEM-02 | «Ya tienes el tema “<nombre del tema>” con estas mismas propiedades.» | campo | HE-03-HU02-CA08 |
 | P-TEM-03 | «El nombre no puede superar los 40 caracteres.» | campo | HE-03-HU04-CA03 |
 | P-TEM-03 | «Tema renombrado.» | resultado | HE-03-HU04-CA01, HE-03-HU04-CA06 |
 | P-TEM-03 | «Ya existe un tema con ese nombre. Elige otro.» | resultado | HE-03-HU04-CA04 |
@@ -590,10 +602,11 @@ IPC-WID-04. Detalle en `contratos.md`.
 | P-WID-09 | «No hay música en reproducción.» | opción deshabilitada | HE-04-HU11-CA03 |
 | P-WID-10 | «No encontramos esa ciudad. Revisa el nombre e intenta de nuevo.» | campo | HE-04-HU12-CA04 |
 | P-WID-10 | «Ya tienes un widget Clima para esa ciudad.» | campo | HE-04-HU12-CA05 |
-| P-DIS-01 | «Cambios guardados.» | resultado | HE-05-HU04-CA01, HE-05-HU04-CA02, HE-05-HU04-CA04 |
+| P-DIS-01 | «Cambios guardados.» | resultado | HE-05-HU04-CA01, HE-05-HU04-CA02, HE-05-HU04-CA04, HE-05-HU04-CA05 |
 | P-DIS-01 | «No se guardaron cambios.» | resultado | HE-05-HU05-CA03 |
 | P-DIS-01 | «Se aplicó una personalización más reciente desde otro computador. Tus cambios sin guardar se conservan.» | resultado | HE-15-HU04-CA08 |
 | P-DIS-01 | «Tienes cambios sin guardar. ¿Deseas salir sin guardarlos?» | confirmación | HE-05-HU05-CA01, HE-05-HU05-CA02 |
+| P-DIS-01 | «Uno de los widgets ya no existe. Vuelve a abrir la pantalla de edición.» | aviso | HE-05-HU04-ET06 |
 | P-WAL-02 | «No pudimos cargar las noticias. Intenta de nuevo más tarde.» | aviso | RT-04-CA06 |
 | P-WAL-02 | «No pudimos mostrar tu wallpaper. Se aplicó el wallpaper por defecto.» | aviso | HE-02-HU01-CA04 |
 | P-WAL-02 | «No tienes tarjetas para hoy.» | estado vacío | HE-06-HU02-CA05 |
@@ -643,6 +656,7 @@ IPC-WID-04. Detalle en `contratos.md`.
 | P-AGE-01 | «Tarjeta asignada al bloque 12:00 – 13:00.» | resultado | HE-11-HU02-CA03 |
 | P-AGE-01 | «Tarjeta quitada del horario.» | resultado | HE-11-HU03-CA01, RT-04-CA09 |
 | P-PLA-01 | «No tienes tarjetas para hoy.» | estado vacío | HE-12-HU01-CA03, HE-12-HU03-CA05 |
+| P-PLA-01 | «Tarjeta creada.» | resultado | HE-12-HU01-CA07 |
 | P-PLA-01 | «¡Bien hecho! Tarjeta completada.» | resultado | HE-12-HU02-CA01 |
 | P-PLA-01 | «¡Completaste todas tus tarjetas de hoy!» | resultado | HE-12-HU03-CA04 |
 | P-REP-01 | «Aún no tienes etiquetas.» | opción deshabilitada | HE-13-HU05-CA05 |
@@ -658,14 +672,21 @@ IPC-WID-04. Detalle en `contratos.md`.
 | P-IA-01 | «Esta tarjeta está completada. Editarla no cambia su columna.» | resultado | HE-14-HU05-CA06 |
 | P-IA-01 | «Esta tarjeta está completada. Si la eliminas, dejará de contar en tus reportes.» | resultado | HE-14-HU07-CA06 |
 | P-IA-01 | «Esta tarjeta está completada. Si la mueves, dejará de estar completada y se borrará su fecha de completado.» | resultado | HE-14-HU06-CA06 |
+| P-IA-01 | «La fecha límite no puede ser anterior a hoy.» | resultado | HE-14-HU04-CA11 |
+| P-IA-01 | «No encuentro la columna “<columna>”. Tus columnas son: <columnas en orden>.» | resultado | HE-14-HU03-CA06 |
+| P-IA-01 | «No encuentro una tarjeta llamada “<nombre>”. ¿Me das más detalles?» | resultado | HE-14-HU07-CA07 |
+| P-IA-01 | «No pude aplicar los cambios. No se hizo ningún cambio.» | aviso | HE-14-HU03-CA07 |
 | P-IA-01 | «No pude responder en este momento. Intenta de nuevo.» | aviso | HE-14-HU01-CA08 |
+| P-IA-01 | «No tienes la etiqueta “<etiqueta>”. Tus etiquetas son: <etiquetas>.» | resultado | HE-14-HU05-CA10 |
 | P-IA-01 | «Se perdió la conexión. No se hizo ningún cambio.» | resultado | HE-14-HU03-CA02, HE-14-HU04-CA07 |
+| P-IA-01 | «Solo puedo ayudarte con tus tarjetas y con Windgets. Por ejemplo, puedo crear una tarjeta o contarte qué tienes para hoy.» | resultado | HE-14-HU01-CA06 |
 | P-IA-01 | «Tu mensaje no puede superar los 2000 caracteres.» | opción deshabilitada | HE-14-HU01-CA05 |
 | P-CFG-01 | «Error de sincronización. Reintentaremos automáticamente.» | aviso | HE-16-HU01-CA05 |
 | P-CFG-01 | «Inicio automático activado.» | resultado | HE-16-HU02-CA02 |
 | P-CFG-01 | «Inicio automático desactivado.» | resultado | HE-16-HU02-CA01 |
 | P-CFG-01 | «No pudimos cambiar el inicio automático. Intenta de nuevo.» | aviso | HE-16-HU02-CA05 |
-| P-CFG-01 | «Sesión cerrada.» | resultado | HE-16-HU03-CA01, HE-16-HU03-CA04 |
+| P-CFG-01 | «No pudimos cerrar la sesión. Cierra la aplicación y vuelve a intentarlo.» | aviso | HE-16-HU03-CA07 |
+| P-CFG-01 | «Sesión cerrada.» | resultado | HE-16-HU03-CA01, HE-16-HU03-CA04, HE-16-HU03-CA06 |
 | P-CFG-01 | «Tienes cambios sin sincronizar. Si cierras sesión ahora, se perderán. ¿Deseas cerrar sesión?» | aviso | HE-16-HU03-CA03 |
 | P-CFG-01 | «¿Deseas cerrar sesión?» | confirmación | HE-16-HU03-CA05 |
 | P-SIN-01 | «Algunas tarjetas se actualizaron con cambios más recientes de otro computador.» | resultado | HE-15-HU03-CA02, HE-15-HU03-CA05, HE-15-HU03-CA06 |

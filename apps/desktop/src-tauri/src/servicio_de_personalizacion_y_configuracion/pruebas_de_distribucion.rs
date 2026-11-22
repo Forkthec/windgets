@@ -217,3 +217,126 @@ fn ca_he_05_hu05_ca05() {
     let (_, servicio) = abrir();
     assert!(servicio.cancelar_edicion().is_none());
 }
+
+/// Un monitor principal de 2560 × 1440 con la escala de Windows en 125 % (píxeles físicos, HE-05-HU02-ET07).
+fn monitor_a_escala() -> crate::tipos::Monitor {
+    crate::tipos::Monitor {
+        id: "0".into(),
+        x: 0,
+        y: 0,
+        width: 2560,
+        height: 1440,
+        scale_factor: 1.25,
+    }
+}
+
+/// Lo que la capa muestra en el escritorio para un widget (los mismos rectángulos que lee IPC-DESK-01).
+fn en_el_escritorio(base: &BaseLocal, widget: &str) -> (i64, i64, i64, i64) {
+    let rects = bloquear(ServicioDePersonalizacion::rectangulos_ajustados(
+        base,
+        USUARIO,
+        &[monitor_a_escala()],
+    ))
+    .unwrap();
+    let w = rects.iter().find(|w| w.widget_id.0 == widget).unwrap();
+    (w.x, w.y, w.width, w.height)
+}
+
+#[test]
+fn ca_he_05_hu02_ca05() {
+    // HE-05-HU02-CA05 · A 125 %, la edición parte de los mismos rectángulos que el escritorio y, al guardar, el
+    // widget queda en el escritorio donde se soltó, sin volver a escalarlo (ET07; HE-05-HU04-ET05).
+    let (base, servicio) = con_widgets_por_defecto();
+    let abierta = bloquear(servicio.abrir_edicion(&base, USUARIO, &[monitor_a_escala()])).unwrap();
+    let reloj = abierta
+        .widgets
+        .iter()
+        .find(|w| w.widget_id.0 == RELOJ)
+        .unwrap();
+    assert_eq!(
+        (reloj.x, reloj.y, reloj.width, reloj.height),
+        en_el_escritorio(&base, RELOJ)
+    );
+    let movido = servicio.mover_en_edicion(RELOJ, 1800, 1000).unwrap();
+    assert!(!movido.collided);
+    bloquear(servicio.guardar_edicion(&base, USUARIO, AHORA_MS))
+        .unwrap()
+        .unwrap();
+    assert_eq!(en_el_escritorio(&base, RELOJ), rect(&movido));
+    // Los que no cambiaron siguen donde estaban en el escritorio.
+    let tareas = abierta
+        .widgets
+        .iter()
+        .find(|w| w.widget_id.0 == TAREAS)
+        .unwrap();
+    assert_eq!(
+        en_el_escritorio(&base, TAREAS),
+        (tareas.x, tareas.y, tareas.width, tareas.height)
+    );
+}
+
+#[test]
+fn ca_he_05_hu03_ca06() {
+    // HE-05-HU03-CA06 · A 125 %, el widget redimensionado se ve en el escritorio con el mismo tamaño que en la
+    // edición y no pasa del área visible del monitor principal (ET03).
+    let (base, servicio) = con_widgets_por_defecto();
+    let abierta = bloquear(servicio.abrir_edicion(&base, USUARIO, &[monitor_a_escala()])).unwrap();
+    let kanban = abierta
+        .widgets
+        .iter()
+        .find(|w| w.widget_id.0 == KANBAN)
+        .unwrap();
+    let r = servicio
+        .redimensionar_en_edicion(KANBAN, kanban.x, kanban.y, 9_000, 9_000)
+        .unwrap();
+    assert_eq!(r.rect.x + r.rect.width, 2560);
+    assert_eq!(r.rect.y + r.rect.height, 1440);
+    bloquear(servicio.guardar_edicion(&base, USUARIO, AHORA_MS))
+        .unwrap()
+        .unwrap();
+    assert_eq!(en_el_escritorio(&base, KANBAN), rect(&r));
+}
+
+#[test]
+fn ca_he_05_hu04_ca05() {
+    // HE-05-HU04-CA05 · «Guardar» incluye todos los cambios hechos hasta ese momento (ET05).
+    let (base, servicio) = abrir();
+    servicio.mover_en_edicion(RELOJ, 40, 600).unwrap();
+    servicio.mover_en_edicion(RELOJ, 40, 700).unwrap();
+    servicio
+        .redimensionar_en_edicion(KANBAN, 760, 40, 700, 600)
+        .unwrap();
+    bloquear(servicio.guardar_edicion(&base, USUARIO, AHORA_MS))
+        .unwrap()
+        .unwrap();
+    assert_eq!(guardado(&base, RELOJ), (40, 700, 320, 160));
+    assert_eq!(guardado(&base, KANBAN), (760, 40, 700, 600));
+}
+
+#[test]
+fn ca_he_05_hu04_et06() {
+    // HE-05-HU04-ET06 · Un widget eliminado desde otro computador: mover, redimensionar o guardar responden su
+    // mensaje y la pantalla de edición no se cierra (los cambios siguen en memoria).
+    let (base, servicio) = abrir();
+    servicio.mover_en_edicion(RELOJ, 40, 600).unwrap();
+    bloquear(async {
+        sqlx::query("DELETE FROM theme_widget WHERE widget_id = ?")
+            .bind(RELOJ)
+            .execute(base.pool().await.unwrap())
+            .await
+            .unwrap();
+    });
+    let e = bloquear(servicio.guardar_edicion(&base, USUARIO, AHORA_MS)).unwrap_err();
+    assert_eq!(e.code, ErrorCode::LayoutWidgetMissing);
+    assert_eq!(
+        e.message,
+        "Uno de los widgets ya no existe. Vuelve a abrir la pantalla de edición."
+    );
+    assert!(servicio.edicion_con_cambios());
+    let e = servicio.mover_en_edicion("no-existe", 0, 0).unwrap_err();
+    assert_eq!(e.code, ErrorCode::LayoutWidgetMissing);
+    let e = servicio
+        .redimensionar_en_edicion("no-existe", 0, 0, 200, 200)
+        .unwrap_err();
+    assert_eq!(e.code, ErrorCode::LayoutWidgetMissing);
+}

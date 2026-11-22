@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { PlannerItem, PlannerSummary, PlannerToday, ScreenParams } from '@/types';
+import { Boton } from '@/ui/Boton/Boton';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNucleo, useParametrosDeNavegacion } from '@/ventana_principal/VentanaPrincipal';
@@ -17,7 +18,11 @@ function horaVisible(hora: number): string {
   return `${String(hora).padStart(2, '0')}:00`;
 }
 
-/** Una tarjeta de la lista: casilla de completada, título, hora si la tiene y prioridad (ET04). */
+/**
+ * Una tarjeta de la lista: casilla de completada, título, hora si la tiene, prioridad y el botón de información
+ * «i» (ET04). Toda la tarjeta, salvo la «i», es la etiqueta de la casilla: seleccionar cualquier parte la alterna
+ * (HE-12-HU02-ET01). La «i» abre el Detalle de tarjeta (ET10).
+ */
 interface ElementoProps {
   item: PlannerItem;
   alAbrir: (id: string) => void;
@@ -29,18 +34,26 @@ function Elemento({ item, alAbrir, alCompletar }: ElementoProps) {
   return (
     // ET07 y HE-12-HU02-ET05: una tarjeta en Hecho va tachada y con la casilla marcada.
     <li className={`wg-tarjeta wg-fila${card.is_completed ? ' wg-tachada' : ''}`}>
-      {/* HE-12-HU02-ET01: la casilla de completada de cada tarjeta. */}
-      <input
-        type="checkbox"
-        checked={card.is_completed}
-        aria-label={card.title}
-        onChange={(e) => alCompletar(card.id, e.target.checked)}
-      />
-      <button type="button" className="wg-tarjeta__titulo" onClick={() => alAbrir(card.id)}>
-        {card.title}
+      <label className="wg-fila wg-planificador__casilla">
+        {/* HE-12-HU02-ET01; ET10: la casilla conserva como nombre accesible el título de la tarjeta. */}
+        <input
+          type="checkbox"
+          checked={card.is_completed}
+          aria-label={card.title}
+          onChange={(e) => alCompletar(card.id, e.target.checked)}
+        />
+        <span className="wg-tarjeta__titulo">{card.title}</span>
+        {hour !== null && <span>{horaVisible(hour)}</span>}
+        {card.priority && <span>{NOMBRE_DE_PRIORIDAD[card.priority]}</span>}
+      </label>
+      <button
+        type="button"
+        className="wg-boton wg-boton-informacion"
+        aria-label={`Ver detalle de ${card.title}`}
+        onClick={() => alAbrir(card.id)}
+      >
+        i
       </button>
-      {hour !== null && <span>{horaVisible(hour)}</span>}
-      {card.priority && <span>{NOMBRE_DE_PRIORIDAD[card.priority]}</span>}
     </li>
   );
 }
@@ -109,6 +122,14 @@ export function PlannerDaily() {
         <>
           {/* ET01: la fecha de hoy y la lista de tarjetas. */}
           <h2 className="wg-agenda__fecha">{fechaVisible(dia.date)}</h2>
+          {/* ET11, ET12 (D-214): «Nueva tarjeta» abre el Formulario de tarjeta con la fecha límite de hoy, que el
+              usuario puede cambiar; se crea con las reglas de HE-07-HU01 y muestra «Tarjeta creada.». También
+              acompaña al estado vacío (ET06; HE-12-HU03-ET06). */}
+          <div className="wg-fila">
+            <Boton principal onClick={() => tarjetas.abrirNueva(dia.date)}>
+              Nueva tarjeta
+            </Boton>
+          </div>
           {dia.items.length === 0 ? (
             // ET06
             <EstadoVacio texto="No tienes tarjetas para hoy." />

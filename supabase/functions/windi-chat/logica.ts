@@ -27,7 +27,19 @@ export interface Contexto {
   labels: { id: string; name: string }[];
   cards: Record<string, unknown>[];
   totals: { total: number; overdue: number; pending: number; completed: number };
+  /** HE-14-HU09-ET06: las cantidades que calcula el Núcleo con todas las tarjetas. */
+  counts?: {
+    by_column: Cantidad[];
+    by_label: Cantidad[];
+    by_priority: Cantidad[];
+    completed_by_date: Cantidad[];
+  };
   active_proposal: unknown;
+}
+
+export interface Cantidad {
+  key: string;
+  count: number;
 }
 
 export interface PeticionWindi {
@@ -99,10 +111,56 @@ export const GUIA = [
   '«Catálogo de imágenes», colores, paleta, tipografía; «Guardar», «Guardar como tema», «Aplicar», «Cancelar»), Temas',
   '(«Aplicar», «Renombrar», «Eliminar») y Widgets (activar o desactivar, «Agregar widget», «Configurar», «Eliminar»,',
   '«Editar escritorio» para mover y cambiar el tamaño de los widgets).',
-  'Menú principal > Configuración: indicador de sincronización, inicio automático con Windows y «Cerrar sesión».',
+  'Menú principal > Configuración: indicador de sincronización, interruptor «Inicio automático» y «Cerrar sesión».',
   'Para abrir el detalle de una tarjeta se selecciona su título; desde el detalle se edita, se elimina o se marca',
   'como completada.',
+  // HE-14-HU08-CA03, ET04 (P24): Agenda diaria, pantalla de edición y cuenta, desde docs/interfaz.md y HE-11.
+  'Menú principal > Planificador > Agenda diaria: los 24 bloques horarios del día, de 00:00 a 23:00, con «Día',
+  'anterior», «Día siguiente» y «Hoy». Para asignar una tarjeta a un bloque horario se arrastra (drag-and-drop)',
+  'desde el panel Tarjetas sin horario, o desde otro bloque, hasta el bloque de destino; «Quitar del horario» la',
+  'devuelve al panel Tarjetas sin horario.',
+  'Menú principal > Personalización > Widgets > «Editar escritorio» abre la pantalla de edición, donde se mueven y',
+  'se cambia el tamaño de los widgets; «Guardar» guarda los cambios y «Cancelar» o la tecla Esc sale.',
+  'Cuenta: en Inicio de sesión, el hipervínculo «¿Olvidaste tu contraseña?» abre Recuperar contraseña (pasos',
+  'Correo electrónico, Diligenciar código y Nueva contraseña) y «Regístrate» abre Registro.',
 ].join(' ');
+
+const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+/** HE-14-HU04-ET14: «sábado 21/11/2026» a partir de AAAA-MM-DD (el día del calendario, sin zona horaria). */
+export function diaYFecha(iso: string, mas = 0): string {
+  const [a, m, d] = iso.split('-').map(Number);
+  const fecha = new Date(Date.UTC(a ?? 1970, (m ?? 1) - 1, (d ?? 1) + mas));
+  const dos = (n: number) => String(n).padStart(2, '0');
+  return `${DIAS[fecha.getUTCDay()]} ${dos(fecha.getUTCDate())}/${dos(fecha.getUTCMonth() + 1)}/${fecha.getUTCFullYear()}`;
+}
+
+/** DD/MM/AAAA a partir de AAAA-MM-DD. */
+const dmy = (iso: string) => iso.split('-').reverse().join('/');
+
+/** HE-14-HU09-ET06: las cantidades del Núcleo con los nombres de columnas, etiquetas y prioridades. */
+function cantidades(contexto: Contexto): string {
+  const { totals, counts } = contexto;
+  const partes = [
+    `total ${totals.total}, vencidas ${totals.overdue}, pendientes ${totals.pending}, completadas ${totals.completed}`,
+  ];
+  if (counts) {
+    const nombre = (lista: { id: string; name: string }[], id: string) =>
+      lista.find((x) => x.id.toLowerCase() === id.toLowerCase())?.name ?? id;
+    const prioridades: Record<string, string> = { high: 'alta', medium: 'media', low: 'baja', none: 'sin prioridad' };
+    const unir = (lista: Cantidad[], texto: (k: string) => string) =>
+      lista.length ? lista.map((c) => `${texto(c.key)} ${c.count}`).join(', ') : 'ninguna';
+    partes.push(
+      `por columna: ${unir(counts.by_column, (k) => nombre(contexto.columns, k))}`,
+      `por etiqueta: ${unir(counts.by_label, (k) => nombre(contexto.labels, k))}`,
+      `por prioridad: ${unir(counts.by_priority, (k) => prioridades[k] ?? k)}`,
+      `completadas por fecha de completado: ${unir(counts.completed_by_date, dmy)}`,
+    );
+  }
+  return partes.join('; ');
+}
+
+const TIPOS: Record<string, string> = { task: 'tarea', reminder: 'recordatorio', event: 'evento' };
 
 /** Una tarjeta del contexto con su estado, fechas, columna, prioridad y etiquetas (HE-14-HU09-ET01). */
 function lineaDeTarjeta(t: Record<string, unknown>, contexto: Contexto): string {
@@ -117,6 +175,16 @@ function lineaDeTarjeta(t: Record<string, unknown>, contexto: Contexto): string 
     ? t.label_ids.map((id) => contexto.labels.find((e) => e.id === id)?.name).filter(Boolean)
     : [];
   const prioridad = typeof t.priority === 'string' ? { high: 'alta', medium: 'media', low: 'baja' }[t.priority] : null;
+  // HE-14-HU09-ET07: el tipo, el bloque horario y la descripción (recortada) de cada tarjeta.
+  const hora = (h: number) => `${String(h).padStart(2, '0')}:00`;
+  const bloque =
+    typeof t.scheduled_date === 'string' && typeof t.scheduled_hour === 'number'
+      ? `bloque horario ${t.scheduled_date} ${hora(t.scheduled_hour)} – ${hora((t.scheduled_hour + 1) % 24)}`
+      : null;
+  const descripcion =
+    typeof t.description === 'string' && t.description.trim()
+      ? `descripción «${[...t.description.trim()].slice(0, 120).join('')}${[...t.description.trim()].length > 120 ? '…' : ''}»`
+      : null;
   const datos = [
     `id ${String(t.id)}`,
     `fecha límite ${String(t.due_date)}`,
@@ -124,6 +192,9 @@ function lineaDeTarjeta(t: Record<string, unknown>, contexto: Contexto): string 
     columna ? `columna ${columna}` : null,
     prioridad ? `prioridad ${prioridad}` : null,
     etiquetas.length ? `etiquetas ${etiquetas.join(', ')}` : null,
+    typeof t.type === 'string' && TIPOS[t.type] ? `tipo ${TIPOS[t.type]}` : null,
+    bloque,
+    descripcion,
   ].filter(Boolean);
   return `${String(t.title)} (${datos.join(', ')})`;
 }
@@ -137,15 +208,27 @@ export function instruccionDelSistema(contexto: Contexto): string {
   const reglas = [
     'Eres Windi, el agente de IA de Windgets, una aplicación de escritorio para organizar tarjetas (tareas,',
     'recordatorios y eventos) en un tablero Kanban, un calendario, una agenda diaria y un planificador diario.',
-    `La persona con la que hablas se llama ${contexto.alias}. Hoy es ${contexto.today} y son las`,
-    `${contexto.now_hour}:00 en su computador.`,
+    // HE-14-HU04-CA12, ET14: el día de la semana de hoy y de los próximos 7 días, en hora de Colombia (UTC-5).
+    `La persona con la que hablas se llama ${contexto.alias}. Hoy es ${diaYFecha(contexto.today)}`,
+    `(${contexto.today}) y son las ${contexto.now_hour}:00 en su computador, en hora de Colombia (UTC-5).`,
+    `Los próximos 7 días: ${Array.from({ length: 7 }, (_, i) => diaYFecha(contexto.today, i + 1)).join(', ')}.`,
     'Alcance: solo hablas de las tarjetas de esta persona y del funcionamiento de Windgets. Ante cualquier otro',
-    'tema, mantienes la calma, dices con amabilidad que solo puedes ayudar con sus tarjetas y con la aplicación,',
-    'no respondes la consulta y propones algo en lo que sí puedes ayudar.',
+    'tema no respondes la consulta y llamas a responder con intent out_of_scope: la aplicación muestra un mensaje',
+    'fijo que ofrece algo en lo que sí puedes ayudar (HE-14-HU01-ET26).',
+    // HE-14-HU01-ET25: cada respuesta tiene su intención.
+    'En responder indicas la intención: answer cuando respondes, clarify cuando preguntas por un dato que falta y',
+    'out_of_scope cuando el tema no es de sus tarjetas ni de Windgets. Aclarar no descarta la propuesta pendiente.',
     'Si no entiendes qué acción quiere ni sobre qué tarjeta, haces una sola pregunta concreta para aclararlo y',
     'no propones cambios hasta tener la respuesta.',
     'Si no puedes hacer algo, lo dices y ofreces una alternativa.',
     'Nunca haces cambios por tu cuenta: solo propones y la persona confirma.',
+    // HE-14-HU03: CA05, ET09 y ET10.
+    'Nunca dices que hiciste, creaste, cambiaste, moviste o eliminaste algo: los cambios solo se aplican cuando la',
+    'persona selecciona «Confirmar» en la propuesta.',
+    'Si la persona escribe «sí», «confirmo» o algo parecido para aceptar una propuesta, le pides que seleccione',
+    '«Confirmar» en la propuesta; no llamas ninguna función de propuesta y no dices que hiciste el cambio.',
+    'Nunca anuncias un cambio con texto sin llamar en la misma respuesta a la función de la propuesta.',
+    'En cada respuesta propones un solo tipo de cambio: crear, cambiar, mover o eliminar.',
     // HE-14-HU02: personalidad (ET01), trato (ET02, ET03), lenguaje (ET04) y formato (ET05 a ET07).
     'Personalidad: eres un compañero de organización cercano, relajado y optimista, cálido sin exagerar.',
     'Tratas a la persona de tú y la llamas por su nombre al saludarla y al celebrar un logro.',
@@ -168,10 +251,25 @@ export function instruccionDelSistema(contexto: Contexto): string {
     'entiendes; si falta el título y no se puede deducir, preguntas qué título ponerle. No propones hasta tenerlos.',
     'La fecha límite no puede ser anterior a hoy: si lo es, lo explicas y pides otra fecha, sin proponer.',
     'Si piden varias tarjetas en un mensaje, las propones todas en una sola llamada.',
+    // HE-14-HU04-ET13.
+    'Las tarjetas nuevas siempre se crean en la columna Por hacer: si piden crearla en otra columna, explicas que',
+    'las tarjetas nuevas se crean en Por hacer y propones crearla en Por hacer.',
     'Solo usas etiquetas que existen y nunca creas etiquetas. Si piden una que no existe, dices que no existe,',
     'mencionas las disponibles y preguntas si prefiere una de ellas o crear la tarjeta sin etiqueta.',
-    // HE-14-HU05: editar tarjetas.
-    'Para cambiar datos de una tarjeta llamas a propose_edit_card con su id y solo los datos que cambian.',
+    // HE-14-HU05: editar tarjetas (ET10 a ET14).
+    'Para cambiar datos de una o varias tarjetas llamas a propose_edit_cards con un elemento por tarjeta: su id y',
+    'solo los datos que cambian. Si piden el mismo cambio para varias tarjetas, como las vencidas, las incluyes',
+    'todas en una sola llamada.',
+    'Para quitar la prioridad, la descripción o el bloque horario, envías null en ese dato.',
+    'Para poner o quitar etiquetas llamas a propose_label_cards con el id de la tarjeta y los nombres de las',
+    'etiquetas que se agregan o se quitan; las demás etiquetas de la tarjeta se conservan. Una tarjeta tiene máximo',
+    '5 etiquetas.',
+    // HE-14-HU04-CA10; HE-14-HU05-CA11, CA12.
+    'El bloque horario dura una hora y se indica con su fecha y su hora de inicio, de 0 a 23: el bloque',
+    '«10:00 – 11:00» es start_hour 10. Si piden un bloque de más de una hora, explicas que los bloques son de una',
+    'hora y preguntas cuál. Al crear o al cambiar una tarjeta puedes asignar el bloque en time_block.',
+    'En la aplicación el bloque horario se asigna en Agenda diaria; tú solo lo propones en time_block y nunca',
+    'prometes asignarlo sin la propuesta.',
     'Si no encuentras una tarjeta con el nombre que menciona, lo dices, pides más detalles y no propones.',
     'Si varias tarjetas coinciden, muestras el título y la fecha límite de cada una y preguntas a cuál se refiere',
     'antes de proponer.',
@@ -179,7 +277,9 @@ export function instruccionDelSistema(contexto: Contexto): string {
     'Si la tarjeta está completada (tiene completed_on), avisas que está completada; si además pide que vuelva a',
     'estar pendiente, eso es mover la tarjeta, no editarla.',
     // HE-14-HU06: mover tarjetas.
-    'Para mover una tarjeta a otra columna llamas a propose_move_card con su id y el id de la columna de destino.',
+    'Para mover una o varias tarjetas a otra columna llamas a propose_move_cards con sus ids y el id o el nombre',
+    'de la columna de destino. Si piden mover varias, como todas las de una columna, las incluyes todas en una',
+    'sola llamada.',
     'Si dice que una tarjeta ya está completada o terminada, eso es moverla a la columna con función done (Hecho).',
     'Si pide que una tarjeta completada vuelva a estar pendiente, eso es moverla a otra columna; avisas que está',
     'completada antes de proponer.',
@@ -210,6 +310,14 @@ export function instruccionDelSistema(contexto: Contexto): string {
     'Si ninguna tarjeta cumple el criterio, dices que no encuentras tarjetas que coincidan; si preguntaban por',
     'vencidas, lo dices celebrando que no tiene ninguna.',
     'Responder una consulta nunca crea, edita, mueve ni elimina tarjetas: no llamas ninguna función.',
+    // HE-14-HU09-CA05, ET06.
+    'Para decir cuántas tarjetas hay usas las cantidades calculadas y nunca las cuentas tú: la lista de tarjetas',
+    'puede no traerlas todas.',
+    `Cantidades calculadas con todas sus tarjetas: ${cantidades(contexto)}.`,
+    // HE-14-HU03: la propuesta que espera «Confirmar».
+    `Propuesta pendiente de confirmar: ${
+      contexto.active_proposal ? JSON.stringify(contexto.active_proposal) : 'ninguna'
+    }. Si piden ajustarla, propones de nuevo la propuesta completa con el ajuste.`,
     `Tarjetas (las relacionadas con el mensaje primero): ${
       contexto.cards.length ? contexto.cards.map((t) => lineaDeTarjeta(t, contexto)).join('; ') : 'ninguna'
     }.`,
@@ -226,6 +334,18 @@ export function instruccionDelSistema(contexto: Contexto): string {
   return reglas.join(' ');
 }
 
+/** El bloque horario de una tarjeta: su fecha y su hora de inicio; dura una hora (HE-11-HU01). `null` lo quita. */
+const BLOQUE = {
+  type: 'OBJECT',
+  nullable: true,
+  description: 'El bloque horario de una hora; null para quitarlo.',
+  properties: {
+    date: { type: 'STRING', description: 'Fecha AAAA-MM-DD.' },
+    start_hour: { type: 'INTEGER', description: 'Hora de inicio, de 0 a 23.' },
+  },
+  required: ['date', 'start_hour'],
+};
+
 /**
  * Las funciones que Windi puede llamar (INT-03): `responder` lleva el texto de la respuesta y las demás proponen
  * cambios. DUDA (P23): INT-03 no define `responder`; con `mode: 'AUTO'` Gemini a veces anunciaba la propuesta en
@@ -238,8 +358,16 @@ export const FUNCIONES = [
       'Envía a la persona el texto de tu respuesta. Lo llamas siempre, solo o junto a una función de propuesta.',
     parameters: {
       type: 'OBJECT',
-      properties: { text: { type: 'STRING', description: 'El texto que ve la persona.' } },
-      required: ['text'],
+      properties: {
+        text: { type: 'STRING', description: 'El texto que ve la persona.' },
+        // HE-14-HU01-ET25.
+        intent: {
+          type: 'STRING',
+          enum: ['answer', 'clarify', 'out_of_scope'],
+          description: 'answer al responder, clarify al pedir un dato que falta, out_of_scope fuera del alcance.',
+        },
+      },
+      required: ['text', 'intent'],
     },
   },
   {
@@ -259,6 +387,7 @@ export const FUNCIONES = [
               description: { type: 'STRING' },
               priority: { type: 'STRING', enum: ['high', 'medium', 'low'] },
               label_ids: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Solo ids de etiquetas que existen.' },
+              time_block: BLOQUE,
             },
             required: ['title', 'due_date'],
           },
@@ -268,38 +397,80 @@ export const FUNCIONES = [
     },
   },
   {
-    name: 'propose_edit_card',
-    description: 'Propone cambiar datos de una tarjeta. La persona confirma antes de cambiarla.',
+    name: 'propose_edit_cards',
+    description: 'Propone cambiar datos de una o varias tarjetas. La persona confirma antes de cambiarlas.',
     parameters: {
       type: 'OBJECT',
       properties: {
-        card_id: { type: 'STRING', description: 'El id de una tarjeta de las relacionadas con el mensaje.' },
-        changes: {
-          type: 'OBJECT',
-          description: 'Solo los datos que cambian.',
-          properties: {
-            type: { type: 'STRING', enum: ['task', 'reminder', 'event'] },
-            title: { type: 'STRING', description: 'De 1 a 100 caracteres.' },
-            due_date: { type: 'STRING', description: 'Fecha límite AAAA-MM-DD, no anterior a hoy.' },
-            description: { type: 'STRING' },
-            priority: { type: 'STRING', enum: ['high', 'medium', 'low'] },
-            label_ids: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Solo ids de etiquetas que existen.' },
+        edits: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              card_id: { type: 'STRING', description: 'El id de una tarjeta de las relacionadas con el mensaje.' },
+              changes: {
+                type: 'OBJECT',
+                description: 'Solo los datos que cambian.',
+                properties: {
+                  type: { type: 'STRING', enum: ['task', 'reminder', 'event'] },
+                  title: { type: 'STRING', description: 'De 1 a 100 caracteres.' },
+                  due_date: { type: 'STRING', description: 'Fecha límite AAAA-MM-DD, no anterior a hoy.' },
+                  // HE-14-HU05-ET12: `null` quita la descripción, la prioridad o el bloque horario.
+                  description: { type: 'STRING', nullable: true, description: 'null para quitarla.' },
+                  priority: {
+                    type: 'STRING',
+                    enum: ['high', 'medium', 'low'],
+                    nullable: true,
+                    description: 'null para quitarla.',
+                  },
+                  time_block: BLOQUE,
+                },
+              },
+            },
+            required: ['card_id', 'changes'],
           },
         },
       },
-      required: ['card_id', 'changes'],
+      required: ['edits'],
     },
   },
   {
-    name: 'propose_move_card',
-    description: 'Propone mover una tarjeta a otra columna. La persona confirma antes de moverla.',
+    name: 'propose_label_cards',
+    description:
+      'Propone agregar o quitar etiquetas de una o varias tarjetas, por su nombre. La persona confirma antes.',
     parameters: {
       type: 'OBJECT',
       properties: {
-        card_id: { type: 'STRING', description: 'El id de una tarjeta de las relacionadas con el mensaje.' },
-        column_id: { type: 'STRING', description: 'El id de una columna del tablero.' },
+        edits: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              card_id: { type: 'STRING', description: 'El id de una tarjeta de las relacionadas con el mensaje.' },
+              add: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Nombres de etiquetas que se agregan.' },
+              remove: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Nombres de etiquetas que se quitan.' },
+            },
+            required: ['card_id'],
+          },
+        },
       },
-      required: ['card_id', 'column_id'],
+      required: ['edits'],
+    },
+  },
+  {
+    name: 'propose_move_cards',
+    description: 'Propone mover una o varias tarjetas a otra columna. La persona confirma antes de moverlas.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        card_ids: {
+          type: 'ARRAY',
+          items: { type: 'STRING' },
+          description: 'Los ids de las tarjetas de las relacionadas con el mensaje.',
+        },
+        column_id: { type: 'STRING', description: 'El id o el nombre de una columna del tablero.' },
+      },
+      required: ['card_ids', 'column_id'],
     },
   },
   {
@@ -322,25 +493,59 @@ export const FUNCIONES = [
 /** La acción de la propuesta según la función que llamó Gemini. */
 const ACCION: Record<string, Propuesta['action']> = {
   propose_create_cards: 'create',
-  propose_edit_card: 'edit',
-  propose_move_card: 'move',
+  propose_edit_cards: 'edit',
+  propose_label_cards: 'edit',
+  propose_move_cards: 'move',
   propose_delete_cards: 'delete',
 };
 
+/** HE-14-HU03-ET11: el texto que acompaña una propuesta corresponde a su acción. */
+export const RESPALDO: Record<Propuesta['action'], string> = {
+  create: 'Esto es lo que voy a crear. ¿Confirmas?',
+  edit: 'Esto es lo que voy a cambiar. ¿Confirmas?',
+  move: 'Esto es lo que voy a mover. ¿Confirmas?',
+  delete: 'Esto es lo que voy a eliminar. ¿Confirmas?',
+};
+
+/**
+ * Si Gemini llama a funciones de propuesta distintas en una respuesta, Windi pide hacerlo en dos pasos. DUDA:
+ * HE-14-HU03 no define el texto (docs/DUDAS.md).
+ */
+export const UN_CAMBIO_A_LA_VEZ = 'Puedo preparar un tipo de cambio a la vez. ¿Cuál hacemos primero?';
+
+/**
+ * Si Gemini se queda sin tokens de salida, Windi pide hacerlo por partes en vez de dar el error genérico. DUDA:
+ * HE-14-HU07-ET07 no define el texto (docs/DUDAS.md).
+ */
+export const MUY_LARGO = 'Tu pedido es muy largo para responderlo de una vez. ¿Lo hacemos por partes?';
+
 /** Los elementos de la propuesta a partir de los argumentos de la función (INT-03 → EF-01). */
 function elementos(nombre: string, args: Record<string, unknown>): Propuesta['items'] {
-  if (nombre === 'propose_edit_card') {
-    const cambios = esObjeto(args.changes) ? args.changes : null;
-    return typeof args.card_id === 'string' ? [{ card_id: args.card_id, changes: cambios }] : [];
+  const ediciones = Array.isArray(args.edits) ? args.edits.filter(esObjeto) : [];
+  if (nombre === 'propose_edit_cards') {
+    return ediciones
+      .filter((e) => typeof e.card_id === 'string')
+      .map((e) => ({ card_id: String(e.card_id), changes: esObjeto(e.changes) ? e.changes : null }));
+  }
+  // HE-14-HU05-CA09, ET11: las etiquetas van por su nombre; el Núcleo conserva las demás.
+  if (nombre === 'propose_label_cards') {
+    const nombres = (v: unknown) => (Array.isArray(v) ? v.filter((n) => typeof n === 'string') : []);
+    return ediciones
+      .filter((e) => typeof e.card_id === 'string')
+      .map((e) => ({
+        card_id: String(e.card_id),
+        changes: { add_labels: nombres(e.add), remove_labels: nombres(e.remove) },
+      }));
   }
   if (nombre === 'propose_delete_cards') {
     const ids = Array.isArray(args.card_ids) ? args.card_ids.filter((id) => typeof id === 'string') : [];
     return ids.map((id) => ({ card_id: id, changes: null }));
   }
-  if (nombre === 'propose_move_card') {
-    return typeof args.card_id === 'string' && typeof args.column_id === 'string'
-      ? [{ card_id: args.card_id, changes: { column_id: args.column_id } }]
-      : [];
+  // HE-14-HU06-ET12: una propuesta de movimiento puede incluir varias tarjetas.
+  if (nombre === 'propose_move_cards') {
+    const ids = Array.isArray(args.card_ids) ? args.card_ids.filter((id) => typeof id === 'string') : [];
+    const columna = args.column_id;
+    return typeof columna === 'string' ? ids.map((id) => ({ card_id: id, changes: { column_id: columna } })) : [];
   }
   const tarjetas = Array.isArray(args.cards) ? args.cards.filter(esObjeto) : [];
   return tarjetas.map((t) => ({ card_id: null, changes: t }));
@@ -357,7 +562,8 @@ export function cuerpoParaGemini(peticion: PeticionWindi): Record<string, unknow
     contents,
     tools: [{ functionDeclarations: FUNCIONES }],
     toolConfig: { functionCallingConfig: { mode: 'ANY' } },
-    generationConfig: { temperature: 0.4, maxOutputTokens: 600 },
+    // HE-14-HU07-ET07: una propuesta con muchas tarjetas no cabe en 600 tokens de salida.
+    generationConfig: { temperature: 0.4, maxOutputTokens: 2048 },
   };
 }
 
@@ -369,36 +575,51 @@ export function errorDeGemini(estado: number): CodigoDeError {
 /**
  * La respuesta de EF-01 a partir de la de Gemini. Sin texto (por ejemplo, un bloqueo de seguridad) es
  * `provider_error` (INT-03).
- * DUDA: HE-14-HU01 EF-01 devuelve `intent`, pero Gemini solo da texto. Valor usado: `answer` para el texto
- * (`propose` llega con las propuestas, HE-14-HU03) (docs/DUDAS.md).
+ * La intención llega en `responder` (HE-14-HU01-ET25); `propose` llega con las propuestas (HE-14-HU03).
  */
 export function leerGemini(respuesta: unknown): RespuestaWindi | CodigoDeError {
   const partes = esObjeto(respuesta) && Array.isArray(respuesta.candidates) ? respuesta.candidates[0] : null;
+  // La respuesta se cortó por el tope de tokens: lo que llegó está incompleto (HE-14-HU07-ET07).
+  if (esObjeto(partes) && partes.finishReason === 'MAX_TOKENS') {
+    return { reply: MUY_LARGO, intent: 'clarify', proposal: null };
+  }
   const contenido = esObjeto(partes) && esObjeto(partes.content) ? partes.content : null;
   const lista = contenido && Array.isArray(contenido.parts) ? contenido.parts : [];
   const llamadas = lista
     .map((p: unknown) => (esObjeto(p) && esObjeto(p.functionCall) ? p.functionCall : null))
     .filter((f) => f !== null);
-  // El texto llega en partes de texto o en los argumentos de `responder`.
-  const reply = [
-    ...lista.map((p: unknown) => (esObjeto(p) && typeof p.text === 'string' ? p.text : '')),
-    ...llamadas.map((f) =>
-      f.name === 'responder' && esObjeto(f.args) && typeof f.args.text === 'string' ? f.args.text : '',
-    ),
-  ]
+  // El texto llega en los argumentos de `responder` o en partes de texto; si llegan los dos, vale `responder`,
+  // para no repetir la respuesta.
+  const deResponder = llamadas
+    .map((f) => (f.name === 'responder' && esObjeto(f.args) && typeof f.args.text === 'string' ? f.args.text : ''))
     .join('')
     .trim();
-  const llamada = llamadas.find((f) => typeof f.name === 'string' && f.name in ACCION);
-  const accion = llamada && typeof llamada.name === 'string' ? ACCION[llamada.name] : undefined;
-  if (llamada && accion) {
-    const args = esObjeto(llamada.args) ? llamada.args : {};
+  const reply =
+    deResponder ||
+    lista
+      .map((p: unknown) => (esObjeto(p) && typeof p.text === 'string' ? p.text : ''))
+      .join('')
+      .trim();
+  const propuestas = llamadas.filter((f) => typeof f.name === 'string' && f.name in ACCION);
+  const acciones = new Set(propuestas.map((f) => ACCION[String(f.name)]));
+  if (acciones.size > 1) {
+    return { reply: UN_CAMBIO_A_LA_VEZ, intent: 'clarify', proposal: null };
+  }
+  const [accion] = [...acciones];
+  if (accion) {
+    // HE-14-HU05-ET10: las llamadas de la misma acción se juntan en una sola propuesta.
+    const items = propuestas.flatMap((f) => elementos(String(f.name), esObjeto(f.args) ? f.args : {}));
     return {
-      // DUDA: HE-14-HU04 Gemini puede llamar a la función sin texto. Valor usado: el texto del ejemplo de INT-03.
-      reply: reply || 'Esto es lo que voy a crear. ¿Confirmas?',
+      // DUDA: HE-14-HU04 Gemini puede llamar a la función sin texto. Valor usado: el texto de su acción (ET11).
+      reply: reply || RESPALDO[accion],
       intent: 'propose',
-      proposal: { action: accion, items: elementos(String(llamada.name), args) },
+      proposal: { action: accion, items },
     };
   }
   if (!reply) return 'provider_error';
-  return { reply, intent: 'answer', proposal: null };
+  // HE-14-HU01-ET25: la intención la indica Gemini en `responder`; sin una válida, es `answer`.
+  const indicada = llamadas
+    .map((f) => (f.name === 'responder' && esObjeto(f.args) ? f.args.intent : null))
+    .find((i): i is Intencion => i === 'answer' || i === 'clarify' || i === 'out_of_scope');
+  return { reply, intent: indicada ?? 'answer', proposal: null };
 }

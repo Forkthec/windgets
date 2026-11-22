@@ -16,9 +16,9 @@ use crate::servicio_del_planificador::{Calendario, ServicioDelPlanificador, erro
 use crate::tipos::{
     AppError, ErrorCode, ProposalState, Uuid, WindiChatContext, WindiChatProposal,
     WindiChatProposalItemsItem, WindiChatRequest, WindiChatRequestHistoryItem,
-    WindiChatRequestHistoryItemRole, WindiChatResponse, WindiConfirmProposalResult,
-    WindiConfirmProposalResultOutcome, WindiConversation, WindiMessage, WindiMessageRole,
-    WindiProposal, WindiRejectProposalResult, WindiSendMessageResult,
+    WindiChatRequestHistoryItemRole, WindiChatResponse, WindiChatResponseIntent,
+    WindiConfirmProposalResult, WindiConfirmProposalResultOutcome, WindiConversation, WindiMessage,
+    WindiMessageRole, WindiProposal, WindiRejectProposalResult, WindiSendMessageResult,
 };
 use serde_json::Value;
 
@@ -48,23 +48,35 @@ pub trait AgenteEnLaNube: Send + Sync {
     ) -> impl std::future::Future<Output = Result<WindiChatResponse, FallaDeWindi>> + Send;
 }
 
+/// HE-14-HU03-ET13: el resultado de la consulta inmediata a la nube que hace el Puente IPC antes de confirmar.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConsultaALaNube {
+    /// Se descargaron los cambios de otros computadores.
+    Lista,
+    /// No hay conexión: se actúa como en HE-14-HU03-CA02.
+    SinConexion,
+    /// Hay conexión, pero la descarga falló: se actúa como en HE-14-HU03-ET12.
+    Fallida,
+}
+
 /// HE-14-HU03: lo que cada acción (crear, editar, mover, eliminar; HE-14-HU04 a HU07) sabe hacer con una
 /// propuesta. El servicio guarda una sola propuesta activa (ET03) y solo la aplica al confirmar (ET01; D-047).
 pub trait ManejadorDePropuestas: Send + Sync {
     /// La propuesta que ve el usuario a partir de la de `windi-chat`: el título y el estado actual de cada tarjeta
-    /// y las advertencias. `None` si no se puede proponer (las reglas de `card_*` la rechazan).
+    /// y las advertencias. Si las reglas de `card_*` no la permiten, el motivo de rechazo con su código y su texto
+    /// (ET10); `internal.unexpected` si la propuesta de `windi-chat` no se entiende.
     fn preparar(
         &self,
         propuesta: &WindiChatProposal,
-    ) -> impl std::future::Future<Output = Result<Option<WindiProposal>, AppError>> + Send;
+    ) -> impl std::future::Future<Output = Result<WindiProposal, AppError>> + Send;
     /// El estado actual de una tarjeta, con los mismos campos que `WindiProposalItem.current`; `None` si ya no
     /// existe (ET05).
     fn actual(
         &self,
         card_id: &str,
     ) -> impl std::future::Future<Output = Result<Option<Value>, AppError>> + Send;
-    /// Aplica la propuesta con las mismas reglas de `card_*`. Devuelve la respuesta de Windi, si la acción tiene
-    /// una propia (la celebración de HE-14-HU06-CA02); si no, «Listo, ya hice el cambio.».
+    /// Aplica la propuesta completa o nada (ET12) con las mismas reglas de `card_*`. Devuelve la respuesta de
+    /// Windi, si la acción tiene una propia (la celebración de HE-14-HU06-CA02); si no, «Listo, ya hice el cambio.».
     fn aplicar(
         &self,
         propuesta: &WindiProposal,
@@ -81,10 +93,19 @@ fn nombre_del_campo(campo: &str) -> &str {
         "type" => "el tipo",
         "description" => "la descripción",
         "label_ids" => "las etiquetas",
-        "scheduled_date" | "scheduled_hour" => "el bloque horario",
+        "scheduled_date" | "scheduled_hour" | "time_block" => "el bloque horario",
         "completed_on" => "la fecha de completado",
         otro => otro,
     }
+}
+
+/// HE-14-HU03-ET12: «No pude aplicar los cambios. No se hizo ningún cambio.»; la propuesta sigue activa.
+fn no_pude_aplicar() -> AppError {
+    error(
+        ErrorCode::WindiApplyFailed,
+        messages::WINDI_NO_PUDE_APLICAR,
+        None,
+    )
 }
 
 /// La propuesta tal como viaja a `windi-chat` (`context.active_proposal`).
@@ -247,19 +268,50 @@ impl ServicioDeWindi {
         } else {
             Err(FallaDeWindi::SinConexion)
         };
-        // HE-14-HU03: la propuesta de windi-chat se prepara con los datos actuales; si las reglas de `card_*` no la
-        // permiten, no hay propuesta.
-        let preparada = match &respuesta {
+        // HE-14-HU03: la propuesta de windi-chat se prepara con los datos actuales. Si las reglas de `card_*` no la
+        // permiten, Windi responde el motivo, sin propuesta, y la anterior sigue activa (ET10; CA06). Una propuesta
+        // que no se entiende es una respuesta inválida de windi-chat (HE-14-HU01-CA08).
+        let mut motivo = None;
+        let mut preparada = None;
+        let respuesta = match respuesta {
             Ok(WindiChatResponse {
                 proposal: Some(propuesta),
-                ..
-            }) => manejador.preparar(propuesta).await.ok().flatten(),
-            _ => None,
+                reply,
+                intent,
+            }) => match manejador.preparar(&propuesta).await {
+                Ok(lista) => {
+                    preparada = Some(lista);
+                    Ok(WindiChatResponse {
+                        reply,
+                        intent,
+                        proposal: Some(propuesta),
+                    })
+                }
+                Err(e) if e.code == ErrorCode::InternalUnexpected => {
+                    Err(FallaDeWindi::NoDisponible)
+                }
+                Err(e) => {
+                    motivo = Some(e.message);
+                    Ok(WindiChatResponse {
+                        reply,
+                        intent,
+                        proposal: None,
+                    })
+                }
+            },
+            otra => otra,
         };
         let mut estado = self.estado.lock().unwrap_or_else(|e| e.into_inner());
         match respuesta {
             Ok(respuesta) => {
-                let reply = mensaje(WindiMessageRole::Assistant, &respuesta.reply, ahora_ms);
+                // HE-14-HU01-ET26: fuera de alcance, el mensaje es fijo. ET25: aclarar y fuera de alcance no traen
+                // propuesta, así que la activa sigue activa.
+                let texto = match (&motivo, &respuesta.intent) {
+                    (Some(motivo), _) => motivo.as_str(),
+                    (None, WindiChatResponseIntent::OutOfScope) => messages::WINDI_FUERA_DE_ALCANCE,
+                    (None, _) => respuesta.reply.as_str(),
+                };
+                let reply = mensaje(WindiMessageRole::Assistant, texto, ahora_ms);
                 estado.mensajes.push(reply.clone());
                 // ET03, ET04: una sola propuesta activa; la anterior sin confirmar ni rechazar queda «Descartada».
                 if let Some(nueva) = &preparada {
@@ -318,24 +370,31 @@ impl ServicioDeWindi {
         }
     }
 
-    /// IPC-WIN-03 `windi_confirm_proposal` (HE-14-HU03). `en_linea` es el resultado de la consulta inmediata a la
-    /// nube que hace el Puente IPC antes de llamar (ET05): sin conexión no aplica nada (ET07). Si alguna tarjeta
-    /// cambió o se eliminó, no aplica, explica qué cambió y propone de nuevo con los datos actuales si aún se puede
-    /// (ET05, ET06). Si no, aplica con las reglas de `card_*` y Windi confirma el cambio (CA01).
+    /// IPC-WIN-03 `windi_confirm_proposal` (HE-14-HU03). `consulta` es el resultado de la consulta inmediata a la
+    /// nube que hace el Puente IPC antes de llamar (ET05): sin conexión no aplica nada (ET07); con conexión y una
+    /// descarga fallida, `windi.apply_failed` (ET13). Si alguna tarjeta cambió en cualquier dato o se eliminó, no
+    /// aplica, explica qué cambió y propone de nuevo con los datos actuales si aún se puede (ET05, ET06; CA08).
+    /// Antes de aplicar vuelve a validar la propuesta con el día de hoy (ET13). Si no se puede aplicar completa, no
+    /// aplica nada, responde `windi.apply_failed` y la propuesta sigue activa (ET12; CA07). Si se aplica, Windi
+    /// confirma el cambio (CA01).
     pub async fn confirmar<M: ManejadorDePropuestas>(
         &self,
         manejador: &M,
         id: &Uuid,
-        en_linea: bool,
+        consulta: ConsultaALaNube,
         ahora_ms: i64,
     ) -> Result<WindiConfirmProposalResult, AppError> {
         let propuesta = self.activa(id)?;
-        if !en_linea {
-            return Err(error(
-                ErrorCode::NetOffline,
-                messages::WINDI_SIN_CONEXION_AL_CONFIRMAR,
-                None,
-            ));
+        match consulta {
+            ConsultaALaNube::SinConexion => {
+                return Err(error(
+                    ErrorCode::NetOffline,
+                    messages::WINDI_SIN_CONEXION_AL_CONFIRMAR,
+                    None,
+                ));
+            }
+            ConsultaALaNube::Fallida => return Err(no_pude_aplicar()),
+            ConsultaALaNube::Lista => {}
         }
         let mut diferencias = Vec::new();
         let mut vigentes = Vec::new();
@@ -344,7 +403,11 @@ impl ServicioDeWindi {
                 vigentes.push(item);
                 continue;
             };
-            match manejador.actual(&card_id.0).await? {
+            match manejador
+                .actual(&card_id.0)
+                .await
+                .map_err(|_| no_pude_aplicar())?
+            {
                 None => diferencias
                     .push(messages::WINDI_TARJETA_YA_NO_EXISTE.replace("<título>", &item.title)),
                 Some(actual) => {
@@ -362,7 +425,12 @@ impl ServicioDeWindi {
                         .unwrap_or_default();
                     if !campos.is_empty() {
                         let mut campos = campos;
-                        campos.dedup();
+                        let mut vistos = Vec::new();
+                        campos.retain(|c| {
+                            let nuevo = !vistos.contains(c);
+                            vistos.push(*c);
+                            nuevo
+                        });
                         diferencias.push(
                             messages::WINDI_TARJETA_CAMBIO
                                 .replace("<título>", &item.title)
@@ -374,9 +442,23 @@ impl ServicioDeWindi {
             }
         }
         if diferencias.is_empty() {
+            // ET13: las fechas y las etiquetas se vuelven a validar con el día de hoy.
+            match manejador.preparar(&para_el_chat(&propuesta)).await {
+                Ok(_) => {}
+                Err(e) if e.code == ErrorCode::InternalUnexpected => return Err(no_pude_aplicar()),
+                Err(motivo) => {
+                    self.cambiar_estado(id, ProposalState::Discarded);
+                    return Ok(WindiConfirmProposalResult {
+                        outcome: WindiConfirmProposalResultOutcome::Stale,
+                        reply: self.responder(&motivo.message, ahora_ms),
+                        new_proposal: None,
+                    });
+                }
+            }
             let texto = manejador
                 .aplicar(&propuesta)
-                .await?
+                .await
+                .map_err(|_| no_pude_aplicar())?
                 .unwrap_or_else(|| messages::WINDI_CAMBIO_HECHO.to_string());
             self.cambiar_estado(id, ProposalState::Confirmed);
             return Ok(WindiConfirmProposalResult {
@@ -399,7 +481,11 @@ impl ServicioDeWindi {
                     })
                     .collect(),
             };
-            manejador.preparar(&chat).await?
+            match manejador.preparar(&chat).await {
+                Ok(nueva) => Some(nueva),
+                Err(e) if e.code == ErrorCode::InternalUnexpected => return Err(no_pude_aplicar()),
+                Err(_) => None,
+            }
         };
         let mut texto =
             messages::WINDI_PROPUESTA_DESACTUALIZADA.replace("<cambios>", &diferencias.join("; "));
@@ -465,6 +551,7 @@ pub async fn contexto<C: Calendario>(
             pending: contar(&|t| !t.is_completed && !t.is_overdue),
             completed: contar(&|t| t.is_completed),
         },
+        counts: conteos(&tarjetas, &columnas, &etiquetas),
         columns: columnas
             .into_iter()
             .map(|c| crate::tipos::WindiChatContextColumnsItem {
@@ -480,14 +567,12 @@ pub async fn contexto<C: Calendario>(
                 name: e.name,
             })
             .collect(),
-        // DUDA: HE-14-HU05 EF-01 dice «solo las necesarias para la pregunta» sin definir cuáles; HE-14-HU09 pide
-        // contar tarjetas por estado, fecha, columna, etiqueta o prioridad igual que las vistas. Valor usado:
-        // primero las tarjetas cuyo título comparte una palabra de 3 letras o más con el mensaje y después las demás,
-        // hasta 200 (docs/DUDAS.md).
+        // DUDA: HE-14-HU05 EF-01 dice «solo las necesarias para la pregunta» sin definir cuáles. Valor usado:
+        // primero las tarjetas cuyo título se relaciona con el mensaje y después las demás, hasta 200; las
+        // cantidades van completas en `counts` (HE-14-HU09-ET06) (docs/DUDAS.md).
         cards: {
             let buscadas = palabras(mensaje);
-            let relacionada =
-                |t: &&&crate::tipos::Card| palabras(&t.title).iter().any(|p| buscadas.contains(p));
+            let relacionada = |t: &&&crate::tipos::Card| relacionada(&buscadas, &t.title);
             tarjetas
                 .iter()
                 .filter(relacionada)
@@ -515,7 +600,84 @@ pub async fn contexto<C: Calendario>(
 /// Cuántas tarjetas van como máximo en el contexto de `windi-chat`.
 const TARJETAS_EN_EL_CONTEXTO: usize = 200;
 
-/// Las palabras de 3 letras o más de un texto, en minúsculas y sin tildes, para buscar tarjetas por su título.
+/// HE-14-HU09-ET06: las cantidades por columna, etiqueta, prioridad y fecha de completado, con todas las tarjetas
+/// del usuario. Windi las usa sin contar él mismo; las de estado van en `totals`.
+fn conteos(
+    tarjetas: &[&crate::tipos::Card],
+    columnas: &[crate::tipos::Column],
+    etiquetas: &[crate::tipos::Label],
+) -> crate::tipos::WindiChatContextCounts {
+    use crate::tipos::WindiChatContextCount as Cantidad;
+    let cuantas = |f: &dyn Fn(&crate::tipos::Card) -> bool| {
+        i64::try_from(tarjetas.iter().filter(|t| f(t)).count()).unwrap_or(i64::MAX)
+    };
+    let mismo = |a: &crate::tipos::Uuid, b: &crate::tipos::Uuid| a.0.eq_ignore_ascii_case(&b.0);
+    let prioridad = |t: &crate::tipos::Card| {
+        t.priority
+            .as_ref()
+            .and_then(|p| serde_json::to_value(p).ok())
+            .and_then(|v| v.as_str().map(str::to_string))
+            .unwrap_or_else(|| "none".to_string())
+    };
+    let mut fechas: Vec<String> = tarjetas
+        .iter()
+        .filter_map(|t| t.completed_on.as_ref().map(|d| d.0.clone()))
+        .collect();
+    fechas.sort();
+    fechas.dedup();
+    crate::tipos::WindiChatContextCounts {
+        by_column: columnas
+            .iter()
+            .map(|c| Cantidad {
+                key: c.id.0.clone(),
+                count: cuantas(&|t| mismo(&t.column_id, &c.id)),
+            })
+            .collect(),
+        by_label: etiquetas
+            .iter()
+            .map(|e| Cantidad {
+                key: e.id.0.clone(),
+                count: cuantas(&|t| t.label_ids.iter().any(|l| mismo(l, &e.id))),
+            })
+            .collect(),
+        by_priority: ["high", "medium", "low", "none"]
+            .into_iter()
+            .map(|p| Cantidad {
+                key: p.to_string(),
+                count: cuantas(&|t| prioridad(t) == p),
+            })
+            .collect(),
+        completed_by_date: fechas
+            .into_iter()
+            .map(|d| Cantidad {
+                count: cuantas(&|t| t.completed_on.as_ref().is_some_and(|c| c.0 == d)),
+                key: d,
+            })
+            .collect(),
+    }
+}
+
+/// Palabras frecuentes que no sirven para buscar una tarjeta.
+const VACIAS: &[&str] = &[
+    "al", "con", "de", "del", "el", "en", "es", "la", "las", "lo", "los", "me", "mi", "mis",
+    "para", "por", "que", "se", "su", "sus", "tu", "tus", "un", "una", "uno", "unos", "unas", "ya",
+    "y", "a", "o",
+];
+
+/// Si el título se relaciona con las palabras del mensaje: una palabra del mensaje está dentro de una del título
+/// («TP» encuentra «TP final», «informe» encuentra «Informes»), o una del título de 3 letras o más está dentro de
+/// una del mensaje (HE-14-HU09-CA06).
+fn relacionada(buscadas: &[String], titulo: &str) -> bool {
+    let del_titulo = palabras(titulo);
+    buscadas.iter().any(|b| {
+        del_titulo
+            .iter()
+            .any(|p| p.contains(b.as_str()) || (p.chars().count() >= 3 && b.contains(p.as_str())))
+    })
+}
+
+/// Las palabras de un texto, en minúsculas y sin tildes, sin las palabras vacías, para buscar tarjetas por su
+/// título.
 fn palabras(texto: &str) -> Vec<String> {
     texto
         .to_lowercase()
@@ -530,7 +692,7 @@ fn palabras(texto: &str) -> Vec<String> {
         })
         .collect::<String>()
         .split(|c: char| !c.is_alphanumeric())
-        .filter(|p| p.chars().count() >= 3)
+        .filter(|p| p.chars().count() >= 2 && !VACIAS.contains(p))
         .map(str::to_string)
         .collect()
 }

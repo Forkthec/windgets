@@ -327,6 +327,12 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         self.calendario.hoy()
     }
 
+    /// El calendario del servicio, para que una prueba adelante el día (HE-14-HU03-ET13).
+    #[cfg(test)]
+    pub(crate) fn calendario(&self) -> &C {
+        &self.calendario
+    }
+
     pub fn base(&self) -> &BaseLocal {
         &self.base
     }
@@ -338,12 +344,29 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         user_id: &str,
         params: CardCreateParams,
     ) -> Result<ConMensaje<Card>, AppError> {
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let mut tx = pool.begin().await.map_err(de_sqlx)?;
+        let id = self.crear_tarjeta_en(&mut tx, user_id, params).await?;
+        tx.commit().await.map_err(de_sqlx)?;
+        let tarjeta = self.tarjeta(user_id, &id).await?.ok_or_else(inesperado)?;
+        Ok(ConMensaje {
+            valor: tarjeta,
+            mensaje: resultado("card_create", messages::TARJETA_CREADA),
+        })
+    }
+
+    /// Las validaciones y escrituras de `card_create` sobre una conexión ya abierta, para que Windi aplique una
+    /// propuesta completa o nada (HE-14-HU03-ET12). Devuelve el id de la tarjeta creada.
+    pub(crate) async fn crear_tarjeta_en(
+        &self,
+        tx: &mut sqlx::SqliteConnection,
+        user_id: &str,
+        params: CardCreateParams,
+    ) -> Result<String, AppError> {
         let hoy = self.calendario.hoy();
         if let Some(primero) = validar_creacion(&params, hoy).into_iter().next() {
             return Err(primero);
         }
-        let pool = self.base.pool().await.map_err(de_sqlx)?;
-        let mut tx = pool.begin().await.map_err(de_sqlx)?;
 
         // DUDA: HE-07-HU01 la columna Por hacer llega con la primera descarga de la cuenta (sync_pull, P10);
         // sin ella no hay dónde crear la tarjeta y la respuesta es `internal.unexpected` (docs/DUDAS.md).
@@ -429,7 +452,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         .execute(&mut *tx)
         .await
         .map_err(de_sqlx)?;
-        encolar_cambio(&mut tx, "card", &id, "upsert", &fields, &ahora)
+        encolar_cambio(&mut *tx, "card", &id, "upsert", &fields, &ahora)
             .await
             .map_err(de_sqlx)?;
 
@@ -455,17 +478,11 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
             .execute(&mut *tx)
             .await
             .map_err(de_sqlx)?;
-            encolar_cambio(&mut tx, "card_label", &union, "upsert", &fields, &ahora)
+            encolar_cambio(&mut *tx, "card_label", &union, "upsert", &fields, &ahora)
                 .await
                 .map_err(de_sqlx)?;
         }
-        tx.commit().await.map_err(de_sqlx)?;
-
-        let tarjeta = self.tarjeta(user_id, &id).await?.ok_or_else(inesperado)?;
-        Ok(ConMensaje {
-            valor: tarjeta,
-            mensaje: resultado("card_create", messages::TARJETA_CREADA),
-        })
+        Ok(id)
     }
 
     /// IPC-CARD-02 `card_update` (HE-07-HU04). Mismas reglas de campos que al crear (ET04); la fecha límite
@@ -477,9 +494,36 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         user_id: &str,
         params: CardUpdateParams,
     ) -> Result<ConMensaje<Card>, AppError> {
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let mut tx = pool.begin().await.map_err(de_sqlx)?;
+        let (id, sale_del_bloque) = self.actualizar_tarjeta_en(&mut tx, user_id, params).await?;
+        tx.commit().await.map_err(de_sqlx)?;
+        let tarjeta = self
+            .tarjeta(user_id, &id)
+            .await?
+            .ok_or_else(tarjeta_no_existe)?;
+        let mensaje = if sale_del_bloque {
+            messages::TARJETA_ACTUALIZADA_SIN_BLOQUE
+        } else {
+            messages::TARJETA_ACTUALIZADA
+        };
+        Ok(ConMensaje {
+            valor: tarjeta,
+            mensaje: resultado("card_update", mensaje),
+        })
+    }
+
+    /// Las validaciones y escrituras de `card_update` sobre una conexión ya abierta (HE-14-HU03-ET12). Devuelve el
+    /// id de la tarjeta y si salió de su bloque horario (ET12, ET13).
+    pub(crate) async fn actualizar_tarjeta_en(
+        &self,
+        tx: &mut sqlx::SqliteConnection,
+        user_id: &str,
+        params: CardUpdateParams,
+    ) -> Result<(String, bool), AppError> {
         let id = params.id.0.to_lowercase();
         let actual = self
-            .tarjeta(user_id, &id)
+            .tarjeta_en(&mut *tx, user_id, &id)
             .await?
             .ok_or_else(tarjeta_no_existe)?;
         let patch = params.patch;
@@ -545,8 +589,6 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
             valores.push(("scheduled_hour", Value::Null));
         }
 
-        let pool = self.base.pool().await.map_err(de_sqlx)?;
-        let mut tx = pool.begin().await.map_err(de_sqlx)?;
         if !valores.is_empty() {
             let (fields, mods) = campos(&valores, &ahora);
             let asignaciones: Vec<String> =
@@ -570,7 +612,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 .execute(&mut *tx)
                 .await
                 .map_err(de_sqlx)?;
-            encolar_cambio(&mut tx, "card", &id, "upsert", &fields, &ahora)
+            encolar_cambio(&mut *tx, "card", &id, "upsert", &fields, &ahora)
                 .await
                 .map_err(de_sqlx)?;
         }
@@ -605,7 +647,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                     .await
                     .map_err(de_sqlx)?;
                 encolar_cambio(
-                    &mut tx,
+                    &mut *tx,
                     "card_label",
                     &union,
                     "delete",
@@ -637,26 +679,12 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 .execute(&mut *tx)
                 .await
                 .map_err(de_sqlx)?;
-                encolar_cambio(&mut tx, "card_label", &union, "upsert", &fields, &ahora)
+                encolar_cambio(&mut *tx, "card_label", &union, "upsert", &fields, &ahora)
                     .await
                     .map_err(de_sqlx)?;
             }
         }
-        tx.commit().await.map_err(de_sqlx)?;
-
-        let tarjeta = self
-            .tarjeta(user_id, &id)
-            .await?
-            .ok_or_else(tarjeta_no_existe)?;
-        let mensaje = if sale_del_bloque {
-            messages::TARJETA_ACTUALIZADA_SIN_BLOQUE
-        } else {
-            messages::TARJETA_ACTUALIZADA
-        };
-        Ok(ConMensaje {
-            valor: tarjeta,
-            mensaje: resultado("card_update", mensaje),
-        })
+        Ok((id, sale_del_bloque))
     }
 
     /// IPC-CARD-03 `card_delete` (HE-07-HU05): elimina la tarjeta de forma definitiva (ET03) con sus etiquetas
@@ -667,9 +695,24 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         user_id: &str,
         id: &str,
     ) -> Result<ConMensaje<()>, AppError> {
-        let id = id.to_lowercase();
         let pool = self.base.pool().await.map_err(de_sqlx)?;
         let mut tx = pool.begin().await.map_err(de_sqlx)?;
+        self.eliminar_tarjeta_en(&mut tx, user_id, id).await?;
+        tx.commit().await.map_err(de_sqlx)?;
+        Ok(ConMensaje {
+            valor: (),
+            mensaje: resultado("card_delete", messages::TARJETA_ELIMINADA),
+        })
+    }
+
+    /// Las escrituras de `card_delete` sobre una conexión ya abierta (HE-14-HU03-ET12).
+    pub(crate) async fn eliminar_tarjeta_en(
+        &self,
+        tx: &mut sqlx::SqliteConnection,
+        user_id: &str,
+        id: &str,
+    ) -> Result<(), AppError> {
+        let id = id.to_lowercase();
         let uniones: Vec<String> = sqlx::query_scalar(
             "SELECT cl.id FROM card_label cl JOIN card c ON c.id = cl.card_id \
              WHERE cl.card_id = ? AND c.user_id = ?",
@@ -693,18 +736,21 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         // Las etiquetas de la tarjeta se borran en cascada (sqlite_esquema.sql); sus cambios pendientes pasan a
         // eliminación para no enviar altas de una tarjeta que ya no existe.
         for union in &uniones {
-            encolar_cambio(&mut tx, "card_label", union, "delete", &Value::Null, &ahora)
-                .await
-                .map_err(de_sqlx)?;
-        }
-        encolar_cambio(&mut tx, "card", &id, "delete", &Value::Null, &ahora)
+            encolar_cambio(
+                &mut *tx,
+                "card_label",
+                union,
+                "delete",
+                &Value::Null,
+                &ahora,
+            )
             .await
             .map_err(de_sqlx)?;
-        tx.commit().await.map_err(de_sqlx)?;
-        Ok(ConMensaje {
-            valor: (),
-            mensaje: resultado("card_delete", messages::TARJETA_ELIMINADA),
-        })
+        }
+        encolar_cambio(&mut *tx, "card", &id, "delete", &Value::Null, &ahora)
+            .await
+            .map_err(de_sqlx)?;
+        Ok(())
     }
 
     /// IPC-CARD-06 `card_move` (HE-09-HU02): cambia la tarjeta de columna o de posición. `end` la pone al final
@@ -716,10 +762,24 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         user_id: &str,
         params: CardMoveParams,
     ) -> Result<Card, AppError> {
-        let id = params.card_id.0.to_lowercase();
-        let destino = params.column_id.0.to_lowercase();
         let pool = self.base.pool().await.map_err(de_sqlx)?;
         let mut tx = pool.begin().await.map_err(de_sqlx)?;
+        let id = self.mover_tarjeta_en(&mut tx, user_id, params).await?;
+        tx.commit().await.map_err(de_sqlx)?;
+        self.tarjeta(user_id, &id)
+            .await?
+            .ok_or_else(tarjeta_no_existe)
+    }
+
+    /// Las escrituras de `card_move` sobre una conexión ya abierta (HE-14-HU03-ET12). Devuelve el id.
+    pub(crate) async fn mover_tarjeta_en(
+        &self,
+        tx: &mut sqlx::SqliteConnection,
+        user_id: &str,
+        params: CardMoveParams,
+    ) -> Result<String, AppError> {
+        let id = params.card_id.0.to_lowercase();
+        let destino = params.column_id.0.to_lowercase();
         let origen: Option<(String, String)> = sqlx::query_as(
             "SELECT c.column_id, k.role FROM card c JOIN kanban_column k ON k.id = c.column_id \
              WHERE c.id = ? AND c.user_id = ?",
@@ -806,13 +866,10 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
             .execute(&mut *tx)
             .await
             .map_err(de_sqlx)?;
-        encolar_cambio(&mut tx, "card", &id, "upsert", &fields, &ahora)
+        encolar_cambio(&mut *tx, "card", &id, "upsert", &fields, &ahora)
             .await
             .map_err(de_sqlx)?;
-        tx.commit().await.map_err(de_sqlx)?;
-        self.tarjeta(user_id, &id)
-            .await?
-            .ok_or_else(tarjeta_no_existe)
+        Ok(id)
     }
 
     /// IPC-CARD-07 `card_set_completed` (HE-12-HU02; HE-06-HU03). Marcar la casilla mueve la tarjeta al final
@@ -1063,12 +1120,23 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
     /// Una tarjeta del usuario con sus etiquetas, o `None` si no existe.
     pub async fn tarjeta(&self, user_id: &str, id: &str) -> Result<Option<Card>, AppError> {
         let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let mut con = pool.acquire().await.map_err(de_sqlx)?;
+        self.tarjeta_en(&mut con, user_id, id).await
+    }
+
+    /// `tarjeta` sobre una conexión ya abierta (por ejemplo, dentro de una transacción).
+    pub(crate) async fn tarjeta_en(
+        &self,
+        con: &mut sqlx::SqliteConnection,
+        user_id: &str,
+        id: &str,
+    ) -> Result<Option<Card>, AppError> {
         let Some(fila) = sqlx::query(&format!(
             "{SELECT_TARJETA} WHERE c.id = ? AND c.user_id = ?"
         ))
         .bind(id)
         .bind(user_id)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *con)
         .await
         .map_err(de_sqlx)?
         else {
@@ -1078,7 +1146,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
             "SELECT label_id FROM card_label WHERE card_id = ? ORDER BY created_at, label_id",
         )
         .bind(id)
-        .fetch_all(pool)
+        .fetch_all(&mut *con)
         .await
         .map_err(de_sqlx)?;
         tarjeta_de_fila(&fila, etiquetas, self.calendario.hoy())
@@ -1147,58 +1215,10 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         user_id: &str,
         params: CardAssignTimeBlockParams,
     ) -> Result<ConMensaje<Card>, AppError> {
-        let id = params.card_id.0.to_lowercase();
-        let actual = self
-            .tarjeta(user_id, &id)
-            .await?
-            .ok_or_else(tarjeta_no_existe)?;
-        let dia = fecha(&params.date.0).ok_or_else(inesperado)?;
         let hora = params.hour.0;
-        if hora > 23 {
-            return Err(inesperado());
-        }
-        let hoy = self.calendario.hoy();
-        // El bloque de las <hora> termina a las <hora + 1>: ya pasó si su hora de fin no es posterior a ahora.
-        if dia < hoy || (dia == hoy && hora < self.calendario.hora()) {
-            return Err(error(
-                ErrorCode::TimeBlockPast,
-                messages::BLOQUE_YA_PASO,
-                None,
-            ));
-        }
-        if fecha(&actual.due_date.0).is_some_and(|limite| dia > limite) {
-            return Err(error(
-                ErrorCode::TimeBlockAfterDueDate,
-                messages::BLOQUE_DESPUES_DE_FECHA_LIMITE,
-                None,
-            ));
-        }
-        let dia = dia.format("%Y-%m-%d").to_string();
-        let ahora = instante(self.calendario.ahora_ms()).0;
-        let (fields, mods) = campos(
-            &[
-                ("scheduled_date", Value::from(dia.as_str())),
-                ("scheduled_hour", Value::from(hora)),
-            ],
-            &ahora,
-        );
         let pool = self.base.pool().await.map_err(de_sqlx)?;
         let mut tx = pool.begin().await.map_err(de_sqlx)?;
-        sqlx::query(
-            "UPDATE card SET scheduled_date = ?, scheduled_hour = ?, \
-             field_mods = json_patch(field_mods, ?) WHERE id = ? AND user_id = ?",
-        )
-        .bind(&dia)
-        .bind(i64::from(hora))
-        .bind(mods.to_string())
-        .bind(&id)
-        .bind(user_id)
-        .execute(&mut *tx)
-        .await
-        .map_err(de_sqlx)?;
-        encolar_cambio(&mut tx, "card", &id, "upsert", &fields, &ahora)
-            .await
-            .map_err(de_sqlx)?;
+        let id = self.asignar_bloque_en(&mut tx, user_id, params).await?;
         tx.commit().await.map_err(de_sqlx)?;
         let tarjeta = self
             .tarjeta(user_id, &id)
@@ -1220,6 +1240,82 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         })
     }
 
+    /// Las reglas y la escritura de `card_assign_time_block` sobre una conexión ya abierta, para que Windi asigne
+    /// el bloque dentro de la transacción de su propuesta (HE-14-HU03-ET12; HE-14-HU04-CA10). Devuelve el id.
+    pub(crate) async fn asignar_bloque_en(
+        &self,
+        tx: &mut sqlx::SqliteConnection,
+        user_id: &str,
+        params: CardAssignTimeBlockParams,
+    ) -> Result<String, AppError> {
+        let id = params.card_id.0.to_lowercase();
+        let actual = self
+            .tarjeta_en(&mut *tx, user_id, &id)
+            .await?
+            .ok_or_else(tarjeta_no_existe)?;
+        let dia = fecha(&params.date.0).ok_or_else(inesperado)?;
+        let hora = params.hour.0;
+        if hora > 23 {
+            return Err(inesperado());
+        }
+        if let Some(motivo) = self.validar_bloque(dia, hora, &actual.due_date.0) {
+            return Err(motivo);
+        }
+        let dia = dia.format("%Y-%m-%d").to_string();
+        let ahora = instante(self.calendario.ahora_ms()).0;
+        let (fields, mods) = campos(
+            &[
+                ("scheduled_date", Value::from(dia.as_str())),
+                ("scheduled_hour", Value::from(hora)),
+            ],
+            &ahora,
+        );
+        sqlx::query(
+            "UPDATE card SET scheduled_date = ?, scheduled_hour = ?, \
+             field_mods = json_patch(field_mods, ?) WHERE id = ? AND user_id = ?",
+        )
+        .bind(&dia)
+        .bind(i64::from(hora))
+        .bind(mods.to_string())
+        .bind(&id)
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(de_sqlx)?;
+        encolar_cambio(&mut *tx, "card", &id, "upsert", &fields, &ahora)
+            .await
+            .map_err(de_sqlx)?;
+        Ok(id)
+    }
+
+    /// Las reglas de HE-11-HU02 para un bloque horario: no uno que ya pasó (ET06) ni un día posterior a la fecha
+    /// límite (ET08). Windi las usa al preparar la propuesta (HE-14-HU04-ET11; HE-14-HU05-ET13).
+    pub(crate) fn validar_bloque(
+        &self,
+        dia: NaiveDate,
+        hora: u8,
+        fecha_limite: &str,
+    ) -> Option<AppError> {
+        let hoy = self.calendario.hoy();
+        // El bloque de las <hora> termina a las <hora + 1>: ya pasó si su hora de fin no es posterior a ahora.
+        if dia < hoy || (dia == hoy && hora < self.calendario.hora()) {
+            return Some(error(
+                ErrorCode::TimeBlockPast,
+                messages::BLOQUE_YA_PASO,
+                None,
+            ));
+        }
+        fecha(fecha_limite)
+            .is_some_and(|limite| dia > limite)
+            .then(|| {
+                error(
+                    ErrorCode::TimeBlockAfterDueDate,
+                    messages::BLOQUE_DESPUES_DE_FECHA_LIMITE,
+                    None,
+                )
+            })
+    }
+
     /// IPC-CARD-11 `card_unassign_time_block` (HE-11-HU03): quita la tarjeta de su bloque horario sin eliminarla;
     /// vuelve al panel Tarjetas sin horario (ET02) y, si su fecha límite no es hoy, deja de estar en el planificador
     /// diario (ET04). El cambio se guarda y se encola para sincronizar. «Tarjeta quitada del horario.» (ET03).
@@ -1228,33 +1324,9 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         user_id: &str,
         params: CardUnassignTimeBlockParams,
     ) -> Result<ConMensaje<Card>, AppError> {
-        let id = params.card_id.0.to_lowercase();
-        self.tarjeta(user_id, &id)
-            .await?
-            .ok_or_else(tarjeta_no_existe)?;
-        let ahora = instante(self.calendario.ahora_ms()).0;
-        let (fields, mods) = campos(
-            &[
-                ("scheduled_date", Value::Null),
-                ("scheduled_hour", Value::Null),
-            ],
-            &ahora,
-        );
         let pool = self.base.pool().await.map_err(de_sqlx)?;
         let mut tx = pool.begin().await.map_err(de_sqlx)?;
-        sqlx::query(
-            "UPDATE card SET scheduled_date = NULL, scheduled_hour = NULL, \
-             field_mods = json_patch(field_mods, ?) WHERE id = ? AND user_id = ?",
-        )
-        .bind(mods.to_string())
-        .bind(&id)
-        .bind(user_id)
-        .execute(&mut *tx)
-        .await
-        .map_err(de_sqlx)?;
-        encolar_cambio(&mut tx, "card", &id, "upsert", &fields, &ahora)
-            .await
-            .map_err(de_sqlx)?;
+        let id = self.quitar_bloque_en(&mut tx, user_id, params).await?;
         tx.commit().await.map_err(de_sqlx)?;
         let tarjeta = self
             .tarjeta(user_id, &id)
@@ -1267,6 +1339,41 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 messages::TARJETA_QUITADA_DEL_HORARIO,
             ),
         })
+    }
+
+    /// La escritura de `card_unassign_time_block` sobre una conexión ya abierta (HE-14-HU05-CA12). Devuelve el id.
+    pub(crate) async fn quitar_bloque_en(
+        &self,
+        tx: &mut sqlx::SqliteConnection,
+        user_id: &str,
+        params: CardUnassignTimeBlockParams,
+    ) -> Result<String, AppError> {
+        let id = params.card_id.0.to_lowercase();
+        self.tarjeta_en(&mut *tx, user_id, &id)
+            .await?
+            .ok_or_else(tarjeta_no_existe)?;
+        let ahora = instante(self.calendario.ahora_ms()).0;
+        let (fields, mods) = campos(
+            &[
+                ("scheduled_date", Value::Null),
+                ("scheduled_hour", Value::Null),
+            ],
+            &ahora,
+        );
+        sqlx::query(
+            "UPDATE card SET scheduled_date = NULL, scheduled_hour = NULL, \
+             field_mods = json_patch(field_mods, ?) WHERE id = ? AND user_id = ?",
+        )
+        .bind(mods.to_string())
+        .bind(&id)
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(de_sqlx)?;
+        encolar_cambio(&mut *tx, "card", &id, "upsert", &fields, &ahora)
+            .await
+            .map_err(de_sqlx)?;
+        Ok(id)
     }
 
     /// IPC-CARD-08 `planner_get_today` (HE-12-HU01): las tarjetas con fecha límite hoy y las asignadas a un
@@ -2073,7 +2180,7 @@ pub(crate) mod pruebas {
     /// 14/11/2026, 12:00 UTC.
     pub(crate) const AHORA_MS: i64 = 1_794_657_600_000;
 
-    /// Calendario de prueba: hoy es 14/11/2026.
+    /// Calendario de prueba: hoy es 14/11/2026, salvo que la prueba adelante `ahora_ms` (la fecha es la UTC).
     #[derive(Clone)]
     pub(crate) struct CalendarioDePrueba(pub Arc<AtomicI64>);
 
@@ -2085,7 +2192,9 @@ pub(crate) mod pruebas {
 
     impl Calendario for CalendarioDePrueba {
         fn hoy(&self) -> NaiveDate {
-            NaiveDate::from_ymd_opt(2026, 11, 14).unwrap_or_default()
+            chrono::DateTime::from_timestamp_millis(self.ahora_ms())
+                .map(|d| d.date_naive())
+                .unwrap_or_default()
         }
         fn ahora_ms(&self) -> i64 {
             self.0.load(Ordering::SeqCst)

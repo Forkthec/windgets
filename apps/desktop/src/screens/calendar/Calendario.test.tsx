@@ -342,6 +342,35 @@ describe('HE-10-HU03 · Tarjetas de un día desde el calendario', () => {
     expect(tarjetasDelPanel()).toEqual([]);
   });
 
+  it('HE-10-HU03-CA05 · Seleccionar la celda del día fuera de su número', async () => {
+    const nucleo = await abrir(DEL_VEINTE);
+    // ET09: una celda que no es de un día del mes no abre el Panel del día.
+    const vacia = within(screen.getByRole('table'))
+      .getAllByRole('cell')
+      .find((c) => c.querySelector('.wg-calendario__numero') === null);
+    await act(async () => {
+      fireEvent.click(vacia as HTMLElement);
+    });
+    expect(screen.queryByRole('region', { name: 'Panel del día' })).toBeNull();
+    // ET01: un espacio de la celda fuera del número abre el Panel del día con sus 2 tarjetas.
+    await act(async () => {
+      fireEvent.click(dia(20));
+    });
+    expect(llamadasA(nucleo, 'calendar_get_day')).toEqual([{ date: '2026-11-20' }]);
+    expect(within(panel()).getByRole('heading', { name: '20/11/2026' })).toBeTruthy();
+    expect(tarjetasDelPanel()).toHaveLength(2);
+    expect(within(panel()).getByRole('button', { name: 'Nueva tarjeta' })).toBeTruthy();
+    expect(within(panel()).getByRole('button', { name: 'Cerrar' })).toBeTruthy();
+    // ET01: también el título de una de sus tarjetas.
+    await act(async () => {
+      fireEvent.click(within(panel()).getByRole('button', { name: 'Cerrar' }));
+    });
+    await act(async () => {
+      fireEvent.click(within(dia(20)).getByText('Pagar la luz'));
+    });
+    expect(within(panel()).getByRole('heading', { name: '20/11/2026' })).toBeTruthy();
+  });
+
   it('HE-10-HU03-CA04 · Abrir una tarjeta desde el día', async () => {
     await abrir(DEL_VEINTE);
     await seleccionarDia('20');

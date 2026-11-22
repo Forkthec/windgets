@@ -50,7 +50,11 @@ const MENSAJE_M04 =
   'Tienes cambios sin guardar en el tema “Mi tema”. ¿Deseas cambiar de tema sin guardarlos?';
 
 /** Abre la pantalla con «Mi tema» (aplicado) y «Verano»; con `conCambios`, el Núcleo avisa al cambiar de tema. */
-async function abrir(conCambios = false, primerInicio = false) {
+async function abrir(
+  conCambios = false,
+  primerInicio = false,
+  preparar?: (n: NucleoDelPlanificador) => void,
+) {
   const nucleo = await abrirPantalla(
     'personalization',
     'Personalización del wallpaper',
@@ -150,6 +154,7 @@ async function abrir(conCambios = false, primerInicio = false) {
               : { ok: false, error: { code: 'image.unreadable', message: textos.IMAGEN_ILEGIBLE } },
       );
       n.responder('theme_draft_open', () => ({ ok: true, value: vista('t1', 'Mi tema', conCambios) }));
+      preparar?.(n);
       // HE-02-HU09-ET03: los widgets activos del escritorio y su monitor principal (1920 × 1080).
       n.responder('layer_get_initial_state', () => ({
         ok: true,
@@ -378,6 +383,38 @@ describe('HE-02-HU03 · Imagen de fondo', () => {
       expect(vistaPrevia().style.backgroundImage).toBe('');
     },
   );
+
+  it('HE-02-HU03-CA09 · Ver la imagen de fondo en el escritorio', async () => {
+    // Al volver a abrir la aplicación, el tema en edición ya tiene una imagen propia: la vista previa la toma de la
+    // carpeta de archivos de la aplicación (ET11), aunque no se haya importado en esta sesión.
+    const nucleo = await abrir(false, false, (n) => {
+      n.responder('theme_draft_open', () => ({
+        ok: true,
+        value: {
+          ...vista('t1', 'Mi tema'),
+          content: {
+            ...CONTENIDO,
+            background: { source: 'own', catalog_image_id: null, uploaded_image_id: 'img-9' },
+          },
+        },
+      }));
+      n.responder('asset_resolve', ({ kind, id }) => ({
+        ok: true,
+        value: { url: `C:/Users/Prueba/AppData/Roaming/Windgets/files/${kind}-${id}.png`, state: 'ready' },
+      }));
+    });
+    await waitFor(() =>
+      expect(vistaPrevia().style.backgroundImage).toContain('Windgets/files/uploaded_image-img-9.png'),
+    );
+    expect(llamadasA(nucleo, 'asset_resolve')).toContainEqual({ kind: 'uploaded_image', id: 'img-9' });
+    // ET11: también la imagen del catálogo, desde la carpeta de archivos y no solo su miniatura.
+    fireEvent.click(within(seccion()).getByRole('button', { name: 'Catálogo de imágenes' }));
+    const catalogo = await screen.findByRole('list', { name: 'Catálogo de imágenes' });
+    fireEvent.click(within(catalogo).getByRole('button', { name: 'Mar' }));
+    await waitFor(() =>
+      expect(vistaPrevia().style.backgroundImage).toContain('Windgets/files/catalog_image-mar.png'),
+    );
+  });
 
   it('HE-02-HU03-CA08 · Cancelar la selección de archivo', async () => {
     const nucleo = await abrir();
@@ -963,6 +1000,29 @@ describe('HE-03-HU02 · Guardar como tema', () => {
     expect(within(ventana).getByRole('button', { name: 'Cancelar' })).toBeTruthy();
     expect(screen.getByRole('main', { name: 'Personalización del wallpaper' })).toBeTruthy();
   });
+
+  it('HE-03-HU02-CA08 · Tema con las mismas propiedades que otro', async () => {
+    const { nucleo, ventana } = await abrirVentana();
+    // ET13: el Núcleo compara el contenido (sin los widgets) después del nombre y del máximo de temas.
+    nucleo.responder('theme_draft_save_as', () => ({
+      ok: false,
+      error: {
+        code: 'theme.content_duplicate',
+        message: 'Ya tienes el tema “Verano” con estas mismas propiedades.',
+        field: 'name',
+      },
+    }));
+    diligenciarNombre(ventana, 'Otoño');
+    fireEvent.click(guardar(ventana));
+    // ET14: el mensaje en el campo Nombre; no se guarda y la ventana sigue abierta.
+    const mensaje = await within(ventana).findByText(
+      'Ya tienes el tema “Verano” con estas mismas propiedades.',
+    );
+    const campo = within(ventana).getByRole('textbox', { name: 'Nombre' });
+    expect(campo.getAttribute('aria-describedby')?.split(' ')).toContain(mensaje.id);
+    expect(screen.getByRole('dialog', { name: 'Guardar como tema' })).toBeTruthy();
+    expect(llamadasA(nucleo, 'theme_draft_open')).toHaveLength(1);
+  });
 });
 
 describe('HE-02-HU11 · Guardar los cambios de la vista previa', () => {
@@ -1001,6 +1061,25 @@ describe('HE-02-HU11 · Guardar los cambios de la vista previa', () => {
       'Cambios guardados. Selecciona Aplicar para verlos en tu escritorio.',
     );
     expect(llamadasA(nucleo, 'theme_apply')).toEqual([]);
+  });
+
+  it('HE-02-HU11-CA06 · Tema igual a otro', async () => {
+    const nucleo = await abrir(true);
+    await waitFor(() => expect(guardar().disabled).toBe(false));
+    nucleo.responder('theme_draft_save', () => ({
+      ok: false,
+      error: {
+        code: 'theme.content_duplicate',
+        message: 'Ya tienes el tema “Verano” con estas mismas propiedades.',
+      },
+    }));
+    fireEvent.click(guardar());
+    // ET06: el mensaje de resultado (RT-04); no se guarda y los cambios siguen en la vista previa.
+    expect((await screen.findByRole('status')).textContent).toContain(
+      'Ya tienes el tema “Verano” con estas mismas propiedades.',
+    );
+    expect(guardar().disabled).toBe(false);
+    expect(llamadasA(nucleo, 'theme_draft_open')).toHaveLength(1);
   });
 
   it('HE-02-HU11-CA03 · Guardar sin cambios', async () => {

@@ -1,4 +1,4 @@
-import type { WindiProposal } from '@/types';
+import type { Label, WindiProposal } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { fechaVisible } from '../tarjeta/fechas';
 
@@ -10,6 +10,16 @@ const DATOS: Record<string, string> = {
   description: 'Descripción',
   priority: 'Prioridad',
   label_ids: 'Etiquetas',
+  time_block: 'Bloque horario',
+};
+// HE-14-HU04-ET10: los datos de una tarjeta nueva, en este orden (el título va arriba).
+const DATOS_DE_CREACION = ['type', 'due_date', 'priority', 'label_ids', 'description', 'time_block'];
+// HE-14-HU05-ET12: cómo se lee un dato que se quita.
+const SIN_VALOR: Record<string, string> = {
+  priority: 'Sin prioridad',
+  description: 'Sin descripción',
+  time_block: 'Sin bloque horario',
+  label_ids: 'Sin etiquetas',
 };
 const VALORES: Record<string, string> = {
   task: 'Tarea',
@@ -20,11 +30,29 @@ const VALORES: Record<string, string> = {
   low: 'Baja',
 };
 
-/** Un valor de la tarjeta como se lee en la propuesta. DUDA: HE-14-HU05 las etiquetas se muestran por cantidad. */
-function valorVisible(dato: string, valor: unknown): string {
-  if (valor === null || valor === undefined || valor === '') return 'Sin valor';
+const hora = (h: number) => `${String(h).padStart(2, '0')}:00`;
+
+/**
+ * El bloque horario «10:00 – 11:00», con « del DD/MM/AAAA» cuando es el valor nuevo (HE-14-HU04-CA10; HE-14-HU05-CA11,
+ * CA12). DUDA: CA12 muestra el valor actual sin la fecha (docs/DUDAS.md).
+ */
+export function bloqueVisible(valor: unknown, conFecha: boolean): string | null {
+  if (typeof valor !== 'object' || valor === null) return null;
+  const { date, start_hour } = valor as { date?: unknown; start_hour?: unknown };
+  if (typeof date !== 'string' || typeof start_hour !== 'number') return null;
+  const texto = `${hora(start_hour)} – ${hora((start_hour + 1) % 24)}`;
+  return conFecha ? `${texto} del ${fechaVisible(date)}` : texto;
+}
+
+/** Un valor de la tarjeta como se lee en la propuesta; las etiquetas por su nombre (HE-14-HU05-ET11). */
+function valorVisible(dato: string, valor: unknown, etiquetas: Label[], nuevo: boolean): string {
+  const vacio =
+    valor === null || valor === undefined || valor === '' || (Array.isArray(valor) && !valor.length);
+  if (vacio) return SIN_VALOR[dato] ?? 'Sin valor';
   if (dato === 'due_date' && typeof valor === 'string') return fechaVisible(valor);
-  if (Array.isArray(valor)) return String(valor.length);
+  if (dato === 'time_block') return bloqueVisible(valor, nuevo) ?? 'Sin bloque horario';
+  if (Array.isArray(valor))
+    return valor.map((id) => etiquetas.find((e) => e.id === id)?.name ?? String(id)).join(', ');
   if (typeof valor === 'string') return VALORES[valor] ?? valor;
   return String(valor);
 }
@@ -40,9 +68,17 @@ export interface PropuestaProps {
   habilitada: boolean;
   alConfirmar: () => void;
   alRechazar: () => void;
+  /** Las etiquetas del usuario, para mostrarlas por su nombre (HE-14-HU05-ET11). */
+  etiquetas?: Label[];
 }
 
-export function Propuesta({ propuesta, habilitada, alConfirmar, alRechazar }: PropuestaProps) {
+export function Propuesta({
+  propuesta,
+  habilitada,
+  alConfirmar,
+  alRechazar,
+  etiquetas = [],
+}: PropuestaProps) {
   const activa = propuesta.state === 'active';
   return (
     <section className="wg-windi__propuesta" aria-label="Propuesta">
@@ -55,9 +91,29 @@ export function Propuesta({ propuesta, habilitada, alConfirmar, alRechazar }: Pr
               <ul aria-label="Cambios">
                 {Object.entries(item.changes).map(([dato, nuevo]) => (
                   <li key={dato}>
-                    {`${DATOS[dato] ?? dato}: ${valorVisible(dato, (item.current as Record<string, unknown> | null)?.[dato])} → ${valorVisible(dato, nuevo)}`}
+                    {`${DATOS[dato] ?? dato}: ${valorVisible(dato, (item.current as Record<string, unknown> | null)?.[dato], etiquetas, false)} → ${valorVisible(dato, nuevo, etiquetas, true)}`}
                   </li>
                 ))}
+              </ul>
+            )}
+            {propuesta.action === 'create' && item.changes && (
+              // HE-14-HU04-ET10: el tipo, la fecha límite, la prioridad, las etiquetas, la descripción y el bloque
+              // horario de cada tarjeta, si los tiene.
+              <ul aria-label="Datos">
+                {DATOS_DE_CREACION.map((dato) => {
+                  const valor = (item.changes as Record<string, unknown>)[dato];
+                  const vacio =
+                    valor === null ||
+                    valor === undefined ||
+                    valor === '' ||
+                    (Array.isArray(valor) && !valor.length);
+                  if (vacio && dato !== 'type') return null;
+                  return (
+                    <li
+                      key={dato}
+                    >{`${DATOS[dato] ?? dato}: ${valorVisible(dato, valor ?? 'task', etiquetas, true)}`}</li>
+                  );
+                })}
               </ul>
             )}
             {propuesta.action === 'move' && item.changes && (

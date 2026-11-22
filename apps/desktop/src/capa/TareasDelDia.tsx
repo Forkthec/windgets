@@ -64,16 +64,20 @@ function Elemento({ item, invocar, alCambiar }: ElementoProps) {
         if (!esUnControl(e.target)) abrirPantalla(invocar, 'planner_daily', { card_id: card.id });
       }}
     >
-      <input
-        type="checkbox"
-        checked={card.is_completed}
-        aria-label={card.title}
-        // HE-06-HU03: marcar mueve a Hecho; desmarcar la devuelve (IPC-CARD-07). En el widget no hay mensaje.
-        onChange={(e) => {
-          const completed = e.target.checked;
-          void invocar('card_set_completed', { card_id: card.id, completed }).then(alCambiar);
-        }}
-      />
+      {/* HE-06-HU03-ET06: la casilla tiene un área de selección de al menos 32 × 32 píxeles; seleccionar cualquier
+          punto de esa área la alterna y no abre la aplicación (CA05). */}
+      <label className="wg-widget__casilla">
+        <input
+          type="checkbox"
+          checked={card.is_completed}
+          aria-label={card.title}
+          // HE-06-HU03: marcar mueve a Hecho; desmarcar la devuelve (IPC-CARD-07). En el widget no hay mensaje.
+          onChange={(e) => {
+            const completed = e.target.checked;
+            void invocar('card_set_completed', { card_id: card.id, completed }).then(alCambiar);
+          }}
+        />
+      </label>
       <span className="wg-tarjeta__titulo">{card.title}</span>
       {hour !== null && <span>{horaVisible(hour)}</span>}
       {card.priority && <span>{NOMBRE_DE_PRIORIDAD[card.priority]}</span>}
@@ -84,6 +88,7 @@ function Elemento({ item, invocar, alCambiar }: ElementoProps) {
         </button>
         {opciones && (
           <MoverA
+            enLugar
             columnas={columnas}
             actual={card.column_id}
             alElegir={(columna) => {

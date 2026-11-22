@@ -353,12 +353,15 @@ body {
   outline-offset: calc(var(--wg-unidad) / 2);
 }
 
-/* Tablero Kanban (P-KAN-01, HE-09-HU01): columnas una al lado de otra, con desplazamiento horizontal. */
+/* Tablero Kanban (P-KAN-01, HE-09-HU01): columnas una al lado de otra, con desplazamiento horizontal. Su alto es
+   el de las columnas, así que no tiene barra vertical propia: la pantalla se desplaza, y los menús de las
+   tarjetas se dibujan fuera del tablero y no se recortan (HE-09-HU02-ET14, RT-02-ET12). */
 .wg-tablero {
   display: flex;
   align-items: stretch; /* columnas de la misma altura */
   gap: calc(var(--wg-unidad) * 4);
   overflow-x: auto;
+  overflow-y: hidden;
   padding-block: calc(var(--wg-unidad) * 4);
 }
 .wg-columna {
@@ -378,6 +381,7 @@ body {
 }
 /* Widget Kanban de la capa (HE-06-HU05): columnas que se reparten el ancho del widget. */
 .wg-tablero--widget {
+  overflow-y: visible; /* como antes de HE-09-HU02-ET14: el widget Kanban no cambia */
   padding-block: 0;
   gap: calc(var(--wg-unidad) * 2);
 }
@@ -508,14 +512,19 @@ button.wg-tarjeta__titulo:focus-visible {
   outline: calc(var(--wg-borde-ancho) * 2) solid var(--wg-accion);
 }
 
-/* «Mover a» (HE-09-HU02-ET10, ET11): la columna actual va marcada y deshabilitada (RT-04). */
-.wg-mover-a {
-  position: relative;
+/* Menú de acciones «⋮» (RT-02-ET10 a ET12) y «Mover a» (HE-09-HU02-ET10, ET11), que usa el mismo menú: se dibuja
+   fijo sobre el contenido, así que ningún contenedor lo recorta. La opción actual va marcada y deshabilitada, y
+   una opción deshabilitada se ve en gris (RT-04). */
+.wg-menu-acciones {
+  display: inline-flex;
 }
-.wg-mover-a__menu {
-  position: absolute;
-  z-index: 2;
-  margin: var(--wg-unidad) 0 0;
+.wg-menu-acciones__lista {
+  position: fixed;
+  z-index: 50;
+  min-width: calc(var(--wg-unidad) * 40);
+  max-height: calc(100vh - var(--wg-unidad) * 2);
+  overflow-y: auto;
+  margin: 0;
   padding: var(--wg-unidad);
   list-style: none;
   background: var(--wg-superficie);
@@ -523,7 +532,16 @@ button.wg-tarjeta__titulo:focus-visible {
   border-radius: var(--wg-radio);
   box-shadow: var(--wg-sombra);
 }
-.wg-mover-a__opcion {
+.wg-menu-acciones {
+  position: relative;
+}
+/* En los widgets de la capa el menú queda dentro del widget (HE-06-HU01). */
+.wg-menu-acciones__lista--en-lugar {
+  position: absolute;
+  top: 100%;
+  right: 0;
+}
+.wg-menu-acciones__opcion {
   display: block;
   width: 100%;
   padding: var(--wg-unidad) calc(var(--wg-unidad) * 2);
@@ -532,13 +550,18 @@ button.wg-tarjeta__titulo:focus-visible {
   color: inherit;
   font: inherit;
   text-align: left;
+  white-space: nowrap;
   cursor: pointer;
 }
-.wg-mover-a__opcion[aria-checked='true'] {
+.wg-menu-acciones__opcion:hover:not(:disabled),
+.wg-menu-acciones__opcion:focus-visible {
+  background: var(--wg-superficie-alta);
+}
+.wg-menu-acciones__opcion[aria-checked='true'] {
   font-weight: 700;
   text-decoration: underline;
 }
-.wg-mover-a__opcion:disabled {
+.wg-menu-acciones__opcion:disabled {
   color: var(--wg-borde);
   cursor: default;
 }
@@ -591,6 +614,18 @@ button.wg-tarjeta__titulo:focus-visible {
 }
 .wg-tachada .wg-tarjeta__titulo {
   text-decoration: line-through;
+}
+/* HE-12-HU02-ET01: toda la tarjeta, salvo el botón de información «i», alterna la casilla. */
+.wg-planificador__casilla {
+  flex: 1;
+  align-items: center;
+  cursor: pointer;
+}
+/* HE-12-HU01-ET10: botón de información «i» de una tarjeta. */
+.wg-boton-informacion {
+  min-width: calc(var(--wg-unidad) * 8);
+  font-style: italic;
+  font-weight: 700;
 }
 
 /* Listas de la pantalla Etiquetas (P-ETQ-01): un elemento por fila con su color, su nombre y sus opciones. */
@@ -788,6 +823,10 @@ button.wg-tarjeta__titulo:focus-visible {
 .wg-calendario__dia--hoy .wg-calendario__numero {
   font-weight: 700;
 }
+/* HE-10-HU03-ET01: toda la celda de un día abre el Panel del día. */
+.wg-calendario__celda {
+  cursor: pointer;
+}
 .wg-calendario__tarjetas {
   margin: var(--wg-unidad) 0 0;
   padding: 0;
@@ -884,6 +923,8 @@ button.wg-tarjeta__titulo:focus-visible {
 .wg-widget {
   box-sizing: border-box;
   overflow: hidden;
+  /* HE-06-HU06-CA06: arrastrar dentro de un widget no selecciona su texto. */
+  user-select: none;
   border: var(--wg-borde-ancho) solid var(--wg-borde);
   border-radius: var(--wg-radio);
   background: var(--wg-superficie);
@@ -891,6 +932,16 @@ button.wg-tarjeta__titulo:focus-visible {
 }
 .wg-widget p {
   margin: 0;
+}
+/* HE-06-HU03-ET06: área de selección de la casilla de completada del widget Tareas del día. */
+.wg-widget__casilla {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 32px;
+  cursor: pointer;
 }
 .wg-widget button {
   font: inherit;

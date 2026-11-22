@@ -4,6 +4,7 @@ import type { Label } from '@/types';
 import textos from '@/types/messages.es.json';
 import { Boton } from '@/ui/Boton/Boton';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
+import { MenuDeAcciones } from '@/ui/MenuDeAcciones/MenuDeAcciones';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { FormularioEtiqueta } from './FormularioEtiqueta';
@@ -80,14 +81,20 @@ export function Labels() {
         ) : (
           <>
             <div className="wg-fila">{nueva}</div>
-            {/* ET02, ET05: nombre y color de cada una, de la A a la Z, con «Editar» y «Eliminar». */}
+            {/* ET02, ET05: nombre y color de cada una, de la A a la Z, con «Editar» y «Eliminar» en su botón de
+                acciones «⋮» (RT-02-ET10). */}
             <ul className="wg-lista" aria-label="Lista de etiquetas">
               {etiquetas.map((e) => (
                 <li key={e.id} className="wg-fila wg-lista__elemento">
                   <span className="wg-muestra-color" style={{ background: e.color_hex }} aria-hidden="true" />
                   <span className="wg-lista__nombre">{e.name}</span>
-                  <Boton onClick={() => setEditando(e)}>Editar</Boton>
-                  <Boton onClick={() => void preguntarEliminar(e)}>Eliminar</Boton>
+                  <MenuDeAcciones
+                    nombre={e.name}
+                    opciones={[
+                      { etiqueta: 'Editar', alElegir: () => setEditando(e) },
+                      { etiqueta: 'Eliminar', alElegir: () => void preguntarEliminar(e) },
+                    ]}
+                  />
                 </li>
               ))}
             </ul>

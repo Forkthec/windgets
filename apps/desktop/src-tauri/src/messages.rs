@@ -417,11 +417,17 @@ pub const WINDI_EDITAR_COMPLETADA: &str =
     "Esta tarjeta está completada. Editarla no cambia su columna.";
 /// DUDA: HE-14-HU05 el texto no es literal («confirma el cambio mencionando el título»).
 pub const WINDI_TARJETA_ACTUALIZADA: &str = "Listo, actualicé la tarjeta «<título>».";
+/// HE-14-HU05-CA08: la confirmación de una edición de varias tarjetas. DUDA: no es literal (docs/DUDAS.md).
+pub const WINDI_TARJETAS_ACTUALIZADAS: &str = "Listo, actualicé <cantidad> tarjetas.";
 // HE-14-HU06 · Mover tarjetas con el agente de IA.
 /// Aviso en la propuesta de mover una tarjeta completada (HE-14-HU06-CA06, ET05).
 pub const WINDI_MOVER_COMPLETADA: &str = "Esta tarjeta está completada. Si la mueves, dejará de estar completada y se borrará su fecha de completado.";
 /// DUDA: HE-14-HU06 el texto no es literal («confirma el movimiento mencionando el título y la columna de destino»).
 pub const WINDI_TARJETA_MOVIDA: &str = "Listo, moví la tarjeta «<título>» a <columna>.";
+/// HE-14-HU01-CA06, ET26: el mensaje fijo para lo que está fuera de alcance.
+pub const WINDI_FUERA_DE_ALCANCE: &str = "Solo puedo ayudarte con tus tarjetas y con Windgets. Por ejemplo, puedo crear una tarjeta o contarte qué tienes para hoy.";
+/// HE-14-HU06-CA09: la confirmación de un movimiento de varias tarjetas. DUDA: no es literal (docs/DUDAS.md).
+pub const WINDI_TARJETAS_MOVIDAS: &str = "Listo, moví <cantidad> tarjetas.";
 // HE-14-HU07 · Eliminar tarjetas con el agente de IA.
 /// Aviso en toda propuesta de eliminación (HE-14-HU07-CA01, ET01).
 pub const WINDI_ELIMINAR_SIN_DESHACER: &str = "Esta acción no se puede deshacer.";
@@ -433,6 +439,39 @@ pub const WINDI_TARJETA_ELIMINADA: &str = "Listo, eliminé la tarjeta «<título
 pub const WINDI_TARJETAS_ELIMINADAS: &str = "Listo, eliminé <cantidad> tarjetas.";
 pub const WINDI_TARJETA_YA_NO_EXISTE: &str = "«<título>» ya no existe";
 pub const WINDI_TARJETA_CAMBIO: &str = "«<título>» tiene otro valor en <campos>";
+
+// P24 · Códigos sembrados con su mensaje (docs/DUDAS.md, sección P24). Cada HU los usa en su commit.
+
+/// `theme.content_duplicate`: tema igual a otro (HE-03-HU02-CA08, ET13, ET14; HE-02-HU11-CA06, ET06).
+pub const TEMA_CON_LAS_MISMAS_PROPIEDADES: &str =
+    "Ya tienes el tema “<nombre del tema>” con estas mismas propiedades.";
+/// `layout.widget_missing`: la pantalla de edición mueve o redimensiona un widget que ya no existe; la pantalla de
+/// edición no se cierra (HE-05-HU04-ET06).
+pub const WIDGET_YA_NO_EXISTE_EN_LA_EDICION: &str =
+    "Uno de los widgets ya no existe. Vuelve a abrir la pantalla de edición.";
+/// `auth.sign_out_failed`: no se pudo borrar el token al cerrar la sesión (HE-16-HU03-CA07, ET09).
+pub const NO_PUDIMOS_CERRAR_LA_SESION: &str =
+    "No pudimos cerrar la sesión. Cierra la aplicación y vuelve a intentarlo.";
+/// `windi.card_not_found` (HE-14-HU03-ET10; HE-14-HU07-CA07).
+pub const WINDI_TARJETA_NO_ENCONTRADA: &str =
+    "No encuentro una tarjeta llamada “<nombre>”. ¿Me das más detalles?";
+/// `windi.column_not_found` (HE-14-HU03-CA06, ET10).
+pub const WINDI_COLUMNA_NO_ENCONTRADA: &str =
+    "No encuentro la columna “<columna>”. Tus columnas son: <columnas en orden>.";
+/// `windi.label_not_found` (HE-14-HU05-CA10; HE-14-HU03-ET10).
+pub const WINDI_ETIQUETA_NO_ENCONTRADA: &str =
+    "No tienes la etiqueta “<etiqueta>”. Tus etiquetas son: <etiquetas>.";
+/// `windi.same_value` (HE-14-HU03-ET10).
+pub const WINDI_MISMO_VALOR: &str = "La tarjeta “<título>” ya tiene ese valor.";
+/// `windi.already_in_column` (HE-14-HU03-ET10).
+pub const WINDI_YA_ESTA_EN_LA_COLUMNA: &str = "La tarjeta “<título>” ya está en <columna>.";
+/// `windi.apply_failed`: la propuesta no se pudo aplicar completa (HE-14-HU03-CA07, ET12, ET13).
+pub const WINDI_NO_PUDE_APLICAR: &str = "No pude aplicar los cambios. No se hizo ningún cambio.";
+/// `title.required` en una propuesta de creación de Windi. DUDA: HE-14-HU04 no define el texto (docs/DUDAS.md).
+pub const WINDI_FALTA_TITULO: &str = "Falta el título de una de las tarjetas. ¿Cómo se llama?";
+/// `due_date.required` en una propuesta de creación de Windi. DUDA: HE-14-HU04 no define el texto (docs/DUDAS.md).
+pub const WINDI_FALTA_FECHA: &str =
+    "A la tarjeta “<título>” le falta la fecha límite. ¿Para cuándo es?";
 
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
@@ -628,6 +667,26 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("WINDI_PROPUESTA_NUEVA", WINDI_PROPUESTA_NUEVA),
     ("WINDI_TARJETA_YA_NO_EXISTE", WINDI_TARJETA_YA_NO_EXISTE),
     ("WINDI_TARJETA_CAMBIO", WINDI_TARJETA_CAMBIO),
+    (
+        "TEMA_CON_LAS_MISMAS_PROPIEDADES",
+        TEMA_CON_LAS_MISMAS_PROPIEDADES,
+    ),
+    (
+        "WIDGET_YA_NO_EXISTE_EN_LA_EDICION",
+        WIDGET_YA_NO_EXISTE_EN_LA_EDICION,
+    ),
+    ("NO_PUDIMOS_CERRAR_LA_SESION", NO_PUDIMOS_CERRAR_LA_SESION),
+    ("WINDI_TARJETA_NO_ENCONTRADA", WINDI_TARJETA_NO_ENCONTRADA),
+    ("WINDI_COLUMNA_NO_ENCONTRADA", WINDI_COLUMNA_NO_ENCONTRADA),
+    ("WINDI_ETIQUETA_NO_ENCONTRADA", WINDI_ETIQUETA_NO_ENCONTRADA),
+    ("WINDI_MISMO_VALOR", WINDI_MISMO_VALOR),
+    ("WINDI_YA_ESTA_EN_LA_COLUMNA", WINDI_YA_ESTA_EN_LA_COLUMNA),
+    ("WINDI_NO_PUDE_APLICAR", WINDI_NO_PUDE_APLICAR),
+    ("WINDI_FALTA_TITULO", WINDI_FALTA_TITULO),
+    ("WINDI_FALTA_FECHA", WINDI_FALTA_FECHA),
+    ("WINDI_TARJETAS_ACTUALIZADAS", WINDI_TARJETAS_ACTUALIZADAS),
+    ("WINDI_TARJETAS_MOVIDAS", WINDI_TARJETAS_MOVIDAS),
+    ("WINDI_FUERA_DE_ALCANCE", WINDI_FUERA_DE_ALCANCE),
 ];
 
 #[cfg(test)]

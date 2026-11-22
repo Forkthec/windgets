@@ -87,6 +87,22 @@ impl ServicioDePersonalizacion {
             ));
         }
         validar_colores(&borrador.contenido)?;
+        // HE-02-HU11-ET06 (CA06): el tema en edición no puede quedar igual a otro tema del usuario; los cambios
+        // siguen en la vista previa.
+        if let Some(otro) = tema_con_el_mismo_contenido(
+            base,
+            user_id,
+            &borrador.contenido,
+            Some(&borrador.theme_id),
+        )
+        .await?
+        {
+            return Err(error(
+                ErrorCode::ThemeContentDuplicate,
+                &messages::con_nombre_del_tema(messages::TEMA_CON_LAS_MISMAS_PROPIEDADES, &otro),
+                None,
+            ));
+        }
         let id = self
             .escribir_en_el_tema(base, user_id, ahora_ms, &borrador)
             .await?;
@@ -240,6 +256,34 @@ pub(super) async fn datos_descargados(
 }
 
 /// Los tres colores del tema son obligatorios (`color.required`, HE-02-HU05).
+/// HE-03-HU02-ET13, HE-02-HU11-ET06: el nombre de otro tema del usuario con la misma plantilla, imagen de fondo,
+/// colores del tema, paleta, tipografía y tamaño del texto; los widgets no cuentan. `excepto` es el propio tema.
+pub(super) async fn tema_con_el_mismo_contenido(
+    base: &BaseLocal,
+    user_id: &str,
+    contenido: &ThemeContent,
+    excepto: Option<&str>,
+) -> Result<Option<String>, AppError> {
+    let pool = base.pool().await.map_err(de_sqlx)?;
+    let filas = sqlx::query(&format!(
+        "SELECT id, name, palette_id, {COLUMNAS_DEL_TEMA} FROM theme WHERE user_id = ? ORDER BY name"
+    ))
+    .bind(user_id)
+    .fetch_all(pool)
+    .await
+    .map_err(de_sqlx)?;
+    for fila in &filas {
+        let id: String = fila.try_get("id").map_err(de_sqlx)?;
+        if excepto == Some(id.as_str()) {
+            continue;
+        }
+        if contenido_de_fila(fila).map_err(de_sqlx)? == *contenido {
+            return Ok(Some(fila.try_get("name").map_err(de_sqlx)?));
+        }
+    }
+    Ok(None)
+}
+
 pub(super) fn validar_colores(contenido: &ThemeContent) -> Result<(), AppError> {
     for (campo, color) in [
         ("colors.primary", &contenido.colors.primary),

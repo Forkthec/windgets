@@ -15,6 +15,7 @@ import {
   POR_HACER,
   tarjeta,
 } from '../screens/kanban/pruebas';
+import estilos from '@/ui/tema/tokens.css?raw';
 import { Capa } from './Capa';
 
 const KANBAN: WidgetRect = {
@@ -55,6 +56,7 @@ const elementFromPoint = document.elementFromPoint;
 afterEach(() => {
   document.elementFromPoint = elementFromPoint;
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 /** Pinta la capa con el widget Kanban activo (y los demás indicados) y las tarjetas indicadas. */
@@ -273,6 +275,33 @@ describe('HE-06-HU06 · Mover tarjetas con drag-and-drop en el widget Kanban', (
     // La tarjeta vuelve a su lugar: ya no sigue al puntero.
     expect(titulo(widget, 'Entregar informe').classList.contains('wg-tarjeta--arrastrada')).toBe(false);
     expect(titulo(widget, 'Entregar informe').style.transform).toBe('');
+  });
+
+  it('HE-06-HU06-CA06 · Arrastrar sin la selección del escritorio', async () => {
+    // El gancho de mouse que impide el rectángulo de selección de Windows es del Núcleo (ET07, D-215;
+    // `ca_he_06_hu06_ca06` en host_del_wallpaper/gancho.rs, spike manual en Windows 11). En la capa: mover la
+    // tarjeta no abre la aplicación (HE-06-HU08-CA10) y el arrastre no selecciona el texto del widget.
+    const { nucleo, widget, arrastrar } = await pintar([tarjeta({ title: 'Entregar informe' })]);
+    await arrastrar(titulo(widget, 'Entregar informe'), columna(widget, 'En progreso'));
+    expect(llamadasA(nucleo, 'card_move')).toHaveLength(1);
+    expect(llamadasA(nucleo, 'app_open_screen')).toEqual([]);
+    const regla = /\.wg-widget \{([^}]*)\}/.exec(estilos)?.[1] ?? '';
+    expect(regla).toContain('user-select: none;');
+  });
+
+  it('HE-06-HU06-ET08 · Un arrastre que no termina en 10 segundos devuelve la tarjeta', async () => {
+    // Como en CA04: la tarjeta vuelve a su columna original y soltarla después ya no la mueve.
+    const { nucleo, widget, arrastrar } = await pintar([tarjeta({ title: 'Entregar informe' })]);
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    await arrastrar(titulo(widget, 'Entregar informe'), columna(widget, 'En progreso'), () => {
+      expect(titulo(widget, 'Entregar informe').classList.contains('wg-tarjeta--arrastrada')).toBe(true);
+      act(() => {
+        vi.advanceTimersByTime(10_000);
+      });
+      expect(titulo(widget, 'Entregar informe').classList.contains('wg-tarjeta--arrastrada')).toBe(false);
+    });
+    expect(llamadasA(nucleo, 'card_move')).toEqual([]);
+    expect(columnas(widget)[0]).toMatchObject({ cantidad: '1', titulos: ['Entregar informe'] });
   });
 
   it('HE-06-HU06-CA05 · Mantener la posición del widget', async () => {

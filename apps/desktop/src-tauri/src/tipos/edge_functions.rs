@@ -72,6 +72,24 @@ pub struct WindiChatContextTotals {
     pub completed: i64,
 }
 
+// HE-14-HU09-ET06: una cantidad calculada por el Núcleo con todas las tarjetas. `key` es el id de la columna o de
+// la etiqueta, la prioridad (`high`, `medium`, `low` o `none`) o la fecha de completado.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
+pub struct WindiChatContextCount {
+    pub key: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
+pub struct WindiChatContextCounts {
+    pub by_column: Vec<WindiChatContextCount>,
+    pub by_label: Vec<WindiChatContextCount>,
+    pub by_priority: Vec<WindiChatContextCount>,
+    pub completed_by_date: Vec<WindiChatContextCount>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "index.ts")]
 pub struct WindiChatContext {
@@ -82,6 +100,7 @@ pub struct WindiChatContext {
     pub labels: Vec<WindiChatContextLabelsItem>,
     pub cards: Vec<WindiChatContextCard>,
     pub totals: WindiChatContextTotals,
+    pub counts: WindiChatContextCounts,
     pub active_proposal: Option<WindiChatProposal>,
 }
 

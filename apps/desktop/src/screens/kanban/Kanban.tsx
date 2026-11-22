@@ -21,12 +21,13 @@ import type {
 import { Boton } from '@/ui/Boton/Boton';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
+import { MenuDeAcciones } from '@/ui/MenuDeAcciones/MenuDeAcciones';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import textos from '@/types/messages.es.json';
 import { FormularioColumna } from './FormularioColumna';
 import { useNucleo, useParametrosDeNavegacion } from '@/ventana_principal/VentanaPrincipal';
 import { fechaVisible } from '../tarjeta/fechas';
-import { MoverA } from '../tarjeta/MoverA';
+import { opcionesDeMoverA } from '../tarjeta/MoverA';
 import { NOMBRE_DE_PRIORIDAD, NOMBRE_DE_TIPO } from '../tarjeta/nombres';
 import { useVentanasDeTarjeta } from '../tarjeta/useVentanasDeTarjeta';
 import { ENCABEZADO, type LugarDeSoltar, movimientoDelArrastre, ordenDelArrastre } from './arrastre';
@@ -38,6 +39,9 @@ import { ENCABEZADO, type LugarDeSoltar, movimientoDelArrastre, ordenDelArrastre
 interface AccionesDelTablero {
   columnas: readonly Column[];
   alAbrir: (id: string) => void;
+  /** «Editar» y «Eliminar» del botón de acciones «⋮» de una tarjeta (HE-07-HU04-ET22). */
+  alEditarTarjeta: (id: string) => void;
+  alEliminarTarjeta: (id: string) => void;
   alMover: (movimiento: CardMoveParams) => void;
   /** HE-09-HU07: la vista de las tarjetas y las etiquetas para mostrar sus nombres en la vista expandida. */
   vista: PreferenceBoardCardView;
@@ -60,7 +64,7 @@ function useTablero(): AccionesDelTablero {
  * Se arrastra a otra columna o a otra posición (HE-09-HU02-ET01) y tiene «Mover a» (ET10).
  */
 function Tarjeta({ tarjeta }: { tarjeta: Card }) {
-  const { columnas, alAbrir, alMover, vista, etiquetas } = useTablero();
+  const { columnas, alAbrir, alEditarTarjeta, alEliminarTarjeta, alMover, vista, etiquetas } = useTablero();
   const expandida = vista === 'expanded';
   const arrastre = useDraggable({ id: tarjeta.id });
   const lugar: LugarDeSoltar = { columna: tarjeta.column_id, tarjeta: tarjeta.id };
@@ -103,12 +107,21 @@ function Tarjeta({ tarjeta }: { tarjeta: Card }) {
           })}
         </ul>
       )}
-      <MoverA
-        columnas={columnas}
-        actual={tarjeta.column_id}
-        alElegir={(columna) =>
-          alMover({ card_id: tarjeta.id, column_id: columna, placement: { kind: 'end' } })
-        }
+      {/* HE-07-HU04-ET22 (RT-02-ET10): las acciones de la tarjeta en su botón de acciones «⋮». «Mover a» es la
+          alternativa sin drag-and-drop (HE-09-HU02-ET10): sus columnas reemplazan las opciones del menú. */}
+      <MenuDeAcciones
+        nombre={tarjeta.title}
+        opciones={[
+          { etiqueta: 'Editar', alElegir: () => alEditarTarjeta(tarjeta.id) },
+          {
+            etiqueta: 'Mover a',
+            submenu: opcionesDeMoverA(columnas, tarjeta.column_id, (columna) =>
+              alMover({ card_id: tarjeta.id, column_id: columna, placement: { kind: 'end' } }),
+            ),
+          },
+          { etiqueta: 'Vista detallada', alElegir: () => alAbrir(tarjeta.id) },
+          { etiqueta: 'Eliminar', alElegir: () => alEliminarTarjeta(tarjeta.id) },
+        ]}
       />
     </li>
   );
@@ -142,18 +155,21 @@ function Columna({
         <span className="wg-muestra-color" style={{ background: column.color_hex }} aria-hidden="true" />
         <span>{column.name}</span>
         <span className="wg-columna__cantidad">{column.card_count}</span>
-        {/* HE-09-HU04-ET01: cada columna tiene «Editar». */}
-        <Boton onClick={() => alEditar(column)}>Editar</Boton>
-        {/* HE-09-HU06-ET01, ET02: «Eliminar» en cada columna; en las por defecto, deshabilitada con su texto. El
-            encabezado no tiene espacio para el texto: aparece al pasar el mouse (RT-04-ET11). */}
-        <Boton
-          disabled={column.is_default}
-          motivo={textos.COLUMNA_POR_DEFECTO_NO_ELIMINABLE}
-          motivoAlPasar
-          onClick={() => alEliminar(column)}
-        >
-          Eliminar
-        </Boton>
+        {/* HE-09-HU04-ET01, HE-09-HU06-ET01 (RT-02-ET10): «Editar» y «Eliminar» en el botón de acciones «⋮» de
+            cada columna. En las por defecto, «Eliminar» está deshabilitada y su motivo aparece al pasar el mouse
+            (HE-09-HU06-ET02, RT-04-ET11). */}
+        <MenuDeAcciones
+          nombre={column.name}
+          opciones={[
+            { etiqueta: 'Editar', alElegir: () => alEditar(column) },
+            {
+              etiqueta: 'Eliminar',
+              deshabilitada: column.is_default,
+              motivo: textos.COLUMNA_POR_DEFECTO_NO_ELIMINABLE,
+              alElegir: () => alEliminar(column),
+            },
+          ]}
+        />
       </h2>
       {cards.length === 0 ? (
         // HE-09-HU01-ET04: estado vacío de la columna (RT-04).
@@ -285,7 +301,7 @@ export function Kanban() {
     },
     [columnas, mover, reordenar],
   );
-  const { abrirDetalle } = tarjetas;
+  const { abrirDetalle, abrirEdicion, abrirEliminacion } = tarjetas;
   // HE-06-HU08-CA03: desde el widget Kanban, el Detalle de tarjeta de la tarjeta seleccionada.
   useParametrosDeNavegacion(
     'kanban',
@@ -300,11 +316,13 @@ export function Kanban() {
     () => ({
       columnas: columnas?.map((c) => c.column) ?? [],
       alAbrir: abrirDetalle,
+      alEditarTarjeta: abrirEdicion,
+      alEliminarTarjeta: abrirEliminacion,
       alMover: (m) => void mover(m),
       vista,
       etiquetas,
     }),
-    [abrirDetalle, columnas, etiquetas, mover, vista],
+    [abrirDetalle, abrirEdicion, abrirEliminacion, columnas, etiquetas, mover, vista],
   );
 
   /** Columnas del tablero, contadas las tres por defecto (HE-09-HU03-ET07, D-167). */
