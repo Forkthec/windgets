@@ -26,7 +26,7 @@ Los elementos de una misma línea (íconos, textos, casillas, botones, campos, i
 De la guía de identidad solo aplica lo siguiente a la aplicación:
 
 - **Los colores y la tipografía de la aplicación los define el tema** (tres colores: principal, secundario y del texto; tipografía y tamaño pequeño, mediano o grande). No hay modo claro ni oscuro. La interfaz lee el tema aplicado; no fijes colores de interfaz en el código.
-- **Tema por defecto** (semilla): plantilla «Windgets», colores principal `#96B2B2`, secundario `#829890` y del texto `#14201C`; tipografía Nunito, tamaño mediano (los de «Mi tema» en WG-MK-01). La plantilla y la tipografía por defecto viajan en el instalador (D-198).
+- **Tema por defecto** (semilla): plantilla «Windgets», colores de la marca: principal `#201B2B`, secundario `#DC026C` y del texto `#FFFFFF`; tipografía Rubik, tamaño mediano (P29, 0008; antes los de «Mi tema» en WG-MK-01: `#96B2B2`, `#829890`, `#14201C` y Nunito). La plantilla y la tipografía por defecto viajan en el instalador (D-198).
 - **Colores de marca fijos** (el isotipo y el logo no cambian con el tema): cian `#00D9E2`, magenta `#DC026C`, amarillo `#DCBA04`, púrpura `#6604E6`; cruces `#D6258C`, `#F7B212`, `#7A14E3`; neutros `#121216` y `#FFFFFF`. La palabra «Windgets» del logo es solo `#121216` o `#FFFFFF` y nunca usa la tipografía ni los colores del tema.
 - **Los colores de marca no tienen función en la aplicación** (acción, foco, selección, estado, prioridad, aviso, fondos); la función la dan los colores del tema (R-04). Los estados con color son mezclas sólidas calculadas, nunca opacidad (R-05).
 - **Forma**: un solo ángulo diagonal de 18° (R-06); esquina de un tercio: radio = grosor / 3 con un tope absoluto fijado por la implementación (R-07); profundidad con capas sólidas y sombra desplazada a 18°, sin transparencias apiladas, desenfoque ni vidrio (R-08). Los widgets no se superponen (R-09). Toda medida nueva es fracción o múltiplo de una unidad base (R-14).
@@ -64,7 +64,7 @@ El significado no depende solo del color (R-12): vencida lleva el ícono de aler
 | `text_surface` (texto) | `texto` | 4,5:1 |
 | `control_surface` (controles y gráficos con significado) | `accion` | 3:1 |
 
-`P` no entra en un par: da `marco`, `linea` y `borde`. El texto sobre `marco` usa `sobre_marco`, que por construcción llega a 4,5:1 o más. El tema por defecto (`#96B2B2`, `#829890`, `#14201C`) da `superficie = #CDD6D3`, `accion = #61746D` y cumple los tres pares (11,3:1; 7,8:1; 3,4:1).
+`P` no entra en un par: da `marco`, `linea` y `borde`. El texto sobre `marco` usa `sobre_marco`, que por construcción llega a 4,5:1 o más. El tema por defecto (`#201B2B`, `#DC026C`, `#FFFFFF`; P29) da `superficie = #630C38`, `accion = #E74E98` y cumple los tres pares (12,8:1; 9,5:1; 3,6:1).
 
 **Color sugerido.** Para el par que no cumple (si fallan varios, el de menor razón), se conservan el tono y la saturación (HSL) del color del primer plano y se busca la luminosidad más cercana a la elegida, en pasos de 1 %, con la que el par cumple su mínimo y los demás siguen cumpliéndose; si empata, la más lejana de `superficie`. Si ninguna cumple, se sugiere `#FFFFFF` o `#121216`, el que dé más contraste con `superficie`. El contraste del aviso es el menor de los pares que fallan, truncado (no redondeado) a un decimal y escrito con coma. El aviso se muestra debajo de la muestra de la vista previa y desaparece cuando todos los pares cumplen.
 

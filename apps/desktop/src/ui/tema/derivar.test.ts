@@ -3,12 +3,13 @@ import { contraste, derivarTokens } from './derivar';
 import { TOKENS_POR_DEFECTO } from './tokens_por_defecto';
 
 describe('tokens a partir del tema (interfaz.md, «Tema a tokens»)', () => {
-  it('el tema por defecto da los tokens por defecto', () => {
+  // P29: el tema por defecto es la plantilla «Windgets» con los colores de la marca (0008).
+  it('el tema por defecto (marca, P29) da los tokens por defecto', () => {
     expect(
       derivarTokens({
-        primary: '#96B2B2',
-        secondary: '#829890',
-        text: '#14201C',
+        primary: '#201B2B',
+        secondary: '#DC026C',
+        text: '#FFFFFF',
         fuente: TOKENS_POR_DEFECTO.fuente,
         tamano: TOKENS_POR_DEFECTO.tamano_fuente,
       }),

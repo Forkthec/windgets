@@ -68,9 +68,9 @@ const TEMA_SIMULADO: ThemeDraftView = {
   content: {
     template_id: 'default',
     background: { source: 'template_default', catalog_image_id: null, uploaded_image_id: null },
-    colors: { primary: '#96B2B2', secondary: '#829890', text: '#14201C' },
+    colors: { primary: '#201B2B', secondary: '#DC026C', text: '#FFFFFF' },
     palette_id: null,
-    font: { id: 'nunito', size: 'medium' },
+    font: { id: 'rubik', size: 'medium' },
   },
   dirty: false,
   applied_unsaved: false,

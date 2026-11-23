@@ -21,10 +21,11 @@ describe('tokens del tema por defecto', () => {
     for (const nombre of NOMBRES_TOKEN) expect(TOKENS_POR_DEFECTO[nombre]).toBeTruthy();
   });
 
-  it('da los valores que fija interfaz.md para el tema por defecto', () => {
-    expect(TOKENS_POR_DEFECTO.superficie).toBe('#CDD6D3');
-    expect(TOKENS_POR_DEFECTO.accion).toBe('#61746D');
-    expect(TOKENS_POR_DEFECTO.marco).toBe('#96B2B2');
+  // P29 (0008, decisión de Paula del 23-nov-2026): el tema por defecto es la plantilla «Windgets» con la marca.
+  it('da los valores del tema por defecto con los colores de la marca (P29)', () => {
+    expect(TOKENS_POR_DEFECTO.superficie).toBe('#630C38');
+    expect(TOKENS_POR_DEFECTO.accion).toBe('#E74E98');
+    expect(TOKENS_POR_DEFECTO.marco).toBe('#201B2B');
   });
 
   it('cumple los tres pares de legibilidad sobre la superficie (R-13)', () => {
