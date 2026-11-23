@@ -11,7 +11,7 @@ import { useApariencia } from '../cuenta/apariencia';
 import { useConexion } from '../cuenta/conexion';
 import { Hipervinculo } from '../cuenta/Hipervinculo';
 import { AccionesDelPaso, PasoCentrado } from '../cuenta/PasoCentrado';
-import { PASOS_CENTRADOS, REQUIERE_CONEXION } from '../cuenta/textosDelRediseno';
+import { ERROR_INESPERADO, PASOS_CENTRADOS, REQUIERE_CONEXION } from '../cuenta/textosDelRediseno';
 import { TEXTOS } from '../cuenta/textos';
 
 // Registro > paso Verificar correo (HE-01-HU03). Con el rediseño lleva la miga de pan «Registro / Verificar
@@ -58,7 +58,7 @@ export function VerificarCorreo({ reenvioDisponible, alRegresar }: VerificarCorr
         const faltan = Number(error.params?.seconds ?? 0);
         setAhora(Date.now());
         setDisponibleEn(Date.now() + faltan * 1000);
-      } else if (error.message) setAviso(error.message);
+      } else setAviso(error.message || ERROR_INESPERADO);
     },
     [campos, sinConexion],
   );

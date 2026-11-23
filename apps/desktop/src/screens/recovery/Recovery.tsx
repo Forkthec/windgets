@@ -9,7 +9,12 @@ import { useNavegacion, useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { useConexion } from '../cuenta/conexion';
 import { MarcoDeCuenta } from '../cuenta/MarcoDeCuenta';
 import { AccionesDelPaso } from '../cuenta/PasoCentrado';
-import { PASOS_CENTRADOS, REQUIERE_CONEXION, SIN_CONEXION_ENVIAR_CODIGO } from '../cuenta/textosDelRediseno';
+import {
+  ERROR_INESPERADO,
+  PASOS_CENTRADOS,
+  REQUIERE_CONEXION,
+  SIN_CONEXION_ENVIAR_CODIGO,
+} from '../cuenta/textosDelRediseno';
 import { validarCorreo } from '../cuenta/validaciones';
 import { DiligenciarCodigo } from './DiligenciarCodigo';
 import { NuevaContrasena } from './NuevaContrasena';
@@ -39,7 +44,7 @@ export function Recovery() {
     (error: AppError) => {
       if (error.field) campos.mostrarDelNucleo([error]);
       else if (error.code === 'net.offline') sinConexion();
-      else if (error.message) setAviso(error.message);
+      else setAviso(error.message || ERROR_INESPERADO);
     },
     [campos, sinConexion],
   );

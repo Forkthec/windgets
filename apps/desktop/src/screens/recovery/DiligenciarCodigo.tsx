@@ -11,7 +11,7 @@ import { useConexion } from '../cuenta/conexion';
 import { Hipervinculo } from '../cuenta/Hipervinculo';
 import { TEXTOS } from '../cuenta/textos';
 import { AccionesDelPaso } from '../cuenta/PasoCentrado';
-import { PASOS_CENTRADOS, REQUIERE_CONEXION } from '../cuenta/textosDelRediseno';
+import { ERROR_INESPERADO, PASOS_CENTRADOS, REQUIERE_CONEXION } from '../cuenta/textosDelRediseno';
 import { PasoDeRecuperacion } from './PasoDeRecuperacion';
 
 // Recuperar contraseña > paso Diligenciar código (HE-01-HU07). Campo Código de verificación, «Verificar»,
@@ -66,7 +66,7 @@ export function DiligenciarCodigo({
         const faltan = Number(error.params?.seconds ?? 0);
         setAhora(Date.now());
         setDisponibleEn(Date.now() + faltan * 1000);
-      } else if (error.message) setAviso(error.message);
+      } else setAviso(error.message || ERROR_INESPERADO);
     },
     [campos, sinConexion],
   );

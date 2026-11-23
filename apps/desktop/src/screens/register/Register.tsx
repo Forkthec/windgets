@@ -12,7 +12,13 @@ import { useInicioConGoogle } from '../cuenta/google';
 import { Hipervinculo } from '../cuenta/Hipervinculo';
 import { Divisor } from '../cuenta/IndicadorDePasos';
 import { MarcoDeCuenta } from '../cuenta/MarcoDeCuenta';
-import { AYUDA_CONTRASENA, MAXIMO, PANTALLAS, PASOS_DE_REGISTRO } from '../cuenta/textosDelRediseno';
+import {
+  AYUDA_CONTRASENA,
+  ERROR_INESPERADO,
+  MAXIMO,
+  PANTALLAS,
+  PASOS_DE_REGISTRO,
+} from '../cuenta/textosDelRediseno';
 import { VerificarCorreo } from './VerificarCorreo';
 import { TEXTOS } from '../cuenta/textos';
 import { validarAlias, validarConfirmacion, validarContrasena, validarCorreo } from '../cuenta/validaciones';
@@ -63,7 +69,7 @@ export function Register() {
       if (error.field) campos.mostrarDelNucleo([error]);
       else if (error.code === 'email.already_registered') setRegistrado(true);
       else if (error.code === 'net.offline') sinConexion();
-      else if (error.message) setAviso(error.message);
+      else setAviso(error.message || ERROR_INESPERADO);
     },
     [campos, sinConexion],
   );

@@ -12,7 +12,7 @@ import { Hipervinculo } from '../cuenta/Hipervinculo';
 import { Divisor } from '../cuenta/IndicadorDePasos';
 import { MarcoDeCuenta } from '../cuenta/MarcoDeCuenta';
 import { TEXTOS } from '../cuenta/textos';
-import { PANTALLAS } from '../cuenta/textosDelRediseno';
+import { PANTALLAS, ERROR_INESPERADO } from '../cuenta/textosDelRediseno';
 import { validarCorreo } from '../cuenta/validaciones';
 
 // P-CTA-01 Inicio de sesión (HE-01-HU04). Disposición y textos del rediseño (docs/rediseno.md RD-07, RD-08, RD-13);
@@ -47,7 +47,7 @@ export function SignIn() {
     (error: AppError) => {
       if (error.field) campos.mostrarDelNucleo([error]);
       else if (error.code === 'net.offline') sinConexion();
-      else if (error.message) setAviso(error.message);
+      else setAviso(error.message || ERROR_INESPERADO);
     },
     [campos, sinConexion],
   );

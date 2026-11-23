@@ -232,3 +232,16 @@ describe('Rediseño · Inicio de sesión', () => {
     expect(orden).toEqual(['Iniciar sesión', 'o', 'Continuar con Google']);
   });
 });
+
+describe('Rediseño · Error sin texto', () => {
+  it('RD-24 · Un error del Núcleo sin texto muestra el aviso de error inesperado', async () => {
+    const nucleo = await inicio();
+    nucleo.responder('auth_sign_in', () => ({
+      ok: false,
+      error: { code: 'internal.unexpected', message: '' },
+    }));
+    diligenciar({});
+    await iniciar();
+    expect(screen.getByRole('alert').textContent).toBe('Ocurrió un error inesperado. Intenta de nuevo.');
+  });
+});

@@ -46,3 +46,9 @@ export const REQUIERE_CONEXION = (accion: string) => `${accion} requiere conexi�
 /** RD-15: la paleta del modo no se pudo aplicar al tema de una cuenta nueva. */
 export const TEMA_INICIAL_NO_APLICADO = (paleta: 'Claro' | 'Oscuro') =>
   `No pudimos aplicar el tema ${paleta}. Puedes elegirlo en Personalización.`;
+
+/**
+ * RD-24: aviso de las pantallas de cuenta cuando el Núcleo responde un error sin texto (`internal.unexpected`,
+ * DP-02), para que la persona no se quede sin respuesta. Texto elegido por Paula (23-nov-2026).
+ */
+export const ERROR_INESPERADO = 'Ocurrió un error inesperado. Intenta de nuevo.';

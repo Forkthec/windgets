@@ -160,3 +160,15 @@ describe('HE-01-HU05 · Iniciar sesión con la cuenta de Google', () => {
     expect(screen.getByRole('status').textContent).toContain(BIENVENIDA);
   });
 });
+
+describe('Rediseño · Error sin texto', () => {
+  it('RD-24 · Si «Continuar con Google» falla sin texto, se muestra el aviso de error inesperado', async () => {
+    const nucleo = await desde('sign_in');
+    nucleo.responder('auth_google_start', () => ({
+      ok: false,
+      error: { code: 'internal.unexpected', message: '' },
+    }));
+    await continuarConGoogle();
+    expect(screen.getByRole('alert').textContent).toBe('Ocurrió un error inesperado. Intenta de nuevo.');
+  });
+});

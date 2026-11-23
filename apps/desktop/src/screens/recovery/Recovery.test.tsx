@@ -454,3 +454,40 @@ describe('Rediseño · Recuperar contraseña', () => {
     expect(acciones()).toEqual(['Regresar', 'Guardar contraseña']);
   });
 });
+
+describe('Rediseño · Error sin texto', () => {
+  const INESPERADO = 'Ocurrió un error inesperado. Intenta de nuevo.';
+
+  it('RD-24 · En Correo electrónico, un error del Núcleo sin texto muestra el aviso de error inesperado', async () => {
+    const nucleo = await recuperar();
+    nucleo.responder('auth_recovery_request', () => ({
+      ok: false,
+      error: { code: 'internal.unexpected', message: '' },
+    }));
+    escribir('Correo electrónico', 'ana@example.com');
+    await seleccionar('Enviar código');
+    expect(within(paso('Correo electrónico')).getByRole('alert').textContent).toBe(INESPERADO);
+  });
+
+  it('RD-24 · En Diligenciar código, un error del Núcleo sin texto muestra el aviso de error inesperado', async () => {
+    const nucleo = await enCodigo();
+    nucleo.responder('auth_recovery_verify', () => ({
+      ok: false,
+      error: { code: 'internal.unexpected', message: '' },
+    }));
+    escribir('Código de verificación', '482913');
+    await seleccionar('Verificar');
+    expect(within(paso('Diligenciar código')).getByRole('alert').textContent).toBe(INESPERADO);
+  });
+
+  it('RD-24 · En Nueva contraseña, un error del Núcleo sin texto muestra el aviso de error inesperado', async () => {
+    const nucleo = await enNueva();
+    nucleo.responder('auth_recovery_set_password', () => ({
+      ok: false,
+      error: { code: 'internal.unexpected', message: '' },
+    }));
+    diligenciar('Nueva123');
+    await seleccionar('Guardar contraseña');
+    expect(within(paso('Nueva contraseña')).getByRole('alert').textContent).toBe(INESPERADO);
+  });
+});

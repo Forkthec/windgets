@@ -6,6 +6,7 @@ import { useNavegacion, useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { useApariencia } from './apariencia';
 import { Hipervinculo } from './Hipervinculo';
 import { TEXTOS } from './textos';
+import { ERROR_INESPERADO } from './textosDelRediseno';
 
 // «Continuar con Google» (HE-01-HU05), igual en Inicio de sesión y en Registro > paso Formulario (ET01, CA09).
 // `auth_google_start` no lleva parámetros: no toma los datos del formulario (ET11). El resultado llega por
@@ -61,7 +62,7 @@ export function useInicioConGoogle(sinConexion: () => void): InicioConGoogle {
     if (r.ok) return;
     // CA07, ET10: sin conexión el botón queda deshabilitado con el aviso de la pantalla.
     if (r.error.code === 'net.offline') sinConexion();
-    else if (r.error.message) setAviso(r.error.message);
+    else setAviso(r.error.message || ERROR_INESPERADO);
   }, [invocar, sinConexion]);
   const { ejecutar, enCurso } = useEnvioUnico(iniciar);
 

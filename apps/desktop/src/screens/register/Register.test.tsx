@@ -526,3 +526,30 @@ describe('Rediseño · Verificar correo', () => {
     expect(llamadasA(nucleo, 'auth_register_cancel')).toHaveLength(1);
   });
 });
+
+describe('Rediseño · Error sin texto', () => {
+  it('RD-24 · En el formulario, un error del Núcleo sin texto muestra el aviso de error inesperado', async () => {
+    const nucleo = await registro();
+    nucleo.responder('auth_register_start', () => ({
+      ok: false,
+      error: { code: 'internal.unexpected', message: '' },
+    }));
+    diligenciar({});
+    await crearCuenta();
+    expect(screen.getByRole('alert').textContent).toBe('Ocurrió un error inesperado. Intenta de nuevo.');
+  });
+
+  it('RD-24 · En Verificar correo, un error del Núcleo sin texto muestra el aviso de error inesperado', async () => {
+    const nucleo = await enVerificar();
+    nucleo.responder('auth_register_verify', () => ({
+      ok: false,
+      error: { code: 'internal.unexpected', message: '' },
+    }));
+    escribirCodigo('482913');
+    await seleccionar('Verificar');
+    const paso = screen.getByRole('region', { name: 'Verificar correo' });
+    expect(within(paso).getByRole('alert').textContent).toBe(
+      'Ocurrió un error inesperado. Intenta de nuevo.',
+    );
+  });
+});

@@ -10,7 +10,12 @@ import { useNavegacion, useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { useConexion } from '../cuenta/conexion';
 import { TEXTOS } from '../cuenta/textos';
 import { AccionesDelPaso } from '../cuenta/PasoCentrado';
-import { AYUDA_NUEVA_CONTRASENA, PASOS_CENTRADOS, REQUIERE_CONEXION } from '../cuenta/textosDelRediseno';
+import {
+  AYUDA_NUEVA_CONTRASENA,
+  ERROR_INESPERADO,
+  PASOS_CENTRADOS,
+  REQUIERE_CONEXION,
+} from '../cuenta/textosDelRediseno';
 import { validarContrasena } from '../cuenta/validaciones';
 import { PasoDeRecuperacion } from './PasoDeRecuperacion';
 
@@ -54,7 +59,7 @@ export function NuevaContrasena({ alRegresar }: NuevaContrasenaProps) {
       // CA03, CA07: debajo del campo; CA06: sin conexión, el aviso arriba y lo diligenciado se conserva.
       if (error.field) campos.mostrarDelNucleo([error]);
       else if (error.code === 'net.offline') sinConexion();
-      else if (error.message) setAviso(error.message);
+      else setAviso(error.message || ERROR_INESPERADO);
     },
     [campos, sinConexion],
   );
