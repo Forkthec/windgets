@@ -43,3 +43,7 @@ desktop.ini
 
 # Estado local de cada persona (ESTADO.md, bitácora, borradores de PR)
 .trabajo/
+
+# Instaladores descargados de GitHub Actions: no se versionan (se guardan en Descargas).
+windgets-instalador/
+*.exe

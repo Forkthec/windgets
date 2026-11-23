@@ -16,6 +16,7 @@ import { FiltroEtiquetas } from './FiltroEtiquetas';
 import { GraficaCompletadas } from './GraficaCompletadas';
 import { SelectorRango } from './SelectorRango';
 import { TasaCumplimiento } from './TasaCumplimiento';
+import './reportes.css';
 
 // P-REP-01 Reportes (Menú principal > Planificador > Reportes; HE-13). Arriba la barra de filtros y debajo las
 // secciones (HE-13-HU02-ET01); el rango de fechas aplica a todas (HE-13-HU01-ET09). Cada sección pide su cálculo
@@ -126,15 +127,18 @@ export function Reports() {
 
   const sinTarjetas = meta !== null && !meta.has_cards;
   return (
-    <main aria-label="Reportes" aria-busy={meta === null}>
-      {/* HE-13-HU02-ET12: sin tarjetas, la barra de filtros deshabilitada y el mensaje en lugar de las secciones. */}
-      <SelectorRango alAplicar={(nuevo) => aplicar(nuevo)} deshabilitado={meta === null || sinTarjetas} />
-      <FiltroEtiquetas
-        etiquetas={etiquetas}
-        elegidas={elegidas}
-        alCambiar={cambiarEtiquetas}
-        deshabilitado={meta === null || sinTarjetas}
-      />
+    <main className="wg-reportes" aria-label="Reportes" aria-busy={meta === null}>
+      {/* HE-13-HU02-ET12: sin tarjetas, la barra de filtros deshabilitada y el mensaje en lugar de las secciones.
+          docs/rediseno.md RD-56 (Figma 84:397): los filtros arriba, en una fila. */}
+      <div className="wg-reportes__filtros">
+        <SelectorRango alAplicar={(nuevo) => aplicar(nuevo)} deshabilitado={meta === null || sinTarjetas} />
+        <FiltroEtiquetas
+          etiquetas={etiquetas}
+          elegidas={elegidas}
+          alCambiar={cambiarEtiquetas}
+          deshabilitado={meta === null || sinTarjetas}
+        />
+      </div>
       {rango?.clipped_start && (
         // HE-13-HU02-ET14
         <p>
@@ -147,8 +151,11 @@ export function Reports() {
         meta && (
           <>
             <GraficaCompletadas reporte={completadas} />
-            <TasaCumplimiento reporte={cumplimiento} />
-            <EstadosTarjetas reporte={estados} rango={rango} alAbrir={tarjetas.abrirDetalle} />
+            {/* RD-56: la tasa de cumplimiento y los estados lado a lado, en tarjetas con fondo. */}
+            <div className="wg-reportes__tarjetas">
+              <TasaCumplimiento reporte={cumplimiento} />
+              <EstadosTarjetas reporte={estados} rango={rango} alAbrir={tarjetas.abrirDetalle} />
+            </div>
           </>
         )
       )}

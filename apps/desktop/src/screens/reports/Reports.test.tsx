@@ -179,3 +179,14 @@ describe('HE-13-HU02 · Gráfica de tarjetas completadas', () => {
     await waitFor(() => expect(grafica()).toBeTruthy());
   });
 });
+
+describe('Rediseño · Reportes (P35)', () => {
+  it('RD-56 · Los filtros en una fila y la tasa y los estados lado a lado', async () => {
+    await abrir();
+    const reportes = screen.getByRole('main', { name: 'Reportes' });
+    const filtros = reportes.querySelector('.wg-reportes__filtros') as HTMLElement;
+    expect(within(filtros).getByRole('group', { name: 'Rango de fechas' })).toBeTruthy();
+    const tarjetas = reportes.querySelector('.wg-reportes__tarjetas');
+    expect(tarjetas?.querySelectorAll(':scope > .wg-seccion').length ?? 0).toBeLessThanOrEqual(2);
+  });
+});

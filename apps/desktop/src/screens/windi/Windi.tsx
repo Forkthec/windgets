@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import type { Label, WindiMessage, WindiProposal } from '@/types';
 import textos from '@/types/messages.es.json';
 import { Aviso } from '@/ui/Aviso/Aviso';
@@ -58,6 +58,13 @@ export function Windi() {
   // HE-14-HU05-ET11: la propuesta muestra las etiquetas por su nombre.
   const [etiquetas, setEtiquetas] = useState<Label[]>([]);
   const idCampo = useId();
+  // docs/rediseno.md RD-57: la conversación se desplaza dentro de la tarjeta (RD-36); con cada mensaje, propuesta,
+  // «Escribiendo…» o falla nueva, baja hasta el final para que se vea lo último.
+  const conversacion = useRef<HTMLOListElement>(null);
+  useEffect(() => {
+    const lista = conversacion.current;
+    if (lista) lista.scrollTop = lista.scrollHeight;
+  }, [mensajes, propuestas, escribiendo, fallido]);
 
   const leer = useCallback(async () => {
     void invocar('label_list', {}).then((e) => {
@@ -172,7 +179,7 @@ export function Windi() {
       {sinConexionAlConfirmar && <Aviso texto={textos.WINDI_SIN_CONEXION_AL_CONFIRMAR} />}
       {avisoAlConfirmar !== null && <Aviso texto={avisoAlConfirmar} />}
       {/* ET01: el área de conversación. */}
-      <ol className="wg-windi__conversacion" aria-label="Conversación" aria-live="polite">
+      <ol ref={conversacion} className="wg-windi__conversacion" aria-label="Conversación" aria-live="polite">
         {(mensajes ?? []).map((m) => (
           // docs/rediseno.md RD-36 (Figma 76:27 «Tu mensaje», 76:29 a 76:42): tus mensajes en un globo a la derecha;
           // los de Windi a la izquierda, con su ilustración y su nombre.

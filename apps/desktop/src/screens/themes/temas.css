@@ -1,0 +1,22 @@
+/* Rediseño de Temas (docs/rediseno.md RD-55; Figma 84:657 «Contenido» de 84:654 «Temas · Claro», boceto): cada tema
+ * en una fila de fondo de columna con radio 6. */
+.wg-temas .wg-lista {
+  gap: 10px;
+  margin: 0;
+}
+.wg-temas .wg-lista__elemento {
+  flex-wrap: wrap;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 4px 6px 4px 14px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--wgm-columna);
+}
+.wg-temas .wg-lista__nombre {
+  font-size: 16px;
+}
+.wg-temas > p {
+  margin-top: 20px;
+  color: var(--wg-texto);
+}
