@@ -347,7 +347,7 @@ body[data-modo] .wg-interruptor[aria-checked='true']::after {
 /* Una acción que el Figma escribe como texto («Eliminar», 81:119). */
 .wg-enlace-texto {
   min-height: 44px;
-  padding: 0 4px;
+  padding: 0;
   border: 0;
   background: none;
   color: var(--wg-tinta);
