@@ -265,6 +265,11 @@ pub struct ImageRef {
 #[ts(export, export_to = "index.ts")]
 pub struct WeatherConfig {
     pub city: String,
+    /// HE-04-HU05-ET18 (P29): el lugar que la persona eligió de las sugerencias de IPC-WID-08. Con él, el Núcleo no
+    /// vuelve a buscar la ciudad; sin él (pedidos anteriores), toma la primera coincidencia como antes.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub place: Option<crate::tipos::GeocodeResult>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]

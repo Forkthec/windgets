@@ -102,6 +102,75 @@ pub async fn resolver_ciudad(
     }
 }
 
+/// HE-04-HU05-ET18 (P29): las sugerencias del campo Ciudad (IPC-WID-08), hasta 5 lugares del servicio de clima
+/// para lo que la persona lleva escrito. Menos de 2 caracteres no consulta (lista vacía); más de 100 es
+/// `city.too_long`. Sin conexión y con el servicio caído, el mismo error que al validar la ciudad.
+pub async fn buscar_ciudades(
+    nube: &impl NubeDeClima,
+    token: &str,
+    texto: &str,
+) -> Result<Vec<GeocodeResult>, AppError> {
+    let texto = texto.trim();
+    if texto.chars().count() > CIUDAD_MAX {
+        return Err(error(
+            ErrorCode::CityTooLong,
+            messages::CIUDAD_MUY_LARGA,
+            Some("city"),
+        ));
+    }
+    if texto.chars().count() < BUSQUEDA_MINIMA {
+        return Ok(Vec::new());
+    }
+    let peticion = WeatherGeocodeRequest {
+        query: texto.to_string(),
+    };
+    match nube.geocodificar(token, &peticion).await {
+        Ok(respuesta) => Ok(respuesta.results.into_iter().take(SUGERENCIAS).collect()),
+        Err(FallaDeAuth::SinConexion) => Err(error(
+            ErrorCode::NetOffline,
+            messages::CIUDAD_SIN_CONEXION,
+            Some("city"),
+        )),
+        Err(_) => Err(error(
+            ErrorCode::ServiceUnavailable,
+            messages::CLIMA_NO_DISPONIBLE,
+            Some("city"),
+        )),
+    }
+}
+
+/// HE-04-HU05-ET18: las sugerencias empiezan con 2 caracteres y son 5 como máximo.
+pub const BUSQUEDA_MINIMA: usize = 2;
+pub const SUGERENCIAS: usize = 5;
+
+/// HE-04-HU05-ET18 (P29): el lugar del widget Clima. Si la persona eligió uno de las sugerencias, se usa ese (sin
+/// volver a consultar); si no, se valida el texto y se toma la primera coincidencia (ET15). Un lugar con datos
+/// imposibles (sin nombre, más de 100 caracteres o coordenadas fuera de rango) es `city.not_found`.
+pub async fn elegir_lugar(
+    nube: &impl NubeDeClima,
+    token: &str,
+    ciudad: &str,
+    elegido: Option<&GeocodeResult>,
+) -> Result<GeocodeResult, AppError> {
+    let Some(lugar) = elegido else {
+        return resolver_ciudad(nube, token, ciudad).await;
+    };
+    let valido = !lugar.geo_id.trim().is_empty()
+        && !lugar.name.trim().is_empty()
+        && lugar.name.chars().count() <= CIUDAD_MAX
+        && (-90.0..=90.0).contains(&lugar.latitude)
+        && (-180.0..=180.0).contains(&lugar.longitude);
+    if valido {
+        Ok(lugar.clone())
+    } else {
+        Err(error(
+            ErrorCode::CityNotFound,
+            messages::CIUDAD_NO_ENCONTRADA,
+            Some("city"),
+        ))
+    }
+}
+
 /// ET13 (INT-04): la condición del clima en español según el código WMO.
 pub fn condicion(codigo: &str) -> &'static str {
     match codigo.trim().parse::<u16>().unwrap_or(u16::MAX) {

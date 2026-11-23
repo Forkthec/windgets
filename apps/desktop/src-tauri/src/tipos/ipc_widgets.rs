@@ -28,6 +28,13 @@ pub struct WidgetSetActiveParams {
     pub active: bool,
 }
 
+/// IPC-WID-08 `weather_city_search` (HE-04-HU05-ET18; P29): el texto del campo Ciudad.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
+pub struct WeatherCitySearchParams {
+    pub query: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "index.ts")]
 pub struct WidgetAddParams {

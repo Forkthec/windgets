@@ -105,6 +105,7 @@ pub fn run() {
             puente_ipc::widget_add,
             puente_ipc::widget_get_data,
             puente_ipc::widget_configure,
+            puente_ipc::weather_city_search,
             puente_ipc::media_get_session,
             puente_ipc::system_open_url,
             puente_ipc::preference_get,

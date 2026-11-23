@@ -1162,10 +1162,11 @@ pub async fn widget_add(
             crate::tipos::AddableWidgetType::Weather,
             crate::tipos::WidgetConfig::WeatherConfig(config),
         ) => {
-            match crate::servicio_de_clima_y_noticias::resolver_ciudad(
+            match crate::servicio_de_clima_y_noticias::elegir_lugar(
                 cliente,
                 &sesion.access_token,
                 &config.city,
+                config.place.as_ref(),
             )
             .await
             {
@@ -1259,6 +1260,26 @@ pub async fn widget_add(
     Ok(leido(r))
 }
 
+/// IPC-WID-08 `weather_city_search` (HE-04-HU05-ET18; P29): las sugerencias del campo Ciudad mientras se escribe.
+#[tauri::command]
+pub async fn weather_city_search(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::WeatherCitySearchParams,
+) -> Result<IpcResult<Vec<crate::tipos::GeocodeResult>>, ()> {
+    let Some(sesion) = sesion_para_la_nube(&app, &nucleo).await else {
+        return Ok(leido(Err(crate::servicio_del_planificador::inesperado())));
+    };
+    Ok(leido(
+        crate::servicio_de_clima_y_noticias::buscar_ciudades(
+            nucleo.sesion.auth(),
+            &sesion.access_token,
+            &params.query,
+        )
+        .await,
+    ))
+}
+
 /// IPC-WID-05 `widget_configure` (HE-04-HU12): cambia la ciudad del Clima (validada con `weather-geocode`) o el
 /// texto del Texto, avisa con EV-12 para que la capa lo muestre en 5 s o menos (ET03) y consulta el clima nuevo.
 #[tauri::command]
@@ -1276,10 +1297,11 @@ pub async fn widget_configure(
     let ahora = RelojDelSistema.ahora_ms();
     let r = match &params.config {
         crate::tipos::WidgetConfigureParamsConfig::WeatherConfig(c) => {
-            match crate::servicio_de_clima_y_noticias::resolver_ciudad(
+            match crate::servicio_de_clima_y_noticias::elegir_lugar(
                 nucleo.sesion.auth(),
                 &sesion.access_token,
                 &c.city,
+                c.place.as_ref(),
             )
             .await
             {

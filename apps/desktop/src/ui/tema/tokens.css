@@ -123,6 +123,38 @@ body {
 .wg-campo__etiqueta {
   color: var(--wg-texto);
 }
+/* HE-04-HU05-ET18 (P29): las sugerencias del campo Ciudad, debajo del campo. */
+.wg-ciudad {
+  position: relative;
+}
+.wg-ciudad__lista {
+  position: absolute;
+  z-index: 10;
+  left: 0;
+  right: 0;
+  margin: var(--wg-unidad) 0 0;
+  padding: var(--wg-unidad) 0;
+  list-style: none;
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-radius: var(--wg-radio);
+  background: var(--wg-superficie-alta);
+  box-shadow: var(--wg-sombra);
+  max-height: calc(var(--wg-grosor-control) * 5.5);
+  overflow-y: auto;
+}
+.wg-ciudad__opcion {
+  min-height: var(--wg-grosor-control);
+  padding: 0 calc(var(--wg-unidad) * 3);
+  display: flex;
+  align-items: center;
+  color: var(--wg-tinta);
+  cursor: pointer;
+}
+.wg-ciudad__opcion[aria-selected='true'],
+.wg-ciudad__opcion:hover {
+  background: var(--wg-accion);
+  color: var(--wg-sobre-accion);
+}
 .wg-campo__entrada {
   min-height: var(--wg-grosor-control);
   padding: 0 calc(var(--wg-unidad) * 3);

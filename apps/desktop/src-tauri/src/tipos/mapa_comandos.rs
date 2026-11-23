@@ -486,6 +486,13 @@ pub struct CommandMapWidgetConfigure {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "index.ts")]
+pub struct CommandMapWeatherCitySearch {
+    pub params: WeatherCitySearchParams,
+    pub result: Vec<GeocodeResult>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
 pub struct CommandMapWidgetDelete {
     pub params: WidgetDeleteParams,
     pub result: (),
@@ -779,6 +786,7 @@ pub struct CommandMap {
     pub widget_set_active: CommandMapWidgetSetActive,
     pub widget_add: CommandMapWidgetAdd,
     pub widget_configure: CommandMapWidgetConfigure,
+    pub weather_city_search: CommandMapWeatherCitySearch,
     pub widget_delete: CommandMapWidgetDelete,
     pub widget_get_data: CommandMapWidgetGetData,
     pub layout_edit_open: CommandMapLayoutEditOpen,

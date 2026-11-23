@@ -234,7 +234,8 @@ export interface ImageRef {
   uploaded_image_id?: Uuid;
 }
 
-export interface WeatherConfig { city: string }
+/** HE-04-HU05-ET18 (P29): `place` es el lugar elegido de las sugerencias de IPC-WID-08. */
+export interface WeatherConfig { city: string; place?: GeocodeResult }
 export interface TextConfig { text: string }
 export interface AnimationConfig { animation_id: string }
 export interface StaticImageConfig extends ImageRef {}
@@ -539,6 +540,8 @@ export interface WidgetCatalog { external: WidgetCatalogEntry[]; local: WidgetCa
 export interface WidgetSetActiveParams { widget_id: Uuid; active: boolean }
 export interface WidgetAddParams { type: AddableWidgetType; config: WidgetConfig }
 export interface WidgetConfigureParams { widget_id: Uuid; config: WeatherConfig | TextConfig }
+/** IPC-WID-08 `weather_city_search` (HE-04-HU05-ET18; P29). */
+export interface WeatherCitySearchParams { query: string }
 export interface WidgetDeleteParams { widget_id: Uuid }
 export interface WidgetDataParams { widget_id: Uuid }
 export type WidgetDataStatus = 'ok' | 'error' | 'offline';
@@ -734,6 +737,7 @@ export interface CommandMap {
   widget_set_active: { params: WidgetSetActiveParams; result: WidgetItem };
   widget_add: { params: WidgetAddParams; result: WidgetItem };
   widget_configure: { params: WidgetConfigureParams; result: WidgetItem };
+  weather_city_search: { params: WeatherCitySearchParams; result: GeocodeResult[] };
   widget_delete: { params: WidgetDeleteParams; result: Void };
   widget_get_data: { params: WidgetDataParams; result: WidgetData };
   // a.9 edición de la distribución

@@ -6,6 +6,7 @@ import { Capa } from '@/capa/Capa';
 import type { Escuchar } from '@/ipc/eventos';
 import type {
   ErrorCode,
+  GeocodeResult,
   Invoke,
   LayerInitialState,
   WidgetCatalog,
@@ -492,11 +493,30 @@ describe('HE-05 · Pantalla de edición desde Widgets', () => {
   });
 });
 
+/** Un lugar de las sugerencias del campo Ciudad (IPC-WID-08). */
+function lugar(name: string, geo_id: string, admin1: string | null = null): GeocodeResult {
+  return { geo_id, name, admin1, country: 'Colombia', latitude: 2.44, longitude: -76.61 };
+}
+
+/** Escribe en el campo Ciudad y elige la sugerencia indicada (HE-04-HU05-ET18). */
+async function elegirCiudad(contenedor: HTMLElement, campo: HTMLInputElement, texto: string, opcion: string) {
+  fireEvent.change(campo, { target: { value: texto } });
+  const lista = await within(contenedor).findByRole('listbox', { name: 'Sugerencias de ciudad' });
+  fireEvent.mouseDown(within(lista).getByRole('option', { name: opcion }));
+}
+
 describe('HE-04-HU05 · Agregar el widget Clima', () => {
-  /** Abre la subpantalla Clima desde el catálogo. */
+  const POPAYAN = lugar('Popayán', '3673269', 'Cauca');
+  const CALI = lugar('Cali', '3687925', 'Valle del Cauca');
+
+  /** Abre la subpantalla Clima desde el catálogo; el Núcleo sugiere Popayán y Cali según lo escrito. */
   async function abrirClima(responder?: (n: NucleoDelPlanificador) => void) {
     const nucleo = await abrir([...POR_DEFECTO]);
     nucleo.responder('widget_catalog_get', () => ({ ok: true, value: catalogo() }));
+    nucleo.responder('weather_city_search', (params) => {
+      const q = (params as { query: string }).query.toLowerCase();
+      return { ok: true, value: [POPAYAN, CALI].filter((l) => l.name.toLowerCase().startsWith(q)) };
+    });
     responder?.(nucleo);
     fireEvent.click(screen.getByRole('button', { name: 'Agregar widget' }));
     const enCatalogo = await screen.findByRole('main', { name: 'Agregar widget' });
@@ -531,20 +551,27 @@ describe('HE-04-HU05 · Agregar el widget Clima', () => {
     );
     expect(within(sub).getByRole('button', { name: 'Regresar' })).toBeTruthy();
     expect(campo.value).toBe('');
-    fireEvent.change(campo, { target: { value: ' Popayán ' } });
+    await elegirCiudad(sub, campo, ' Popa', 'Popayán, Cauca, Colombia');
+    expect(campo.value).toBe('Popayán, Cauca, Colombia');
     fireEvent.click(agregar);
     // Regresa a la pantalla Widgets.
     expect(await screen.findByRole('main', { name: 'Widgets' })).toBeTruthy();
-    expect(llamadasA(nucleo, 'widget_add')).toEqual([{ type: 'weather', config: { city: 'Popayán' } }]);
+    expect(llamadasA(nucleo, 'widget_add')).toEqual([
+      { type: 'weather', config: { city: 'Popayán', place: POPAYAN } },
+    ]);
   });
 
   it('HE-04-HU05-CA02 · Agregar el clima de otra ciudad', async () => {
     // ET04: Clima sigue habilitado en el catálogo aunque ya haya uno; cada ciudad es un widget aparte.
-    const { nucleo, campo, agregar } = await abrirClima((n) => n.responder('widget_add', agregado('Cali')));
-    fireEvent.change(campo, { target: { value: 'Cali' } });
+    const { nucleo, sub, campo, agregar } = await abrirClima((n) =>
+      n.responder('widget_add', agregado('Cali')),
+    );
+    await elegirCiudad(sub, campo, 'Cali', 'Cali, Valle del Cauca, Colombia');
     fireEvent.click(agregar);
     await screen.findByRole('main', { name: 'Widgets' });
-    expect(llamadasA(nucleo, 'widget_add')).toEqual([{ type: 'weather', config: { city: 'Cali' } }]);
+    expect(llamadasA(nucleo, 'widget_add')).toEqual([
+      { type: 'weather', config: { city: 'Cali', place: CALI } },
+    ]);
   });
 
   it('HE-04-HU05-CA03 · Ciudad vacía', async () => {
@@ -556,13 +583,14 @@ describe('HE-04-HU05 · Agregar el widget Clima', () => {
   });
 
   it('HE-04-HU05-CA04 · Ciudad no encontrada', async () => {
+    // ET18 (P29): sin sugerencias, el mensaje va en el campo y «Agregar» sigue deshabilitada.
     const texto = 'No encontramos esa ciudad. Revisa el nombre e intenta de nuevo.';
-    const { sub, campo, agregar } = await abrirClima((n) =>
-      n.responder('widget_add', rechazo('city.not_found', texto)),
-    );
+    const { nucleo, sub, campo, agregar } = await abrirClima();
     fireEvent.change(campo, { target: { value: 'Xyzzy' } });
-    fireEvent.click(agregar);
     expect(await within(sub).findByText(texto)).toBeTruthy();
+    expect(within(sub).queryByRole('listbox')).toBeNull();
+    expect(agregar.disabled).toBe(true);
+    expect(llamadasA(nucleo, 'widget_add')).toEqual([]);
   });
 
   it('HE-04-HU05-CA05 · Ciudad que ya tiene un widget Clima', async () => {
@@ -570,7 +598,7 @@ describe('HE-04-HU05 · Agregar el widget Clima', () => {
     const { sub, campo, agregar } = await abrirClima((n) =>
       n.responder('widget_add', rechazo('city.duplicate', texto)),
     );
-    fireEvent.change(campo, { target: { value: 'Popayán' } });
+    await elegirCiudad(sub, campo, 'Popayán', 'Popayán, Cauca, Colombia');
     fireEvent.click(agregar);
     expect(await within(sub).findByText(texto)).toBeTruthy();
   });
@@ -579,8 +607,56 @@ describe('HE-04-HU05 · Agregar el widget Clima', () => {
     const { nucleo, sub, campo, agregar } = await abrirClima();
     fireEvent.change(campo, { target: { value: 'a'.repeat(101) } });
     expect(within(sub).getByText('La ciudad no puede superar los 100 caracteres.')).toBeTruthy();
-    fireEvent.click(agregar);
+    expect(agregar.disabled).toBe(true);
+    expect(llamadasA(nucleo, 'weather_city_search')).toEqual([]);
+  });
+
+  it('HE-04-HU05-CA10 · Sugerencias al escribir', async () => {
+    // ET18 (P29): desde 2 caracteres, tras una pausa, hasta 5 lugares con nombre, región y país; con 1 no consulta.
+    const { nucleo, sub, campo, agregar } = await abrirClima();
+    fireEvent.change(campo, { target: { value: 'P' } });
+    await new Promise((r) => setTimeout(r, 500));
+    expect(llamadasA(nucleo, 'weather_city_search')).toEqual([]);
+    fireEvent.change(campo, { target: { value: 'Po' } });
+    const lista = await within(sub).findByRole('listbox', { name: 'Sugerencias de ciudad' });
+    expect(
+      within(lista)
+        .getAllByRole('option')
+        .map((o) => o.textContent),
+    ).toEqual(['Popayán, Cauca, Colombia']);
+    expect(llamadasA(nucleo, 'weather_city_search')).toEqual([{ query: 'Po' }]);
+    // Escribir no basta: «Agregar» espera un lugar elegido.
+    expect(agregar.disabled).toBe(true);
+    expect(campo.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('HE-04-HU05-CA11 · Elegir un lugar con el teclado', async () => {
+    // ET18 (P29): las flechas recorren las sugerencias y Enter elige la activa sin enviar el formulario.
+    const { nucleo, sub, campo, agregar } = await abrirClima((n) => {
+      n.responder('weather_city_search', () => ({ ok: true, value: [POPAYAN, CALI] }));
+      n.responder('widget_add', agregado('Cali'));
+    });
+    fireEvent.change(campo, { target: { value: 'Ca' } });
+    await within(sub).findByRole('listbox');
+    fireEvent.keyDown(campo, { key: 'ArrowDown' });
+    expect(within(sub).getByRole('option', { name: /Cali/ }).getAttribute('aria-selected')).toBe('true');
+    fireEvent.keyDown(campo, { key: 'Enter' });
+    expect(campo.value).toBe('Cali, Valle del Cauca, Colombia');
     expect(llamadasA(nucleo, 'widget_add')).toEqual([]);
+    expect(agregar.disabled).toBe(false);
+    // Escribir después de elegir quita el lugar elegido.
+    fireEvent.change(campo, { target: { value: 'Cal' } });
+    expect(agregar.disabled).toBe(true);
+  });
+
+  it('HE-04-HU05-CA12 · Sugerencias sin conexión', async () => {
+    // ET18: sin conexión el campo muestra el mensaje claro del Núcleo, no el genérico.
+    const texto = 'No hay conexión a internet. Conéctate para validar la ciudad.';
+    const { sub, campo } = await abrirClima((n) =>
+      n.responder('weather_city_search', rechazo('net.offline', texto)),
+    );
+    fireEvent.change(campo, { target: { value: 'Popayán' } });
+    expect(await within(sub).findByText(texto)).toBeTruthy();
   });
 });
 
@@ -665,19 +741,29 @@ describe('HE-04-HU12 · Configurar un widget agregado', () => {
     error: { code, message, field: 'city' },
   });
 
+  const CALI = lugar('Cali', '3687925', 'Valle del Cauca');
+  const POPAYAN = lugar('Popayán', '3673269', 'Cauca');
+  const sugerir = (n: NucleoDelPlanificador) =>
+    n.responder('weather_city_search', (params) => {
+      const q = (params as { query: string }).query.toLowerCase();
+      return { ok: true, value: [POPAYAN, CALI].filter((l) => l.name.toLowerCase().startsWith(q)) };
+    });
+
   it('HE-04-HU12-CA01 · Cambiar la ciudad del widget Clima', async () => {
-    const { nucleo, ventana } = await configurar([...POR_DEFECTO, clima('Popayán')], 'w-clima', (n) =>
-      n.responder('widget_configure', () => ({ ok: true, value: clima('Cali') })),
-    );
+    const { nucleo, ventana } = await configurar([...POR_DEFECTO, clima('Popayán')], 'w-clima', (n) => {
+      sugerir(n);
+      n.responder('widget_configure', () => ({ ok: true, value: clima('Cali') }));
+    });
     // ET05: el campo Ciudad precargado, «Guardar» y «Cancelar».
     const campo = within(ventana).getByLabelText('Ciudad') as HTMLInputElement;
     expect(campo.value).toBe('Popayán');
     expect(within(ventana).getByRole('button', { name: 'Cancelar' })).toBeTruthy();
-    fireEvent.change(campo, { target: { value: 'Cali' } });
+    // HE-04-HU05-ET18 (P29): la ciudad nueva se elige de las sugerencias.
+    await elegirCiudad(ventana, campo, 'Cali', 'Cali, Valle del Cauca, Colombia');
     fireEvent.click(within(ventana).getByRole('button', { name: 'Guardar' }));
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Configurar' })).toBeNull());
     expect(llamadasA(nucleo, 'widget_configure')).toEqual([
-      { widget_id: 'w-clima', config: { city: 'Cali' } },
+      { widget_id: 'w-clima', config: { city: 'Cali', place: CALI } },
     ]);
   });
 
@@ -706,13 +792,15 @@ describe('HE-04-HU12 · Configurar un widget agregado', () => {
   });
 
   it('HE-04-HU12-CA04 · Ciudad no encontrada al cambiar la ciudad', async () => {
+    // HE-04-HU05-ET18 (P29): sin sugerencias, el mensaje va en el campo y «Guardar» sigue deshabilitada.
     const t = 'No encontramos esa ciudad. Revisa el nombre e intenta de nuevo.';
-    const { ventana } = await configurar([...POR_DEFECTO, clima('Popayán')], 'w-clima', (n) =>
-      n.responder('widget_configure', rechazo('city.not_found', t)),
-    );
+    const { nucleo, ventana } = await configurar([...POR_DEFECTO, clima('Popayán')], 'w-clima', sugerir);
     fireEvent.change(within(ventana).getByLabelText('Ciudad'), { target: { value: 'Xyzzy' } });
-    fireEvent.click(within(ventana).getByRole('button', { name: 'Guardar' }));
     expect(await within(ventana).findByText(t)).toBeTruthy();
+    expect((within(ventana).getByRole('button', { name: 'Guardar' }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    expect(llamadasA(nucleo, 'widget_configure')).toEqual([]);
   });
 
   it('HE-04-HU12-CA05 · Ciudad que ya tiene un widget Clima al cambiar la ciudad', async () => {
@@ -720,9 +808,13 @@ describe('HE-04-HU12 · Configurar un widget agregado', () => {
     const { ventana } = await configurar(
       [...POR_DEFECTO, clima('Popayán', 'w-p'), clima('Cali')],
       'w-clima',
-      (n) => n.responder('widget_configure', rechazo('city.duplicate', t)),
+      (n) => {
+        sugerir(n);
+        n.responder('widget_configure', rechazo('city.duplicate', t));
+      },
     );
-    fireEvent.change(within(ventana).getByLabelText('Ciudad'), { target: { value: 'Popayán' } });
+    const campo = within(ventana).getByLabelText('Ciudad') as HTMLInputElement;
+    await elegirCiudad(ventana, campo, 'Popayán', 'Popayán, Cauca, Colombia');
     fireEvent.click(within(ventana).getByRole('button', { name: 'Guardar' }));
     expect(await within(ventana).findByText(t)).toBeTruthy();
   });
