@@ -39,7 +39,9 @@ async function seleccionar(nombre: string, rol: 'button' | 'link' = 'button') {
 /** Texto del mensaje de campo que quedó debajo del campo (RT-04). */
 function textoDebajoDe(etiqueta: string) {
   const id = campo(etiqueta).getAttribute('aria-describedby');
-  return id ? document.getElementById(id)?.textContent : undefined;
+  // Con ayuda fija (RD-11) `aria-describedby` también lleva el id de la ayuda: se toma solo el del mensaje.
+  const mensaje = id?.split(' ').find((parte) => parte.endsWith('-mensaje'));
+  return mensaje ? document.getElementById(mensaje)?.textContent : undefined;
 }
 
 const paso = (nombre: string) => screen.getByRole('region', { name: nombre });
@@ -410,5 +412,27 @@ describe('HE-01-HU08 · Crear una contraseña nueva para la cuenta', () => {
     await enNueva();
     await seleccionar('Regresar');
     expect(paso('Diligenciar código')).toBeTruthy();
+  });
+});
+
+// docs/rediseno.md: textos y elementos del rediseño en Recuperar contraseña.
+describe('Rediseño · Recuperar contraseña', () => {
+  afterEach(cleanup);
+
+  it('RD-13 · Título, Windi, el paso Correo marcado y el contador del correo', async () => {
+    await recuperar();
+    expect(screen.getByRole('heading', { level: 1, name: 'Recupera tu contraseña' })).toBeTruthy();
+    expect(screen.getByRole('complementary', { name: 'Windi' }).textContent).toContain(
+      'te ayudo a recuperarla.',
+    );
+    const pasos = screen.getByRole('list', { name: 'Pasos' });
+    expect(
+      within(pasos)
+        .getAllByRole('listitem')
+        .map((p) => p.textContent),
+    ).toEqual(['1Correo', '2Código', '3Nueva contraseña']);
+    expect(pasos.querySelector('[aria-current="step"]')?.textContent).toBe('1Correo');
+    expect(screen.getByText('0/64')).toBeTruthy();
+    expect(campo('Correo electrónico').getAttribute('aria-required')).toBe('true');
   });
 });

@@ -10,7 +10,9 @@ import { useNavegacion, useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { useConexion } from '../cuenta/conexion';
 import { useInicioConGoogle } from '../cuenta/google';
 import { Hipervinculo } from '../cuenta/Hipervinculo';
+import { Divisor } from '../cuenta/IndicadorDePasos';
 import { MarcoDeCuenta } from '../cuenta/MarcoDeCuenta';
+import { AYUDA_CONTRASENA, MAXIMO, PANTALLAS, PASOS_DE_REGISTRO } from '../cuenta/textosDelRediseno';
 import { VerificarCorreo } from './VerificarCorreo';
 import { TEXTOS } from '../cuenta/textos';
 import { validarAlias, validarConfirmacion, validarContrasena, validarCorreo } from '../cuenta/validaciones';
@@ -86,7 +88,11 @@ export function Register() {
       setEnvio(null);
     };
     return (
-      <MarcoDeCuenta nombre="Registro">
+      <MarcoDeCuenta
+        nombre="Registro"
+        {...PANTALLAS.verificar}
+        pasos={{ lista: PASOS_DE_REGISTRO, actual: 1 }}
+      >
         <VerificarCorreo
           correo={correo}
           reenvioDisponible={envio.resend_available_at}
@@ -97,7 +103,7 @@ export function Register() {
   }
 
   return (
-    <MarcoDeCuenta nombre="Registro">
+    <MarcoDeCuenta nombre="Registro" {...PANTALLAS.registro} pasos={{ lista: PASOS_DE_REGISTRO, actual: 0 }}>
       <form
         className="wg-formulario"
         aria-label="Formulario"
@@ -120,9 +126,12 @@ export function Register() {
             </Hipervinculo>
           </div>
         )}
+        {/* docs/rediseno.md RD-10, RD-11: contadores, ayuda fija de la contraseña y marca de obligatorio. */}
         <CampoTexto
           id={campos.ids.alias}
           etiqueta="Alias"
+          obligatorio
+          maximo={MAXIMO.alias}
           valor={valores.alias}
           alCambiar={cambiar('alias')}
           mensaje={campos.mensajes.alias}
@@ -131,6 +140,8 @@ export function Register() {
           id={campos.ids.email}
           etiqueta="Correo electrónico"
           type="email"
+          obligatorio
+          maximo={MAXIMO.correo}
           valor={valores.email}
           alCambiar={cambiar('email')}
           mensaje={campos.mensajes.email}
@@ -139,6 +150,9 @@ export function Register() {
           id={campos.ids.password}
           etiqueta="Contraseña"
           type="password"
+          obligatorio
+          maximo={MAXIMO.contrasena}
+          ayuda={AYUDA_CONTRASENA}
           valor={valores.password}
           alCambiar={cambiar('password')}
           mensaje={campos.mensajes.password}
@@ -147,24 +161,26 @@ export function Register() {
           id={campos.ids.password_confirmation}
           etiqueta="Confirmar contraseña"
           type="password"
+          obligatorio
           valor={valores.password_confirmation}
           alCambiar={cambiar('password_confirmation')}
           mensaje={campos.mensajes.password_confirmation}
         />
-        {/* ET12: sin conexión, los botones se ven deshabilitados en vez de mostrar un error al seleccionarlos.
+        {/* docs/rediseno.md RD-12: «Crear cuenta» a lo ancho, el divisor, «Continuar con Google» y el texto
+            «¿Ya tienes cuenta? Inicia sesión» centrado.
+            ET12: sin conexión, los botones se ven deshabilitados en vez de mostrar un error al seleccionarlos.
             HE-01-HU05-CA07: «Continuar con Google» también. */}
+        <Boton principal type="submit" disabled={!enLinea || enCurso}>
+          Crear cuenta
+        </Boton>
+        <Divisor />
         <Boton disabled={!enLinea || google.enCurso} onClick={() => void google.continuar()}>
           Continuar con Google
         </Boton>
-        <div className="wg-fila wg-cuenta__pie">
-          <p>
-            ¿Ya tienes cuenta?{' '}
-            <Hipervinculo alSeleccionar={() => abrirCuenta('sign_in')}>Iniciar sesión</Hipervinculo>
-          </p>
-          <Boton principal type="submit" disabled={!enLinea || enCurso}>
-            Crear cuenta
-          </Boton>
-        </div>
+        <p className="wg-cuenta__centro">
+          ¿Ya tienes cuenta?{' '}
+          <Hipervinculo alSeleccionar={() => abrirCuenta('sign_in')}>Inicia sesión</Hipervinculo>
+        </p>
       </form>
     </MarcoDeCuenta>
   );

@@ -107,6 +107,7 @@ export function DiligenciarCodigo({
         <CampoTexto
           id={campos.ids.code}
           etiqueta="Código de verificación"
+          obligatorio
           inputMode="numeric"
           autoComplete="one-time-code"
           valor={codigo}

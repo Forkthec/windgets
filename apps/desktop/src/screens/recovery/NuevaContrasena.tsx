@@ -9,6 +9,7 @@ import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNavegacion, useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { useConexion } from '../cuenta/conexion';
 import { TEXTOS } from '../cuenta/textos';
+import { AYUDA_CONTRASENA, MAXIMO } from '../cuenta/textosDelRediseno';
 import { validarContrasena } from '../cuenta/validaciones';
 import { PasoDeRecuperacion } from './PasoDeRecuperacion';
 
@@ -84,6 +85,9 @@ export function NuevaContrasena({ alRegresar }: NuevaContrasenaProps) {
           id={campos.ids.password}
           etiqueta="Nueva contraseña"
           type="password"
+          obligatorio
+          maximo={MAXIMO.contrasena}
+          ayuda={AYUDA_CONTRASENA}
           autoComplete="new-password"
           valor={valores.password}
           alCambiar={cambiar('password')}
@@ -93,6 +97,7 @@ export function NuevaContrasena({ alRegresar }: NuevaContrasenaProps) {
           id={campos.ids.password_confirmation}
           etiqueta="Confirmar contraseña"
           type="password"
+          obligatorio
           autoComplete="new-password"
           valor={valores.password_confirmation}
           alCambiar={cambiar('password_confirmation')}

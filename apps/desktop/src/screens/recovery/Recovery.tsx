@@ -8,6 +8,7 @@ import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
 import { useNavegacion, useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { useConexion } from '../cuenta/conexion';
 import { MarcoDeCuenta } from '../cuenta/MarcoDeCuenta';
+import { MAXIMO, PANTALLAS, PASOS_DE_RECUPERACION } from '../cuenta/textosDelRediseno';
 import { validarCorreo } from '../cuenta/validaciones';
 import { DiligenciarCodigo } from './DiligenciarCodigo';
 import { NuevaContrasena } from './NuevaContrasena';
@@ -66,7 +67,11 @@ export function Recovery() {
 
   if (paso === 'nueva') {
     return (
-      <MarcoDeCuenta nombre="Recuperar contraseña">
+      <MarcoDeCuenta
+        nombre="Recuperar contraseña"
+        {...PANTALLAS.nueva}
+        pasos={{ lista: PASOS_DE_RECUPERACION, actual: 2 }}
+      >
         {/* HE-01-HU07-CA01, HE-01-HU08: el paso Nueva contraseña; «Regresar» vuelve a Diligenciar código. */}
         <NuevaContrasena alRegresar={regresarAlCodigo} />
       </MarcoDeCuenta>
@@ -75,7 +80,11 @@ export function Recovery() {
 
   if (paso === 'codigo') {
     return (
-      <MarcoDeCuenta nombre="Recuperar contraseña">
+      <MarcoDeCuenta
+        nombre="Recuperar contraseña"
+        {...PANTALLAS.recuperar}
+        pasos={{ lista: PASOS_DE_RECUPERACION, actual: 1 }}
+      >
         {/* HE-01-HU07-CA08, ET09: «Regresar» vuelve al paso Correo electrónico con el correo diligenciado.
             DUDA: HE-01-HU07 sin IPC para invalidar el código al regresar (ver docs/DUDAS.md). */}
         <DiligenciarCodigo
@@ -89,7 +98,11 @@ export function Recovery() {
   }
 
   return (
-    <MarcoDeCuenta nombre="Recuperar contraseña">
+    <MarcoDeCuenta
+      nombre="Recuperar contraseña"
+      {...PANTALLAS.recuperar}
+      pasos={{ lista: PASOS_DE_RECUPERACION, actual: 0 }}
+    >
       <PasoDeRecuperacion
         nombre="Correo electrónico"
         enLinea={enLinea}
@@ -109,6 +122,8 @@ export function Recovery() {
             id={campos.ids.email}
             etiqueta="Correo electrónico"
             type="email"
+            obligatorio
+            maximo={MAXIMO.correo}
             valor={correo}
             alCambiar={(valor) => {
               setCorreo(valor);
