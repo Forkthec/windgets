@@ -34,6 +34,7 @@
   --wgc-deshabilitado-borde: #9c93a6;
   --wgc-deshabilitado-texto: #625b6d;
   --wgc-logo: #121216;
+  --wgc-principal-borde: #18131c;
 }
 .wg-cuenta-raiz[data-modo='oscuro'] {
   --wg-marco: #201b2b;
@@ -64,6 +65,7 @@
   --wgc-deshabilitado-borde: #6b6375;
   --wgc-deshabilitado-texto: #a79fb2;
   --wgc-logo: #ffffff;
+  --wgc-principal-borde: #18131c;
 }
 .wg-cuenta-raiz {
   --wg-fuente: 'Rubik', 'Segoe UI', sans-serif;
@@ -133,51 +135,60 @@
   color: var(--wgc-sobre-seleccion);
 }
 
-/* Windi a la izquierda y la nota a la derecha (RD-07). */
+/* Windi a la izquierda y la nota a la derecha (RD-07, RD-19; Figma 66:4 «Inicio de sesión» y 66:162 «Registro»).
+ * A 1240 px de ancho la columna de Windi mide 492 px; el globo y la ilustración van en % de esa columna para que
+ * se achiquen con ella y nunca queden cortados por el borde de la ventana. La ilustración se centra en su punto. */
 .wg-cuenta__cuerpo {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 552px;
   align-items: start;
   gap: 24px;
+  margin-top: 37px;
 }
 .wg-cuenta__windi {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 78px;
+  align-self: stretch;
 }
 .wg-cuenta__ilustracion {
+  position: absolute;
+  top: 386px;
+  left: 46.4%;
   display: block;
-  width: 100%;
-  max-width: 521px;
+  width: 104.3%;
   height: auto;
-  margin-top: 56px;
+  transform: translate(-50%, -50%);
 }
-/* Registro: el globo junto a la nota y Windi con el guiño, girado y detrás de la nota. */
-.wg-cuenta__cuerpo--registro .wg-cuenta__windi {
-  align-items: flex-end;
-  padding-top: 36px;
+/* Registro: el globo a la izquierda y Windi con el guiño, girado y detrás de la nota. */
+.wg-cuenta__cuerpo--registro {
+  margin-top: 40px;
 }
 .wg-cuenta__cuerpo--registro .wg-globo {
-  margin-right: -40px;
+  top: 146px;
+  left: 11.7%;
+  width: 264px;
+  max-width: 88.3%;
+  padding: 15px 18px;
+}
+.wg-cuenta__cuerpo--registro .wg-globo__punta {
+  right: 36px;
 }
 .wg-cuenta__cuerpo--registro .wg-cuenta__ilustracion {
-  position: absolute;
-  top: 190px;
-  right: -150px;
-  width: 560px;
-  max-width: none;
-  margin: 0;
-  transform: rotate(-48deg);
-  transform-origin: center;
+  top: 382px;
+  left: 77.7%;
+  width: 111.4%;
+  transform: translate(-50%, -50%) rotate(-48.5deg);
 }
 
 .wg-globo {
-  position: relative;
+  position: absolute;
+  top: 134px;
+  left: 11.1%;
   z-index: 2;
-  padding: 10px 22px 12px;
+  box-sizing: border-box;
+  width: 347px;
+  max-width: 88.9%;
+  padding: 15px 20px;
   border: 1.5px solid var(--wg-borde);
   border-radius: 15px;
   background: var(--wgc-globo);
@@ -295,14 +306,15 @@
   gap: 18px;
 }
 .wg-nota .wg-campo {
-  gap: 6px;
+  gap: 4px;
 }
 .wg-nota .wg-campo__etiqueta {
   color: var(--wg-tinta);
   font-weight: 500;
 }
 .wg-nota .wg-campo__entrada {
-  min-height: 45px;
+  box-sizing: border-box;
+  min-height: 44px;
   padding: 0 14px;
   border: 1.3px solid var(--wgc-campo-borde);
   border-radius: 9px;
@@ -316,7 +328,8 @@
   font-size: 15px;
 }
 .wg-nota .wg-boton {
-  min-height: 45px;
+  box-sizing: border-box;
+  min-height: 44px;
   justify-content: center;
   border: 1.5px solid var(--wg-borde);
   border-radius: 9px;
@@ -326,7 +339,7 @@
 }
 .wg-nota .wg-boton--principal {
   min-height: 47px;
-  border-color: #18131c;
+  border-color: var(--wgc-principal-borde);
   background: var(--wg-accion);
   color: var(--wg-sobre-accion);
   font-size: 18px;
@@ -381,6 +394,48 @@
   font-size: 15px;
 }
 
+/* RD-19: el ritmo vertical de la nota de cada marco, medido sobre el Figma (Inicio de sesión 66:4 y Registro
+ * 66:162). Registro agrega el divisor y «Continuar con Google» (RD-12) con los espacios de Inicio de sesión. */
+.wg-cuenta__cuerpo--saludo .wg-nota {
+  padding-top: 42px;
+  padding-bottom: 26px;
+}
+.wg-cuenta__cuerpo--saludo .wg-nota__subtitulo {
+  margin-top: 9px;
+}
+.wg-cuenta__cuerpo--saludo .wg-nota > .wg-formulario {
+  margin-top: 43px;
+  gap: 32px;
+}
+.wg-cuenta__cuerpo--saludo .wg-cuenta__derecha {
+  margin: -15px 0 3px;
+}
+.wg-cuenta__cuerpo--saludo .wg-divisor {
+  margin: -6px 0 -18px;
+}
+.wg-cuenta__cuerpo--saludo .wg-cuenta__centro {
+  margin-top: -1px;
+}
+.wg-cuenta__cuerpo--registro .wg-nota {
+  padding-top: 32px;
+  padding-bottom: 43px;
+}
+.wg-cuenta__cuerpo--registro .wg-nota > .wg-formulario {
+  margin-top: 34px;
+}
+.wg-cuenta__cuerpo--registro .wg-campo__ayuda {
+  margin: 10px 0 -10px;
+}
+.wg-cuenta__cuerpo--registro .wg-boton--principal {
+  margin-top: 20px;
+}
+.wg-cuenta__cuerpo--registro .wg-divisor {
+  margin: 9px 0 -2px;
+}
+.wg-cuenta__cuerpo--registro .wg-cuenta__centro {
+  margin-top: 11px;
+}
+
 /* RD-16, RD-17 (Figma «Verificar correo», «Recuperar contraseña», «Diligenciar código», «Nueva contraseña»): el
  * logo centrado, la nota centrada de 570 px sin Windi, la miga de pan con «/», y al final «Regresar» a la
  * izquierda del botón principal de 260 px. El selector «Apariencia» se queda a la derecha (RD-16). */
@@ -390,21 +445,28 @@
 }
 .wg-cuenta--centrada .wg-cuenta__logo {
   grid-column: 2;
-  font-size: 30px;
+  margin-top: 17px;
 }
 .wg-cuenta--centrada .wg-selector-modo {
   grid-column: 3;
+  align-self: start;
   justify-self: end;
 }
+/* RD-20: la nota centrada mide al menos 420 px de alto, como los marcos 84:x; con «Regresar» al final, el espacio
+ * bajo las acciones es el del Figma. */
 .wg-cuenta__cuerpo--centrada {
   grid-template-columns: minmax(0, 570px);
   justify-content: center;
-  margin-top: 22px;
+  margin-top: 18px;
 }
 .wg-cuenta__cuerpo--centrada .wg-nota {
   width: 570px;
-  padding: 34px 36px 32px;
+  min-height: 420px;
+  padding: 28px 36px 24px;
   border-radius: 9px;
+}
+.wg-cuenta__cuerpo--centrada .wg-nota:has(.wg-acciones:last-child) {
+  padding-bottom: 54px;
 }
 .wg-paso-centrado {
   display: flex;
@@ -412,12 +474,24 @@
   gap: 18px;
 }
 .wg-paso-centrado .wg-nota__titulo {
-  margin-top: 2px;
+  margin-top: 5px;
   font-size: 32px;
 }
 .wg-paso-centrado .wg-nota__subtitulo {
-  margin: -10px 0 14px;
+  margin: -3px 0 27px;
   font-size: 16px;
+}
+.wg-paso-centrado .wg-formulario {
+  gap: 20px;
+}
+.wg-paso-centrado .wg-campo {
+  gap: 9px;
+}
+.wg-paso-centrado .wg-campo__ayuda {
+  margin-top: 3px;
+}
+.wg-paso-centrado .wg-formulario > .wg-fila {
+  margin: -1px 0 0;
 }
 .wg-paso-centrado .wg-miga {
   display: flex;
@@ -450,7 +524,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-top: 12px;
+  margin-top: 28px;
 }
 .wg-acciones__regresar {
   padding: 0;
@@ -478,10 +552,12 @@
   font-size: 15px;
 }
 
-/* RD-07: por debajo de 1000 px de ancho, Windi y su globo se ocultan y la nota queda centrada. */
-@media (max-width: 1000px) {
+/* RD-07, RD-21: por debajo de 1000 px de ancho, Windi y su globo se ocultan y la nota queda centrada a la misma
+ * altura; solo el margen lateral baja a 16 px. La nota centrada conserva sus 570 px mientras quepa. */
+@media (width < 1000px) {
   .wg-cuenta {
-    padding: 24px 16px 40px;
+    padding-right: 16px;
+    padding-left: 16px;
   }
   .wg-cuenta__cuerpo {
     grid-template-columns: minmax(0, 552px);

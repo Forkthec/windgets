@@ -58,7 +58,7 @@ export function useApariencia(): Apariencia {
   return useContext(ContextoDeApariencia);
 }
 
-/** Contenedor de las pantallas de cuenta: sus colores salen de `data-modo` (tokens.css, RD-04). */
+/** Contenedor de las pantallas de cuenta: sus colores salen de `data-modo` (cuenta.css, RD-04). */
 export const RaizDeCuenta = forwardRef<HTMLDivElement, { children: ReactNode }>(function RaizDeCuenta(
   { children },
   ref,

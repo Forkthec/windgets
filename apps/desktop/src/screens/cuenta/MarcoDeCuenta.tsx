@@ -10,7 +10,7 @@ import { SelectorDeModo } from './SelectorDeModo';
 // izquierda y el formulario como una nota a la derecha. Por debajo de 1000 px de ancho Windi se oculta (RD-07).
 // Sin `windi`, la nota va centrada debajo del logo centrado (RD-16, Figma «Verificar correo», «Recuperar
 // contraseña»): el paso pone su miga de pan, su título y su subtítulo (PasoCentrado).
-// Los colores salen de `.wg-cuenta-raiz[data-modo]` (tokens.css), no del tema.
+// Los colores salen de `.wg-cuenta-raiz[data-modo]` (cuenta.css), no del tema.
 
 export interface SaludoDeWindi {
   /** Las dos líneas del globo (RD-08). */
