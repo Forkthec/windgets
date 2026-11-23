@@ -71,19 +71,21 @@ pub async fn descargar_archivos_del_catalogo<A: AlmacenDelCatalogo>(
     ahora_ms: i64,
 ) -> Result<Vec<CatalogKind>, sqlx::Error> {
     let pool = base.pool().await?;
-    let candidatos: Vec<(String, String, String)> = sqlx::query_as(ARCHIVOS).fetch_all(pool).await?;
+    let candidatos: Vec<(String, String, String)> =
+        sqlx::query_as(ARCHIVOS).fetch_all(pool).await?;
     let mut cambiadas: Vec<CatalogKind> = Vec::new();
     for (kind, id, ruta) in candidatos {
         if !ruta_del_catalogo_valida(&ruta) {
             continue;
         }
         let local = format!("{CARPETA_DEL_CATALOGO}/{ruta}");
-        let guardado: Option<(String, String)> =
-            sqlx::query_as("SELECT remote_path, local_path FROM local_file WHERE kind = ? AND ref_id = ?")
-                .bind(&kind)
-                .bind(&id)
-                .fetch_optional(pool)
-                .await?;
+        let guardado: Option<(String, String)> = sqlx::query_as(
+            "SELECT remote_path, local_path FROM local_file WHERE kind = ? AND ref_id = ?",
+        )
+        .bind(&kind)
+        .bind(&id)
+        .fetch_optional(pool)
+        .await?;
         if let Some((remota, ruta_local)) = &guardado
             && remota == &ruta
             && carpeta.join(ruta_local).is_file()
@@ -168,7 +170,11 @@ mod pruebas {
     }
 
     impl AlmacenDelCatalogo for StorageDePrueba {
-        async fn descargar_del_catalogo(&self, _token: &str, ruta: &str) -> Result<Vec<u8>, FallaDeAuth> {
+        async fn descargar_del_catalogo(
+            &self,
+            _token: &str,
+            ruta: &str,
+        ) -> Result<Vec<u8>, FallaDeAuth> {
             self.pedidos.lock().unwrap().push(ruta.to_string());
             if self.sin_conexion {
                 return Err(FallaDeAuth::SinConexion);
@@ -176,7 +182,10 @@ mod pruebas {
             self.archivos
                 .get(ruta)
                 .cloned()
-                .ok_or(FallaDeAuth::Rechazo { estado: 404, codigo: String::new() })
+                .ok_or(FallaDeAuth::Rechazo {
+                    estado: 404,
+                    codigo: String::new(),
+                })
         }
     }
 
@@ -190,7 +199,11 @@ mod pruebas {
         .into_iter()
         .map(|r| (r.to_string(), format!("bytes de {r}").into_bytes()))
         .collect();
-        StorageDePrueba { archivos, pedidos: Mutex::new(Vec::new()), sin_conexion }
+        StorageDePrueba {
+            archivos,
+            pedidos: Mutex::new(Vec::new()),
+            sin_conexion,
+        }
     }
 
     /// Una base con la plantilla «Claro», la por defecto y la imagen «Mar» del catálogo.
@@ -221,7 +234,8 @@ mod pruebas {
 
     impl Carpeta {
         fn nueva() -> Self {
-            let ruta = std::env::temp_dir().join(format!("windgets-catalogo-{}", uuid::Uuid::new_v4()));
+            let ruta =
+                std::env::temp_dir().join(format!("windgets-catalogo-{}", uuid::Uuid::new_v4()));
             std::fs::create_dir_all(&ruta).unwrap();
             Self(ruta)
         }
@@ -237,7 +251,10 @@ mod pruebas {
     }
 
     fn sesion() -> Credenciales<'static> {
-        Credenciales { user_id: "u1", token: "jwt" }
+        Credenciales {
+            user_id: "u1",
+            token: "jwt",
+        }
     }
 
     #[test]
@@ -245,21 +262,48 @@ mod pruebas {
         let base = base();
         let carpeta = Carpeta::nueva();
         let almacen = storage(false);
-        let cambiadas =
-            bloquear(descargar_archivos_del_catalogo(&base, &almacen, &sesion(), carpeta.path(), 0)).unwrap();
+        let cambiadas = bloquear(descargar_archivos_del_catalogo(
+            &base,
+            &almacen,
+            &sesion(),
+            carpeta.path(),
+            0,
+        ))
+        .unwrap();
         assert_eq!(cambiadas, [CatalogKind::Template, CatalogKind::Image]);
-        let miniatura = bloquear(ruta_local(&base, carpeta.path(), "template_thumbnail", "claro")).unwrap();
+        let miniatura = bloquear(ruta_local(
+            &base,
+            carpeta.path(),
+            "template_thumbnail",
+            "claro",
+        ))
+        .unwrap();
         assert_eq!(
             std::fs::read(miniatura.unwrap()).unwrap(),
             b"bytes de templates/claro/thumbnail.png"
         );
-        for (kind, id) in [("template_bundle", "claro"), ("catalog_thumbnail", "mar"), ("catalog_image", "mar")] {
-            assert!(bloquear(ruta_local(&base, carpeta.path(), kind, id)).unwrap().is_some(), "{kind}");
+        for (kind, id) in [
+            ("template_bundle", "claro"),
+            ("catalog_thumbnail", "mar"),
+            ("catalog_image", "mar"),
+        ] {
+            assert!(
+                bloquear(ruta_local(&base, carpeta.path(), kind, id))
+                    .unwrap()
+                    .is_some(),
+                "{kind}"
+            );
         }
         // Un segundo ciclo no vuelve a pedir lo que ya está en el computador.
         let otra = storage(false);
-        let cambiadas =
-            bloquear(descargar_archivos_del_catalogo(&base, &otra, &sesion(), carpeta.path(), 0)).unwrap();
+        let cambiadas = bloquear(descargar_archivos_del_catalogo(
+            &base,
+            &otra,
+            &sesion(),
+            carpeta.path(),
+            0,
+        ))
+        .unwrap();
         assert!(cambiadas.is_empty());
         assert!(otra.pedidos.lock().unwrap().is_empty());
     }
@@ -269,12 +313,22 @@ mod pruebas {
         let base = base();
         let carpeta = Carpeta::nueva();
         let almacen = storage(true);
-        let cambiadas =
-            bloquear(descargar_archivos_del_catalogo(&base, &almacen, &sesion(), carpeta.path(), 0)).unwrap();
+        let cambiadas = bloquear(descargar_archivos_del_catalogo(
+            &base,
+            &almacen,
+            &sesion(),
+            carpeta.path(),
+            0,
+        ))
+        .unwrap();
         assert!(cambiadas.is_empty());
         // Al primer «sin conexión» deja de pedir.
         assert_eq!(almacen.pedidos.lock().unwrap().len(), 1);
-        assert!(bloquear(ruta_local(&base, carpeta.path(), "catalog_image", "mar")).unwrap().is_none());
+        assert!(
+            bloquear(ruta_local(&base, carpeta.path(), "catalog_image", "mar"))
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[test]

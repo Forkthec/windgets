@@ -40,7 +40,8 @@ fn ca_he_02_hu02_ca01() {
     let (base, servicio) = con_otra_plantilla();
     let recursos = std::path::Path::new("recursos");
     let carpetas = escritorio::Carpetas {
-        archivos: std::env::temp_dir().join(format!("windgets-sin-catalogo-{}", uuid::Uuid::new_v4())),
+        archivos: std::env::temp_dir()
+            .join(format!("windgets-sin-catalogo-{}", uuid::Uuid::new_v4())),
         recursos: recursos.to_path_buf(),
     };
     let plantillas = bloquear(servicio.plantillas(&base, &carpetas)).unwrap();

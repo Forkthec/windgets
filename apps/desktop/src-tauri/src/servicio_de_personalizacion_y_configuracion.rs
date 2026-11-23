@@ -13,8 +13,8 @@ use sqlx::Row;
 use sqlx::sqlite::SqliteRow;
 
 use crate::messages;
-use crate::repositorios_y_archivos_locales::BaseLocal;
 use crate::motor_de_sincronizacion::archivos_del_catalogo;
+use crate::repositorios_y_archivos_locales::BaseLocal;
 use crate::servicio_de_sesion::ConMensaje;
 use crate::servicio_del_planificador::{de_sqlx, error, inesperado, resultado};
 use crate::tipos::{
@@ -428,9 +428,14 @@ impl ServicioDePersonalizacion {
                         .into_owned(),
                 )
             } else {
-                archivos_del_catalogo::ruta_local(base, &carpetas.archivos, "template_thumbnail", &id)
-                    .await
-                    .map_err(de_sqlx)?
+                archivos_del_catalogo::ruta_local(
+                    base,
+                    &carpetas.archivos,
+                    "template_thumbnail",
+                    &id,
+                )
+                .await
+                .map_err(de_sqlx)?
             });
         }
         filas
@@ -825,9 +830,10 @@ impl ServicioDePersonalizacion {
         .map_err(de_sqlx)?;
         let mut lista = Vec::with_capacity(filas.len());
         for (id, name) in filas {
-            let miniatura = archivos_del_catalogo::ruta_local(base, archivos, "catalog_thumbnail", &id)
-                .await
-                .map_err(de_sqlx)?;
+            let miniatura =
+                archivos_del_catalogo::ruta_local(base, archivos, "catalog_thumbnail", &id)
+                    .await
+                    .map_err(de_sqlx)?;
             lista.push(CatalogItem {
                 id,
                 name,
