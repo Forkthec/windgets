@@ -340,3 +340,20 @@ test('RD-53 · Calendario: días abreviados y «Hoy», «Mes», «Semana» abajo
   expect(hoy.y).toBeGreaterThan(tabla.y + tabla.height);
   expect(await sinScrollHorizontal(page)).toBe(true);
 });
+
+test('RD-57 · La conversación con Windi baja sola hasta el último mensaje', async ({ page }) => {
+  await entrar(page, 1200, 800);
+  await abrir(page, 'Agente de IA');
+  const campo = page.getByPlaceholder('Escribe un mensaje');
+  const lista = page.getByRole('list', { name: 'Conversación' });
+  for (let i = 1; i <= 8; i += 1) {
+    await campo.fill(`Mensaje número ${i} para llenar la conversación`);
+    await campo.press('Enter');
+    await expect(lista.getByText(`Mensaje número ${i} para llenar la conversación`)).toBeVisible();
+  }
+  // El final de la conversación queda a la vista.
+  await expect
+    .poll(() => lista.evaluate((e) => e.scrollHeight - e.scrollTop - e.clientHeight))
+    .toBeLessThanOrEqual(2);
+  expect(await lista.evaluate((e) => e.scrollHeight > e.clientHeight)).toBe(true);
+});

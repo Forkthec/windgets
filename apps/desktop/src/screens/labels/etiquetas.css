@@ -1,0 +1,20 @@
+/* Rediseño de Etiquetas (docs/rediseno.md RD-54; Figma 84:461 «Contenido» de 84:458 «Etiquetas · Claro», boceto):
+ * cada etiqueta en una fila de fondo de columna con radio 6 y «Nueva etiqueta» abajo a la izquierda. */
+.wg-etiquetas .wg-lista {
+  gap: 10px;
+  margin: 0;
+}
+.wg-etiquetas .wg-lista__elemento {
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 4px 6px 4px 14px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--wgm-columna);
+}
+.wg-etiquetas .wg-lista__nombre {
+  font-size: 16px;
+}
+.wg-etiquetas__acciones {
+  margin-top: 28px;
+}

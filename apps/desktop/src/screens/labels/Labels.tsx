@@ -6,6 +6,7 @@ import { Boton } from '@/ui/Boton/Boton';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
 import { MenuDeAcciones } from '@/ui/MenuDeAcciones/MenuDeAcciones';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
+import './etiquetas.css';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { FormularioEtiqueta } from './FormularioEtiqueta';
 
@@ -70,7 +71,7 @@ export function Labels() {
   };
 
   return (
-    <main aria-label="Etiquetas" aria-busy={etiquetas === null}>
+    <main className="wg-etiquetas" aria-label="Etiquetas" aria-busy={etiquetas === null}>
       {etiquetas &&
         (etiquetas.length === 0 ? (
           // ET04: en lugar de la lista, el estado vacío con «Nueva etiqueta».
@@ -80,7 +81,6 @@ export function Labels() {
           />
         ) : (
           <>
-            <div className="wg-fila">{nueva}</div>
             {/* ET02, ET05: nombre y color de cada una, de la A a la Z, con «Editar» y «Eliminar» en su botón de
                 acciones «⋮» (RT-02-ET10). */}
             <ul className="wg-lista" aria-label="Lista de etiquetas">
@@ -98,6 +98,8 @@ export function Labels() {
                 </li>
               ))}
             </ul>
+            {/* docs/rediseno.md RD-54 (Figma 84:461): «Nueva etiqueta» abajo a la izquierda, como acción principal. */}
+            <div className="wg-fila wg-etiquetas__acciones">{nueva}</div>
           </>
         ))}
       {editando && (

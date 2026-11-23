@@ -364,3 +364,12 @@ describe('HE-03-HU05 · Eliminar un tema', () => {
     expect(within(fila(0)).getByText('Verano')).toBeTruthy();
   });
 });
+
+describe('Rediseño · Temas (P35)', () => {
+  it('RD-55 · Cada tema en una fila de la lista de la pantalla de Temas', async () => {
+    await abrirTemas([tema('t1', 'Mi tema', { is_applied: true })]);
+    const temas = screen.getByRole('main', { name: 'Temas' });
+    expect(temas.classList.contains('wg-temas')).toBe(true);
+    expect(within(temas).getByRole('list', { name: 'Lista de temas' })).toBeTruthy();
+  });
+});

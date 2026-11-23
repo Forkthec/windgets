@@ -69,3 +69,15 @@ describe('HE-08-HU01 · Etiquetas', () => {
     ).toEqual(['casa', 'Estudio', 'Trabajo']);
   });
 });
+
+describe('Rediseño · Etiquetas (P35)', () => {
+  it('RD-54 · Cada etiqueta en una fila y «Nueva etiqueta» abajo como acción principal', async () => {
+    await abrir([etiqueta('Proyecto', 0), etiqueta('Universidad', 1)]);
+    const lista = screen.getByRole('list', { name: 'Lista de etiquetas' });
+    const nueva = screen.getByRole('button', { name: 'Nueva etiqueta' });
+    expect(nueva.classList.contains('wg-boton--principal')).toBe(true);
+    // Va después de la lista.
+    expect(lista.compareDocumentPosition(nueva) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(lista).getAllByRole('listitem')[0]?.classList.contains('wg-lista__elemento')).toBe(true);
+  });
+});

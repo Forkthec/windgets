@@ -18,10 +18,17 @@ export function GraficaCompletadas({ reporte }: GraficaCompletadasProps) {
   return (
     <Seccion titulo="Tarjetas completadas" vacia={reporte ? reporte.is_empty : null}>
       <LineChart width={640} height={240} data={datos} aria-label="Gráfica de tarjetas completadas">
-        <CartesianGrid stroke="var(--wg-borde)" />
+        {/* docs/rediseno.md RD-56 (84:397): la línea en el color de selección y la cuadrícula suave. */}
+        <CartesianGrid stroke="var(--wgm-linea-agenda, var(--wg-borde))" />
         <XAxis dataKey="periodo" />
         <YAxis allowDecimals={false} />
-        <Line type="linear" dataKey="cantidad" stroke="var(--wg-accion)" isAnimationActive={false} />
+        <Line
+          type="linear"
+          dataKey="cantidad"
+          stroke="var(--wgm-seleccion-texto, var(--wg-accion))"
+          strokeWidth={2}
+          isAnimationActive={false}
+        />
       </LineChart>
     </Seccion>
   );

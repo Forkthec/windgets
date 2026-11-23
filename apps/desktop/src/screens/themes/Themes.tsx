@@ -8,6 +8,7 @@ import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { escribirFecha } from '../tarjeta/fechas';
 import { RenombrarTema } from './RenombrarTema';
+import './temas.css';
 
 // P-TEM-01 Temas (Menú principal > Personalización > Temas; HE-03-HU01): la colección de temas guardados. Es la
 // entrada de «Aplicar» (HE-03-HU03), «Renombrar» (HE-03-HU04) y «Eliminar» (HE-03-HU05) (ET06; D-065).
@@ -84,7 +85,7 @@ export function Themes() {
   };
 
   return (
-    <main aria-label="Temas" aria-busy={temas === null}>
+    <main className="wg-temas" aria-label="Temas" aria-busy={temas === null}>
       {temas && (
         <>
           {/* ET01, ET02: del más reciente al más antiguo, como los ordena el Núcleo. */}

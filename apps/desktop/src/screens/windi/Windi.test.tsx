@@ -165,6 +165,27 @@ describe('HE-14-HU01 · Conversar con el agente de IA', () => {
     expect(conversacion()).toEqual([SALUDO, 'Hola Windi', '¡Claro! ¿Qué tarjeta revisamos?']);
   });
 
+  it('RD-57 · La conversación baja hasta el final con cada mensaje nuevo', async () => {
+    let terminar: () => void = () => undefined;
+    const espera = new Promise<void>((r) => (terminar = r));
+    await abrir(responde('¡Claro! ¿Qué tarjeta revisamos?'), { espera });
+    const lista = screen.getByRole('list', { name: 'Conversación' });
+    // jsdom no calcula alturas: la lista dice medir 900 px de contenido.
+    let alto = 900;
+    Object.defineProperty(lista, 'scrollHeight', { configurable: true, get: () => alto });
+    lista.scrollTop = 0;
+    await escribir('Hola Windi');
+    await seleccionar(enviar());
+    // Mi mensaje y «Escribiendo…» quedan a la vista.
+    expect(lista.scrollTop).toBe(900);
+    alto = 1200;
+    await act(async () => {
+      terminar();
+    });
+    // La respuesta también.
+    expect(lista.scrollTop).toBe(1200);
+  });
+
   it('HE-14-HU01-CA03 · Enviar mensaje con la tecla Enter', async () => {
     const { nucleo } = await abrir(responde('¿Qué organizamos?'));
     await escribir('Hola');
