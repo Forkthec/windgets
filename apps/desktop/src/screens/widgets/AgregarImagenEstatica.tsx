@@ -5,6 +5,7 @@ import { EncabezadoDeRuta } from '@/reglas/ruta';
 import type { CatalogItem, ImageRef } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { MiniaturaDelCatalogo } from './MiniaturaDelCatalogo';
 
 // Subpantalla Imagen estática (Widgets > Agregar widget > Imagen estática; HE-04-HU07-ET01): «Subir imagen» con el
 // texto «JPG, JPEG o PNG. Máximo 20 MB.», «Catálogo de imágenes», «Agregar» y «Regresar» (RT-03). El Núcleo valida
@@ -65,7 +66,7 @@ export function AgregarImagenEstatica({ alRegresar, alIrAWidgets }: AgregarImage
   const { ejecutar, enCurso } = useEnvioUnico(agregar);
 
   return (
-    <main aria-label="Imagen estática">
+    <main className="wg-subpantalla-widget" aria-label="Imagen estática">
       <EncabezadoDeRuta
         niveles={[
           { texto: 'Widgets', alElegir: alIrAWidgets },
@@ -73,17 +74,14 @@ export function AgregarImagenEstatica({ alRegresar, alIrAWidgets }: AgregarImage
           { texto: 'Imagen estática' },
         ]}
         alRegresar={alRegresar}
+        conRegresar={false}
       />
-      <div className="wg-fila">
-        <Boton onClick={() => void subir()}>Subir imagen</Boton>
-        <Boton onClick={() => void abrirCatalogo()}>Catálogo de imágenes</Boton>
-      </div>
-      <p>JPG, JPEG o PNG. Máximo 20 MB.</p>
-      {mensaje && <p role="alert">{mensaje}</p>}
-      {imagen?.source === 'own' && <p>{`Imagen propia: ${nombre}`}</p>}
+      {imagen?.source === 'own' && (
+        <p className="wg-subpantalla-widget__dato">{`Imagen propia: ${nombre}`}</p>
+      )}
       {catalogo && (
         // ET03: solo se elige; el usuario no agrega imágenes al catálogo.
-        <ul className="wg-lista" aria-label="Catálogo de imágenes">
+        <ul className="wg-lista wg-subpantalla-widget__catalogo" aria-label="Catálogo de imágenes">
           {catalogo.map((i) => (
             <li key={i.id}>
               <button
@@ -95,17 +93,26 @@ export function AgregarImagenEstatica({ alRegresar, alIrAWidgets }: AgregarImage
                   setImagen({ source: 'catalog', catalog_image_id: i.id });
                 }}
               >
-                <img src={i.thumbnail_url} alt="" width={96} height={54} />
+                <MiniaturaDelCatalogo ruta={i.thumbnail_url} />
                 <span>{i.name}</span>
               </button>
             </li>
           ))}
         </ul>
       )}
-      {/* ET04: deshabilitada sin una imagen elegida (RT-04). */}
-      <Boton principal disabled={!imagen || enCurso} onClick={() => void ejecutar()}>
-        Agregar
-      </Boton>
+      <p>JPG, JPEG o PNG. Máximo 20 MB.</p>
+      {mensaje && <p role="alert">{mensaje}</p>}
+      {/* docs/rediseno.md RD-60: «Subir imagen», «Catálogo de imágenes», «Agregar» y «Regresar» abajo a la izquierda
+          (84:796 a 84:800). */}
+      <div className="wg-subpantalla-widget__acciones">
+        <Boton onClick={() => void subir()}>Subir imagen</Boton>
+        <Boton onClick={() => void abrirCatalogo()}>Catálogo de imágenes</Boton>
+        {/* ET04: deshabilitada sin una imagen elegida (RT-04). */}
+        <Boton principal disabled={!imagen || enCurso} onClick={() => void ejecutar()}>
+          Agregar
+        </Boton>
+        <Boton onClick={alRegresar}>Regresar</Boton>
+      </div>
     </main>
   );
 }

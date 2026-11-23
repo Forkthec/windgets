@@ -39,7 +39,7 @@ export function AgregarClima({ alRegresar, alIrAWidgets }: AgregarClimaProps) {
   const { ejecutar, enCurso } = useEnvioUnico(agregar);
 
   return (
-    <main aria-label="Clima">
+    <main className="wg-subpantalla-widget" aria-label="Clima">
       <EncabezadoDeRuta
         niveles={[
           { texto: 'Widgets', alElegir: alIrAWidgets },
@@ -47,10 +47,11 @@ export function AgregarClima({ alRegresar, alIrAWidgets }: AgregarClimaProps) {
           { texto: 'Clima' },
         ]}
         alRegresar={alRegresar}
+        conRegresar={false}
       />
       <form
         id={idFormulario}
-        className="wg-formulario"
+        className="wg-formulario wg-subpantalla-widget__formulario"
         aria-label="Clima"
         noValidate
         onSubmit={(e: FormEvent) => {
@@ -70,9 +71,13 @@ export function AgregarClima({ alRegresar, alIrAWidgets }: AgregarClimaProps) {
           mensaje={mensaje || undefined}
         />
         {/* ET03, ET18: deshabilitada sin un lugar elegido; ET12: también mientras se agrega (RT-04). */}
-        <Boton principal type="submit" disabled={!lugar || enCurso}>
-          Agregar
-        </Boton>
+        {/* docs/rediseno.md RD-59: «Agregar» y «Regresar» abajo a la izquierda (84:756, 84:758). */}
+        <div className="wg-subpantalla-widget__acciones">
+          <Boton principal type="submit" disabled={!lugar || enCurso}>
+            Agregar
+          </Boton>
+          <Boton onClick={alRegresar}>Regresar</Boton>
+        </div>
       </form>
     </main>
   );

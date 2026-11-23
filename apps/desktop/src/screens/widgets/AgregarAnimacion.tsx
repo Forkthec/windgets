@@ -5,6 +5,7 @@ import { EncabezadoDeRuta } from '@/reglas/ruta';
 import type { CatalogItem } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { MiniaturaDelCatalogo } from './MiniaturaDelCatalogo';
 
 // Subpantalla Animación (Widgets > Agregar widget > Animación; HE-04-HU09-ET01): el catálogo de animaciones con la
 // miniatura y el nombre de cada una, la animación elegida en reproducción (ET03) y las opciones «Agregar» y
@@ -47,7 +48,7 @@ export function AgregarAnimacion({ alRegresar, alIrAWidgets }: AgregarAnimacionP
   const { ejecutar, enCurso } = useEnvioUnico(agregar);
 
   return (
-    <main aria-label="Animación">
+    <main className="wg-subpantalla-widget" aria-label="Animación">
       <EncabezadoDeRuta
         niveles={[
           { texto: 'Widgets', alElegir: alIrAWidgets },
@@ -55,9 +56,10 @@ export function AgregarAnimacion({ alRegresar, alIrAWidgets }: AgregarAnimacionP
           { texto: 'Animación' },
         ]}
         alRegresar={alRegresar}
+        conRegresar={false}
       />
       {catalogo && (
-        <ul className="wg-lista" aria-label="Catálogo de animaciones">
+        <ul className="wg-lista wg-subpantalla-widget__catalogo" aria-label="Catálogo de animaciones">
           {catalogo.map((a) => (
             <li key={a.id}>
               <button
@@ -66,7 +68,7 @@ export function AgregarAnimacion({ alRegresar, alIrAWidgets }: AgregarAnimacionP
                 aria-pressed={elegida?.id === a.id}
                 onClick={() => void elegir(a)}
               >
-                <img src={a.thumbnail_url} alt="" width={96} height={54} />
+                <MiniaturaDelCatalogo ruta={a.thumbnail_url} />
                 <span>{a.name}</span>
               </button>
             </li>
@@ -74,19 +76,25 @@ export function AgregarAnimacion({ alRegresar, alIrAWidgets }: AgregarAnimacionP
         </ul>
       )}
       {elegida && (
-        <section aria-label="Vista previa de la animación">
+        <section className="wg-subpantalla-widget__dato" aria-label="Vista previa de la animación">
           {/* DUDA: HE-04-HU09 las animaciones Lottie necesitan un reproductor que el proyecto no tiene; se
               reproducen las webm y de las Lottie se muestra la miniatura (docs/DUDAS.md). */}
           {video && elegida.format !== 'lottie' ? (
             <video src={video} autoPlay loop muted playsInline width={320} height={180} />
           ) : (
-            <img src={elegida.thumbnail_url} alt="" width={320} height={180} />
+            elegida.thumbnail_url && (
+              <img src={urlDeArchivo(elegida.thumbnail_url)} alt="" width={320} height={180} />
+            )
           )}
         </section>
       )}
-      <Boton principal disabled={!elegida || enCurso} onClick={() => void ejecutar()}>
-        Agregar
-      </Boton>
+      {/* docs/rediseno.md RD-59: «Agregar» y «Regresar» abajo a la izquierda (84:844, 84:846). */}
+      <div className="wg-subpantalla-widget__acciones">
+        <Boton principal disabled={!elegida || enCurso} onClick={() => void ejecutar()}>
+          Agregar
+        </Boton>
+        <Boton onClick={alRegresar}>Regresar</Boton>
+      </div>
     </main>
   );
 }

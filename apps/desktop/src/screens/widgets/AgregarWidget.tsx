@@ -31,7 +31,7 @@ function Grupo({
   return (
     <section aria-label={titulo}>
       <h2>{titulo}</h2>
-      <ul className="wg-lista wg-catalogo">
+      <ul className="wg-lista wg-catalogo wg-subpantalla-widget__catalogo">
         {entradas.map((e) => (
           // ET02: nombre, ícono y descripción de una línea; CA02: deshabilitado con su motivo (RT-04).
           <li key={e.type} className="wg-lista__elemento">
@@ -97,11 +97,12 @@ export function AgregarWidget({ alRegresar }: AgregarWidgetProps) {
   }
 
   return (
-    <main aria-label="Agregar widget" aria-busy={catalogo === null}>
+    <main className="wg-subpantalla-widget" aria-label="Agregar widget" aria-busy={catalogo === null}>
       {/* ET01: miga de pan «Widgets > Agregar widget» y «Regresar» (RT-03). */}
       <EncabezadoDeRuta
         niveles={[{ texto: 'Widgets', alElegir: alRegresar }, { texto: 'Agregar widget' }]}
         alRegresar={alRegresar}
+        conRegresar={false}
       />
       {catalogo && (
         <>
@@ -109,6 +110,10 @@ export function AgregarWidget({ alRegresar }: AgregarWidgetProps) {
           <Grupo titulo="Widgets locales" entradas={catalogo.local} alElegir={setElegido} />
         </>
       )}
+      {/* docs/rediseno.md RD-58: «Regresar» abajo a la izquierda (84:736). */}
+      <div className="wg-subpantalla-widget__acciones">
+        <Boton onClick={alRegresar}>Regresar</Boton>
+      </div>
     </main>
   );
 }
