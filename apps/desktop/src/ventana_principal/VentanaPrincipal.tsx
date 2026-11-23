@@ -19,6 +19,7 @@ import { MenuPrincipal } from '@/ui/MenuPrincipal/MenuPrincipal';
 import { useTemaAplicado } from '@/ui/tema/temaAplicado';
 import { AvisoDelWallpaper } from './AvisoDelWallpaper';
 import { EncabezadoDePantalla } from './EncabezadoDePantalla';
+import { IndicadorSincronizacion } from './IndicadorSincronizacion';
 import { AMPLIAR_MENU, OCULTAR_MENU, TITULO_DE_PANTALLA } from './textosDelMarco';
 import simbolo from '@/screens/cuenta/activos/simbolo.svg';
 import './marco.css';
@@ -244,6 +245,11 @@ export function VentanaPrincipal({
   }, [modoDeLaVentana]);
   // RD-31: «Ocultar menú» y «Ampliar menú»; vale mientras la ventana esté abierta.
   const [menuVisible, setMenuVisible] = useState(true);
+  // docs/rediseno.md RD-42: Personalización del wallpaper ocupa la ventana sin el menú lateral (Figma 91:1638);
+  // «Personalización» en su encabezado vuelve al marco con el menú. Se reinicia al cambiar de pantalla.
+  const [marcoEnWallpaper, setMarcoEnWallpaper] = useState(false);
+  useEffect(() => setMarcoEnWallpaper(false), [pantalla]);
+  const pantallaCompleta = pantalla === 'personalization' && !marcoEnWallpaper;
 
   // HE-17-HU02-ET05 (D-156): cada pantalla que se abre queda como la última visitada en este computador.
   useEffect(() => {
@@ -280,7 +286,30 @@ export function VentanaPrincipal({
   );
 
   let contenido = null;
-  if (sesion === 'con_sesion') {
+  if (sesion === 'con_sesion' && pantallaCompleta) {
+    const Pantalla = pantallas[pantalla];
+    contenido = (
+      // Figma 91:1639 «windgets», 91:1640 «Personalización» y 91:1641 «Sincronizado».
+      <div ref={fondo} className="wg-ventana-principal wg-ventana-principal--completa">
+        <header className="wg-cabecera-completa">
+          <span className="wg-cabecera-completa__marca">windgets</span>
+          <button
+            type="button"
+            className="wg-cabecera-completa__seccion"
+            aria-expanded="false"
+            onClick={() => setMarcoEnWallpaper(true)}
+          >
+            Personalización
+          </button>
+          <IndicadorSincronizacion />
+        </header>
+        <div className="wg-ventana-principal__completa">
+          <AvisoDelWallpaper />
+          {Pantalla ? <Pantalla /> : <PantallaSinConstruir nombre={TITULO_DE_PANTALLA[pantalla]} />}
+        </div>
+      </div>
+    );
+  } else if (sesion === 'con_sesion') {
     const Pantalla = pantallas[pantalla];
     contenido = (
       <div
@@ -321,7 +350,10 @@ export function VentanaPrincipal({
               <IconoDelMenu trazo={TRAZO_ABRIR} className="wg-menu__icono" />
             </button>
           )}
-          <EncabezadoDePantalla pantalla={pantalla} modo={modoDelTema} alAplicar={releerTema} />
+          {/* RD-43: Personalización del wallpaper lleva su propio título y «Tema en edición». */}
+          {pantalla !== 'personalization' && (
+            <EncabezadoDePantalla pantalla={pantalla} modo={modoDelTema} alAplicar={releerTema} />
+          )}
           <div className="wg-ventana-principal__pantalla">
             <AvisoDelWallpaper />
             {Pantalla ? <Pantalla /> : <PantallaSinConstruir nombre={TITULO_DE_PANTALLA[pantalla]} />}

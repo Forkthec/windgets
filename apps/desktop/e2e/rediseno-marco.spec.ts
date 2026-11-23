@@ -232,3 +232,55 @@ test('RD-41 · Configuración a la medida de 81:199', async ({ page }) => {
   expect(Math.abs(cerrar.y - 350)).toBeLessThanOrEqual(TOLERANCIA);
   await esperarCaja(page.getByRole('heading', { level: 2, name: 'Sesión' }), [332, null, null, null]);
 });
+
+test('RD-42 a RD-46 · Personalización del wallpaper a la medida de 91:1638 (1360 × 850)', async ({
+  page,
+}) => {
+  await entrar(page, 1360, 850);
+  await claro(page);
+  await abrir(page, 'Wallpaper');
+  await expect(menu(page)).toHaveCount(0);
+  // 91:1639 «windgets» en (38, 22) y 91:1640 «Personalización» en x = 220.
+  await esperarCaja(page.locator('.wg-cabecera-completa__marca'), [38, 22, null, null]);
+  await esperarCaja(page.getByRole('button', { name: 'Personalización' }), [220, null, null, null]);
+  // 91:1642 título en (42, 92), 91:1643 subtítulo en (43, 146) y 91:1644 «Tema en edición» de 317 × 68 en (1000, 89).
+  await esperarCaja(page.getByRole('heading', { level: 1 }), [42, 92, null, null]);
+  await esperarCaja(page.locator('.wg-wallpaper__subtitulo'), [43, 146, null, null]);
+  await esperarCaja(page.locator('.wg-wallpaper__tema'), [1000, 89, 317, 68]);
+  // 91:1647 en y = 216, 91:1648 el monitor de 774 × 422 en (42, 257) y 91:1670 el pie de 220 × 9 en (317, 680).
+  await esperarCaja(page.getByRole('heading', { level: 2, name: /^Vista previa de / }), [
+    43,
+    216,
+    null,
+    null,
+  ]);
+  await esperarCaja(page.locator('.wg-wallpaper__monitor'), [42, 257, 774, 422]);
+  await esperarCaja(page.locator('.wg-wallpaper__pie'), [317, 680, 220, 9]);
+  // 91:1671 el inspector de 469 × 524 en (848, 201) y 91:1672 el encabezado de 445 × 39 en (860, 213).
+  await esperarCaja(page.locator('.wg-wallpaper__inspector'), [848, 201, 469, 524]);
+  await esperarCaja(page.getByRole('button', { name: 'Plantillas' }), [860, 213, 445, 39]);
+  // 91:1711 la barra de 1275 × 69 en (42, 751).
+  await esperarCaja(page.locator('.wg-wallpaper__acciones'), [42, 751, 1275, 69]);
+  // Cabe en la ventana sin desplazarse.
+  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(850);
+  expect(await sinScrollHorizontal(page)).toBe(true);
+  // «Personalización» vuelve al marco con el menú.
+  await page.getByRole('button', { name: 'Personalización' }).click();
+  await expect(menu(page).getByRole('button', { name: 'Wallpaper' })).toHaveAttribute('aria-current', 'page');
+});
+
+for (const [ancho, alto] of [
+  [1200, 800],
+  [999, 800],
+  [768, 480],
+]) {
+  test(`RD-42 · Wallpaper a ${ancho} × ${alto} sin scroll horizontal`, async ({ page }) => {
+    await entrar(page, ancho, alto);
+    await abrir(page, 'Wallpaper');
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Personalización del wallpaper' }),
+    ).toBeVisible();
+    expect(await sinScrollHorizontal(page)).toBe(true);
+    await expect(page.getByRole('button', { name: 'Aplicar' })).toBeVisible();
+  });
+}

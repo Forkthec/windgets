@@ -1,0 +1,312 @@
+/* Rediseño de Personalización del wallpaper (docs/rediseno.md RD-42 a RD-46; Figma 91:1638 «Wallpaper · Claro ·
+ * Cuaderno», 1360 × 850, y 91:2502 del oscuro). Medidas en px del Figma; la pantalla empieza debajo del encabezado
+ * de RD-42 (y = 54). Los colores son los tokens del marco (`ventana_principal/marco.css`). */
+.wg-wallpaper {
+  display: flex;
+  flex-direction: column;
+  padding: 35px 43px 30px 42px;
+}
+@media (width < 1000px) {
+  .wg-wallpaper {
+    padding-inline: 24px;
+  }
+}
+
+/* 91:1642 título (36 px negrita, y = 92), 91:1643 subtítulo (17 px, y = 146) y 91:1644 «Tema en edición» (317 × 68
+ * en y = 89, a la derecha). */
+.wg-wallpaper__cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.wg-wallpaper__titulo {
+  margin: 3px 0 0;
+  color: var(--wg-tinta);
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 43px;
+}
+.wg-wallpaper__subtitulo {
+  margin: 11px 0 0 1px;
+  color: var(--wg-texto);
+  font-size: 17px;
+}
+.wg-wallpaper__tema {
+  box-sizing: border-box;
+  width: 317px;
+  min-height: 68px;
+  padding: 9px 16px 8px;
+  border-radius: 12px;
+  background: var(--wg-superficie);
+}
+.wg-wallpaper__tema .wg-campo {
+  gap: 4px;
+}
+.wg-wallpaper__tema .wg-campo__etiqueta {
+  color: var(--wg-texto);
+  font-size: 13px;
+}
+.wg-wallpaper__tema .wg-campo__entrada {
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--wg-tinta);
+  font: inherit;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+/* La vista previa (774 px) y el inspector (469 px) con 32 px entre ellos; empiezan en y = 201. */
+.wg-wallpaper__cuerpo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 469px;
+  align-items: start;
+  column-gap: 32px;
+  row-gap: 24px;
+  margin-top: 35px;
+}
+@media (width < 1100px) {
+  .wg-wallpaper__cuerpo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* 91:1647 «Vista previa de <tema>» (21 px peso 500) en y = 216 y 91:1648 el monitor en y = 257. */
+.wg-wallpaper__previa-titulo {
+  margin: 15px 0 16px 1px;
+  color: var(--wg-tinta);
+  font-size: 21px;
+  font-weight: 500;
+  line-height: 25px;
+}
+/* 91:1648 «Monitor · vista previa»: marco de 9 px, radio 18; la pantalla 91:1649 con radio 12 (756 × 404). */
+.wg-wallpaper__monitor {
+  padding: 9px;
+  border-radius: 18px;
+  background: var(--wgm-monitor);
+}
+.wg-wallpaper__monitor .wg-vista-previa {
+  aspect-ratio: 756 / 404;
+  border: 0;
+  border-radius: 12px;
+}
+/* 91:1670 «Pie del monitor»: 220 × 9, centrado, 1 px debajo del monitor. */
+.wg-wallpaper__pie {
+  width: 220px;
+  height: 9px;
+  margin: 1px auto 0;
+  border-radius: 4px;
+  background: var(--wgm-pie-monitor);
+}
+.wg-wallpaper__previa .wg-aviso {
+  margin-top: 16px;
+}
+
+/* 91:1671 «Inspector»: 469 × 524, radio 15; se desplaza por dentro si las secciones abiertas no caben. */
+.wg-wallpaper__inspector {
+  box-sizing: border-box;
+  height: 524px;
+  overflow-y: auto;
+  padding: 12px 12px 16px;
+  border-radius: 15px;
+  background: var(--wg-superficie);
+}
+@media (width < 1100px) {
+  .wg-wallpaper__inspector {
+    height: auto;
+  }
+}
+.wg-wallpaper__seccion + .wg-wallpaper__seccion {
+  margin-top: 4px;
+}
+.wg-wallpaper__encabezado-seccion {
+  margin: 0;
+  font-size: inherit;
+}
+/* 91:1672: encabezado de 445 × 39, radio 8, «Plantillas» en 17 px peso 500 y «−» o «+» en 20 px a la derecha. */
+.wg-wallpaper__encabezado-seccion > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  width: 100%;
+  height: 39px;
+  padding: 0 29px 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--wg-superficie);
+  color: var(--wg-tinta);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.wg-wallpaper__encabezado-seccion > button[aria-expanded='true'] {
+  background: var(--wgm-seccion-abierta);
+}
+.wg-wallpaper__encabezado-seccion > button > span {
+  color: var(--wg-texto);
+  font-size: 20px;
+  font-weight: 400;
+}
+.wg-wallpaper__encabezado-seccion > button:focus-visible,
+.wg-wallpaper__plantilla:focus-visible,
+.wg-wallpaper__filas button:focus-visible {
+  outline: 2px solid var(--wgm-seleccion-texto);
+  outline-offset: 2px;
+}
+/* Las filas de una sección abierta (91:1927 a 91:1935): 423 × 34, radio 6, a 11 px del borde del inspector. */
+.wg-wallpaper__filas {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 4px 11px 8px;
+  font-size: 14px;
+}
+.wg-wallpaper__fila,
+.wg-wallpaper__filas .wg-lista__elemento,
+.wg-wallpaper__filas .wg-lista > li > button,
+.wg-wallpaper__filas > .wg-fila,
+.wg-wallpaper__filas .wg-campo {
+  box-sizing: border-box;
+  min-height: 34px;
+  margin: 0;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--wg-superficie-baja);
+  color: var(--wg-tinta);
+}
+.wg-wallpaper__fila {
+  display: flex;
+  align-items: center;
+}
+.wg-wallpaper__filas .wg-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+}
+.wg-wallpaper__filas .wg-lista > li > button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.wg-wallpaper__filas .wg-lista > li > button[aria-pressed='true'] {
+  outline: 1.5px solid var(--wgm-seleccion-texto);
+  outline-offset: -1.5px;
+}
+/* 91:2001 «Muestra»: 26 × 22, radio 4, a la derecha. */
+.wg-wallpaper__filas .wg-muestra-color {
+  width: 26px;
+  height: 22px;
+  border-radius: 4px;
+}
+.wg-wallpaper__filas .wg-lista > li > button > .wg-muestra-color:first-of-type {
+  margin-left: auto;
+}
+/* «Subir imagen», «Catálogo de imágenes», «Quitar imagen» y los «Restablecer»: filas a lo ancho (91:1929 a 91:1933,
+ * 91:2008). */
+.wg-wallpaper__opciones {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+body[data-modo] .wg-wallpaper__filas .wg-boton:not(.wg-boton--principal) {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: var(--wg-superficie-baja);
+  font-size: 14px;
+  font-weight: 400;
+}
+body[data-modo] .wg-wallpaper__filas .wg-boton:disabled {
+  border-color: transparent;
+  color: var(--wgm-deshabilitado-texto);
+}
+.wg-wallpaper__filas .wg-fila {
+  flex-wrap: wrap;
+}
+
+/* 91:1675 a 91:1698: plantillas en tarjetas de 200 × 85 en dos columnas, con la miniatura de 182 × 45. */
+.wg-wallpaper__plantillas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 200px));
+  justify-content: space-between;
+  gap: 9px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wg-wallpaper__plantilla {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 85px;
+  padding: 8px 9px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--wg-superficie-baja);
+  color: var(--wg-tinta);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.wg-wallpaper__plantilla[aria-pressed='true'] {
+  background: var(--wgm-seccion-abierta);
+  outline: 1.5px solid var(--wgm-seleccion-texto);
+  outline-offset: -1.5px;
+}
+.wg-wallpaper__plantilla img {
+  width: 100%;
+  height: 45px;
+  object-fit: cover;
+  border-radius: 5px;
+}
+.wg-wallpaper__plantilla-nombre {
+  display: flex;
+  gap: 6px;
+  margin-left: 1px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* 91:1711 «Acciones del tema»: 1275 × 69, radio 12, en y = 751; el estado en 15 px y los botones de 43 px a la
+ * derecha, «Aplicar» al final. */
+.wg-wallpaper__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  min-height: 69px;
+  margin-top: 26px;
+  padding: 13px 27px 13px 18px;
+  border-radius: 12px;
+  background: var(--wg-superficie);
+}
+.wg-wallpaper__estado {
+  flex: 1;
+  margin: 0;
+  color: var(--wg-texto);
+  font-size: 15px;
+}
+body[data-modo] .wg-wallpaper__acciones .wg-boton {
+  min-height: 43px;
+  font-weight: 400;
+}
+body[data-modo] .wg-wallpaper__acciones .wg-boton:not(.wg-boton--principal):not(:disabled) {
+  background: var(--wgm-seccion-abierta);
+}

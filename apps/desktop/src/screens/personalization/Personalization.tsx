@@ -26,6 +26,7 @@ import { Paletas } from './Paletas';
 import { VistaPrevia } from './VistaPrevia';
 import { familia, PIXELES_DEL_TAMANO } from '@/ui/tema/temaAplicado';
 import { Tipografia } from './Tipografia';
+import './wallpaper.css';
 
 // P-WAL-01 Personalización del wallpaper (Menú principal > Personalización > Personalización del wallpaper;
 // HE-02-HU10). La lista «Tema en edición», la vista previa (HE-02-HU09), las secciones (HE-02-HU02 a HU08) y
@@ -51,6 +52,15 @@ const SECCIONES = ['Plantillas', 'Imagen de fondo', 'Colores', 'Tipografía', 'P
 
 export function Personalization() {
   const { invocar, escuchar } = useNucleo();
+  // docs/rediseno.md RD-45: las secciones abiertas del inspector; al entrar, Plantillas (91:1672).
+  const [abiertas, setAbiertas] = useState<ReadonlySet<string>>(() => new Set(['Plantillas']));
+  const alternarSeccion = (nombre: string) =>
+    setAbiertas((actuales) => {
+      const nuevas = new Set(actuales);
+      if (nuevas.has(nombre)) nuevas.delete(nombre);
+      else nuevas.add(nombre);
+      return nuevas;
+    });
   const mostrarResultado = useMensajeDeResultado();
   const [temas, setTemas] = useState<ThemeSummary[]>([]);
   const [borrador, setBorrador] = useState<ThemeDraftView | null>(null);
@@ -322,171 +332,251 @@ export function Personalization() {
         : undefined;
   // HE-02-HU06: la fuente y el tamaño de los textos de la vista previa.
   const nombreDeLaFuente = fuentes.find((f) => f.id === borrador?.content.font.id)?.name;
+  // RD-46: lo que dice la barra de acciones: el motivo de «Aplicar» deshabilitada o que hay cambios.
+  const estadoDeLaBarra = !borrador
+    ? ''
+    : yaAplicado
+      ? textos.TEMA_YA_APLICADO
+      : borrador.dirty || borrador.applied_unsaved
+        ? 'Cambios en la vista previa'
+        : '';
   return (
-    <main aria-label="Personalización del wallpaper" aria-busy={borrador === null}>
+    <main className="wg-wallpaper" aria-label="Personalización del wallpaper" aria-busy={borrador === null}>
       {borrador && (
         <>
-          <Selector
-            etiqueta="Tema en edición"
-            valor={borrador.theme_id}
-            opciones={(temas.length > 0 ? temas : [{ id: borrador.theme_id, name: borrador.name }]).map(
-              (t) => ({ valor: t.id, texto: t.name }),
-            )}
-            alCambiar={(id) => void seleccionar(id)}
-          />
-          {/* HE-02-HU09-ET01, ET03: el wallpaper y los widgets activos con los cambios, antes de aplicarlos. */}
-          <VistaPrevia
-            contenido={borrador.content}
-            imagen={imagenDeFondo}
-            fuente={nombreDeLaFuente ? familia(nombreDeLaFuente) : undefined}
-            tamano={PIXELES_DEL_TAMANO[borrador.content.font.size]}
-            widgets={escritorio?.widgets ?? []}
-            monitor={escritorio?.monitor ?? null}
-          />
-          {/* HE-02-HU05-ET17: el aviso de contraste va debajo de la vista previa. */}
-          {aviso && (
-            <p className="wg-aviso" aria-live="polite">
-              {aviso}
-            </p>
-          )}
-          {SECCIONES.map((nombre) => (
-            <section key={nombre} aria-label={nombre}>
-              <h2>{nombre}</h2>
-              {nombre === 'Plantillas' && (
-                // HE-02-HU02-ET01, ET02, ET04: solo el catálogo, sin crear plantillas ni subir archivos.
-                <ul className="wg-lista" aria-label="Catálogo de plantillas">
-                  {plantillas.map((p) => {
-                    const elegida = p.id === borrador.content.template_id;
-                    return (
-                      <li key={p.id}>
-                        <button
-                          type="button"
-                          className="wg-fila"
-                          aria-pressed={elegida}
-                          onClick={() => void cambiar({ template_id: p.id })}
-                        >
-                          <img src={urlDeArchivo(p.thumbnail_url)} alt="" width={96} height={54} />
-                          <span>{p.name}</span>
-                          {elegida && <span>Seleccionada</span>}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
+          {/* docs/rediseno.md RD-43 (Figma 91:1642 a 91:1646): título, subtítulo y «Tema en edición». */}
+          <div className="wg-wallpaper__cabecera">
+            <div>
+              <h1 className="wg-wallpaper__titulo">Personalización del wallpaper</h1>
+              <p className="wg-wallpaper__subtitulo">
+                Prueba los cambios aquí antes de aplicarlos a tu escritorio.
+              </p>
+            </div>
+            <div className="wg-wallpaper__tema">
+              <Selector
+                etiqueta="Tema en edición"
+                valor={borrador.theme_id}
+                opciones={(temas.length > 0 ? temas : [{ id: borrador.theme_id, name: borrador.name }]).map(
+                  (t) => ({ valor: t.id, texto: t.name }),
+                )}
+                alCambiar={(id) => void seleccionar(id)}
+              />
+            </div>
+          </div>
+          <div className="wg-wallpaper__cuerpo">
+            {/* RD-44 (91:1647, 91:1648, 91:1670): «Vista previa de <tema>» y el monitor con su pie. */}
+            <div className="wg-wallpaper__previa">
+              <h2 className="wg-wallpaper__previa-titulo">{`Vista previa de ${borrador.name}`}</h2>
+              <div className="wg-wallpaper__monitor">
+                {/* HE-02-HU09-ET01, ET03: el wallpaper y los widgets activos con los cambios, antes de aplicarlos. */}
+                <VistaPrevia
+                  contenido={borrador.content}
+                  imagen={imagenDeFondo}
+                  fuente={nombreDeLaFuente ? familia(nombreDeLaFuente) : undefined}
+                  tamano={PIXELES_DEL_TAMANO[borrador.content.font.size]}
+                  widgets={escritorio?.widgets ?? []}
+                  monitor={escritorio?.monitor ?? null}
+                />
+              </div>
+              <div className="wg-wallpaper__pie" aria-hidden="true" />
+              {/* HE-02-HU05-ET17: el aviso de contraste va debajo de la vista previa. */}
+              {aviso && (
+                <p className="wg-aviso" aria-live="polite">
+                  {aviso}
+                </p>
               )}
-              {nombre === 'Imagen de fondo' && (
-                // HE-02-HU03-ET01, ET02: la imagen actual y las tres opciones.
-                <>
-                  <p>
-                    {fondo?.source === 'template_default'
-                      ? 'Imagen de fondo de la plantilla'
-                      : fondo?.source === 'own'
-                        ? 'Imagen propia'
-                        : 'Imagen del catálogo de imágenes'}
-                  </p>
-                  <div className="wg-fila">
-                    <Boton onClick={() => void subirImagen()}>Subir imagen</Boton>
-                    <Boton onClick={() => void abrirCatalogoDeImagenes()}>Catálogo de imágenes</Boton>
-                    {/* HE-02-HU04: vuelve a la imagen de la plantilla (ET01); con ella, deshabilitada (ET02). */}
-                    <Boton
-                      disabled={fondo?.source === 'template_default'}
-                      motivo={textos.FONDO_YA_POR_DEFECTO}
-                      onClick={() => void cambiar({ background: { source: 'template_default' } })}
+            </div>
+            <div className="wg-wallpaper__inspector">
+              {SECCIONES.map((nombre) => (
+                // docs/rediseno.md RD-45 (Figma 91:1671 «Inspector»): cada sección se abre y se cierra con su encabezado.
+                <section key={nombre} aria-label={nombre} className="wg-wallpaper__seccion">
+                  <h2 className="wg-wallpaper__encabezado-seccion">
+                    <button
+                      type="button"
+                      aria-expanded={abiertas.has(nombre)}
+                      aria-controls={`wg-wallpaper-${SECCIONES.indexOf(nombre)}`}
+                      onClick={() => alternarSeccion(nombre)}
                     >
-                      Quitar imagen
-                    </Boton>
-                  </div>
-                  {/* HE-02-HU14 (P29): el ajuste de la imagen en cada monitor, propio de este computador. */}
-                  <AjusteDelFondo invocar={invocar} escuchar={escuchar} />
-                  <p>JPG, JPEG o PNG. Máximo 20 MB.</p>
-                  {rechazo && <p role="alert">{rechazo}</p>}
-                  {fondo?.source === 'own' && imagenFaltante === claveDelFondo && (
-                    <p className="wg-aviso" aria-live="polite">
-                      {textos.IMAGEN_DE_FONDO_NO_ENCONTRADA}
-                    </p>
+                      {nombre}
+                      <span aria-hidden="true">{abiertas.has(nombre) ? '−' : '+'}</span>
+                    </button>
+                  </h2>
+                  {abiertas.has(nombre) && (
+                    <div id={`wg-wallpaper-${SECCIONES.indexOf(nombre)}`} className="wg-wallpaper__filas">
+                      {nombre === 'Plantillas' && (
+                        // HE-02-HU02-ET01, ET02, ET04: solo el catálogo, sin crear plantillas ni subir archivos.
+                        <ul className="wg-wallpaper__plantillas" aria-label="Catálogo de plantillas">
+                          {plantillas.map((p) => {
+                            const elegida = p.id === borrador.content.template_id;
+                            return (
+                              <li key={p.id}>
+                                <button
+                                  type="button"
+                                  className="wg-wallpaper__plantilla"
+                                  aria-pressed={elegida}
+                                  onClick={() => void cambiar({ template_id: p.id })}
+                                >
+                                  <img src={urlDeArchivo(p.thumbnail_url)} alt="" width={182} height={45} />
+                                  <span className="wg-wallpaper__plantilla-nombre">
+                                    <span>{p.name}</span>
+                                    {/* RD-45 (91:1686 «Cuaderno · Activa»): la elegida. */}
+                                    {elegida && (
+                                      <>
+                                        <span aria-hidden="true">·</span>
+                                        <span>Activa</span>
+                                      </>
+                                    )}
+                                  </span>
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                      {nombre === 'Imagen de fondo' && (
+                        // HE-02-HU03-ET01, ET02: la imagen actual y las tres opciones.
+                        <>
+                          <p className="wg-wallpaper__fila">
+                            {fondo?.source === 'template_default'
+                              ? 'Imagen de fondo de la plantilla'
+                              : fondo?.source === 'own'
+                                ? 'Imagen propia'
+                                : 'Imagen del catálogo de imágenes'}
+                          </p>
+                          <div className="wg-wallpaper__opciones">
+                            <Boton onClick={() => void subirImagen()}>Subir imagen</Boton>
+                            <Boton onClick={() => void abrirCatalogoDeImagenes()}>Catálogo de imágenes</Boton>
+                            {/* HE-02-HU04: vuelve a la imagen de la plantilla (ET01); con ella, deshabilitada (ET02). */}
+                            <Boton
+                              disabled={fondo?.source === 'template_default'}
+                              motivo={textos.FONDO_YA_POR_DEFECTO}
+                              onClick={() => void cambiar({ background: { source: 'template_default' } })}
+                            >
+                              Quitar imagen
+                            </Boton>
+                          </div>
+                          {/* HE-02-HU14 (P29): el ajuste de la imagen en cada monitor, propio de este computador. */}
+                          <AjusteDelFondo invocar={invocar} escuchar={escuchar} />
+                          {/* RD-45 (91:1935): «JPG, JPEG o PNG · Máximo 20 MB». */}
+                          <p className="wg-wallpaper__fila">JPG, JPEG o PNG · Máximo 20 MB</p>
+                          {rechazo && <p role="alert">{rechazo}</p>}
+                          {fondo?.source === 'own' && imagenFaltante === claveDelFondo && (
+                            <p className="wg-aviso" aria-live="polite">
+                              {textos.IMAGEN_DE_FONDO_NO_ENCONTRADA}
+                            </p>
+                          )}
+                          {/* RT-04-ET19 (P26, DUDAS): el catálogo abierto sin imágenes muestra su estado vacío. */}
+                          {imagenes?.length === 0 && (
+                            <EstadoVacio texto={textos.CATALOGO_DE_IMAGENES_VACIO} />
+                          )}
+                          {imagenes && imagenes.length > 0 && (
+                            // ET07, ET08: solo miniaturas para elegir; no se agregan imágenes al catálogo.
+                            <ul className="wg-lista" aria-label="Catálogo de imágenes">
+                              {imagenes.map((i) => (
+                                <li key={i.id}>
+                                  <button
+                                    type="button"
+                                    className="wg-fila"
+                                    aria-pressed={fondo?.catalog_image_id === i.id}
+                                    onClick={() =>
+                                      void cambiar({
+                                        background: { source: 'catalog', catalog_image_id: i.id },
+                                      })
+                                    }
+                                  >
+                                    <img src={urlDeArchivo(i.thumbnail_url)} alt="" width={96} height={54} />
+                                    <span>{i.name}</span>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </>
+                      )}
+                      {nombre === 'Colores' && (
+                        <Colores
+                          colores={borrador.content.colors}
+                          mensajes={{
+                            primary: mensajesDeColor.primary?.message,
+                            secondary: mensajesDeColor.secondary?.message,
+                            text: mensajesDeColor.text?.message,
+                          }}
+                          alCambiar={(campo, valor) => void cambiarColor(campo, valor)}
+                          restablecer={
+                            <Boton onClick={() => void restablecer('colors')}>Restablecer colores</Boton>
+                          }
+                        />
+                      )}
+                      {nombre === 'Tipografía' && (
+                        <Tipografia
+                          fuentes={fuentes}
+                          tipografia={borrador.content.font}
+                          alElegirFuente={(id) => void cambiar({ font_id: id })}
+                          alElegirTamano={(tamano) => void cambiar({ font_size: tamano })}
+                          restablecer={
+                            <Boton onClick={() => void restablecer('typography')}>
+                              Restablecer tipografía
+                            </Boton>
+                          }
+                        />
+                      )}
+                      {nombre === 'Paletas' && (
+                        <Paletas
+                          paletas={paletas}
+                          actual={borrador.content.palette_id}
+                          alElegir={(id) => void cambiar({ palette_id: id })}
+                        />
+                      )}
+                    </div>
                   )}
-                  {/* RT-04-ET19 (P26, DUDAS): el catálogo abierto sin imágenes muestra su estado vacío. */}
-                  {imagenes?.length === 0 && <EstadoVacio texto={textos.CATALOGO_DE_IMAGENES_VACIO} />}
-                  {imagenes && imagenes.length > 0 && (
-                    // ET07, ET08: solo miniaturas para elegir; no se agregan imágenes al catálogo.
-                    <ul className="wg-lista" aria-label="Catálogo de imágenes">
-                      {imagenes.map((i) => (
-                        <li key={i.id}>
-                          <button
-                            type="button"
-                            className="wg-fila"
-                            aria-pressed={fondo?.catalog_image_id === i.id}
-                            onClick={() =>
-                              void cambiar({ background: { source: 'catalog', catalog_image_id: i.id } })
-                            }
-                          >
-                            <img src={urlDeArchivo(i.thumbnail_url)} alt="" width={96} height={54} />
-                            <span>{i.name}</span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </>
-              )}
-              {nombre === 'Colores' && (
-                <Colores
-                  colores={borrador.content.colors}
-                  mensajes={{
-                    primary: mensajesDeColor.primary?.message,
-                    secondary: mensajesDeColor.secondary?.message,
-                    text: mensajesDeColor.text?.message,
-                  }}
-                  alCambiar={(campo, valor) => void cambiarColor(campo, valor)}
-                  restablecer={<Boton onClick={() => void restablecer('colors')}>Restablecer colores</Boton>}
-                />
-              )}
-              {nombre === 'Tipografía' && (
-                <Tipografia
-                  fuentes={fuentes}
-                  tipografia={borrador.content.font}
-                  alElegirFuente={(id) => void cambiar({ font_id: id })}
-                  alElegirTamano={(tamano) => void cambiar({ font_size: tamano })}
-                  restablecer={
-                    <Boton onClick={() => void restablecer('typography')}>Restablecer tipografía</Boton>
-                  }
-                />
-              )}
-              {nombre === 'Paletas' && (
-                <Paletas
-                  paletas={paletas}
-                  actual={borrador.content.palette_id}
-                  alElegir={(id) => void cambiar({ palette_id: id })}
-                />
-              )}
-            </section>
-          ))}
-          <div className="wg-fila">
+                </section>
+              ))}
+            </div>
+          </div>
+          {/* RD-46 (91:1711 «Acciones del tema»): el estado a la izquierda y las acciones a la derecha. */}
+          <div className="wg-wallpaper__acciones">
+            <p id="wg-wallpaper-estado" className="wg-wallpaper__estado" aria-live="polite">
+              {estadoDeLaBarra}
+            </p>
+            <Boton onClick={() => void cancelar()}>Cancelar</Boton>
             {/* ET04: sin cambios sin guardar, «Guardar» queda deshabilitada con su motivo. */}
             <Boton
               disabled={!borrador.dirty || colorVacio}
               motivo={colorVacio ? undefined : textos.SIN_CAMBIOS_PARA_GUARDAR}
+              motivoAlPasar
+              aria-describedby={!borrador.dirty && !colorVacio ? 'wg-wallpaper-motivo-guardar' : undefined}
               onClick={() => void guardar()}
             >
               Guardar
             </Boton>
+            {!borrador.dirty && !colorVacio && (
+              <span id="wg-wallpaper-motivo-guardar" className="wg-oculto">
+                {textos.SIN_CAMBIOS_PARA_GUARDAR}
+              </span>
+            )}
             <Boton
               disabled={colorVacio || enElMaximo}
               motivo={enElMaximo ? textos.MAXIMO_DE_TEMAS : undefined}
+              motivoAlPasar
+              aria-describedby={enElMaximo ? 'wg-wallpaper-motivo-maximo' : undefined}
               onClick={() => setGuardandoComo(true)}
             >
               Guardar como tema
             </Boton>
-            {/* HE-02-HU12-CA06, ET06: «Aplicar» deshabilitada con su motivo. */}
+            {enElMaximo && (
+              <span id="wg-wallpaper-motivo-maximo" className="wg-oculto">
+                {textos.MAXIMO_DE_TEMAS}
+              </span>
+            )}
+            {/* HE-02-HU12-CA06, ET06: «Aplicar» deshabilitada; su motivo es el estado de la barra (RD-46). */}
             <Boton
               principal
               disabled={yaAplicado || colorVacio}
-              motivo={yaAplicado ? textos.TEMA_YA_APLICADO : undefined}
+              aria-describedby={yaAplicado ? 'wg-wallpaper-estado' : undefined}
               onClick={() => void aplicar('apply')}
             >
               Aplicar
             </Boton>
-            <Boton onClick={() => void cancelar()}>Cancelar</Boton>
           </div>
         </>
       )}

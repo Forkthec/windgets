@@ -50,6 +50,10 @@ const CON_SESION_SIN_CONEXION: Result<AuthSessionState> = {
   value: { state: 'signed_in', user_id: 'u-1', alias: 'Paula', token: 'refresh_pending' },
 };
 
+function PersonalizacionSinCambios() {
+  return <main aria-label="Personalización del wallpaper" />;
+}
+
 function InicioDeSesion() {
   const { abrirCuenta } = useNavegacion();
   return (
@@ -176,6 +180,8 @@ describe('RT-01 · Menú principal y pantalla principal', () => {
     await esperarPantallaPrincipal();
     fireEvent.click(within(menu()).getByRole('button', { name: 'Wallpaper' }));
     await screen.findByRole('main', { name: 'Personalización del wallpaper' });
+    // docs/rediseno.md RD-42: la pantalla ocupa la ventana; «Personalización» vuelve a mostrar el menú.
+    fireEvent.click(screen.getByRole('button', { name: 'Personalización' }));
 
     fireEvent.click(within(menu()).getByRole('button', { name: 'Tablero Kanban' }));
     const mensaje = await screen.findByRole('dialog');
@@ -197,6 +203,8 @@ describe('RT-01 · Menú principal y pantalla principal', () => {
     await esperarPantallaPrincipal();
     fireEvent.click(within(menu()).getByRole('button', { name: 'Wallpaper' }));
     await screen.findByRole('main', { name: 'Personalización del wallpaper' });
+    // docs/rediseno.md RD-42: la pantalla ocupa la ventana; «Personalización» vuelve a mostrar el menú.
+    fireEvent.click(screen.getByRole('button', { name: 'Personalización' }));
 
     fireEvent.click(within(menu()).getByRole('button', { name: 'Tablero Kanban' }));
     const mensaje = await screen.findByRole('dialog');
@@ -214,6 +222,30 @@ describe('RT-01 · Menú principal y pantalla principal', () => {
     expect(await screen.findByRole('main', { name: 'Personalización del wallpaper' })).toBeTruthy();
     expect(screen.queryByRole('main', { name: 'Tablero Kanban' })).toBeNull();
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('RD-42 · Personalización del wallpaper ocupa la ventana sin el menú lateral', async () => {
+    render(
+      <VentanaPrincipal {...nucleo(CON_SESION)} pantallas={{ personalization: PersonalizacionSinCambios }} />,
+    );
+    await esperarPantallaPrincipal();
+    fireEvent.click(within(menu()).getByRole('button', { name: 'Wallpaper' }));
+    await screen.findByRole('main', { name: 'Personalización del wallpaper' });
+    expect(screen.queryByRole('navigation', { name: 'Menú principal' })).toBeNull();
+    const seccion = screen.getByRole('button', { name: 'Personalización' });
+    expect(seccion.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.getByText('windgets')).toBeTruthy();
+    fireEvent.click(seccion);
+    // Con el menú, la pantalla sigue abierta y el menú la marca.
+    expect(within(menu()).getByRole('button', { name: 'Wallpaper' }).getAttribute('aria-current')).toBe(
+      'page',
+    );
+    expect(screen.getByRole('main', { name: 'Personalización del wallpaper' })).toBeTruthy();
+    // Al cambiar de pantalla y volver, vuelve a ocupar la ventana.
+    fireEvent.click(within(menu()).getByRole('button', { name: 'Temas' }));
+    fireEvent.click(within(menu()).getByRole('button', { name: 'Wallpaper' }));
+    await screen.findByRole('main', { name: 'Personalización del wallpaper' });
+    expect(screen.queryByRole('navigation', { name: 'Menú principal' })).toBeNull();
   });
 
   it('RT-01-CA10 · Menú principal sin sesión iniciada', async () => {
