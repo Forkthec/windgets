@@ -1,4 +1,5 @@
-// HE-06-HU02, HE-06-HU03 y HE-06-HU04 · Widget Tareas del día en la capa (C-02). Una prueba por CA en la vista;
+// HE-06-HU02, HE-06-HU03 y HE-06-HU04 (retirada del widget en P29) · Widget Tareas del día en la capa (C-02). Una
+// prueba por CA en la vista;
 // las reglas del Núcleo tienen sus pruebas en servicio_del_planificador/pruebas_de_completar.rs (casilla,
 // «Mover a», sin conexión) y pruebas_del_planificador_diario.rs (cambio de día). Las selecciones llegan como
 // las entrega la capa: `click()` en el elemento (HE-06-HU01, `entregarSeleccion`). Hoy es el 14/11/2026.
@@ -84,14 +85,6 @@ function casilla(widget: HTMLElement, titulo: string) {
 
 function tachada(widget: HTMLElement, titulo: string) {
   return casilla(widget, titulo).closest('li')?.classList.contains('wg-tachada') ?? false;
-}
-
-/** Abre «⋮» y después «Mover a» de una tarjeta. */
-async function abrirMoverA(widget: HTMLElement, titulo: string) {
-  const fila = casilla(widget, titulo).closest('li') as HTMLElement;
-  await seleccionar(within(fila).getByRole('button', { name: '⋮' }));
-  await seleccionar(within(fila).getByRole('button', { name: 'Mover a' }));
-  return within(fila).getByRole('menu', { name: 'Mover a' });
 }
 
 describe('HE-06-HU02 · Tarjetas del día en el widget', () => {
@@ -220,15 +213,18 @@ describe('HE-06-HU03 · Casilla de completada en el widget', () => {
   });
 
   it('HE-06-HU03-CA05 · Seleccionar la casilla cerca del borde', async () => {
-    // ET06: la casilla tiene un área de selección de al menos 32 × 32 píxeles. Seleccionar el borde de esa área
-    // (la etiqueta que envuelve la casilla) la alterna y no abre la aplicación.
+    // ET06 (P29): la casilla mide 24 × 24 píxeles y tiene un área de selección de al menos 44 × 44. Seleccionar el
+    // borde de esa área (la etiqueta que envuelve la casilla) la alterna y no abre la aplicación.
     const pagar = tarjeta({ title: 'Pagar la luz', due_date: HOY, column_id: EN_PROGRESO.id });
     const { nucleo, widget } = await pintar([pagar]);
     const area = casilla(widget, 'Pagar la luz').closest('label') as HTMLLabelElement;
     expect(area.classList.contains('wg-widget__casilla')).toBe(true);
     const regla = /\.wg-widget__casilla \{([^}]*)\}/.exec(estilos)?.[1] ?? '';
-    expect(regla).toContain('min-width: 32px;');
-    expect(regla).toContain('min-height: 32px;');
+    expect(regla).toContain('min-width: 44px;');
+    expect(regla).toContain('min-height: 44px;');
+    const casillaVisible = /\.wg-widget__casilla input \{([^}]*)\}/.exec(estilos)?.[1] ?? '';
+    expect(casillaVisible).toContain('width: 24px;');
+    expect(casillaVisible).toContain('height: 24px;');
     await seleccionar(area);
     expect(llamadasA(nucleo, 'card_set_completed')).toEqual([{ card_id: pagar.id, completed: true }]);
     expect(pagar.column_id).toBe(HECHO.id);
@@ -237,60 +233,19 @@ describe('HE-06-HU03 · Casilla de completada en el widget', () => {
   });
 });
 
-describe('HE-06-HU04 · «Mover a» en el widget', () => {
-  it('HE-06-HU04-CA01 · Mover una tarjeta a otra columna', async () => {
+describe('HE-06-HU04 · «Mover a» retirado del widget (P29)', () => {
+  it('HE-06-HU04-CA06 · El widget no muestra «⋮» ni «Mover a»', async () => {
+    // P29 (decisión de Paula): el widget solo completa tarjetas y abre su detalle; mover una tarjeta se hace en la
+    // aplicación. Seleccionar el título abre el detalle (HE-06-HU08-CA01) y no mueve la tarjeta.
     const pagar = tarjeta({ title: 'Pagar la luz', due_date: HOY });
     const { nucleo, widget } = await pintar([pagar]);
-    // ET01: «⋮» abre «Mover a».
-    const menu = await abrirMoverA(widget, 'Pagar la luz');
-    await seleccionar(within(menu).getByRole('menuitemradio', { name: 'En progreso' }));
-    expect(llamadasA(nucleo, 'card_move')).toEqual([
-      { card_id: pagar.id, column_id: EN_PROGRESO.id, placement: { kind: 'end' } },
-    ]);
-    expect(pagar.column_id).toBe(EN_PROGRESO.id);
-    expect(within(widget).queryByRole('menu')).toBeNull();
-  });
-
-  it('HE-06-HU04-CA02 · Opciones de «Mover a»', async () => {
-    const { widget } = await pintar([tarjeta({ title: 'Pagar la luz', due_date: HOY })]);
-    const menu = await abrirMoverA(widget, 'Pagar la luz');
-    // ET02: todas las columnas en su orden, con la actual marcada y deshabilitada.
-    const opciones = within(menu).getAllByRole('menuitemradio') as HTMLButtonElement[];
-    expect(opciones.map((o) => o.textContent)).toEqual(['Por hacer', 'En progreso', 'Hecho']);
-    expect(opciones.map((o) => o.getAttribute('aria-checked'))).toEqual(['true', 'false', 'false']);
-    expect(opciones.map((o) => o.disabled)).toEqual([true, false, false]);
-  });
-
-  it('HE-06-HU04-CA03 · Mover una tarjeta a Hecho con el menú', async () => {
-    const pagar = tarjeta({ title: 'Pagar la luz', due_date: HOY });
-    const { widget } = await pintar([pagar]);
-    const menu = await abrirMoverA(widget, 'Pagar la luz');
-    await seleccionar(within(menu).getByRole('menuitemradio', { name: 'Hecho' }));
-    // ET04: queda completada; el widget la muestra tachada y con la casilla seleccionada.
-    expect(pagar.is_completed).toBe(true);
-    expect(tachada(widget, 'Pagar la luz')).toBe(true);
-    expect(casilla(widget, 'Pagar la luz').checked).toBe(true);
-  });
-
-  it('HE-06-HU04-CA04 · Cerrar el menú sin elegir', async () => {
-    const pagar = tarjeta({ title: 'Pagar la luz', due_date: HOY });
-    const { nucleo, widget } = await pintar([pagar, tarjeta({ title: 'Comprar pan', due_date: HOY })]);
-    await abrirMoverA(widget, 'Pagar la luz');
-    // ET05: una selección dentro del widget, fuera del menú, lo cierra sin mover la tarjeta.
-    await seleccionar(within(widget).getByText('Comprar pan'));
-    expect(within(widget).queryByRole('menu')).toBeNull();
+    expect(within(widget).queryByRole('button', { name: '⋮' })).toBeNull();
+    expect(within(widget).queryByRole('button', { name: 'Mover a' })).toBeNull();
+    await seleccionar(within(widget).getByText('Pagar la luz'));
     expect(llamadasA(nucleo, 'card_move')).toEqual([]);
-    expect(pagar.column_id).toBe(POR_HACER.id);
-  });
-
-  it('HE-06-HU04-CA05 · Mover una tarjeta sin conexión', async () => {
-    // ET06: el Núcleo aplica el cambio en SQLite y lo encola; el widget no depende de la conexión.
-    const pagar = tarjeta({ title: 'Pagar la luz', due_date: HOY });
-    const { nucleo, widget } = await pintar([pagar]);
-    const menu = await abrirMoverA(widget, 'Pagar la luz');
-    await seleccionar(within(menu).getByRole('menuitemradio', { name: 'En progreso' }));
-    expect(llamadasA(nucleo, 'card_move')).toEqual([
-      { card_id: pagar.id, column_id: EN_PROGRESO.id, placement: { kind: 'end' } },
+    expect(llamadasA(nucleo, 'app_open_screen')).toEqual([
+      { screen: 'planner_daily', params: { card_id: pagar.id } },
     ]);
+    expect(pagar.column_id).toBe(POR_HACER.id);
   });
 });
