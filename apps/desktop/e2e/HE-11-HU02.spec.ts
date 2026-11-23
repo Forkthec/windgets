@@ -16,7 +16,9 @@ function fecha(dias: number) {
 async function arrastrar(page: Page, desde: Locator, hasta: Locator) {
   const origen = await desde.boundingBox();
   if (!origen) throw new Error('La tarjeta no tiene caja');
-  await hasta.scrollIntoViewIfNeeded();
+  // El bloque se centra en la pantalla: pegado al borde de la tarjeta, el desplazamiento automático de dnd-kit
+  // movería la lista mientras se arrastra (P30, docs/rediseno.md RD-32: la pantalla se desplaza dentro de la tarjeta).
+  await hasta.evaluate((e) => e.scrollIntoView({ block: 'center' }));
   await page.mouse.move(origen.x + origen.width / 2, origen.y + 6);
   await page.mouse.down();
   await page.mouse.move(origen.x + origen.width / 2 + 10, origen.y + 16, { steps: 4 });

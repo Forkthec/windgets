@@ -404,3 +404,11 @@ body[data-modo] .wg-confirmacion .wg-boton:not(.wg-boton--principal) {
     outline: 2px solid Highlight;
   }
 }
+
+/* RD-32: la tarjeta se desplaza por dentro; en Agenda diaria, «Tarjetas sin horario» queda a la vista mientras se
+   desplazan los bloques, para poder arrastrar una tarjeta a cualquier hora (HE-11-HU02). Se pega a la misma altura
+   con la que empieza (32 px de la tarjeta + 16 de la agenda), así no salta al desplazarse. */
+body[data-modo] .wg-agenda__sin-horario {
+  position: sticky;
+  top: 48px;
+}
