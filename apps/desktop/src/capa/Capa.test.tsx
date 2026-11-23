@@ -21,7 +21,7 @@ const DEL_CATALOGO: ThemeContent = {
 };
 
 function capa(applied: ThemeContent, wallpaper_state: WallpaperState): LayerInitialState {
-  return { applied, widgets: [], monitors: [], wallpaper_state };
+  return { applied, widgets: [], monitors: [], wallpaper_state, wallpaper_fit: [] };
 }
 
 /** Núcleo de prueba: el estado de la capa, los archivos que existen y EV-16. */
@@ -178,6 +178,7 @@ describe('HE-05-HU04 · La capa muestra la distribución guardada', () => {
     widgets: [{ ...RELOJ, x }],
     monitors: [{ id: '0', x: 0, y: 0, width: 2560, height: 1440, scale_factor: escala }],
     wallpaper_state: 'ok',
+    wallpaper_fit: [],
   });
 
   it('HE-05-HU02-CA05 · La capa dibuja a escala los píxeles físicos guardados', async () => {

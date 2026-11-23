@@ -33,7 +33,7 @@ Desde la raíz del repo, en Git Bash:
 6. Anota en ESTADO («Última verificación»): fecha, `git rev-parse HEAD`, `git rev-parse HEAD^{tree}`, los
    PASOS y el resultado de cada uno.
 7. El código Win32 se compila aquí (paso `windows`), pero no se enlaza ni se ejecuta. El `.exe` y el
-   instalador NSIS los compila GitHub Actions en Windows (`spike.yml` en ramas `paso-01-*`). Mira el resultado una vez con `gh run list --branch <rama> --limit 3` (sin sondear
+   instalador NSIS los compila GitHub Actions en Windows (`instalador.yml` en los PR que tocan la aplicación). Mira el resultado una vez con `gh run list --branch <rama> --limit 3` (sin sondear
    en bucle).
 
 Si el árbol (`HEAD^{tree}`) es igual al de una verificación verde ya anotada, esa verificación vale y no

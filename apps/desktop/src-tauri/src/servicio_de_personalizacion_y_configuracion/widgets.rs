@@ -182,6 +182,7 @@ impl ServicioDePersonalizacion {
         let config = match tipo {
             WidgetType::Weather => WidgetConfig::WeatherConfig(WeatherConfig {
                 city: ciudad.clone().unwrap_or_default(),
+                place: None,
             }),
             WidgetType::Text => WidgetConfig::TextConfig(TextConfig {
                 text: texto.clone().unwrap_or_default(),

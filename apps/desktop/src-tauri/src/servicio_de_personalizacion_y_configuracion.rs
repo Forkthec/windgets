@@ -236,7 +236,7 @@ impl ServicioDePersonalizacion {
         .await
         .map_err(de_sqlx)?;
         // DUDA: HE-02-HU10 sin catálogo local (primer inicio sin conexión) se usa la plantilla que trae el
-        // instalador (seed.sql: «default», Nunito y sus tres colores).
+        // instalador (seed.sql: «default», Rubik y los tres colores de la marca; P29, 0008).
         let (plantilla, primario, secundario, texto, fuente) = match fila {
             Some(f) => (
                 f.try_get::<String, _>("id").map_err(de_sqlx)?,
@@ -250,10 +250,10 @@ impl ServicioDePersonalizacion {
             ),
             None => (
                 "default".to_string(),
-                "#96B2B2".to_string(),
-                "#829890".to_string(),
-                "#14201C".to_string(),
-                "nunito".to_string(),
+                "#201B2B".to_string(),
+                "#DC026C".to_string(),
+                "#FFFFFF".to_string(),
+                "rubik".to_string(),
             ),
         };
         Ok(ThemeContent {
@@ -872,6 +872,7 @@ impl ServicioDePersonalizacion {
 
 pub mod agregar;
 pub mod ajuste;
+pub mod ajuste_del_fondo;
 mod aplicar;
 pub mod distribucion;
 mod eliminar_tema;

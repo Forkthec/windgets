@@ -536,6 +536,7 @@ pub async fn contexto<C: Calendario>(
 ) -> Result<WindiChatContext, AppError> {
     let columnas = planificador.columnas(user_id).await?;
     let etiquetas = planificador.etiquetas(user_id).await?;
+    let colores = planificador.colores().await?;
     let tablero = planificador.tablero(user_id).await?;
     let tarjetas: Vec<_> = tablero.columns.iter().flat_map(|c| &c.cards).collect();
     let contar = |f: &dyn Fn(&&crate::tipos::Card) -> bool| {
@@ -565,6 +566,14 @@ pub async fn contexto<C: Calendario>(
             .map(|e| crate::tipos::WindiChatContextLabelsItem {
                 id: e.id,
                 name: e.name,
+            })
+            .collect(),
+        // HE-14-HU10 (P29): los colores para crear etiquetas.
+        colors: colores
+            .into_iter()
+            .map(|c| crate::tipos::WindiChatContextColorsItem {
+                id: c.id,
+                name: c.name,
             })
             .collect(),
         // DUDA: HE-14-HU05 EF-01 dice «solo las necesarias para la pregunta» sin definir cuáles. Valor usado:

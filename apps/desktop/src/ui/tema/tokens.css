@@ -123,6 +123,38 @@ body {
 .wg-campo__etiqueta {
   color: var(--wg-texto);
 }
+/* HE-04-HU05-ET18 (P29): las sugerencias del campo Ciudad, debajo del campo. */
+.wg-ciudad {
+  position: relative;
+}
+.wg-ciudad__lista {
+  position: absolute;
+  z-index: 10;
+  left: 0;
+  right: 0;
+  margin: var(--wg-unidad) 0 0;
+  padding: var(--wg-unidad) 0;
+  list-style: none;
+  border: var(--wg-borde-ancho) solid var(--wg-borde);
+  border-radius: var(--wg-radio);
+  background: var(--wg-superficie-alta);
+  box-shadow: var(--wg-sombra);
+  max-height: calc(var(--wg-grosor-control) * 5.5);
+  overflow-y: auto;
+}
+.wg-ciudad__opcion {
+  min-height: var(--wg-grosor-control);
+  padding: 0 calc(var(--wg-unidad) * 3);
+  display: flex;
+  align-items: center;
+  color: var(--wg-tinta);
+  cursor: pointer;
+}
+.wg-ciudad__opcion[aria-selected='true'],
+.wg-ciudad__opcion:hover {
+  background: var(--wg-accion);
+  color: var(--wg-sobre-accion);
+}
 .wg-campo__entrada {
   min-height: var(--wg-grosor-control);
   padding: 0 calc(var(--wg-unidad) * 3);
@@ -951,14 +983,22 @@ button.wg-tarjeta__titulo:focus-visible {
 .wg-widget p {
   margin: 0;
 }
-/* HE-06-HU03-ET06: área de selección de la casilla de completada del widget Tareas del día. */
+/* HE-06-HU03-ET06 (P29): área de selección de la casilla de completada del widget Tareas del día, de 44 × 44 px
+   como mínimo, con la casilla visible de 24 × 24 px. */
 .wg-widget__casilla {
   display: inline-flex;
   flex: none;
   align-items: center;
   justify-content: center;
-  min-width: 32px;
-  min-height: 32px;
+  min-width: 44px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.wg-widget__casilla input {
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  accent-color: var(--wg-accion);
   cursor: pointer;
 }
 .wg-widget button {

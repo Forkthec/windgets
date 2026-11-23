@@ -49,6 +49,7 @@ function estado(widgets: WidgetRect[]): LayerInitialState {
     widgets,
     monitors: [],
     wallpaper_state: 'ok',
+    wallpaper_fit: [],
   };
 }
 

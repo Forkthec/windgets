@@ -1162,10 +1162,11 @@ pub async fn widget_add(
             crate::tipos::AddableWidgetType::Weather,
             crate::tipos::WidgetConfig::WeatherConfig(config),
         ) => {
-            match crate::servicio_de_clima_y_noticias::resolver_ciudad(
+            match crate::servicio_de_clima_y_noticias::elegir_lugar(
                 cliente,
                 &sesion.access_token,
                 &config.city,
+                config.place.as_ref(),
             )
             .await
             {
@@ -1259,6 +1260,26 @@ pub async fn widget_add(
     Ok(leido(r))
 }
 
+/// IPC-WID-08 `weather_city_search` (HE-04-HU05-ET18; P29): las sugerencias del campo Ciudad mientras se escribe.
+#[tauri::command]
+pub async fn weather_city_search(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::WeatherCitySearchParams,
+) -> Result<IpcResult<Vec<crate::tipos::GeocodeResult>>, ()> {
+    let Some(sesion) = sesion_para_la_nube(&app, &nucleo).await else {
+        return Ok(leido(Err(crate::servicio_del_planificador::inesperado())));
+    };
+    Ok(leido(
+        crate::servicio_de_clima_y_noticias::buscar_ciudades(
+            nucleo.sesion.auth(),
+            &sesion.access_token,
+            &params.query,
+        )
+        .await,
+    ))
+}
+
 /// IPC-WID-05 `widget_configure` (HE-04-HU12): cambia la ciudad del Clima (validada con `weather-geocode`) o el
 /// texto del Texto, avisa con EV-12 para que la capa lo muestre en 5 s o menos (ET03) y consulta el clima nuevo.
 #[tauri::command]
@@ -1276,10 +1297,11 @@ pub async fn widget_configure(
     let ahora = RelojDelSistema.ahora_ms();
     let r = match &params.config {
         crate::tipos::WidgetConfigureParamsConfig::WeatherConfig(c) => {
-            match crate::servicio_de_clima_y_noticias::resolver_ciudad(
+            match crate::servicio_de_clima_y_noticias::elegir_lugar(
                 nucleo.sesion.auth(),
                 &sesion.access_token,
                 &c.city,
+                c.place.as_ref(),
             )
             .await
             {
@@ -1878,6 +1900,54 @@ pub async fn wallpaper_get_status(
             state: c.wallpaper_state,
         }
     })))
+}
+
+/// IPC-DESK-15 `wallpaper_fit_get` (HE-02-HU14; P29): el ajuste del fondo de cada monitor de este computador.
+#[tauri::command]
+pub async fn wallpaper_fit_get(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<crate::tipos::WallpaperFitSettings>, ()> {
+    let _ = params;
+    use crate::servicio_de_personalizacion_y_configuracion::ajuste_del_fondo;
+    let monitores = nucleo.host.monitores();
+    Ok(leido(
+        ajuste_del_fondo::leer(nucleo.planificador.base())
+            .await
+            .map(|g| ajuste_del_fondo::configuracion(&g, &monitores)),
+    ))
+}
+
+/// IPC-DESK-16 `wallpaper_fit_set` (HE-02-HU14; P29): guarda el ajuste de un monitor y emite EV-30
+/// `wallpaper_fit_changed` para que la capa pinte el fondo con él, sin aplicar el tema.
+#[tauri::command]
+pub async fn wallpaper_fit_set(
+    app: AppHandle,
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::WallpaperFitSetParams,
+) -> Result<IpcResult<crate::tipos::WallpaperFitSettings>, ()> {
+    use crate::servicio_de_personalizacion_y_configuracion::ajuste_del_fondo;
+    let base = nucleo.planificador.base();
+    let monitores = nucleo.host.monitores();
+    let r = async {
+        let guardados = ajuste_del_fondo::leer(base).await?;
+        let nuevos =
+            ajuste_del_fondo::cambiar(&guardados, &monitores, &params.monitor_id, params.fit)?;
+        ajuste_del_fondo::guardar(base, &nuevos, chrono::Utc::now().timestamp_millis()).await?;
+        Ok(nuevos)
+    }
+    .await;
+    if let Ok(nuevos) = &r {
+        let _ = app.emit(
+            "wallpaper_fit_changed",
+            crate::tipos::EventMapWallpaperFitChanged {
+                monitors: ajuste_del_fondo::ajustes(nuevos, &monitores),
+            },
+        );
+    }
+    Ok(leido(
+        r.map(|g| ajuste_del_fondo::configuracion(&g, &monitores)),
+    ))
 }
 
 /// IPC-WID-01 `widget_list` (HE-04-HU01): los widgets del tema aplicado con su estado activo o inactivo.
@@ -2979,6 +3049,8 @@ pub async fn windi_confirm_proposal(
     if matches!(&r, Ok(c) if c.outcome == crate::tipos::WindiConfirmProposalResultOutcome::Applied)
     {
         avisar_tarjetas(&app, Vec::new(), ChangeOp::Upsert);
+        // HE-14-HU10 (P29): una propuesta puede crear etiquetas; Etiquetas y el Formulario de tarjeta las muestran.
+        avisar_etiquetas(&app, Vec::new(), ChangeOp::Upsert);
     }
     Ok(leido(r))
 }

@@ -133,8 +133,9 @@ describe('HE-03-HU06 · La aplicación con el tema aplicado', () => {
   it('HE-03-HU06-CA08 · Primer inicio de sesión', async () => {
     await abrir(() =>
       aplicado({
-        colors: { primary: '#96B2B2', secondary: '#829890', text: '#14201C' },
-        font: { id: 'nunito', size: 'medium' },
+        // P29 (0008): la plantilla por defecto «Windgets» con los colores de la marca y Rubik.
+        colors: { primary: '#201B2B', secondary: '#DC026C', text: '#FFFFFF' },
+        font: { id: 'rubik', size: 'medium' },
       }),
     );
     // ET07: los colores y la tipografía de la plantilla por defecto.
@@ -142,6 +143,6 @@ describe('HE-03-HU06 · La aplicación con el tema aplicado', () => {
     for (const nombre of ['superficie', 'tinta', 'accion', 'borde'] as const) {
       expect(token(nombre)).toBe(TOKENS_POR_DEFECTO[nombre]);
     }
-    expect(token('fuente')).toContain('Nunito');
+    expect(token('fuente')).toContain('Rubik');
   });
 });

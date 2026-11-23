@@ -486,6 +486,13 @@ pub struct CommandMapWidgetConfigure {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "index.ts")]
+pub struct CommandMapWeatherCitySearch {
+    pub params: WeatherCitySearchParams,
+    pub result: Vec<GeocodeResult>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
 pub struct CommandMapWidgetDelete {
     pub params: WidgetDeleteParams,
     pub result: (),
@@ -552,6 +559,20 @@ pub struct CommandMapLayerGetInitialState {
 pub struct CommandMapWallpaperGetStatus {
     pub params: NoParams,
     pub result: WallpaperStatus,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
+pub struct CommandMapWallpaperFitGet {
+    pub params: NoParams,
+    pub result: WallpaperFitSettings,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
+pub struct CommandMapWallpaperFitSet {
+    pub params: WallpaperFitSetParams,
+    pub result: WallpaperFitSettings,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
@@ -779,6 +800,7 @@ pub struct CommandMap {
     pub widget_set_active: CommandMapWidgetSetActive,
     pub widget_add: CommandMapWidgetAdd,
     pub widget_configure: CommandMapWidgetConfigure,
+    pub weather_city_search: CommandMapWeatherCitySearch,
     pub widget_delete: CommandMapWidgetDelete,
     pub widget_get_data: CommandMapWidgetGetData,
     pub layout_edit_open: CommandMapLayoutEditOpen,
@@ -789,6 +811,8 @@ pub struct CommandMap {
     pub layout_edit_cancel: CommandMapLayoutEditCancel,
     pub layer_get_initial_state: CommandMapLayerGetInitialState,
     pub wallpaper_get_status: CommandMapWallpaperGetStatus,
+    pub wallpaper_fit_get: CommandMapWallpaperFitGet,
+    pub wallpaper_fit_set: CommandMapWallpaperFitSet,
     pub app_open_screen: CommandMapAppOpenScreen,
     pub app_get_last_screen: CommandMapAppGetLastScreen,
     pub app_set_last_screen: CommandMapAppSetLastScreen,

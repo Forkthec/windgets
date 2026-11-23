@@ -25,6 +25,8 @@ export interface Contexto {
   now_hour: number;
   columns: { id: string; name: string; role: string }[];
   labels: { id: string; name: string }[];
+  /** HE-14-HU10 (P29): los colores del catálogo para crear etiquetas; un Núcleo anterior no los envía. */
+  colors?: { id: string; name: string }[];
   cards: Record<string, unknown>[];
   totals: { total: number; overdue: number; pending: number; completed: number };
   /** HE-14-HU09-ET06: las cantidades que calcula el Núcleo con todas las tarjetas. */
@@ -52,7 +54,7 @@ export interface PeticionWindi {
 export type Intencion = 'answer' | 'clarify' | 'propose' | 'out_of_scope';
 
 export interface Propuesta {
-  action: 'create' | 'edit' | 'move' | 'delete';
+  action: 'create' | 'edit' | 'move' | 'delete' | 'create_label';
   items: { card_id: string | null; changes: Record<string, unknown> | null }[];
 }
 
@@ -257,8 +259,20 @@ export function instruccionDelSistema(contexto: Contexto): string {
     // HE-14-HU04-ET13.
     'Las tarjetas nuevas siempre se crean en la columna Por hacer: si piden crearla en otra columna, explicas que',
     'las tarjetas nuevas se crean en Por hacer y propones crearla en Por hacer.',
-    'Solo usas etiquetas que existen y nunca creas etiquetas. Si piden una que no existe, dices que no existe,',
-    'mencionas las disponibles y preguntas si prefiere una de ellas o crear la tarjeta sin etiqueta.',
+    // HE-14-HU10 (P29): crear etiquetas.
+    'Al crear o editar tarjetas solo usas etiquetas que existen. Si piden una que no existe, dices que no existe,',
+    'mencionas las disponibles y preguntas si prefiere una de ellas, crear la tarjeta sin etiqueta o crear antes',
+    'la etiqueta. Cuando la persona confirma la etiqueta nueva, propones la tarjeta con ella.',
+    'Para crear etiquetas llamas a propose_create_labels con el nombre y el color de cada una; nunca dices que ya',
+    'las creaste. El nombre y el color son obligatorios y nunca eliges el color por la persona: si falta el color,',
+    'preguntas de qué color quiere la etiqueta y mencionas los colores disponibles; si falta el nombre, preguntas',
+    'qué nombre ponerle. No propones hasta tenerlos.',
+    'El nombre de una etiqueta tiene máximo 30 caracteres y no repite el de otra etiqueta, sin distinguir',
+    'mayúsculas: si lo repite, dices que ya existe y no propones. Se pueden tener máximo 20 etiquetas: si ya hay 20,',
+    'lo dices y no propones.',
+    `Colores para etiquetas: ${
+      contexto.colors?.length ? contexto.colors.map((c) => `${c.name} (id ${c.id})`).join(', ') : 'ninguno'
+    }.`,
     // HE-14-HU05: editar tarjetas (ET10 a ET14).
     'Para cambiar datos de una o varias tarjetas llamas a propose_edit_cards con un elemento por tarjeta: su id y',
     'solo los datos que cambian. Si piden el mismo cambio para varias tarjetas, como las vencidas, las incluyes',
@@ -333,7 +347,8 @@ export function instruccionDelSistema(contexto: Contexto): string {
     // P23: en las pruebas manuales, Gemini anunciaba la propuesta («vamos a programar ese recordatorio») y se
     // detenía sin llamar a la función; la persona tenía que insistir. Ahora responde siempre con funciones.
     'Respondes siempre llamando funciones. El texto que ve la persona va en responder. Si ya tienes los datos para',
-    'crear, editar, mover o eliminar tarjetas, en la misma respuesta llamas a responder con una frase breve y a la',
+    'crear, editar, mover o eliminar tarjetas, o para crear etiquetas, en la misma respuesta llamas a responder con',
+    'una frase breve y a la',
     'función de la propuesta: la persona solo ve la propuesta y el botón para confirmarla si llamas a esa función.',
     'Nunca describes la propuesta solo con texto ni pides permiso para proponer.',
   ];
@@ -464,6 +479,29 @@ export const FUNCIONES = [
     },
   },
   {
+    // HE-14-HU10 (P29).
+    name: 'propose_create_labels',
+    description:
+      'Propone crear una o varias etiquetas con su nombre y su color. Solo con los dos datos. La persona confirma antes.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        labels: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              name: { type: 'STRING', description: 'El nombre de la etiqueta, de 1 a 30 caracteres.' },
+              color: { type: 'STRING', description: 'El id o el nombre de un color de la lista; nunca uno inventado.' },
+            },
+            required: ['name', 'color'],
+          },
+        },
+      },
+      required: ['labels'],
+    },
+  },
+  {
     name: 'propose_move_cards',
     description: 'Propone mover una o varias tarjetas a otra columna. La persona confirma antes de moverlas.',
     parameters: {
@@ -498,6 +536,7 @@ export const FUNCIONES = [
 
 /** La acción de la propuesta según la función que llamó Gemini. */
 const ACCION: Record<string, Propuesta['action']> = {
+  propose_create_labels: 'create_label',
   propose_create_cards: 'create',
   propose_edit_cards: 'edit',
   propose_label_cards: 'edit',
@@ -511,6 +550,8 @@ export const RESPALDO: Record<Propuesta['action'], string> = {
   edit: 'Esto es lo que voy a cambiar. ¿Confirmas?',
   move: 'Esto es lo que voy a mover. ¿Confirmas?',
   delete: 'Esto es lo que voy a eliminar. ¿Confirmas?',
+  // DUDA: HE-14-HU10 (P29) el texto sigue el de las demás acciones (docs/DUDAS.md).
+  create_label: 'Esta es la etiqueta que voy a crear. ¿Confirmas?',
 };
 
 /**
@@ -601,6 +642,17 @@ function elementos(nombre: string, args: Record<string, unknown>): Propuesta['it
         card_id: String(e.card_id),
         changes: { add_labels: nombres(e.add), remove_labels: nombres(e.remove) },
       }));
+  }
+  // HE-14-HU10: el color va por su id o su nombre; el Núcleo lo busca en el catálogo y valida el nombre.
+  if (nombre === 'propose_create_labels') {
+    const etiquetas = Array.isArray(args.labels) ? args.labels.filter(esObjeto) : [];
+    return etiquetas.map((e) => ({
+      card_id: null,
+      changes: {
+        name: typeof e.name === 'string' ? e.name : '',
+        color: typeof e.color === 'string' ? e.color : null,
+      },
+    }));
   }
   if (nombre === 'propose_delete_cards') {
     const ids = Array.isArray(args.card_ids) ? args.card_ids.filter((id) => typeof id === 'string') : [];

@@ -22,6 +22,54 @@ pub struct LayerInitialState {
     pub widgets: Vec<WidgetRect>,
     pub monitors: Vec<Monitor>,
     pub wallpaper_state: WallpaperState,
+    /// HE-02-HU14 (P29): el ajuste de la imagen en cada monitor, en el orden de `monitors`.
+    pub wallpaper_fit: Vec<WallpaperMonitorFit>,
+}
+
+/// HE-02-HU14 (P29): cómo se ajusta la imagen de fondo a un monitor, como en Windows: Rellenar (`fill`), Ajustar
+/// (`fit`), Expandir (`stretch`), Mosaico (`tile`), Centrar (`center`) y Extender (`span`, una sola imagen sobre
+/// todos los monitores).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
+pub enum WallpaperFit {
+    #[serde(rename = "fill")]
+    Fill,
+    #[serde(rename = "fit")]
+    Fit,
+    #[serde(rename = "stretch")]
+    Stretch,
+    #[serde(rename = "tile")]
+    Tile,
+    #[serde(rename = "center")]
+    Center,
+    #[serde(rename = "span")]
+    Span,
+}
+
+/// HE-02-HU14: el ajuste de un monitor. `number` es su número en Windows (1, 2…).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
+pub struct WallpaperMonitorFit {
+    pub monitor_id: String,
+    pub number: i64,
+    pub is_primary: bool,
+    pub fit: WallpaperFit,
+}
+
+/// IPC-DESK-15 `wallpaper_fit_get` y IPC-DESK-16 `wallpaper_fit_set` (HE-02-HU14): los monitores que se pueden
+/// ajustar (hasta 6) y cuántos más hay, que usan el ajuste del monitor principal.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
+pub struct WallpaperFitSettings {
+    pub monitors: Vec<WallpaperMonitorFit>,
+    pub other_monitors: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
+pub struct WallpaperFitSetParams {
+    pub monitor_id: String,
+    pub fit: WallpaperFit,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]

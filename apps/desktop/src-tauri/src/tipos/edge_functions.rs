@@ -63,6 +63,14 @@ pub struct WindiChatContextLabelsItem {
     pub name: String,
 }
 
+/// HE-14-HU10 (P29): un color del catálogo para crear etiquetas.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
+pub struct WindiChatContextColorsItem {
+    pub id: String,
+    pub name: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "index.ts")]
 pub struct WindiChatContextTotals {
@@ -98,6 +106,9 @@ pub struct WindiChatContext {
     pub now_hour: Hour,
     pub columns: Vec<WindiChatContextColumnsItem>,
     pub labels: Vec<WindiChatContextLabelsItem>,
+    /// HE-14-HU10 (P29): los colores del catálogo, para que Windi los ofrezca al crear una etiqueta.
+    #[serde(default)]
+    pub colors: Vec<WindiChatContextColorsItem>,
     pub cards: Vec<WindiChatContextCard>,
     pub totals: WindiChatContextTotals,
     pub counts: WindiChatContextCounts,

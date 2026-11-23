@@ -116,6 +116,17 @@ export function Propuesta({
                 })}
               </ul>
             )}
+            {propuesta.action === 'create_label' && item.changes && (
+              // HE-14-HU10-CA01 (P29): el color de cada etiqueta nueva, con su muestra.
+              <p>
+                <span
+                  className="wg-muestra-color"
+                  aria-hidden="true"
+                  style={{ background: String((item.changes as Record<string, unknown>).hex ?? '') }}
+                />
+                {`Color: ${String((item.changes as Record<string, unknown>).color_name ?? '')}`}
+              </p>
+            )}
             {propuesta.action === 'move' && item.changes && (
               <p>{`Columna: ${String((item.changes as Record<string, unknown>).from_column)} → ${String((item.changes as Record<string, unknown>).to_column)}`}</p>
             )}

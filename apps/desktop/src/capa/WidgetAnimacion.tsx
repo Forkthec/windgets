@@ -60,7 +60,8 @@ export function WidgetAnimacion({ widgetId, invocar, escuchar }: WidgetAnimacion
           loop
           muted
           playsInline
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          // Bloque: en línea, el video deja abajo el hueco de la línea base y se corta 4 px (revisión de P29).
+          style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }}
         />
       )}
       {enPausa && (

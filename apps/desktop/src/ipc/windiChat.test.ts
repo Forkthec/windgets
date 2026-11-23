@@ -385,7 +385,9 @@ describe('EF-01 windi-chat · HE-14-HU04 (crear tarjetas)', () => {
 
   it('HE-14-HU04-CA09 · solo etiquetas que existen, con las disponibles en la instrucción', () => {
     const texto = instruccionDelSistema(conEtiquetas);
-    expect(texto).toContain('nunca creas etiquetas');
+    // HE-14-HU10 (P29): ya no dice «nunca creas etiquetas»; ofrece crearla antes, pidiendo su color.
+    expect(texto).toContain('Al crear o editar tarjetas solo usas etiquetas que existen.');
+    expect(texto).toContain('crear antes la etiqueta');
     expect(texto).toContain('mencionas las disponibles');
     expect(texto).toContain('Etiquetas disponibles: Trabajo (id l1).');
   });
@@ -641,7 +643,9 @@ describe('EF-01 windi-chat · HE-14-HU03 (propuestas)', () => {
       const r = leerGemini(conLlamadas({ name, args }));
       expect(typeof r === 'object' && r.reply).toBe(`Esto es lo que voy a ${verbo}. ¿Confirmas?`);
     }
-    expect(Object.values(RESPALDO)).toHaveLength(4);
+    // HE-14-HU10 (P29): crear etiquetas es la quinta acción.
+    expect(RESPALDO.create_label).toBe('Esta es la etiqueta que voy a crear. ¿Confirmas?');
+    expect(Object.values(RESPALDO)).toHaveLength(5);
   });
 
   it('HE-14-HU03-CA05 · ante «sí» pide seleccionar «Confirmar» y nunca dice que hizo el cambio (ET09)', () => {
@@ -766,12 +770,13 @@ describe('EF-01 windi-chat · HE-14-HU05 (P24: varias tarjetas, etiquetas y bloq
     expect(typeof juntas === 'object' && juntas.proposal?.items).toHaveLength(2);
   });
 
-  it('HE-14-HU05-CA10 · no crea etiquetas: las etiquetas van por su nombre y el Núcleo las busca', () => {
+  it('HE-14-HU05-CA10 · editar no crea etiquetas: las etiquetas van por su nombre y el Núcleo las busca', () => {
     expect(JSON.stringify(FUNCIONES.find((f) => f.name === 'propose_label_cards'))).toContain(
       'Nombres de etiquetas que se agregan.',
     );
+    // HE-14-HU10 (P29): crear una etiqueta es otra propuesta (propose_create_labels), no parte de la edición.
     expect(instruccionDelSistema(CONTEXTO)).toContain(
-      'Solo usas etiquetas que existen y nunca creas etiquetas.',
+      'Al crear o editar tarjetas solo usas etiquetas que existen.',
     );
   });
 
@@ -943,5 +948,78 @@ describe('EF-01 windi-chat · HE-14-HU01 (P24: intención de cada respuesta)', (
     expect(texto).toContain('llamas a responder con intent out_of_scope');
     expect(texto).toContain('clarify cuando preguntas por un dato que falta');
     expect(texto).toContain('Aclarar no descarta la propuesta pendiente.');
+  });
+});
+
+describe('EF-01 windi-chat · HE-14-HU10 (crear etiquetas, P29)', () => {
+  const conColores: Contexto = {
+    ...CONTEXTO,
+    labels: [{ id: 'l1', name: 'Trabajo' }],
+    colors: [
+      { id: 'rojo', name: 'Rojo' },
+      { id: 'azul', name: 'Azul' },
+    ],
+  };
+
+  it('HE-14-HU10-CA01 · propone crear la etiqueta con su nombre y su color', () => {
+    const r = leerGemini(
+      llamadas(
+        { name: 'propose_create_labels', args: { labels: [{ name: 'Universidad', color: 'Azul' }] } },
+        { name: 'responder', args: { text: 'Te propongo crear la etiqueta Universidad.' } },
+      ),
+    );
+    expect(r).toEqual({
+      reply: 'Te propongo crear la etiqueta Universidad.',
+      intent: 'propose',
+      proposal: {
+        action: 'create_label',
+        items: [{ card_id: null, changes: { name: 'Universidad', color: 'Azul' } }],
+      },
+    });
+    // Sin texto, el de su acción (HE-14-HU03-ET11).
+    const sola = leerGemini(
+      llamadas({ name: 'propose_create_labels', args: { labels: [{ name: 'Casa', color: 'rojo' }] } }),
+    );
+    expect(typeof sola === 'object' && sola.reply).toBe(RESPALDO.create_label);
+    const declarada = FUNCIONES.find((f) => f.name === 'propose_create_labels') as unknown as {
+      parameters: { properties: { labels: { items: { required: string[] } } } };
+    };
+    expect(declarada.parameters.properties.labels.items.required).toEqual(['name', 'color']);
+  });
+
+  it('HE-14-HU10-CA02 · sin color, pregunta de qué color y menciona los colores; nunca lo elige', () => {
+    const texto = instruccionDelSistema(conColores);
+    expect(texto).toContain('nunca eliges el color por la persona');
+    expect(texto).toContain('preguntas de qué color quiere la etiqueta y mencionas los colores disponibles');
+    expect(texto).toContain('Colores para etiquetas: Rojo (id rojo), Azul (id azul).');
+    // Un Núcleo anterior no envía colores.
+    expect(instruccionDelSistema(CONTEXTO)).toContain('Colores para etiquetas: ninguno.');
+  });
+
+  it('HE-14-HU10-CA03 · sin nombre, pregunta qué nombre ponerle; no propone hasta tener los dos', () => {
+    expect(instruccionDelSistema(conColores)).toContain(
+      'si falta el nombre, preguntas qué nombre ponerle. No propones',
+    );
+  });
+
+  it('HE-14-HU10-CA04, CA05, CA06 · nombre de 30 caracteres, sin repetir y máximo 20 etiquetas', () => {
+    const texto = instruccionDelSistema(conColores);
+    expect(texto).toContain('máximo 30 caracteres');
+    expect(texto).toContain('si lo repite, dices que ya existe y no propones');
+    expect(texto).toContain('máximo 20 etiquetas');
+  });
+
+  it('HE-14-HU10-CA07 · una etiqueta que no existe al crear una tarjeta: ofrece crearla antes', () => {
+    const texto = instruccionDelSistema(conColores);
+    expect(texto).toContain('crear la tarjeta sin etiqueta o crear antes la etiqueta');
+    expect(texto).toContain('Cuando la persona confirma la etiqueta nueva, propones la tarjeta con ella.');
+    // Crear la etiqueta y la tarjeta en la misma respuesta son dos tipos de cambio (HE-14-HU03).
+    const juntas = leerGemini(
+      llamadas(
+        { name: 'propose_create_labels', args: { labels: [{ name: 'Viaje', color: 'rojo' }] } },
+        { name: 'propose_create_cards', args: { cards: [{ title: 'Maleta', due_date: '2026-11-20' }] } },
+      ),
+    );
+    expect(typeof juntas === 'object' && juntas.reply).toBe(UN_CAMBIO_A_LA_VEZ);
   });
 });

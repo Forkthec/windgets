@@ -270,6 +270,64 @@ pub fn decidir(
     })
 }
 
+/// Qué hay bajo el cursor según la clase de la ventana que devuelve `WindowFromPoint` y la de su padre (D-186).
+/// Es el escritorio la lista de íconos (`SysListView32` dentro de `SHELLDLL_DefView`) y también, cuando la
+/// persona oculta los íconos (clic derecho > Ver > Mostrar iconos del escritorio), la ventana que queda a la vista:
+/// `SHELLDLL_DefView`, `WorkerW`, `Progman` o la propia capa (HE-06-HU01-CA08; P29). Cualquier otra es otra
+/// aplicación.
+pub fn clasificar(clase: &str, clase_del_padre: &str, es_la_capa: bool) -> BajoElCursor {
+    let es_el_escritorio = es_la_capa
+        || matches!(clase, "SHELLDLL_DefView" | "WorkerW" | "Progman")
+        || (clase == "SysListView32" && clase_del_padre == "SHELLDLL_DefView");
+    if es_el_escritorio {
+        BajoElCursor::Escritorio
+    } else {
+        BajoElCursor::OtraVentana
+    }
+}
+
+/// Evento interno con la rueda del mouse sobre un widget (HE-06-HU01-CA09; P29). La capa no recibe el mouse
+/// (D-186), así que sin él no se puede desplazar el contenido de un widget que no cabe (Noticias, Tareas del día).
+/// DUDA: P29 ningún evento del contrato lleva la rueda. Valor usado: este evento, solo hacia la capa, en sus
+/// coordenadas como EV-18 (docs/DUDAS.md).
+pub const RUEDA_REENVIADA: &str = "pointer_wheel_forwarded";
+
+/// Carga de `pointer_wheel_forwarded`: el punto en coordenadas de la capa y el giro en unidades de Windows (120 por
+/// muesca; positivo es hacia arriba en `delta_y` y hacia la derecha en `delta_x`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct RuedaReenviada {
+    pub x: i64,
+    pub y: i64,
+    pub delta_x: i64,
+    pub delta_y: i64,
+}
+
+/// Decide si el giro de la rueda en `(x, y)` (píxeles físicos) va a la capa: solo con el escritorio bajo el cursor
+/// (otra ventana encima la recibe ella) y sobre un widget activo de cualquier tipo. Los íconos no se desplazan con
+/// la rueda, así que no se pregunta por ellos.
+pub fn rueda(
+    geometria: &GeometriaDeLaCapa,
+    (x, y): (i32, i32),
+    bajo_el_cursor: BajoElCursor,
+    (delta_x, delta_y): (i64, i64),
+) -> Option<RuedaReenviada> {
+    if bajo_el_cursor != BajoElCursor::Escritorio || (delta_x == 0 && delta_y == 0) {
+        return None;
+    }
+    let (fx, fy) = desde_el_origen(geometria, x, y);
+    geometria
+        .widgets
+        .iter()
+        .find(|w| w.is_active && contiene(w, fx, fy))?;
+    let (cx, cy) = en_la_capa(geometria, x, y);
+    Some(RuedaReenviada {
+        x: cx.round() as i64,
+        y: cy.round() as i64,
+        delta_x,
+        delta_y,
+    })
+}
+
 #[cfg(test)]
 mod pruebas {
     //! HE-06-HU01 · Seleccionar un widget interactivo directamente en el escritorio. Las reglas se prueban aquí;
@@ -610,5 +668,93 @@ mod pruebas {
         arrastre.cancelar();
         arrastre.seguir(&geometria, (800, 100), true);
         assert_eq!(arrastre.tomar_soltada(), None);
+    }
+    #[test]
+    fn ca_he_06_hu01_ca08() {
+        // HE-06-HU01-CA08 · Seleccionar un widget con los íconos del escritorio ocultos (P29): sin íconos, Windows
+        // devuelve bajo el cursor SHELLDLL_DefView, WorkerW, Progman o la propia capa; todos son el escritorio y la
+        // selección llega al widget como con los íconos visibles.
+        for clase in ["SHELLDLL_DefView", "WorkerW", "Progman"] {
+            assert_eq!(
+                clasificar(clase, "", false),
+                BajoElCursor::Escritorio,
+                "{clase}"
+            );
+        }
+        assert_eq!(
+            clasificar("Chrome_RenderWidgetHostHWND", "Chrome_WidgetWin_0", true),
+            BajoElCursor::Escritorio
+        );
+        assert_eq!(
+            clasificar("SysListView32", "SHELLDLL_DefView", false),
+            BajoElCursor::Escritorio
+        );
+        // Una lista de otra aplicación y las ventanas de otras aplicaciones siguen teniendo prioridad (ET05).
+        assert_eq!(
+            clasificar("SysListView32", "Otra", false),
+            BajoElCursor::OtraVentana
+        );
+        assert_eq!(clasificar("Notepad", "", false), BajoElCursor::OtraVentana);
+        let evento = decidir(
+            &por_defecto(),
+            &monitores(),
+            (400, 100),
+            clasificar("SHELLDLL_DefView", "Progman", false),
+            sin_icono,
+        );
+        assert!(evento.is_some());
+    }
+
+    #[test]
+    fn ca_he_06_hu01_ca09() {
+        // HE-06-HU01-CA09 · Desplazar el contenido de un widget con la rueda del mouse (P29): sobre cualquier widget
+        // activo, el giro llega a la capa en sus coordenadas; fuera de los widgets o con otra ventana encima, no.
+        let r = rueda(
+            &por_defecto(),
+            (400, 100),
+            BajoElCursor::Escritorio,
+            (0, -120),
+        )
+        .unwrap();
+        assert_eq!((r.x, r.y, r.delta_x, r.delta_y), (400, 100, 0, -120));
+        // También en un widget que no es interactivo (el Reloj).
+        assert!(
+            rueda(
+                &por_defecto(),
+                (100, 100),
+                BajoElCursor::Escritorio,
+                (0, 120)
+            )
+            .is_some()
+        );
+        assert_eq!(
+            rueda(
+                &por_defecto(),
+                (1800, 900),
+                BajoElCursor::Escritorio,
+                (0, 120)
+            ),
+            None
+        );
+        assert_eq!(
+            rueda(
+                &por_defecto(),
+                (400, 100),
+                BajoElCursor::OtraVentana,
+                (0, 120)
+            ),
+            None
+        );
+        assert_eq!(
+            rueda(&por_defecto(), (400, 100), BajoElCursor::Escritorio, (0, 0)),
+            None
+        );
+        // Al 150 % llega en píxeles CSS.
+        let a_escala = GeometriaDeLaCapa {
+            escala: 1.5,
+            ..por_defecto()
+        };
+        let r = rueda(&a_escala, (600, 150), BajoElCursor::Escritorio, (120, 0)).unwrap();
+        assert_eq!((r.x, r.y, r.delta_x), (400, 100, 120));
     }
 }

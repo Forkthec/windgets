@@ -16,6 +16,7 @@ const ESTADO: LayerInitialState = {
   widgets: [{ widget_id: 'w-m', type: 'music_player', x: 0, y: 0, width: 320, height: 160, is_active: true }],
   monitors: [],
   wallpaper_state: 'ok',
+  wallpaper_fit: [],
 };
 
 const SONANDO: MediaSession = {

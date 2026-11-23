@@ -133,6 +133,13 @@ pub struct EventMapWallpaperStatusChanged {
     pub state: WallpaperState,
 }
 
+/// EV-30 `wallpaper_fit_changed` (HE-02-HU14; P29): la capa vuelve a pintar el fondo con el ajuste nuevo.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
+pub struct EventMapWallpaperFitChanged {
+    pub monitors: Vec<WallpaperMonitorFit>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "index.ts")]
 pub struct EventMapMonitorsChanged {
@@ -254,6 +261,7 @@ pub struct EventMap {
     pub layout_edit_state_changed: EventMapLayoutEditStateChanged,
     pub wallpaper_status_changed: EventMapWallpaperStatusChanged,
     pub monitors_changed: EventMapMonitorsChanged,
+    pub wallpaper_fit_changed: EventMapWallpaperFitChanged,
     pub pointer_forwarded: EventMapPointerForwarded,
     pub pointer_released: EventMapPointerReleased,
     pub media_session_changed: MediaSession,

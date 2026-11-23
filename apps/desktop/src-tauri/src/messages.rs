@@ -422,6 +422,23 @@ pub const WINDI_PROPUESTA_NUEVA: &str = "Esta es la propuesta con los datos actu
 // creación mencionando el título», «confirma la cantidad de tarjetas creadas»).
 pub const WINDI_TARJETA_CREADA: &str = "Listo, creé la tarjeta «<título>».";
 pub const WINDI_TARJETAS_CREADAS: &str = "Listo, creé <cantidad> tarjetas.";
+// HE-02-HU14 · Ajuste del fondo por monitor (P29).
+/// `monitor.not_found` (HE-02-HU14-CA07).
+pub const MONITOR_NO_CONECTADO: &str = "Ese monitor ya no está conectado. Elige otro monitor.";
+/// `monitor.not_configurable` (HE-02-HU14-CA06).
+pub const MONITOR_NO_AJUSTABLE: &str =
+    "Puedes ajustar el fondo de hasta 6 monitores. Los demás usan el ajuste del monitor principal.";
+// HE-14-HU10 · Crear etiquetas con el agente de IA (P29). DUDA: los textos siguen los de HE-14-HU04.
+pub const WINDI_ETIQUETA_CREADA: &str = "Listo, creé la etiqueta «<nombre>».";
+pub const WINDI_ETIQUETAS_CREADAS: &str = "Listo, creé <cantidad> etiquetas.";
+/// `windi.label_color_required` (HE-14-HU10-CA02).
+pub const WINDI_COLOR_DE_LA_ETIQUETA: &str =
+    "¿De qué color quieres la etiqueta “<nombre>”? Los colores son: <colores>.";
+/// `windi.color_not_found` (HE-14-HU10-CA08).
+pub const WINDI_COLOR_NO_ENCONTRADO: &str =
+    "No tengo el color “<color>”. Los colores son: <colores>.";
+/// `name.required` (HE-14-HU10-CA03).
+pub const WINDI_NOMBRE_DE_LA_ETIQUETA: &str = "¿Qué nombre le pongo a la etiqueta?";
 // HE-14-HU05 · Editar tarjetas con el agente de IA.
 /// Aviso en la propuesta de editar una tarjeta completada (HE-14-HU05-CA06, ET05).
 pub const WINDI_EDITAR_COMPLETADA: &str =
@@ -699,6 +716,13 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("WINDI_TARJETA_NO_ENCONTRADA", WINDI_TARJETA_NO_ENCONTRADA),
     ("WINDI_COLUMNA_NO_ENCONTRADA", WINDI_COLUMNA_NO_ENCONTRADA),
     ("WINDI_ETIQUETA_NO_ENCONTRADA", WINDI_ETIQUETA_NO_ENCONTRADA),
+    ("WINDI_ETIQUETA_CREADA", WINDI_ETIQUETA_CREADA),
+    ("MONITOR_NO_CONECTADO", MONITOR_NO_CONECTADO),
+    ("MONITOR_NO_AJUSTABLE", MONITOR_NO_AJUSTABLE),
+    ("WINDI_ETIQUETAS_CREADAS", WINDI_ETIQUETAS_CREADAS),
+    ("WINDI_COLOR_DE_LA_ETIQUETA", WINDI_COLOR_DE_LA_ETIQUETA),
+    ("WINDI_COLOR_NO_ENCONTRADO", WINDI_COLOR_NO_ENCONTRADO),
+    ("WINDI_NOMBRE_DE_LA_ETIQUETA", WINDI_NOMBRE_DE_LA_ETIQUETA),
     ("WINDI_MISMO_VALOR", WINDI_MISMO_VALOR),
     ("WINDI_YA_ESTA_EN_LA_COLUMNA", WINDI_YA_ESTA_EN_LA_COLUMNA),
     ("WINDI_NO_PUDE_APLICAR", WINDI_NO_PUDE_APLICAR),

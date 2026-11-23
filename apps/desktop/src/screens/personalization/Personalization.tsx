@@ -19,6 +19,7 @@ import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { Selector } from '@/ui/Selector/Selector';
 import { useGuardiaDeSalida, useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { AjusteDelFondo } from './AjusteDelFondo';
 import { Colores, type CampoDeColor } from './Colores';
 import { GuardarComoTema } from './GuardarComoTema';
 import { Paletas } from './Paletas';
@@ -395,6 +396,8 @@ export function Personalization() {
                       Quitar imagen
                     </Boton>
                   </div>
+                  {/* HE-02-HU14 (P29): el ajuste de la imagen en cada monitor, propio de este computador. */}
+                  <AjusteDelFondo invocar={invocar} escuchar={escuchar} />
                   <p>JPG, JPEG o PNG. Máximo 20 MB.</p>
                   {rechazo && <p role="alert">{rechazo}</p>}
                   {fondo?.source === 'own' && imagenFaltante === claveDelFondo && (

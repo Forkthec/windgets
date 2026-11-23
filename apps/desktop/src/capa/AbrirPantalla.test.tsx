@@ -32,6 +32,7 @@ const ESTADO: LayerInitialState = {
   ],
   monitors: [],
   wallpaper_state: 'ok',
+  wallpaper_fit: [],
 };
 
 const PUNTO = { x: 50, y: 50, monitor_id: '0', button: 'primary' } as const;
@@ -108,11 +109,10 @@ describe('HE-06-HU08 · Abrir la pantalla relacionada desde un widget', () => {
   it('HE-06-HU08-CA01 · Abrir el detalle de una tarjeta de Tareas del día', async () => {
     const capa = await pintarCapa([PAGAR]);
     const tareas = capa.widget('Tareas del día');
-    // ET01: la tarjeta, fuera de la casilla y de «⋮», abre su detalle.
+    // ET01: la tarjeta, fuera de la casilla, abre su detalle (P29 retiró «⋮» del widget, HE-06-HU04-CA06).
     await capa.seleccionar(within(tareas).getByText('Pagar la luz'));
     expect(capa.pedidas()).toEqual([{ screen: 'planner_daily', params: { card_id: PAGAR.id } }]);
-    // La casilla y «⋮» no abren pantallas.
-    await capa.seleccionar(within(tareas).getByRole('button', { name: '⋮' }));
+    // La casilla no abre pantallas.
     await capa.seleccionar(within(tareas).getByRole('checkbox', { name: 'Pagar la luz' }));
     expect(capa.pedidas()).toHaveLength(1);
     // ET07: un widget que no es interactivo (Reloj) no abre pantallas.

@@ -1,6 +1,6 @@
 //! El manejador de propuestas sobre el planificador (HE-14-HU03): lee el estado actual de las tarjetas y aplica
 //! cada acción con las mismas reglas de `card_*`. Cada acción llega con su HU: crear (HE-14-HU04), editar
-//! (HE-14-HU05), mover (HE-14-HU06) y eliminar (HE-14-HU07).
+//! (HE-14-HU05), mover (HE-14-HU06) y eliminar (HE-14-HU07); y crear etiquetas (HE-14-HU10, P29).
 //!
 //! HE-14-HU03-ET10: si una propuesta no se puede preparar, el motivo es un error de negocio con su código estable y
 //! el texto que Windi muestra en el chat. HE-14-HU03-ET12: una propuesta se aplica completa, en una sola
@@ -11,14 +11,15 @@ use serde_json::{Map, Value, json};
 use super::ManejadorDePropuestas;
 use crate::messages;
 use crate::servicio_del_planificador::{
-    Calendario, ServicioDelPlanificador, clave_alfabetica, de_sqlx, error, inesperado,
-    validar_cantidad_de_etiquetas, validar_creacion, validar_descripcion, validar_fecha_limite,
-    validar_titulo,
+    Calendario, ETIQUETAS_POR_USUARIO_MAX, NOMBRE_DE_ETIQUETA_MAX, ServicioDelPlanificador,
+    clave_alfabetica, de_sqlx, error, inesperado, validar_cantidad_de_etiquetas, validar_creacion,
+    validar_descripcion, validar_fecha_limite, validar_titulo,
 };
 use crate::tipos::{
     AppError, Card, CardCreateParams, CardMoveParams, CardPatch, CardType, CardUpdateParams,
-    Column, ColumnRole, ErrorCode, Label, Placement, PlacementVariant1, PlacementVariant1Kind,
-    ProposalAction, ProposalState, Uuid, WindiChatProposal, WindiProposal, WindiProposalItem,
+    CatalogItem, Column, ColumnRole, ErrorCode, Label, LabelCreateParams, Placement,
+    PlacementVariant1, PlacementVariant1Kind, ProposalAction, ProposalState, Uuid,
+    WindiChatProposal, WindiProposal, WindiProposalItem,
 };
 
 /// Por qué no se puede preparar una propuesta (HE-14-HU03-ET10): el código estable y el texto que ve la persona.
@@ -229,6 +230,66 @@ fn unir_motivos(motivos: Vec<(Option<String>, AppError)>, tarjetas: usize) -> Mo
     motivo(code, &texto)
 }
 
+/// HE-14-HU10 (P29): una etiqueta que propone Windi, con las reglas de «Nueva etiqueta» (HE-08-HU02) y el color
+/// del catálogo por su id o su nombre. `tomados` son los nombres ya usados, sin mayúsculas.
+fn validar_etiqueta<'c>(
+    nombre: &str,
+    pedido: &str,
+    tomados: &[String],
+    colores: &'c [CatalogItem],
+) -> Result<&'c CatalogItem, AppError> {
+    let lista = || {
+        colores
+            .iter()
+            .map(|c| c.name.as_str())
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    // CA03: sin nombre, Windi lo pide.
+    if nombre.is_empty() {
+        return Err(motivo(
+            ErrorCode::NameRequired,
+            messages::WINDI_NOMBRE_DE_LA_ETIQUETA,
+        ));
+    }
+    // CA04, CA05: las mismas reglas y los mismos textos que la pantalla Etiquetas.
+    if nombre.chars().count() > NOMBRE_DE_ETIQUETA_MAX {
+        return Err(motivo(
+            ErrorCode::NameTooLong,
+            messages::NOMBRE_DE_ETIQUETA_MUY_LARGO,
+        ));
+    }
+    if tomados.contains(&nombre.to_lowercase()) {
+        return Err(motivo(
+            ErrorCode::NameDuplicate,
+            messages::ETIQUETA_DUPLICADA,
+        ));
+    }
+    // CA02: el color es obligatorio y no tiene valor por defecto (D-162); Windi lo pregunta con los colores.
+    if pedido.is_empty() {
+        return Err(motivo(
+            ErrorCode::WindiLabelColorRequired,
+            &messages::WINDI_COLOR_DE_LA_ETIQUETA
+                .replace("<nombre>", nombre)
+                .replace("<colores>", &lista()),
+        ));
+    }
+    let clave = clave_alfabetica(pedido);
+    colores
+        .iter()
+        .find(|c| c.id.eq_ignore_ascii_case(pedido))
+        .or_else(|| colores.iter().find(|c| clave_alfabetica(&c.name) == clave))
+        .ok_or_else(|| {
+            // CA08: un color que no está en el catálogo.
+            motivo(
+                ErrorCode::WindiColorNotFound,
+                &messages::WINDI_COLOR_NO_ENCONTRADO
+                    .replace("<color>", pedido)
+                    .replace("<colores>", &lista()),
+            )
+        })
+}
+
 /// Los datos de una tarjeta nueva ya preparada, con el tipo Tarea si no se indicó otro (HE-14-HU04-ET02).
 fn datos_de_creacion(cambios: Option<&Value>) -> Result<CardCreateParams, AppError> {
     let mut params: CardCreateParams =
@@ -251,6 +312,7 @@ impl<C: Calendario> ManejadorDePropuestas for ManejadorDelPlanificador<'_, C> {
             ProposalAction::Edit => self.preparar_edicion(propuesta).await,
             ProposalAction::Move => self.preparar_movimiento(propuesta).await,
             ProposalAction::Delete => self.preparar_eliminacion(propuesta).await,
+            ProposalAction::CreateLabel => self.preparar_etiquetas(propuesta).await,
         }
     }
 
@@ -271,6 +333,7 @@ impl<C: Calendario> ManejadorDePropuestas for ManejadorDelPlanificador<'_, C> {
             ProposalAction::Edit => self.aplicar_edicion(&mut tx, propuesta).await?,
             ProposalAction::Move => self.aplicar_movimiento(&mut tx, propuesta).await?,
             ProposalAction::Delete => self.aplicar_eliminacion(&mut tx, propuesta).await?,
+            ProposalAction::CreateLabel => self.aplicar_etiquetas(&mut tx, propuesta).await?,
         };
         tx.commit().await.map_err(de_sqlx)?;
         Ok(Some(texto))
@@ -711,6 +774,109 @@ impl<C: Calendario> ManejadorDelPlanificador<'_, C> {
             items,
             warnings,
             state: ProposalState::Active,
+        })
+    }
+
+    /// HE-14-HU10 (P29): valida cada etiqueta (CA02 a CA06, CA08) y muestra su nombre y su color. Con varias, el
+    /// texto nombra cada una que no es válida (como HE-14-HU04-ET12).
+    async fn preparar_etiquetas(
+        &self,
+        propuesta: &WindiChatProposal,
+    ) -> Result<WindiProposal, AppError> {
+        let existentes = self.planificador.etiquetas(self.user_id).await?;
+        let colores = self.planificador.colores().await?;
+        let mut tomados: Vec<String> = existentes
+            .iter()
+            .map(|e| e.name.trim().to_lowercase())
+            .collect();
+        let mut items = Vec::new();
+        let mut motivos = Vec::new();
+        for item in &propuesta.items {
+            let cambios = item.changes.as_ref().and_then(Value::as_object);
+            let texto = |campo: &str| {
+                cambios
+                    .and_then(|c| c.get(campo))
+                    .and_then(Value::as_str)
+                    .map_or(String::new(), |t| t.trim().to_string())
+            };
+            let nombre = texto("name");
+            // Al confirmar se vuelve a validar la propuesta ya preparada, que guarda `color_id` (HE-14-HU03-ET13).
+            let pedido = Some(texto("color"))
+                .filter(|c| !c.is_empty())
+                .unwrap_or_else(|| texto("color_id"));
+            match validar_etiqueta(&nombre, &pedido, &tomados, &colores) {
+                Ok(color) => {
+                    tomados.push(nombre.to_lowercase());
+                    items.push(WindiProposalItem {
+                        card_id: None,
+                        current: None,
+                        changes: Some(json!({
+                            "name": nombre,
+                            "color_id": color.id,
+                            "color_name": color.name,
+                            "hex": color.hex,
+                        })),
+                        title: nombre,
+                    });
+                }
+                Err(e) => motivos.push(((!nombre.is_empty()).then_some(nombre), e)),
+            }
+        }
+        if !motivos.is_empty() {
+            return Err(unir_motivos(motivos, propuesta.items.len()));
+        }
+        if items.is_empty() {
+            return Err(inesperado());
+        }
+        // CA06: el máximo de 20 etiquetas cuenta las que ya existen.
+        if i64::try_from(existentes.len() + items.len()).unwrap_or(i64::MAX)
+            > ETIQUETAS_POR_USUARIO_MAX
+        {
+            return Err(motivo(
+                ErrorCode::LabelLimitReached,
+                messages::MAXIMO_DE_ETIQUETAS_CREADAS,
+            ));
+        }
+        Ok(WindiProposal {
+            id: Uuid(uuid::Uuid::new_v4().to_string()),
+            action: ProposalAction::CreateLabel,
+            items,
+            warnings: Vec::new(),
+            state: ProposalState::Active,
+        })
+    }
+
+    /// HE-14-HU10-CA01: crea las etiquetas con las reglas de `label_create`, en la transacción de la propuesta, y
+    /// confirma con el nombre o la cantidad.
+    async fn aplicar_etiquetas(
+        &self,
+        tx: &mut sqlx::SqliteConnection,
+        propuesta: &WindiProposal,
+    ) -> Result<String, AppError> {
+        let mut nombres = Vec::new();
+        for item in &propuesta.items {
+            let cambios = item.changes.as_ref().ok_or_else(inesperado)?;
+            let texto = |campo: &str| {
+                cambios
+                    .get(campo)
+                    .and_then(Value::as_str)
+                    .map(str::to_string)
+                    .ok_or_else(inesperado)
+            };
+            let params = LabelCreateParams {
+                name: texto("name")?,
+                color_id: texto("color_id")?,
+            };
+            nombres.push(params.name.trim().to_string());
+            self.planificador
+                .crear_etiqueta_en(&mut *tx, self.user_id, params)
+                .await?;
+        }
+        Ok(match nombres.as_slice() {
+            [nombre] => messages::WINDI_ETIQUETA_CREADA.replace("<nombre>", nombre),
+            varias => {
+                messages::WINDI_ETIQUETAS_CREADAS.replace("<cantidad>", &varias.len().to_string())
+            }
         })
     }
 

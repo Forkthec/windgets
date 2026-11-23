@@ -359,6 +359,88 @@ fn ca_he_04_hu05_ca09() {
     assert_eq!(nube.consultas.lock().unwrap().len(), 1);
 }
 
+#[test]
+fn ca_he_04_hu05_ca10() {
+    // HE-04-HU05-CA10 (P29) · Sugerencias al escribir: con 2 caracteres o más el campo Ciudad muestra hasta 5 lugares
+    // del servicio de clima (ET18); con menos no consulta; sin coincidencias la lista viene vacía.
+    let nube = ClimaSimulado::nuevo();
+    let lugares = bloquear(clima::buscar_ciudades(&nube, "jwt", "  Popayán ")).unwrap();
+    assert_eq!(
+        lugares
+            .iter()
+            .map(|l| l.geo_id.as_str())
+            .collect::<Vec<_>>(),
+        ["3673269", "1"]
+    );
+    assert!(
+        bloquear(clima::buscar_ciudades(&nube, "jwt", "P"))
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(nube.consultas.lock().unwrap().len(), 1);
+    assert!(
+        bloquear(clima::buscar_ciudades(&nube, "jwt", "Xyzzy"))
+            .unwrap()
+            .is_empty()
+    );
+    let e = bloquear(clima::buscar_ciudades(&nube, "jwt", &"a".repeat(101))).unwrap_err();
+    assert_eq!(e.code, ErrorCode::CityTooLong);
+    assert_eq!(e.field.as_deref(), Some("city"));
+    // Sin conexión, el mensaje claro de la ciudad (no el genérico).
+    struct SinRed;
+    impl NubeDeClima for SinRed {
+        async fn geocodificar(
+            &self,
+            _: &str,
+            _: &WeatherGeocodeRequest,
+        ) -> Result<WeatherGeocodeResponse, FallaDeAuth> {
+            Err(FallaDeAuth::SinConexion)
+        }
+        async fn clima_actual(
+            &self,
+            _: &str,
+            _: &WeatherCurrentRequest,
+        ) -> Result<WeatherCurrentResponse, FallaDeAuth> {
+            Err(FallaDeAuth::SinConexion)
+        }
+        async fn titulares(
+            &self,
+            _: &str,
+            _: &crate::tipos::NewsHeadlinesRequest,
+        ) -> Result<crate::tipos::NewsHeadlinesResponse, FallaDeAuth> {
+            Err(FallaDeAuth::SinConexion)
+        }
+    }
+    let e = bloquear(clima::buscar_ciudades(&SinRed, "jwt", "Cali")).unwrap_err();
+    assert_eq!(e.code, ErrorCode::NetOffline);
+}
+
+#[test]
+fn ca_he_04_hu05_ca11() {
+    // HE-04-HU05-CA11 (P29) · Elegir un lugar de las sugerencias: el widget queda con ese lugar (no con la primera
+    // coincidencia) y el Núcleo no vuelve a consultar (ET18).
+    let (base, servicio) = con_widgets_por_defecto();
+    let nube = ClimaSimulado::nuevo();
+    let elegido = ciudad("1", "Popayán (otra)");
+    let lugar = bloquear(clima::elegir_lugar(&nube, "jwt", "Popayán", Some(&elegido))).unwrap();
+    assert_eq!(lugar, elegido);
+    assert!(nube.consultas.lock().unwrap().is_empty());
+    let w = bloquear(servicio.agregar_clima(&base, USUARIO, &lugar, AHORA_MS)).unwrap();
+    let guardado = de_clima(&base, &w.widget_id.0);
+    assert_eq!(
+        (guardado.1.as_str(), guardado.2.as_str()),
+        ("Popayán (otra)", "1")
+    );
+    // Sin lugar elegido, como antes: la primera coincidencia.
+    let primero = bloquear(clima::elegir_lugar(&nube, "jwt", "Cali", None)).unwrap();
+    assert_eq!(primero.geo_id, "3687925");
+    // Un lugar con datos imposibles no se acepta.
+    let mut malo = ciudad("2", "Sin coordenadas");
+    malo.latitude = 120.0;
+    let e = bloquear(clima::elegir_lugar(&nube, "jwt", "x", Some(&malo))).unwrap_err();
+    assert_eq!(e.code, ErrorCode::CityNotFound);
+}
+
 // HE-04-HU06 · Agregar el widget Noticias.
 
 fn agregar_noticias(

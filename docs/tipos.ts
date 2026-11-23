@@ -65,6 +65,7 @@ export type ErrorCode =
   // imágenes y catálogos
   | 'image.format_not_allowed' | 'image.too_large' | 'image.unreadable' | 'asset.unavailable'
   // widgets
+  | 'monitor.not_found' | 'monitor.not_configurable'
   | 'widget.not_found' | 'widget.already_added' | 'widget.default_not_deletable' | 'layout.widget_missing'
   | 'city.not_found' | 'city.duplicate' | 'city.too_long'
   | 'text.too_long'
@@ -76,7 +77,8 @@ export type ErrorCode =
   | 'media.no_session' | 'media.action_unsupported'
   // agente de IA
   | 'message.too_long' | 'windi.unavailable' | 'proposal.discarded' | 'windi.card_not_found' | 'windi.column_not_found' | 'windi.label_not_found'
-  | 'windi.same_value' | 'windi.already_in_column' | 'windi.apply_failed';
+  | 'windi.same_value' | 'windi.already_in_column' | 'windi.apply_failed'
+  | 'windi.label_color_required' | 'windi.color_not_found';
 
 /** Parámetros con los que el Núcleo sustituye los marcadores del mensaje (contratos.md, 1.4). */
 export type ErrorParams = Record<string, string | number>;
@@ -234,7 +236,8 @@ export interface ImageRef {
   uploaded_image_id?: Uuid;
 }
 
-export interface WeatherConfig { city: string }
+/** HE-04-HU05-ET18 (P29): `place` es el lugar elegido de las sugerencias de IPC-WID-08. */
+export interface WeatherConfig { city: string; place?: GeocodeResult }
 export interface TextConfig { text: string }
 export interface AnimationConfig { animation_id: string }
 export interface StaticImageConfig extends ImageRef {}
@@ -539,6 +542,8 @@ export interface WidgetCatalog { external: WidgetCatalogEntry[]; local: WidgetCa
 export interface WidgetSetActiveParams { widget_id: Uuid; active: boolean }
 export interface WidgetAddParams { type: AddableWidgetType; config: WidgetConfig }
 export interface WidgetConfigureParams { widget_id: Uuid; config: WeatherConfig | TextConfig }
+/** IPC-WID-08 `weather_city_search` (HE-04-HU05-ET18; P29). */
+export interface WeatherCitySearchParams { query: string }
 export interface WidgetDeleteParams { widget_id: Uuid }
 export interface WidgetDataParams { widget_id: Uuid }
 export type WidgetDataStatus = 'ok' | 'error' | 'offline';
@@ -576,8 +581,16 @@ export interface LayerInitialState {
   widgets: WidgetRect[];
   monitors: Monitor[];
   wallpaper_state: WallpaperState;
+  /** HE-02-HU14 (P29): el ajuste de la imagen en cada monitor, en el orden de `monitors`. */
+  wallpaper_fit: WallpaperMonitorFit[];
 }
 export interface WallpaperStatus { state: WallpaperState }
+/** HE-02-HU14 (P29): Rellenar, Ajustar, Expandir, Mosaico, Centrar y Extender, como en Windows. */
+export type WallpaperFit = 'fill' | 'fit' | 'stretch' | 'tile' | 'center' | 'span';
+export interface WallpaperMonitorFit { monitor_id: string; number: number; is_primary: boolean; fit: WallpaperFit }
+/** Hasta 6 monitores; `other_monitors` usan el ajuste del principal. */
+export interface WallpaperFitSettings { monitors: WallpaperMonitorFit[]; other_monitors: number }
+export interface WallpaperFitSetParams { monitor_id: string; fit: WallpaperFit }
 export interface AppOpenScreenParams { screen: ScreenId; params?: ScreenParams }
 export interface LastScreen { screen: ScreenId | null }
 export interface AppSetLastScreenParams { screen: ScreenId }
@@ -612,7 +625,8 @@ export interface WindiMessage {
   /** El mensaje del usuario que no recibió respuesta; la vista agrega «Reintentar». */
   failed: boolean;
 }
-export type ProposalAction = 'create' | 'edit' | 'move' | 'delete';
+/** HE-14-HU10 (P29): `create_label` crea etiquetas con su nombre y su color. */
+export type ProposalAction = 'create' | 'edit' | 'move' | 'delete' | 'create_label';
 export type ProposalState = 'active' | 'confirmed' | 'rejected' | 'discarded';
 export interface WindiProposalItem {
   card_id: Uuid | null;
@@ -734,6 +748,7 @@ export interface CommandMap {
   widget_set_active: { params: WidgetSetActiveParams; result: WidgetItem };
   widget_add: { params: WidgetAddParams; result: WidgetItem };
   widget_configure: { params: WidgetConfigureParams; result: WidgetItem };
+  weather_city_search: { params: WeatherCitySearchParams; result: GeocodeResult[] };
   widget_delete: { params: WidgetDeleteParams; result: Void };
   widget_get_data: { params: WidgetDataParams; result: WidgetData };
   // a.9 edición de la distribución
@@ -746,6 +761,8 @@ export interface CommandMap {
   // a.10 escritorio, wallpaper y sistema
   layer_get_initial_state: { params: NoParams; result: LayerInitialState };
   wallpaper_get_status: { params: NoParams; result: WallpaperStatus };
+  wallpaper_fit_get: { params: NoParams; result: WallpaperFitSettings };
+  wallpaper_fit_set: { params: WallpaperFitSetParams; result: WallpaperFitSettings };
   app_open_screen: { params: AppOpenScreenParams; result: Void };
   app_get_last_screen: { params: NoParams; result: LastScreen };
   app_set_last_screen: { params: AppSetLastScreenParams; result: Void };
@@ -815,6 +832,8 @@ export interface EventMap {
   layout_edit_state_changed: { open: boolean; dirty: boolean };
   wallpaper_status_changed: { state: WallpaperState };
   monitors_changed: { monitors: Monitor[] };
+  /** EV-30 (HE-02-HU14; P29). */
+  wallpaper_fit_changed: { monitors: WallpaperMonitorFit[] };
   /** Coordenadas en el sistema de la capa. */
   pointer_forwarded: { x: number; y: number; monitor_id: string; button: 'primary' };
   /** EV-27: al soltar sin mover el puntero más de 4 px desde EV-18; coordenadas de la capa. */
@@ -984,6 +1003,8 @@ export interface WindiChatContext {
   now_hour: Hour;
   columns: Array<{ id: Uuid; name: string; role: ColumnRole }>;
   labels: Array<{ id: Uuid; name: string }>;
+  /** HE-14-HU10 (P29): los colores del catálogo para crear etiquetas. */
+  colors: Array<{ id: string; name: string }>;
   /** Solo las tarjetas necesarias para la pregunta, incluidos los cambios aún no sincronizados (D-193). */
   cards: WindiChatContextCard[];
   totals: { total: number; overdue: number; pending: number; completed: number };

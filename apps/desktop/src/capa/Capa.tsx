@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { invocar as invocarNucleo } from '@/ipc/cliente';
 import { escuchar as escucharNucleo, type Escuchar } from '@/ipc/eventos';
 import { escucharArrastreReenviado, type EscucharArrastre } from '@/ipc/arrastreReenviado';
+import { desplazarConLaRueda, escucharRuedaReenviada, type EscucharRueda } from '@/ipc/ruedaReenviada';
 import { urlDeArchivo } from '@/ipc/archivos';
 import { Reloj } from './Reloj';
 import { TareasDelDia } from './TareasDelDia';
@@ -14,6 +15,7 @@ import { WidgetCarrusel } from './WidgetCarrusel';
 import { WidgetAnimacion } from './WidgetAnimacion';
 import { WidgetTexto } from './WidgetTexto';
 import { WidgetReproductor } from './WidgetReproductor';
+import { fondosPorMonitor } from './fondo';
 import { tokensDelTema } from '@/ui/tema/temaAplicado';
 import { aplicarTokens } from '@/ui/tema/tokens';
 import type {
@@ -117,12 +119,15 @@ export interface CapaProps {
   escuchar?: Escuchar;
   /** El arrastre que sigue a una selección reenviada (HE-06-HU06). */
   escucharArrastre?: EscucharArrastre;
+  /** La rueda del mouse sobre un widget (HE-06-HU01-CA09). */
+  escucharRueda?: EscucharRueda;
 }
 
 export function Capa({
   invocar = invocarNucleo,
   escuchar = escucharNucleo,
   escucharArrastre = escucharArrastreReenviado,
+  escucharRueda = escucharRuedaReenviada,
 }: CapaProps) {
   const [pintado, setPintado] = useState<Pintado | null>(null);
   // HE-05-HU04-ET05: varias lecturas pueden cruzarse (guardar la distribución avisa con EV-13 y otros eventos);
@@ -159,7 +164,11 @@ export function Capa({
     // EV-17: al cambiar un monitor o la escala de Windows, la capa vuelve a leer los monitores y dibuja los widgets
     // con la escala nueva, sin reiniciar la aplicación (RNF-34, HE-05-HU02-ET07; P26).
     const dejarMonitores = escuchar('monitors_changed', () => void leer());
+    // EV-30 (HE-02-HU14; P29): al cambiar el ajuste del fondo de un monitor, se pinta sin reiniciar.
+    const dejarAjuste = escuchar('wallpaper_fit_changed', () => void leer());
     const dejarSeleccion = escuchar('pointer_released', (carga) => entregarSeleccion(carga));
+    // HE-06-HU01-CA09 (P29): la rueda sobre un widget desplaza su contenido.
+    const dejarRueda = escucharRueda((rueda) => void desplazarConLaRueda(rueda));
     return () => {
       vigente = false;
       dejarEstado();
@@ -167,14 +176,21 @@ export function Capa({
       dejarWidgets();
       dejarDistribucion();
       dejarMonitores();
+      dejarAjuste();
       dejarSeleccion();
+      dejarRueda();
     };
-  }, [escuchar, invocar]);
+  }, [escuchar, escucharRueda, invocar]);
 
   // Sin sesión la capa no pinta y se ve el fondo original de Windows (HE-02-HU01-CA05, ET07).
   if (!pintado || pintado.estado.wallpaper_state === 'hidden') return null;
 
   const { colors } = pintado.estado.applied;
+  // HE-02-HU14 (P29): cada monitor con su ajuste; `null` es Extender (una sola imagen sobre todos).
+  const principal = monitorPrincipal(pintado.estado.monitors);
+  const fondos = pintado.imagen
+    ? fondosPorMonitor(pintado.estado.monitors, pintado.estado.wallpaper_fit ?? [], principal.scale_factor)
+    : null;
   return (
     <main
       aria-label="Wallpaper"
@@ -184,7 +200,7 @@ export function Capa({
         background: colors.primary,
         color: colors.text,
         // La imagen cubre el escritorio sin deformarse (HE-02-HU03-ET05).
-        ...(pintado.imagen
+        ...(pintado.imagen && !fondos
           ? {
               backgroundImage: `url("${pintado.imagen}")`,
               backgroundSize: 'cover',
@@ -193,6 +209,16 @@ export function Capa({
           : {}),
       }}
     >
+      {pintado.imagen &&
+        fondos?.map((f) => (
+          <div
+            key={f.monitor_id}
+            className="wg-fondo"
+            data-monitor-id={f.monitor_id}
+            aria-hidden="true"
+            style={{ ...f.estilo, backgroundImage: `url("${pintado.imagen}")` }}
+          />
+        ))}
       {pintado.estado.widgets.map((w) => (
         <section
           key={w.widget_id}

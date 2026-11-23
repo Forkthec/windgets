@@ -137,6 +137,12 @@ pub enum ErrorCode {
     AssetUnavailable,
     #[serde(rename = "widget.not_found")]
     WidgetNotFound,
+    /// HE-02-HU14-CA07 (P29): el monitor se desconectó antes de elegir su ajuste.
+    #[serde(rename = "monitor.not_found")]
+    MonitorNotFound,
+    /// HE-02-HU14-CA06 (P29): el 7.º monitor y los siguientes usan el ajuste del principal.
+    #[serde(rename = "monitor.not_configurable")]
+    MonitorNotConfigurable,
     #[serde(rename = "widget.already_added")]
     WidgetAlreadyAdded,
     #[serde(rename = "widget.default_not_deletable")]
@@ -187,6 +193,12 @@ pub enum ErrorCode {
     WindiAlreadyInColumn,
     #[serde(rename = "windi.apply_failed")]
     WindiApplyFailed,
+    /// HE-14-HU10-CA02 (P29): la etiqueta que propone Windi no trae color.
+    #[serde(rename = "windi.label_color_required")]
+    WindiLabelColorRequired,
+    /// HE-14-HU10-CA08 (P29): el color no está en el catálogo.
+    #[serde(rename = "windi.color_not_found")]
+    WindiColorNotFound,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
