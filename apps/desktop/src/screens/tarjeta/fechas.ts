@@ -49,3 +49,16 @@ export function fechaLarga(iso: string): string {
   });
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
+
+const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+/**
+ * docs/rediseno.md RD-49 (Figma 93:12 «27 nov»): el día y el mes abreviado; con el año si no es el de `hoy`. Solo en
+ * las tarjetas del Tablero Kanban.
+ */
+export function fechaCorta(iso: string, referencia: Date = hoy()): string {
+  const [anio, mes, dia] = iso.split('-').map(Number);
+  if (!anio || !mes || !dia) return iso;
+  const texto = `${dia} ${MESES_CORTOS[mes - 1]}`;
+  return anio === referencia.getFullYear() ? texto : `${texto} ${anio}`;
+}

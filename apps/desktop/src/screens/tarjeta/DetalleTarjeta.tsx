@@ -23,10 +23,11 @@ export interface DetalleTarjetaProps {
 /** Un dato del detalle: su nombre y su valor. */
 function Dato({ nombre, children }: { nombre: string; children: React.ReactNode }) {
   return (
-    <>
+    // docs/rediseno.md RD-50 (Figma 84:514): cada dato en una fila «Tipo · Tarea».
+    <div className="wg-detalle__fila">
       <dt className="wg-campo__etiqueta">{nombre}</dt>
       <dd>{children}</dd>
-    </>
+    </div>
   );
 }
 
@@ -55,15 +56,14 @@ export function DetalleTarjeta({ id, alCerrar, alNoExistir, alEditar, alEliminar
       acciones={
         // ET04
         <>
-          <Boton disabled={!detalle} onClick={() => detalle && alEditar?.(detalle)}>
+          {/* RD-50 (84:514): «Editar» es la acción principal, primero; «Cerrar» va al final. */}
+          <Boton principal disabled={!detalle} onClick={() => detalle && alEditar?.(detalle)}>
             Editar
           </Boton>
           <Boton disabled={!detalle} onClick={() => detalle && alEliminar?.(detalle)}>
             Eliminar
           </Boton>
-          <Boton principal onClick={alCerrar}>
-            Cerrar
-          </Boton>
+          <Boton onClick={alCerrar}>Cerrar</Boton>
         </>
       }
     >

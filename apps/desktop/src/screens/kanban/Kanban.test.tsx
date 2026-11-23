@@ -50,10 +50,30 @@ describe('HE-09-HU01 · Tablero Kanban', () => {
     ]);
     // ET05: vista compacta con título, fecha límite y prioridad.
     const leer = within(columna('Por hacer')).getByText('Leer el capítulo 3').closest('li') as HTMLElement;
-    expect(within(leer).getByText('18/11/2026')).toBeTruthy();
+    // docs/rediseno.md RD-49 (Figma 93:12): la fecha corta.
+    expect(within(leer).getByText('18 nov')).toBeTruthy();
     expect(within(leer).getByText('Alta')).toBeTruthy();
     expect(within(columna('En progreso')).getByText('Ensayo')).toBeTruthy();
     expect(within(columna('En progreso')).getByText('Baja')).toBeTruthy();
+  });
+
+  it('RD-48, RD-49 · La barra de la primera etiqueta y el detalle «Tipo · etiquetas · fecha · prioridad»', async () => {
+    await abrirPantalla('kanban', 'Tablero Kanban', Kanban, [
+      tarjeta({ title: 'Leer el capítulo 3', due_date: '2026-11-18', priority: 'high', label_ids: ['e1'] }),
+      tarjeta({ title: 'Ensayo', due_date: '2027-01-05' }),
+    ]);
+    const leer = within(columna('Por hacer')).getByText('Leer el capítulo 3').closest('li') as HTMLElement;
+    const barra = leer.querySelector('.wg-kanban__barra') as HTMLElement;
+    expect(barra.style.background).toBe('rgb(33, 150, 243)');
+    expect(barra.getAttribute('aria-hidden')).toBe('true');
+    const detalle = Array.from(leer.querySelectorAll('.wg-kanban__detalle > span')).map((e) => e.textContent);
+    expect(detalle).toEqual(['Tarea', 'Estudio', '18 nov', 'Alta']);
+    // Sin etiquetas no hay barra; de otro año, la fecha lleva el año.
+    const ensayo = within(columna('Por hacer')).getByText('Ensayo').closest('li') as HTMLElement;
+    expect(ensayo.querySelector('.wg-kanban__barra')).toBeNull();
+    expect(within(ensayo).getByText('5 ene 2027')).toBeTruthy();
+    // El menú «⋮» se conserva (RT-02-ET10).
+    expect(within(ensayo).getByRole('button', { name: 'Acciones de Ensayo' })).toBeTruthy();
   });
 
   it('HE-09-HU01-CA03 · Columna sin tarjetas entre columnas con tarjetas', async () => {
