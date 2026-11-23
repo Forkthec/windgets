@@ -11,14 +11,19 @@ export interface EncabezadoDeRutaProps {
   niveles?: readonly NivelDeMiga[];
   /** Vuelve a la pantalla, subpantalla o paso inmediatamente anterior sin completar la acción (ET05). */
   alRegresar: () => void;
+  /**
+   * docs/rediseno.md RD-59: en las subpantallas de Agregar widget «Regresar» va al final, junto a «Agregar»
+   * (Figma 84:758); ahí la pantalla lo pone y el encabezado solo lleva la miga de pan.
+   */
+  conRegresar?: boolean;
 }
 
 /** Parte superior de una pantalla con ruta: la miga de pan y la opción «Regresar» (RT-03-ET01, ET03). */
-export function EncabezadoDeRuta({ niveles, alRegresar }: EncabezadoDeRutaProps) {
+export function EncabezadoDeRuta({ niveles, alRegresar, conRegresar = true }: EncabezadoDeRutaProps) {
   return (
     <header className="wg-fila wg-encabezado-ruta">
       {niveles && niveles.length > 0 && <MigaDePan niveles={niveles} />}
-      <Boton onClick={alRegresar}>Regresar</Boton>
+      {conRegresar && <Boton onClick={alRegresar}>Regresar</Boton>}
     </header>
   );
 }

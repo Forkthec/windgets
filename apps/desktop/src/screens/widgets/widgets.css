@@ -81,3 +81,115 @@
     gap: 16px;
   }
 }
+
+/* Subpantallas de Agregar widget (docs/rediseno.md RD-58 a RD-60; Figma 84:726 a 84:888, bocetos de 1280 × 790). Van
+ * dentro de la tarjeta del marco (RD-32) con la miga de pan arriba; el título suelto del boceto no se copia (RD-27). */
+.wg-subpantalla-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.wg-subpantalla-widget > :is(p, section, h2) {
+  margin: 0;
+}
+.wg-subpantalla-widget section > h2 {
+  margin: 0 0 15px;
+}
+/* RD-58: cada widget del catálogo en una fila de 57 px con fondo de columna y radio 8 (84:730 a 84:734), cada 72 px;
+ * el nombre en 17 px peso 500 y la descripción en 17 px. */
+.wg-lista.wg-subpantalla-widget__catalogo {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wg-subpantalla-widget__catalogo > .wg-lista__elemento,
+.wg-subpantalla-widget__catalogo > li {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+body[data-modo] .wg-subpantalla-widget__catalogo button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 57px;
+  padding: 8px 15px;
+  border-radius: 8px;
+  background: var(--wgm-columna);
+  color: var(--wg-tinta);
+  font-size: 17px;
+  font-weight: 400;
+  text-align: left;
+}
+.wg-subpantalla-widget__catalogo .wg-lista__nombre {
+  font-weight: 500;
+}
+body[data-modo] .wg-subpantalla-widget__catalogo button[aria-pressed='true'] {
+  background: var(--wgm-seleccion-fondo);
+  color: var(--wgm-seleccion-texto);
+  font-weight: 500;
+}
+/* Mientras el archivo del catálogo se descarga (HE-02-HU02), un espacio del tamaño de la miniatura. */
+.wg-subpantalla-widget__sin-miniatura {
+  display: block;
+  flex: none;
+  width: 96px;
+  height: 54px;
+  border-radius: 5px;
+  background: var(--wg-superficie-baja);
+  outline: 1px dashed var(--wg-borde);
+  outline-offset: -1px;
+}
+/* RD-60: el dato de la subpantalla (descripción, imagen o imágenes elegidas, vista previa) en una fila de fondo de
+ * columna con radio 8, de 57 px como mínimo y 17 px (84:774, 84:794, 84:818, 84:842, 84:882). */
+.wg-subpantalla-widget__dato {
+  min-height: 57px;
+  padding: 11px 15px;
+  border-radius: 8px;
+  background: var(--wgm-columna);
+  color: var(--wg-tinta);
+  font-size: 17px;
+}
+.wg-subpantalla-widget__dato > :is(p, ol) {
+  margin: 0;
+}
+.wg-subpantalla-widget__dato > ol {
+  padding-left: 20px;
+}
+/* RD-59: el campo en una columna de 522 px (84:754, 84:862), con la etiqueta en 15 px peso 500 (89:24). */
+.wg-subpantalla-widget__formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 522px;
+}
+.wg-subpantalla-widget__formulario .wg-campo__etiqueta {
+  font-size: 15px;
+  font-weight: 500;
+}
+/* RD-58 a RD-60: las acciones abajo a la izquierda, 12 px entre ellas, con la principal antes de «Regresar» (84:756,
+ * 84:758); de 48 px de alto y radio 9. */
+.wg-subpantalla-widget__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+body[data-modo] .wg-subpantalla-widget__acciones .wg-boton {
+  min-height: 48px;
+  border-radius: 9px;
+  font-size: 16px;
+  font-weight: 500;
+}
+/* El motivo de una acción deshabilitada (RT-04) va debajo de la fila de acciones, no entre ellas. */
+.wg-subpantalla-widget__acciones > span.wg-fila {
+  display: contents;
+}
+.wg-subpantalla-widget__acciones .wg-motivo {
+  order: 1;
+  flex-basis: 100%;
+}

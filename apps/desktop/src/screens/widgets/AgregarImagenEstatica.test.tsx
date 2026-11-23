@@ -118,4 +118,28 @@ describe('HE-04-HU07 · Agregar el widget Imagen estática', () => {
     expect(await screen.findByRole('main', { name: 'Agregar widget' })).toBeTruthy();
     expect(llamadasA(n, 'widget_add')).toEqual([]);
   });
+
+  it('HE-04-HU07-ET03 · Sin la miniatura en el computador, el catálogo muestra un espacio y no una imagen rota', async () => {
+    const SIN_ARCHIVO = { id: 'monte', name: 'Monte', thumbnail_url: '' } as CatalogItem;
+    const { sub } = await abrir((n) =>
+      n.responder('catalog_list', () => ({ ok: true, value: [MAR, SIN_ARCHIVO] })),
+    );
+    fireEvent.click(within(sub).getByRole('button', { name: 'Catálogo de imágenes' }));
+    const lista = await within(sub).findByRole('list', { name: 'Catálogo de imágenes' });
+    const [mar, monte] = within(lista).getAllByRole('button');
+    expect(mar?.querySelector('img')?.getAttribute('src')).toBe('mar-t.jpg');
+    expect(monte?.querySelector('img')).toBeNull();
+    expect(monte?.querySelector('.wg-subpantalla-widget__sin-miniatura')).not.toBeNull();
+  });
+
+  it('RD-60 · «Regresar» va al final de las acciones, después de «Agregar», y no en el encabezado', async () => {
+    const { sub } = await abrir();
+    const nombres = within(sub)
+      .getAllByRole('button')
+      .map((b) => b.textContent);
+    expect(nombres.slice(-4)).toEqual(['Subir imagen', 'Catálogo de imágenes', 'Agregar', 'Regresar']);
+    expect(within(sub).getAllByRole('button', { name: 'Regresar' })).toHaveLength(1);
+    fireEvent.click(within(sub).getByRole('button', { name: 'Regresar' }));
+    expect(await screen.findByRole('main', { name: 'Agregar widget' })).toBeTruthy();
+  });
 });

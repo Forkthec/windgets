@@ -40,7 +40,7 @@ export function AgregarSinDatos({
   const { ejecutar, enCurso } = useEnvioUnico(agregar);
 
   return (
-    <main aria-label={nombre}>
+    <main className="wg-subpantalla-widget" aria-label={nombre}>
       <EncabezadoDeRuta
         niveles={[
           { texto: 'Widgets', alElegir: alIrAWidgets },
@@ -48,12 +48,17 @@ export function AgregarSinDatos({
           { texto: nombre },
         ]}
         alRegresar={alRegresar}
+        conRegresar={false}
       />
-      <p>{descripcion}</p>
+      {/* docs/rediseno.md RD-60: la descripción en una fila de fondo de columna (84:774, 84:882). */}
+      <p className="wg-subpantalla-widget__dato">{descripcion}</p>
       {mensaje && <p role="alert">{mensaje}</p>}
-      <Boton principal disabled={enCurso} onClick={() => void ejecutar()}>
-        Agregar
-      </Boton>
+      <div className="wg-subpantalla-widget__acciones">
+        <Boton principal disabled={enCurso} onClick={() => void ejecutar()}>
+          Agregar
+        </Boton>
+        <Boton onClick={alRegresar}>Regresar</Boton>
+      </div>
     </main>
   );
 }

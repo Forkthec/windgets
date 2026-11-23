@@ -7,6 +7,7 @@ import textos from '@/types/messages.es.json';
 import { Boton } from '@/ui/Boton/Boton';
 import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { MiniaturaDelCatalogo } from './MiniaturaDelCatalogo';
 
 // Subpantalla Carrusel de imágenes (Widgets > Agregar widget > Carrusel de imágenes; HE-04-HU08-ET01): «Subir
 // imagen», «Catálogo de imágenes», la lista de imágenes elegidas con «<cantidad> de 10», el campo Intervalo en
@@ -109,7 +110,7 @@ export function AgregarCarrusel({ alRegresar, alIrAWidgets }: AgregarCarruselPro
   const { ejecutar, enCurso } = useEnvioUnico(agregar);
 
   return (
-    <main aria-label="Carrusel de imágenes">
+    <main className="wg-subpantalla-widget" aria-label="Carrusel de imágenes">
       <EncabezadoDeRuta
         niveles={[
           { texto: 'Widgets', alElegir: alIrAWidgets },
@@ -117,8 +118,49 @@ export function AgregarCarrusel({ alRegresar, alIrAWidgets }: AgregarCarruselPro
           { texto: 'Carrusel de imágenes' },
         ]}
         alRegresar={alRegresar}
+        conRegresar={false}
       />
-      <div className="wg-fila">
+      {/* docs/rediseno.md RD-60: las imágenes del carrusel en una fila de fondo de columna (84:818). */}
+      <div className="wg-subpantalla-widget__dato">
+        <p>{`${elegidas.length} de ${MAXIMO}`}</p>
+        <ol aria-label="Imágenes elegidas">
+          {elegidas.map((e, i) => (
+            <li key={`${i}-${e.nombre}`}>{e.nombre}</li>
+          ))}
+        </ol>
+      </div>
+      {catalogo && !lleno && (
+        <ul className="wg-lista wg-subpantalla-widget__catalogo" aria-label="Catálogo de imágenes">
+          {catalogo.map((i) => (
+            <li key={i.id}>
+              <button
+                type="button"
+                className="wg-fila"
+                onClick={() =>
+                  sumar([{ imagen: { source: 'catalog', catalog_image_id: i.id }, nombre: i.name }])
+                }
+              >
+                <MiniaturaDelCatalogo ruta={i.thumbnail_url} />
+                <span>{i.name}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="wg-subpantalla-widget__formulario">
+        <CampoTexto
+          etiqueta="Intervalo (segundos)"
+          valor={intervalo}
+          alCambiar={cambiarIntervalo}
+          inputMode="numeric"
+          mensaje={mensajeIntervalo || undefined}
+        />
+      </div>
+      <p>JPG, JPEG o PNG. Máximo 20 MB.</p>
+      {rechazo && !lleno && <p role="alert">{rechazo}</p>}
+      {/* docs/rediseno.md RD-60: «Subir imagen», «Catálogo de imágenes», «Agregar» y «Regresar» abajo a la izquierda
+          (84:820 a 84:824). */}
+      <div className="wg-subpantalla-widget__acciones">
         {/* ET06: con 10 imágenes, deshabilitadas con su texto (RT-04). */}
         <Boton disabled={lleno} motivo={textos.CARRUSEL_DEMASIADAS_IMAGENES} onClick={() => void subir()}>
           Subir imagen
@@ -130,49 +172,17 @@ export function AgregarCarrusel({ alRegresar, alIrAWidgets }: AgregarCarruselPro
         >
           Catálogo de imágenes
         </Boton>
+        {/* ET07: con menos de 2 imágenes, deshabilitada con su texto (RT-04). */}
+        <Boton
+          principal
+          disabled={elegidas.length < MINIMO || enCurso}
+          motivo={elegidas.length < MINIMO ? textos.CARRUSEL_POCAS_IMAGENES : undefined}
+          onClick={() => void ejecutar()}
+        >
+          Agregar
+        </Boton>
+        <Boton onClick={alRegresar}>Regresar</Boton>
       </div>
-      <p>JPG, JPEG o PNG. Máximo 20 MB.</p>
-      {rechazo && !lleno && <p role="alert">{rechazo}</p>}
-      <p>{`${elegidas.length} de ${MAXIMO}`}</p>
-      <ol aria-label="Imágenes elegidas">
-        {elegidas.map((e, i) => (
-          <li key={`${i}-${e.nombre}`}>{e.nombre}</li>
-        ))}
-      </ol>
-      {catalogo && !lleno && (
-        <ul className="wg-lista" aria-label="Catálogo de imágenes">
-          {catalogo.map((i) => (
-            <li key={i.id}>
-              <button
-                type="button"
-                className="wg-fila"
-                onClick={() =>
-                  sumar([{ imagen: { source: 'catalog', catalog_image_id: i.id }, nombre: i.name }])
-                }
-              >
-                <img src={i.thumbnail_url} alt="" width={96} height={54} />
-                <span>{i.name}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      <CampoTexto
-        etiqueta="Intervalo (segundos)"
-        valor={intervalo}
-        alCambiar={cambiarIntervalo}
-        inputMode="numeric"
-        mensaje={mensajeIntervalo || undefined}
-      />
-      {/* ET07: con menos de 2 imágenes, deshabilitada con su texto (RT-04). */}
-      <Boton
-        principal
-        disabled={elegidas.length < MINIMO || enCurso}
-        motivo={elegidas.length < MINIMO ? textos.CARRUSEL_POCAS_IMAGENES : undefined}
-        onClick={() => void ejecutar()}
-      >
-        Agregar
-      </Boton>
     </main>
   );
 }

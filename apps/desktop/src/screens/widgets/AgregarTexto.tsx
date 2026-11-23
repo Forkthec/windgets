@@ -40,7 +40,7 @@ export function AgregarTexto({ alRegresar, alIrAWidgets }: AgregarTextoProps) {
   const { ejecutar, enCurso } = useEnvioUnico(agregar);
 
   return (
-    <main aria-label="Texto">
+    <main className="wg-subpantalla-widget" aria-label="Texto">
       <EncabezadoDeRuta
         niveles={[
           { texto: 'Widgets', alElegir: alIrAWidgets },
@@ -48,21 +48,28 @@ export function AgregarTexto({ alRegresar, alIrAWidgets }: AgregarTextoProps) {
           { texto: 'Texto' },
         ]}
         alRegresar={alRegresar}
+        conRegresar={false}
       />
-      <CampoTexto
-        etiqueta="Texto"
-        valor={texto}
-        alCambiar={(v) => {
-          setTexto(v);
-          setMensajeDelNucleo('');
-        }}
-        multilinea
-        mensaje={demasiado ? textos.TEXTO_MUY_LARGO : mensajeDelNucleo || undefined}
-      />
-      <p>{`${largo} / ${TEXTO_MAX}`}</p>
-      <Boton principal disabled={deshabilitada || enCurso} onClick={() => void ejecutar()}>
-        Agregar
-      </Boton>
+      <div className="wg-subpantalla-widget__formulario">
+        <CampoTexto
+          etiqueta="Texto"
+          valor={texto}
+          alCambiar={(v) => {
+            setTexto(v);
+            setMensajeDelNucleo('');
+          }}
+          multilinea
+          mensaje={demasiado ? textos.TEXTO_MUY_LARGO : mensajeDelNucleo || undefined}
+        />
+        <p>{`${largo} / ${TEXTO_MAX}`}</p>
+      </div>
+      {/* docs/rediseno.md RD-59: «Agregar» y «Regresar» abajo a la izquierda (84:864, 84:866). */}
+      <div className="wg-subpantalla-widget__acciones">
+        <Boton principal disabled={deshabilitada || enCurso} onClick={() => void ejecutar()}>
+          Agregar
+        </Boton>
+        <Boton onClick={alRegresar}>Regresar</Boton>
+      </div>
     </main>
   );
 }
