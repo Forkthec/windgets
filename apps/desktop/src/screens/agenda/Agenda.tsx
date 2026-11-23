@@ -14,7 +14,8 @@ import { Boton } from '@/ui/Boton/Boton';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
-import { fechaIso, fechaVisible, hoy } from '../tarjeta/fechas';
+import { fechaIso, fechaLarga, hoy } from '../tarjeta/fechas';
+import './agenda.css';
 import { useVentanasDeTarjeta } from '../tarjeta/useVentanasDeTarjeta';
 import { asignacionDelArrastre, type BloqueDeSoltar } from './arrastre';
 
@@ -107,7 +108,10 @@ function Bloque({
       className={clases}
     >
       <section aria-label={textoDelBloque(bloque.hour)} aria-disabled={deshabilitado || undefined}>
-        <h3 className="wg-agenda__hora">{textoDelBloque(bloque.hour)}</h3>
+        {/* RD-52 (93:45): se ve la hora de inicio; el bloque conserva «HH:00 – HH:00» como nombre accesible. */}
+        <h3 className="wg-agenda__hora" aria-label={textoDelBloque(bloque.hour)}>
+          {textoDelBloque(bloque.hour).slice(0, 5)}
+        </h3>
         {bloque.cards.length > 0 && (
           <ul className="wg-columna__tarjetas">
             {bloque.cards.map((t) => (
@@ -184,9 +188,11 @@ export function Agenda() {
   );
 
   return (
-    <main aria-label="Agenda diaria" aria-busy={agenda === null}>
+    <main className="wg-agenda-diaria" aria-label="Agenda diaria" aria-busy={agenda === null}>
       {/* ET02: la fecha del día consultado y la navegación entre días (ET06, ET07). */}
-      <div className="wg-fila">
+      {/* docs/rediseno.md RD-52 (Figma 93:38 a 93:44): la fecha larga a la izquierda y la navegación a la derecha. */}
+      <div className="wg-fila wg-agenda__cabecera">
+        <h2 className="wg-agenda__fecha">{fechaLarga(dia)}</h2>
         <Boton onClick={() => setDia((d) => otroDia(d, -1))}>Día anterior</Boton>
         <Boton
           onClick={() => {
@@ -197,7 +203,6 @@ export function Agenda() {
           Hoy
         </Boton>
         <Boton onClick={() => setDia((d) => otroDia(d, 1))}>Día siguiente</Boton>
-        <h2 className="wg-agenda__fecha">{fechaVisible(dia)}</h2>
       </div>
       {agenda && (
         <DndContext

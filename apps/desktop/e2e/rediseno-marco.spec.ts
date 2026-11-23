@@ -308,3 +308,35 @@ test('RD-47, RD-48 · Tablero Kanban a la medida de 84:85', async ({ page }) => 
   await expect(page.locator('.wg-kanban__tarjeta').first().getByText('27 nov')).toBeVisible();
   expect(await sinScrollHorizontal(page)).toBe(true);
 });
+
+test('RD-52 · Agenda diaria a la medida de 84:361', async ({ page }) => {
+  await entrar(page);
+  await claro(page);
+  await abrir(page, 'Agenda diaria');
+  // 93:39 a 93:43: los botones de 40 px a la derecha de la fecha.
+  for (const nombre of ['Día anterior', 'Hoy', 'Día siguiente']) {
+    await esperarCaja(page.getByRole('button', { name: nombre, exact: true }), [null, null, null, 40]);
+  }
+  const siguiente = await caja(page.getByRole('button', { name: 'Día siguiente' }));
+  expect(Math.abs(siguiente.x + siguiente.width - 1258)).toBeLessThanOrEqual(TOLERANCIA);
+  // 93:61 «Tarjetas sin horario» de 371 px, alineada a la derecha de la tarjeta.
+  const panel = await caja(page.getByRole('region', { name: 'Tarjetas sin horario' }));
+  expect(Math.abs(panel.width - 371)).toBeLessThanOrEqual(TOLERANCIA);
+  expect(Math.abs(panel.x + panel.width - 1258)).toBeLessThanOrEqual(TOLERANCIA);
+  // 93:45: un bloque cada 65 px.
+  const nueve = await caja(page.getByRole('region', { name: '09:00 – 10:00' }));
+  const diez = await caja(page.getByRole('region', { name: '10:00 – 11:00' }));
+  expect(Math.abs(diez.y - nueve.y - 65)).toBeLessThanOrEqual(TOLERANCIA);
+  expect(await sinScrollHorizontal(page)).toBe(true);
+});
+
+test('RD-53 · Calendario: días abreviados y «Hoy», «Mes», «Semana» abajo', async ({ page }) => {
+  await entrar(page);
+  await claro(page);
+  await abrir(page, 'Calendario');
+  await expect(page.getByRole('columnheader').first()).toHaveText('Lun');
+  const hoy = await caja(page.getByRole('button', { name: 'Hoy' }));
+  const tabla = await caja(page.getByRole('table'));
+  expect(hoy.y).toBeGreaterThan(tabla.y + tabla.height);
+  expect(await sinScrollHorizontal(page)).toBe(true);
+});

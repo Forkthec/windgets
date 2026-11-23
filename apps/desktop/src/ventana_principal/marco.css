@@ -47,6 +47,7 @@ body[data-modo='claro'] {
   --wgm-pie-monitor: #9b8ba8; /* 91:1670 */
   --wgm-seccion-abierta: #f0eaf8; /* 91:1672 */
   --wgm-columna: #f2ecf8; /* 93:6 */
+  --wgm-linea-agenda: #e8deed; /* 93:46 */
   /* El selector «Apariencia» de las pantallas de cuenta (RD-29). */
   --wgc-selector: #ffffff;
   --wgc-selector-borde: #766b81;
@@ -96,6 +97,7 @@ body[data-modo='oscuro'] {
   --wgm-pie-monitor: #9b8ba8;
   --wgm-seccion-abierta: #463453;
   --wgm-columna: #1c1922;
+  --wgm-linea-agenda: #53485d;
   --wgc-selector: #2b2534;
   --wgc-selector-borde: #948b9e;
   --wgc-selector-texto: #f8f5ff;
@@ -418,10 +420,10 @@ body[data-modo] .wg-confirmacion .wg-boton:not(.wg-boton--principal) {
 
 /* RD-32: la tarjeta se desplaza por dentro; en Agenda diaria, «Tarjetas sin horario» queda a la vista mientras se
    desplazan los bloques, para poder arrastrar una tarjeta a cualquier hora (HE-11-HU02). Se pega a la misma altura
-   con la que empieza (32 px de la tarjeta + 16 de la agenda), así no salta al desplazarse. */
+   con la que empieza (32 px de la tarjeta + 40 de la cabecera + 24, RD-52), así no salta al desplazarse. */
 body[data-modo] .wg-agenda__sin-horario {
   position: sticky;
-  top: 48px;
+  top: 96px;
 }
 
 /* ---------- Pantalla completa: Personalización del wallpaper (RD-42; Figma 91:1638, 1360 × 850) ---------- */
