@@ -7,6 +7,10 @@ export interface VentanaEmergenteProps {
   /** «Cerrar» o «Cancelar»; también lo ejecuta la tecla Esc (RT-02-ET05). */
   alSalir: () => void;
   acciones?: ReactNode;
+  /** Clase de la ventana, por ejemplo `wg-confirmacion` (docs/rediseno.md RD-34). */
+  clase?: string;
+  /** RD-34: el título no se ve; sigue siendo el nombre accesible de la ventana. */
+  tituloOculto?: boolean;
 }
 
 /** Avisa a la ventana principal que hay una ventana emergente abierta, para bloquear el fondo (RT-02-ET08). */
@@ -18,7 +22,14 @@ const abiertas: symbol[] = [];
 // Se abre sobre la pantalla actual, que sigue visible de fondo (RT-02-ET02): la capa de fondo no tiene color
 // (sin transparencias apiladas, interfaz.md) pero recibe la selección, así que la pantalla de fondo y el menú
 // principal no responden (ET08). Se dibuja fuera de la pantalla para que el bloqueo no la alcance.
-export function VentanaEmergente({ titulo, children, alSalir, acciones }: VentanaEmergenteProps) {
+export function VentanaEmergente({
+  titulo,
+  children,
+  alSalir,
+  acciones,
+  clase,
+  tituloOculto = false,
+}: VentanaEmergenteProps) {
   const ventana = useRef<HTMLDivElement>(null);
   const salir = useRef(alSalir);
   const bloquear = useContext(ContextoDeBloqueo);
@@ -46,13 +57,13 @@ export function VentanaEmergente({ titulo, children, alSalir, acciones }: Ventan
     <div className="wg-fondo-emergente">
       <div
         ref={ventana}
-        className="wg-emergente"
+        className={clase ? `wg-emergente ${clase}` : 'wg-emergente'}
         role="dialog"
         aria-modal="true"
         aria-label={titulo}
         tabIndex={-1}
       >
-        <h2>{titulo}</h2>
+        <h2 className={tituloOculto ? 'wg-oculto' : undefined}>{titulo}</h2>
         {children}
         {acciones && <div className="wg-fila wg-emergente__acciones">{acciones}</div>}
       </div>

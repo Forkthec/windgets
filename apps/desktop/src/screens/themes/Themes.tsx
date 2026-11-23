@@ -160,7 +160,7 @@ export function Themes() {
         <Confirmacion
           titulo="Eliminar"
           texto={textos.CONFIRMAR_ELIMINAR_TEMA.replace('<nombre del tema>', porEliminar.name)}
-          opcionPrincipal="Eliminar"
+          opcionPrincipal="Confirmar"
           alConfirmar={() => void eliminar(porEliminar)}
           alCancelar={() => setPorEliminar(null)}
         />

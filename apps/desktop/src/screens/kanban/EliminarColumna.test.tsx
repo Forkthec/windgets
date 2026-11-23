@@ -63,7 +63,7 @@ describe('HE-09-HU06 · Eliminar las columnas creadas', () => {
 
   it('HE-09-HU06-CA02 · Eliminar una columna sin tarjetas', async () => {
     const { nucleo, ventana } = await pedirEliminar(await abrirTablero(0));
-    fireEvent.click(within(ventana).getByRole('button', { name: 'Eliminar' }));
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Confirmar' }));
     expect(await screen.findByText('Columna eliminada.')).toBeTruthy();
     expect(llamadasA(nucleo, 'column_delete')).toEqual([{ id: 'col-revision' }]);
   });
@@ -79,7 +79,7 @@ describe('HE-09-HU06 · Eliminar las columnas creadas', () => {
 
   it('HE-09-HU06-CA04 · Eliminar una columna con tarjetas', async () => {
     const { nucleo, ventana } = await pedirEliminar(await abrirTablero(3));
-    fireEvent.click(within(ventana).getByRole('button', { name: 'Eliminar' }));
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Confirmar' }));
     expect(await screen.findByText('Columna eliminada.')).toBeTruthy();
     expect(llamadasA(nucleo, 'column_delete')).toEqual([{ id: 'col-revision' }]);
   });

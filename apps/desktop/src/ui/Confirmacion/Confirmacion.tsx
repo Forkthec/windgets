@@ -4,7 +4,7 @@ import { VentanaEmergente } from '@/ui/VentanaEmergente/VentanaEmergente';
 export interface ConfirmacionProps {
   titulo: string;
   texto: string;
-  /** Verbo de la acción, por ejemplo «Eliminar» (RT-04). */
+  /** La opción principal; en M-06 a M-10 y M-12 a M-14, «Confirmar» (docs/rediseno.md RD-34). */
   opcionPrincipal: string;
   /** «Cancelar», salvo en el instalador («Seguir instalando», D-149). */
   opcionSalir?: string;
@@ -25,21 +25,25 @@ export function Confirmacion({
   alElegirSecundaria,
   alCancelar,
 }: ConfirmacionProps) {
+  // docs/rediseno.md RD-34 (Figma 85:2 «M-01 · Claro», 85:8 «M-01 · Oscuro»): sin título visible, la pregunta
+  // arriba y las opciones abajo a la izquierda, primero la principal y al final la de salir.
   return (
     <VentanaEmergente
       titulo={titulo}
       alSalir={alCancelar}
+      clase="wg-confirmacion"
+      tituloOculto
       acciones={
         <>
-          <Boton onClick={alCancelar}>{opcionSalir}</Boton>
-          {opcionSecundaria && <Boton onClick={alElegirSecundaria}>{opcionSecundaria}</Boton>}
           <Boton principal onClick={alConfirmar}>
             {opcionPrincipal}
           </Boton>
+          {opcionSecundaria && <Boton onClick={alElegirSecundaria}>{opcionSecundaria}</Boton>}
+          <Boton onClick={alCancelar}>{opcionSalir}</Boton>
         </>
       }
     >
-      <p>{texto}</p>
+      <p className="wg-confirmacion__pregunta">{texto}</p>
     </VentanaEmergente>
   );
 }

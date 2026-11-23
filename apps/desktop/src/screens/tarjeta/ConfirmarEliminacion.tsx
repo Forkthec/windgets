@@ -36,7 +36,7 @@ export function ConfirmarEliminacion({
     <Confirmacion
       titulo="Eliminar"
       texto={`¿Deseas eliminar la tarjeta “${tarjeta.title}”? Esta acción no se puede deshacer.`}
-      opcionPrincipal="Eliminar"
+      opcionPrincipal="Confirmar"
       alConfirmar={() => void ejecutar()}
       alCancelar={alCancelar}
     />

@@ -133,7 +133,7 @@ export function Widgets() {
         <Confirmacion
           titulo="Eliminar"
           texto={textos.CONFIRMAR_ELIMINAR_WIDGET.replace('<nombre del widget>', porEliminar.display_name)}
-          opcionPrincipal="Eliminar"
+          opcionPrincipal="Confirmar"
           alConfirmar={() => void eliminar(porEliminar)}
           // CA03, ET07: se cierra sin cambios.
           alCancelar={() => setPorEliminar(null)}

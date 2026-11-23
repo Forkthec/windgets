@@ -337,7 +337,7 @@ describe('HE-04-HU13 · Eliminar un widget', () => {
   async function eliminarYConfirmar(i: number) {
     fireEvent.click(eliminarDe(fila(i)));
     const dialogo = await screen.findByRole('dialog');
-    fireEvent.click(within(dialogo).getByRole('button', { name: 'Eliminar' }));
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar' }));
   }
 
   it('HE-04-HU13-CA01 · Eliminar un widget agregado', async () => {
@@ -406,7 +406,7 @@ describe('HE-04-HU13 · Eliminar un widget', () => {
     // ET01: ventana emergente con «Eliminar» y «Cancelar»; todavía no se elimina.
     const dialogo = await screen.findByRole('dialog');
     expect(within(dialogo).getByText(M07('Clima'))).toBeTruthy();
-    expect(within(dialogo).getByRole('button', { name: 'Eliminar' })).toBeTruthy();
+    expect(within(dialogo).getByRole('button', { name: 'Confirmar' })).toBeTruthy();
     expect(within(dialogo).getByRole('button', { name: 'Cancelar' })).toBeTruthy();
     expect(llamadasA(nucleo, 'widget_delete')).toEqual([]);
   });

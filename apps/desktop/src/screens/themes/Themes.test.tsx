@@ -342,7 +342,7 @@ describe('HE-03-HU05 · Eliminar un tema', () => {
     expect(
       within(ventana).getByText('¿Deseas eliminar el tema “Verano”? Esta acción no se puede deshacer.'),
     ).toBeTruthy();
-    fireEvent.click(within(ventana).getByRole('button', { name: 'Eliminar' }));
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Confirmar' }));
     expect(await screen.findByText('Tema eliminado.')).toBeTruthy();
     expect(llamadasA(n, 'theme_delete')).toEqual([{ theme_id: 't2' }]);
   });

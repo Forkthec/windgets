@@ -103,7 +103,7 @@ export function Settings() {
               ? textos.CAMBIOS_SIN_SINCRONIZAR_AL_CERRAR_SESION
               : textos.DESEAS_CERRAR_SESION
           }
-          opcionPrincipal="Cerrar sesión"
+          opcionPrincipal={confirmar === 'M-12' ? 'Confirmar' : 'Cerrar sesión'}
           alConfirmar={() => void ejecutar()}
           // CA02: «Cancelar» cierra el mensaje y la sesión sigue iniciada.
           alCancelar={() => setConfirmar(null)}
