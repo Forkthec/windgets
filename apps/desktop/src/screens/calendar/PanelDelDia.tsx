@@ -42,7 +42,9 @@ export function PanelDelDia({ fecha, alAbrirTarjeta, alNuevaTarjeta, alCerrar }:
         {/* ET02: la fecha del día. */}
         <h3>{fechaVisible(fecha)}</h3>
         {/* HE-10-HU04-ET01, ET07: abre el Formulario de tarjeta; en un día pasado va deshabilitada con su texto. */}
+        {/* docs/rediseno.md RD-53 (84:334): «Nueva tarjeta» es la acción principal. */}
         <Boton
+          principal
           disabled={dia?.can_create === false}
           motivo={dia?.can_create === false ? textos.NO_CREAR_EN_DIAS_PASADOS : undefined}
           onClick={() => dia && alNuevaTarjeta(dia)}

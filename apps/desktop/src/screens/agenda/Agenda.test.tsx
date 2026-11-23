@@ -29,7 +29,8 @@ function sinHorario() {
 
 /** El bloque donde quedó ubicada la vista. */
 function bloqueUbicado() {
-  return ubicados.at(-1)?.querySelector('h3')?.textContent;
+  // RD-52: se ve la hora de inicio; el nombre del bloque sigue siendo «HH:00 – HH:00».
+  return ubicados.at(-1)?.querySelector('h3')?.getAttribute('aria-label');
 }
 
 async function elegir(opcion: string) {
@@ -46,15 +47,16 @@ describe('HE-11-HU01 · Agenda diaria', () => {
       tarjeta({ title: 'Leer capítulo 3', column_id: HECHO.id, is_completed: true }),
     ]);
     // ET02: la fecha de hoy y las tres opciones.
-    expect(screen.getByRole('heading', { name: '14/11/2026' })).toBeTruthy();
+    // docs/rediseno.md RD-52 (Figma 93:38): la fecha larga.
+    expect(screen.getByRole('heading', { name: 'Sábado, 14 de noviembre' })).toBeTruthy();
     for (const opcion of ['Día anterior', 'Día siguiente', 'Hoy']) {
       expect(screen.getByRole('button', { name: opcion })).toBeTruthy();
     }
     // ET01: 24 bloques de 00:00 a 23:00 y la vista en el bloque de la hora actual.
     const horas = within(screen.getByRole('list', { name: 'Bloques horarios' })).getAllByRole('heading');
     expect(horas).toHaveLength(24);
-    expect(horas[0]?.textContent).toBe('00:00 – 01:00');
-    expect(horas[23]?.textContent).toBe('23:00 – 00:00');
+    expect(horas[0]?.getAttribute('aria-label')).toBe('00:00 – 01:00');
+    expect(horas[23]?.getAttribute('aria-label')).toBe('23:00 – 00:00');
     expect(bloqueUbicado()).toBe('14:00 – 15:00');
     // ET03, ET04
     expect(within(bloque('16:00 – 17:00')).getByRole('button', { name: 'Estudiar redes' })).toBeTruthy();
@@ -71,7 +73,7 @@ describe('HE-11-HU01 · Agenda diaria', () => {
     expect(within(bloque('09:00 – 10:00')).queryByText('Estudiar redes')).toBeNull();
     await elegir('Día siguiente');
     // ET06
-    expect(screen.getByRole('heading', { name: '15/11/2026' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Domingo, 15 de noviembre' })).toBeTruthy();
     expect(within(bloque('09:00 – 10:00')).getByRole('button', { name: 'Estudiar redes' })).toBeTruthy();
   });
 
@@ -80,7 +82,7 @@ describe('HE-11-HU01 · Agenda diaria', () => {
       tarjeta({ title: 'Leer capítulo 3', scheduled_date: '2026-11-13', scheduled_hour: 8 }),
     ]);
     await elegir('Día anterior');
-    expect(screen.getByRole('heading', { name: '13/11/2026' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Viernes, 13 de noviembre' })).toBeTruthy();
     expect(within(bloque('08:00 – 09:00')).getByRole('button', { name: 'Leer capítulo 3' })).toBeTruthy();
   });
 
@@ -100,7 +102,7 @@ describe('HE-11-HU01 · Agenda diaria', () => {
     ubicados = [];
     await elegir('Hoy');
     // ET07: la fecha de hoy y la vista en el bloque de la hora actual (D-169).
-    expect(screen.getByRole('heading', { name: '14/11/2026' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Sábado, 14 de noviembre' })).toBeTruthy();
     expect(bloqueUbicado()).toBe('14:00 – 15:00');
   });
 
@@ -117,6 +119,21 @@ describe('HE-11-HU01 · Agenda diaria', () => {
     await abrirPantalla('agenda', 'Agenda diaria', Agenda, [tarjeta({ title: 'Pagar la luz' })]);
     await elegir('Pagar la luz');
     expect(screen.getByRole('dialog', { name: 'Detalle de tarjeta' })).toBeTruthy();
+  });
+});
+
+describe('Rediseño · Agenda diaria (P34)', () => {
+  it('RD-52 · La fecha larga con la navegación a su derecha y la hora de inicio de cada bloque', async () => {
+    await abrirPantalla('agenda', 'Agenda diaria', Agenda, []);
+    const fecha = screen.getByRole('heading', { level: 2, name: 'Sábado, 14 de noviembre' });
+    const cabecera = fecha.parentElement as HTMLElement;
+    expect(Array.from(cabecera.querySelectorAll('button')).map((b) => b.textContent)).toEqual([
+      'Día anterior',
+      'Hoy',
+      'Día siguiente',
+    ]);
+    const nueve = bloque('09:00 – 10:00');
+    expect(nueve.querySelector('h3')?.textContent).toBe('09:00');
   });
 });
 

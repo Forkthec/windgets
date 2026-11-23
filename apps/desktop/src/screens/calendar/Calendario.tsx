@@ -7,6 +7,7 @@ import { fechaIso, fechaVisible, hoy } from '../tarjeta/fechas';
 import { useVentanasDeTarjeta } from '../tarjeta/useVentanasDeTarjeta';
 import { DIAS, nombreDelMes, semanasDelMes } from './mes';
 import { PanelDelDia } from './PanelDelDia';
+import './calendario.css';
 
 // P-CAL-01 Calendario (Menú principal > Planificador > Calendario). Al abrir muestra la vista mensual del mes
 // actual (HE-10-HU01-ET01); «Semana» cambia a la vista semanal (HE-10-HU02). Los días y sus tarjetas vienen del
@@ -229,22 +230,14 @@ export function Calendario() {
       ? nombreDelMes(vista.anio, vista.mes)
       : `Semana del ${fechaVisible(fechaIso(vista.lunes))} al ${fechaVisible(fechaIso(masDias(vista.lunes, 6)))}`;
   return (
-    <main aria-label="Calendario" aria-busy={datos === null}>
-      {/* HE-10-HU01-ET04 y HE-10-HU02-ET04: las opciones de cada vista. */}
-      <div className="wg-fila">
+    <main className="wg-calendario-pantalla" aria-label="Calendario" aria-busy={datos === null}>
+      {/* docs/rediseno.md RD-53 (Figma 84:184, 84:120): el mes o la semana a la izquierda y el anterior y el
+          siguiente a la derecha, como en Agenda diaria (RD-52). */}
+      <div className="wg-fila wg-calendario__cabecera">
+        <h2 className="wg-calendario__titulo">{titulo}</h2>
         <Boton onClick={() => mover(-1)}>{esMes ? 'Mes anterior' : 'Semana anterior'}</Boton>
         <Boton onClick={() => mover(1)}>{esMes ? 'Mes siguiente' : 'Semana siguiente'}</Boton>
-        <Boton onClick={irAHoy}>Hoy</Boton>
-        <Boton principal={esMes} aria-pressed={esMes} onClick={aMes}>
-          Mes
-        </Boton>
-        {esMes && (
-          <Boton aria-pressed={false} onClick={aSemana}>
-            Semana
-          </Boton>
-        )}
       </div>
-      <h2>{titulo}</h2>
       {vista.tipo === 'mes' && (
         <VistaMensual
           vista={vista}
@@ -267,6 +260,21 @@ export function Calendario() {
           ))}
         </div>
       )}
+      {/* HE-10-HU01-ET04 y HE-10-HU02-ET04: las opciones de cada vista. RD-53 (84:253 a 84:257): abajo a la
+          izquierda, «Hoy» como acción principal. */}
+      <div className="wg-fila wg-calendario__vistas">
+        <Boton principal onClick={irAHoy}>
+          Hoy
+        </Boton>
+        <Boton aria-pressed={esMes} onClick={aMes}>
+          Mes
+        </Boton>
+        {esMes && (
+          <Boton aria-pressed={false} onClick={aSemana}>
+            Semana
+          </Boton>
+        )}
+      </div>
       {diaAbierto && (
         <PanelDelDia
           fecha={diaAbierto}
@@ -296,8 +304,9 @@ function VistaMensual({ vista, mes, hoyEs, titulo, alSeleccionar }: VistaMensual
       <thead>
         <tr>
           {DIAS.map((d) => (
-            <th key={d} scope="col">
-              {d}
+            // RD-53 (84:188 «Lun»): el día abreviado; el nombre completo queda como nombre accesible.
+            <th key={d} scope="col" aria-label={d}>
+              {d.slice(0, 3)}
             </th>
           ))}
         </tr>

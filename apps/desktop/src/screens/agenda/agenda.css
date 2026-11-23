@@ -1,0 +1,127 @@
+/* Rediseño de Agenda diaria (docs/rediseno.md RD-52; Figma 84:361 «Contenido» de 84:358 «Agenda diaria · Claro», nodos
+ * 93:38 a 93:66). Medidas en px del Figma; los colores son los tokens del marco. */
+
+/* 93:38 la fecha (25 px peso 500) a la izquierda y 93:39 a 93:43 «Día anterior», «Hoy» y «Día siguiente» (40 px,
+ * 15 px peso 500) a la derecha. */
+.wg-fila.wg-agenda__cabecera {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.wg-agenda-diaria .wg-agenda__fecha {
+  flex: 1;
+  margin: 0;
+  font-size: 25px;
+  font-weight: 500;
+}
+body[data-modo] .wg-agenda__cabecera .wg-boton {
+  min-height: 40px;
+  padding: 0 12px;
+  font-size: 15px;
+}
+/* Los bloques a la izquierda y «Tarjetas sin horario» (371 px) a la derecha, 30 px entre ellos, 24 px debajo de la
+ * cabecera. */
+.wg-agenda-diaria .wg-agenda {
+  grid-template-columns: minmax(0, 1fr) 371px;
+  gap: 30px;
+  margin-top: 24px;
+  padding-block: 0;
+}
+@media (width < 1000px) {
+  .wg-agenda-diaria .wg-agenda {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* Un bloque cada 65 px: la hora (16 px) a la izquierda y las tarjetas desde x = 81; la línea (#E8DEED) abajo, desde
+ * x = 73 (93:45, 93:46). */
+.wg-agenda-diaria .wg-agenda__bloque {
+  padding: 0;
+  border-top: 0;
+  border-bottom: 1px solid var(--wgm-linea-agenda);
+}
+.wg-agenda-diaria .wg-agenda__bloque > section {
+  display: grid;
+  grid-template-columns: 73px minmax(0, 1fr);
+  align-content: start;
+  min-height: 64px;
+}
+.wg-agenda-diaria .wg-agenda__bloque--actual {
+  border-bottom-width: 4px;
+  border-bottom-color: var(--wgm-seleccion-texto);
+}
+.wg-agenda-diaria .wg-agenda__hora {
+  grid-column: 1;
+  margin: 0;
+  padding-top: 6px;
+  color: var(--wg-texto);
+  font-size: 16px;
+  font-weight: 400;
+}
+.wg-agenda-diaria .wg-agenda__bloque .wg-columna__tarjetas {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0 14px 6px 8px;
+  list-style: none;
+}
+/* 93:49 «Tarjeta asignada»: 37 px, radio 6, fondo de columna, el título en 16 px. */
+.wg-agenda-diaria .wg-agenda__bloque .wg-tarjeta {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 37px;
+  box-sizing: border-box;
+  padding: 0 6px 0 13px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--wgm-columna);
+}
+body[data-modo] .wg-agenda-diaria .wg-agenda__bloque .wg-tarjeta .wg-boton {
+  min-height: 30px;
+  padding: 0 8px;
+  font-size: 13px;
+}
+/* 93:61 «Tarjetas sin horario»: 371 px, radio 12, fondo de columna; el título en 20 px peso 500 y las tarjetas
+ * blancas de 62 px con radio 8 (93:63). */
+.wg-agenda-diaria .wg-agenda__sin-horario {
+  min-height: 424px;
+  box-sizing: border-box;
+  padding: 19px 13px 13px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--wgm-columna);
+}
+.wg-agenda-diaria .wg-agenda__sin-horario h3 {
+  margin: 0 0 32px 4px;
+  font-size: 20px;
+  font-weight: 500;
+}
+.wg-agenda-diaria .wg-agenda__sin-horario .wg-columna__tarjetas {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.wg-agenda-diaria .wg-agenda__sin-horario .wg-tarjeta {
+  justify-content: center;
+  min-height: 62px;
+  box-sizing: border-box;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--wg-superficie);
+}
+.wg-agenda-diaria .wg-tarjeta__titulo {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--wg-tinta);
+  font: inherit;
+  font-size: 16px;
+  text-align: left;
+  cursor: pointer;
+}
+.wg-agenda-diaria .wg-agenda__sin-horario .wg-tarjeta__titulo {
+  font-size: 17px;
+}

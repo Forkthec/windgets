@@ -70,7 +70,8 @@ describe('HE-10-HU01 · Calendario en vista mensual', () => {
     expect(llamadasA(nucleo, 'calendar_get_month')).toEqual([{ year: 2026, month: 11 }]);
     // ET02: el nombre del mes y el año, los días de lunes a domingo y el día actual resaltado.
     expect(screen.getByRole('heading', { name: 'Noviembre 2026' })).toBeTruthy();
-    expect(screen.getAllByRole('columnheader').map((d) => d.textContent)).toEqual([
+    // docs/rediseno.md RD-53 (Figma 84:188): se ve el día abreviado; el nombre completo es el nombre accesible.
+    expect(screen.getAllByRole('columnheader').map((d) => d.getAttribute('aria-label'))).toEqual([
       'Lunes',
       'Martes',
       'Miércoles',
@@ -617,3 +618,31 @@ function tonoDe(hex: string): number {
 }
 
 const TEMA = { primary: '#96B2B2', secondary: '#829890', text: '#14201C' };
+
+describe('Rediseño · Calendario (P34)', () => {
+  it('RD-53 · Los días abreviados y «Hoy», «Mes» y «Semana» abajo, con «Hoy» como acción principal', async () => {
+    await abrirPantalla('calendar', 'Calendario', Calendario, []);
+    expect(screen.getAllByRole('columnheader').map((d) => d.textContent)).toEqual([
+      'Lun',
+      'Mar',
+      'Mié',
+      'Jue',
+      'Vie',
+      'Sáb',
+      'Dom',
+    ]);
+    const hoy = screen.getByRole('button', { name: 'Hoy' });
+    expect(hoy.classList.contains('wg-boton--principal')).toBe(true);
+    const vistas = hoy.parentElement as HTMLElement;
+    expect(Array.from(vistas.querySelectorAll('button')).map((b) => b.textContent)).toEqual([
+      'Hoy',
+      'Mes',
+      'Semana',
+    ]);
+    // El mes y su navegación arriba.
+    const titulo = screen.getByRole('heading', { level: 2, name: 'Noviembre 2026' });
+    expect(
+      within(titulo.parentElement as HTMLElement).getByRole('button', { name: 'Mes anterior' }),
+    ).toBeTruthy();
+  });
+});

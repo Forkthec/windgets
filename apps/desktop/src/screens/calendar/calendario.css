@@ -1,0 +1,86 @@
+/* Rediseño del Calendario (docs/rediseno.md RD-53; Figma 84:187 «Contenido» de 84:184 «Calendario · Mes · Claro» y
+ * 84:123 de la semana). Son bocetos: se toman la disposición y los textos, y las medidas que el boceto fija. Los
+ * colores son los tokens del marco. */
+.wg-fila.wg-calendario__cabecera {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.wg-calendario__titulo {
+  flex: 1;
+  margin: 0;
+  font-size: 25px;
+  font-weight: 500;
+}
+body[data-modo] .wg-calendario__cabecera .wg-boton {
+  min-height: 40px;
+  padding: 0 12px;
+  font-size: 15px;
+}
+/* 84:253 a 84:257: «Hoy», «Mes» y «Semana» abajo a la izquierda, 14 px entre ellos. */
+.wg-fila.wg-calendario__vistas {
+  gap: 14px;
+  margin-top: 24px;
+}
+body[data-modo] .wg-calendario__vistas .wg-boton[aria-pressed='true'] {
+  outline: 2px solid var(--wgm-seleccion-texto);
+  outline-offset: -2px;
+}
+/* 84:188 los días abreviados (16 px peso 500) y 84:189 cada día en una celda de fondo de columna con radio 6,
+ * 11 px entre columnas y 7 entre semanas. */
+.wg-calendario-pantalla .wg-calendario {
+  margin-top: 16px;
+  border-collapse: separate;
+  border-spacing: 11px 7px;
+}
+.wg-calendario-pantalla .wg-calendario th {
+  padding: 0 0 6px 13px;
+  border: 0;
+  color: var(--wg-texto);
+  font-size: 16px;
+  font-weight: 500;
+  text-align: left;
+}
+.wg-calendario-pantalla .wg-calendario td {
+  height: 55px;
+  padding: 9px 11px;
+  border: 0;
+  border-radius: 6px;
+}
+.wg-calendario-pantalla .wg-calendario td.wg-calendario__celda {
+  background: var(--wgm-columna);
+}
+.wg-calendario-pantalla .wg-calendario__numero {
+  font-size: 16px;
+}
+.wg-calendario-pantalla .wg-calendario__tarjeta {
+  margin-top: 4px;
+  font-size: 13px;
+}
+/* El día de hoy: borde del color de selección y el número en negrita. */
+.wg-calendario-pantalla .wg-calendario__dia--hoy {
+  outline: 2px solid var(--wgm-seleccion-texto);
+  outline-offset: -2px;
+}
+/* 84:123 la semana: siete días en columnas con la misma celda. */
+.wg-calendario-pantalla .wg-calendario-semana {
+  gap: 11px;
+  margin-top: 16px;
+}
+.wg-calendario-pantalla .wg-calendario-semana .wg-calendario__dia {
+  min-height: 180px;
+  padding: 9px 11px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--wgm-columna);
+}
+/* 84:337 «Panel del día»: cada tarjeta en una fila de fondo de columna con radio 6 («09:00  Revisar bocetos»). */
+body[data-modo] .wg-panel-del-dia .wg-tarjeta {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--wgm-columna);
+}
