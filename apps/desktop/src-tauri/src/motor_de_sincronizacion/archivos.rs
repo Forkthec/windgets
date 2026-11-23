@@ -181,7 +181,7 @@ pub fn ruta_de_imagen_valida(user_id: &str, ruta: &str) -> bool {
         && matches!(extension, "jpg" | "jpeg" | "png")
 }
 
-fn sha256_en_hex(bytes: &[u8]) -> String {
+pub(crate) fn sha256_en_hex(bytes: &[u8]) -> String {
     Sha256::digest(bytes)
         .iter()
         .map(|b| format!("{b:02x}"))

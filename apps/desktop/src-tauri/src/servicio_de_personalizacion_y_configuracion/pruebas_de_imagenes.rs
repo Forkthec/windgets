@@ -166,10 +166,32 @@ fn ca_he_02_hu03_ca01() {
 fn ca_he_02_hu03_ca02() {
     // HE-02-HU03-CA02 · El catálogo de imágenes trae la miniatura de cada imagen, por orden (ET07, ET08).
     let (base, servicio) = con_imagenes();
-    let imagenes = bloquear(servicio.imagenes(&base)).unwrap();
+    // INT-09: la miniatura de «Mar» ya se descargó; la de «Monte» todavía no.
+    let archivos = carpeta();
+    std::fs::create_dir_all(archivos.join("catalog/images")).unwrap();
+    std::fs::write(archivos.join("catalog/images/mar-t.jpg"), b"miniatura").unwrap();
+    bloquear(async {
+        let pool = base.pool().await.unwrap();
+        sqlx::query(
+            "INSERT INTO local_file (id, kind, ref_id, remote_path, local_path, size_bytes, sha256, downloaded_at, \
+             last_used_at) VALUES ('f1', 'catalog_thumbnail', 'mar', 'images/mar-t.jpg', 'catalog/images/mar-t.jpg', \
+             9, ?, '2026-11-23T00:00:00.000Z', '2026-11-23T00:00:00.000Z')",
+        )
+        .bind("a".repeat(64))
+        .execute(pool)
+        .await
+        .unwrap();
+    });
+    let imagenes = bloquear(servicio.imagenes(&base, &archivos)).unwrap();
     let nombres: Vec<_> = imagenes.iter().map(|i| i.name.as_str()).collect();
     assert_eq!(nombres, ["Mar", "Monte"]);
-    assert!(imagenes.iter().all(|i| !i.thumbnail_url.is_empty()));
+    assert_eq!(
+        imagenes[0].thumbnail_url,
+        archivos.join("catalog/images/mar-t.jpg").to_string_lossy()
+    );
+    assert!(imagenes[0].is_cached);
+    assert_eq!(imagenes[1].thumbnail_url, "");
+    assert!(!imagenes[1].is_cached);
 }
 
 #[test]

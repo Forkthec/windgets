@@ -48,6 +48,9 @@ export function avisoDeContraste(legibilidad: Legibility): string | null {
 }
 
 /** Las secciones de la pantalla (HE-02-HU10-ET01), en este orden. */
+/** La miniatura de una imagen del catálogo, o nada si todavía no se descargó (INT-09). */
+const miniaturaDelCatalogo = (ruta: string | undefined) => (ruta ? urlDeArchivo(ruta) : undefined);
+
 const SECCIONES = ['Plantillas', 'Imagen de fondo', 'Colores', 'Tipografía', 'Paletas'] as const;
 
 export function Personalization() {
@@ -328,7 +331,7 @@ export function Personalization() {
       ? (resuelta ?? vistasPropias[fondo.uploaded_image_id])
       : fondo?.source === 'catalog'
         ? (resuelta ??
-          urlDeArchivo(imagenes?.find((i) => i.id === fondo.catalog_image_id)?.thumbnail_url ?? ''))
+          miniaturaDelCatalogo(imagenes?.find((i) => i.id === fondo.catalog_image_id)?.thumbnail_url))
         : undefined;
   // HE-02-HU06: la fuente y el tamaño de los textos de la vista previa.
   const nombreDeLaFuente = fuentes.find((f) => f.id === borrador?.content.font.id)?.name;
@@ -416,7 +419,12 @@ export function Personalization() {
                                   aria-pressed={elegida}
                                   onClick={() => void cambiar({ template_id: p.id })}
                                 >
-                                  <img src={urlDeArchivo(p.thumbnail_url)} alt="" width={182} height={45} />
+                                  {/* INT-09: mientras la miniatura se descarga, un espacio del mismo tamaño (sin imagen rota). */}
+                                  {p.thumbnail_url ? (
+                                    <img src={urlDeArchivo(p.thumbnail_url)} alt="" width={182} height={45} />
+                                  ) : (
+                                    <span className="wg-wallpaper__sin-miniatura" aria-hidden="true" />
+                                  )}
                                   <span className="wg-wallpaper__plantilla-nombre">
                                     <span>{p.name}</span>
                                     {/* RD-45 (91:1686 «Cuaderno · Activa»): la elegida. */}
@@ -484,7 +492,19 @@ export function Personalization() {
                                       })
                                     }
                                   >
-                                    <img src={urlDeArchivo(i.thumbnail_url)} alt="" width={96} height={54} />
+                                    {i.thumbnail_url ? (
+                                      <img
+                                        src={urlDeArchivo(i.thumbnail_url)}
+                                        alt=""
+                                        width={96}
+                                        height={54}
+                                      />
+                                    ) : (
+                                      <span
+                                        className="wg-wallpaper__sin-miniatura wg-wallpaper__sin-miniatura--imagen"
+                                        aria-hidden="true"
+                                      />
+                                    )}
                                     <span>{i.name}</span>
                                   </button>
                                 </li>

@@ -310,3 +310,18 @@ body[data-modo] .wg-wallpaper__acciones .wg-boton {
 body[data-modo] .wg-wallpaper__acciones .wg-boton:not(.wg-boton--principal):not(:disabled) {
   background: var(--wgm-seccion-abierta);
 }
+/* INT-09: el espacio de una miniatura del catálogo que todavía se está descargando. */
+.wg-wallpaper__sin-miniatura {
+  display: block;
+  width: 100%;
+  height: 45px;
+  border-radius: 5px;
+  background: var(--wg-superficie-baja);
+  outline: 1px dashed var(--wg-borde);
+  outline-offset: -1px;
+}
+.wg-wallpaper__sin-miniatura--imagen {
+  width: 96px;
+  height: 54px;
+  flex: none;
+}

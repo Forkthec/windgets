@@ -14,6 +14,7 @@ use sqlx::sqlite::SqliteRow;
 
 use crate::messages;
 use crate::repositorios_y_archivos_locales::BaseLocal;
+use crate::motor_de_sincronizacion::archivos_del_catalogo;
 use crate::servicio_de_sesion::ConMensaje;
 use crate::servicio_del_planificador::{de_sqlx, error, inesperado, resultado};
 use crate::tipos::{
@@ -400,12 +401,13 @@ impl ServicioDePersonalizacion {
     /// IPC-CAT-01 `catalog_list` con `kind: 'template'`: las plantillas activas, por `sort_order`
     /// (HE-02-HU02-CA01, ET01). Solo el catálogo: no hay forma de crear plantillas propias (ET04).
     /// `thumbnail_url` es la ruta de un archivo del computador; la vista la convierte con el protocolo de
-    /// assets de Tauri. La plantilla por defecto viene en el instalador (`recursos`, HE-02-HU01-ET02).
-    /// DUDA: HE-02-HU02 las demás plantillas todavía dan la ruta de `catalog_template.thumbnail_path`.
+    /// assets de Tauri. La plantilla por defecto viene en el instalador (`recursos`, HE-02-HU01-ET02); las demás,
+    /// de la descarga del catálogo (INT-09, `archivos_del_catalogo`). Mientras su miniatura no está en el computador,
+    /// `thumbnail_url` va vacía e `is_cached` es `false` (contratos.md, IPC-CAT-01).
     pub async fn plantillas(
         &self,
         base: &BaseLocal,
-        recursos: &std::path::Path,
+        carpetas: &escritorio::Carpetas,
     ) -> Result<Vec<CatalogItem>, AppError> {
         let pool = base.pool().await.map_err(de_sqlx)?;
         let filas = sqlx::query(
@@ -414,23 +416,35 @@ impl ServicioDePersonalizacion {
         .fetch_all(pool)
         .await
         .map_err(de_sqlx)?;
-        filas
-            .iter()
-            .map(|f| {
-                let id: String = f.try_get("id")?;
-                let thumbnail_url = if id == "default" {
-                    recursos
+        let mut miniaturas = Vec::with_capacity(filas.len());
+        for f in &filas {
+            let id: String = f.try_get("id").map_err(de_sqlx)?;
+            miniaturas.push(if id == "default" {
+                Some(
+                    carpetas
+                        .recursos
                         .join("assets/templates/default/thumbnail.png")
                         .to_string_lossy()
-                        .into_owned()
-                } else {
-                    f.try_get("thumbnail_path")?
-                };
+                        .into_owned(),
+                )
+            } else {
+                archivos_del_catalogo::ruta_local(base, &carpetas.archivos, "template_thumbnail", &id)
+                    .await
+                    .map_err(de_sqlx)?
+            });
+        }
+        filas
+            .iter()
+            .zip(miniaturas)
+            .map(|(f, miniatura)| {
+                let id: String = f.try_get("id")?;
+                let is_cached = miniatura.is_some();
+                let thumbnail_url = miniatura.unwrap_or_default();
                 Ok(CatalogItem {
                     id,
                     name: f.try_get("name")?,
                     thumbnail_url,
-                    is_cached: true,
+                    is_cached,
                     hex: None,
                     color_primary: Some(Hex(f.try_get("default_color_primary")?)),
                     color_secondary: Some(Hex(f.try_get("default_color_secondary")?)),
@@ -795,33 +809,38 @@ impl ServicioDePersonalizacion {
     }
 
     /// IPC-CAT-01 `catalog_list` con `kind: 'image'`: las imágenes activas del catálogo, por `sort_order`
-    /// (HE-02-HU03-CA02, ET07). Solo lectura: no hay forma de agregar imágenes al catálogo (ET08).
-    /// DUDA: HE-02-HU03 `thumbnail_url` con la ruta de la miniatura hasta que exista `asset_resolve` (HE-02-HU01).
-    pub async fn imagenes(&self, base: &BaseLocal) -> Result<Vec<CatalogItem>, AppError> {
+    /// (HE-02-HU03-CA02, ET07). Solo lectura: no hay forma de agregar imágenes al catálogo (ET08). `thumbnail_url` es
+    /// la miniatura descargada (INT-09, `archivos_del_catalogo`); mientras no está, va vacía con `is_cached: false`.
+    pub async fn imagenes(
+        &self,
+        base: &BaseLocal,
+        archivos: &std::path::Path,
+    ) -> Result<Vec<CatalogItem>, AppError> {
         let pool = base.pool().await.map_err(de_sqlx)?;
-        let filas = sqlx::query(
-            "SELECT id, name, thumbnail_path FROM catalog_image WHERE is_active = 1 ORDER BY sort_order, name",
+        let filas: Vec<(String, String)> = sqlx::query_as(
+            "SELECT id, name FROM catalog_image WHERE is_active = 1 ORDER BY sort_order, name",
         )
         .fetch_all(pool)
         .await
         .map_err(de_sqlx)?;
-        filas
-            .iter()
-            .map(|f| {
-                Ok(CatalogItem {
-                    id: f.try_get("id")?,
-                    name: f.try_get("name")?,
-                    thumbnail_url: f.try_get("thumbnail_path")?,
-                    is_cached: true,
-                    hex: None,
-                    color_primary: None,
-                    color_secondary: None,
-                    color_text: None,
-                    format: None,
-                })
-            })
-            .collect::<Result<Vec<_>, sqlx::Error>>()
-            .map_err(de_sqlx)
+        let mut lista = Vec::with_capacity(filas.len());
+        for (id, name) in filas {
+            let miniatura = archivos_del_catalogo::ruta_local(base, archivos, "catalog_thumbnail", &id)
+                .await
+                .map_err(de_sqlx)?;
+            lista.push(CatalogItem {
+                id,
+                name,
+                is_cached: miniatura.is_some(),
+                thumbnail_url: miniatura.unwrap_or_default(),
+                hex: None,
+                color_primary: None,
+                color_secondary: None,
+                color_text: None,
+                format: None,
+            });
+        }
+        Ok(lista)
     }
 
     /// IPC-CAT-01 `catalog_list` con `kind: 'animation'`: las animaciones activas del catálogo, con su miniatura,
