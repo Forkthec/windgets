@@ -43,6 +43,9 @@ body[data-modo='claro'] {
   --wgm-campo-windi: #f7f4fb;
   --wgm-nombre-windi: #6604e6;
   --wgm-divisor: #e5dfe9; /* 81:203 */
+  --wgm-monitor: #251e30; /* 91:1648 */
+  --wgm-pie-monitor: #9b8ba8; /* 91:1670 */
+  --wgm-seccion-abierta: #f0eaf8; /* 91:1672 */
   /* El selector «Apariencia» de las pantallas de cuenta (RD-29). */
   --wgc-selector: #ffffff;
   --wgc-selector-borde: #766b81;
@@ -88,6 +91,9 @@ body[data-modo='oscuro'] {
   --wgm-campo-windi: #1c1922;
   --wgm-nombre-windi: #d5b5ff;
   --wgm-divisor: #53485d; /* 81:230 */
+  --wgm-monitor: #251e30;
+  --wgm-pie-monitor: #9b8ba8;
+  --wgm-seccion-abierta: #463453;
   --wgc-selector: #2b2534;
   --wgc-selector-borde: #948b9e;
   --wgc-selector-texto: #f8f5ff;
@@ -198,6 +204,7 @@ body[data-modo] .wg-ventana-principal--sin-menu .wg-ventana-principal__principal
 
 /* La tarjeta de la pantalla (81:21): radio 16, desde y = 174; abajo deja 96 px como el marco de 890. */
 body[data-modo] .wg-ventana-principal__pantalla {
+  position: relative;
   flex: 1;
   min-height: 0;
   margin-bottom: 96px;
@@ -413,4 +420,65 @@ body[data-modo] .wg-confirmacion .wg-boton:not(.wg-boton--principal) {
 body[data-modo] .wg-agenda__sin-horario {
   position: sticky;
   top: 48px;
+}
+
+/* ---------- Pantalla completa: Personalización del wallpaper (RD-42; Figma 91:1638, 1360 × 850) ---------- */
+body[data-modo] .wg-ventana-principal--completa {
+  display: flex;
+  flex-direction: column;
+  grid-template-columns: none;
+}
+/* 91:1639 «windgets» (27 px negrita) en x = 38, 91:1640 «Personalización» (16 px peso 500, selección) en x = 220 y
+ * 91:1641 «Sincronizado» (15 px) a la derecha, en y ≈ 30. */
+.wg-cabecera-completa {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 32px;
+  margin: 22px 43px 0 38px;
+}
+.wg-cabecera-completa__marca {
+  width: 182px;
+  color: var(--wg-tinta);
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 32px;
+}
+.wg-cabecera-completa__seccion {
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--wgm-seleccion-texto);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.wg-cabecera-completa__seccion:focus-visible {
+  outline: 2px solid var(--wgm-seleccion-texto);
+  outline-offset: 2px;
+}
+.wg-cabecera-completa .wg-indicador-sincronizacion {
+  margin-left: auto;
+  align-items: flex-end;
+  font-size: 15px;
+}
+/* `position: relative` aquí y en la tarjeta: los textos ocultos (`.wg-oculto`, absolutos) quedan dentro del área que se
+   desplaza y no alargan la página. */
+.wg-ventana-principal__completa {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+@media (width < 1000px) {
+  .wg-cabecera-completa {
+    margin-inline: 24px;
+  }
+  .wg-cabecera-completa__marca {
+    width: auto;
+    margin-right: 24px;
+  }
 }

@@ -17,6 +17,8 @@ for (const pantalla of ['Wallpaper', 'Agente de IA']) {
   test(`RT-01 · En ${pantalla} solo se desplaza la pantalla, no el menú principal`, async ({ page }) => {
     const menu = page.getByRole('navigation', { name: 'Menú principal' });
     await menu.getByRole('button', { name: pantalla }).click();
+    // docs/rediseno.md RD-42: Wallpaper ocupa la ventana; «Personalización» vuelve a mostrar el menú.
+    if (pantalla === 'Wallpaper') await page.getByRole('button', { name: 'Personalización' }).click();
     await expect(menu.getByRole('button', { name: pantalla })).toHaveAttribute('aria-current', 'page');
     // La página no tiene desplazamiento propio: el documento mide lo mismo que la ventana.
     const { documento, ventana } = await page.evaluate(() => ({

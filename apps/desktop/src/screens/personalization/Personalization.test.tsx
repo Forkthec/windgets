@@ -184,6 +184,11 @@ async function abrir(
       );
     },
   );
+  // docs/rediseno.md RD-45: el inspector abre solo Plantillas; aquí se abren todas las secciones.
+  await screen.findByRole('region', { name: 'Plantillas' });
+  for (const boton of screen.getAllByRole('button', { expanded: false })) {
+    if (boton.closest('.wg-wallpaper__encabezado-seccion')) fireEvent.click(boton);
+  }
   return nucleo;
 }
 
@@ -271,10 +276,11 @@ describe('HE-02-HU02 · Plantillas', () => {
     await abrir();
     const catalogo = await screen.findByRole('list', { name: 'Catálogo de plantillas' });
     const plantillas = within(catalogo).getAllByRole('button');
-    // ET01: miniatura y nombre de cada plantilla; ET02: «Seleccionada» solo en la del tema en edición.
-    expect(plantillas.map((b) => b.textContent)).toEqual(['WindgetsSeleccionada', 'Minimal']);
+    // ET01: miniatura y nombre de cada plantilla; ET02: la marca solo en la del tema en edición, «· Activa» (RD-45,
+    // Figma 91:1686).
+    expect(plantillas.map((b) => b.textContent)).toEqual(['Windgets·Activa', 'Minimal']);
     expect(catalogo.querySelectorAll('img')).toHaveLength(2);
-    expect(within(catalogo).getAllByText('Seleccionada')).toHaveLength(1);
+    expect(within(catalogo).getAllByText('Activa')).toHaveLength(1);
     // ET04, ET05: nada para crear plantillas propias ni para subir archivos.
     const seccion = screen.getByRole('region', { name: 'Plantillas' });
     expect(within(seccion).queryByRole('button', { name: /crear|subir|importar/i })).toBeNull();
@@ -286,11 +292,9 @@ describe('HE-02-HU02 · Plantillas', () => {
     fireEvent.click(within(catalogo).getByRole('button', { name: /Minimal/ }));
     // La etiqueta se mueve a la plantilla elegida y no se pide nada que cambie el escritorio (ET07).
     await waitFor(() =>
-      expect(within(catalogo).getByRole('button', { name: /Minimal/ }).textContent).toContain('Seleccionada'),
+      expect(within(catalogo).getByRole('button', { name: /Minimal/ }).textContent).toContain('Activa'),
     );
-    expect(within(catalogo).getByRole('button', { name: /Windgets/ }).textContent).not.toContain(
-      'Seleccionada',
-    );
+    expect(within(catalogo).getByRole('button', { name: /Windgets/ }).textContent).not.toContain('Activa');
     expect(llamadasA(nucleo, 'theme_draft_update')).toEqual([{ patch: { template_id: 'minimal' } }]);
     expect(llamadasA(nucleo, 'theme_apply')).toEqual([]);
   });
@@ -308,7 +312,8 @@ describe('HE-02-HU03 · Imagen de fondo', () => {
     for (const opcion of ['Subir imagen', 'Catálogo de imágenes', 'Quitar imagen']) {
       expect(within(seccion()).getByRole('button', { name: opcion })).toBeTruthy();
     }
-    expect(within(seccion()).getByText('JPG, JPEG o PNG. Máximo 20 MB.')).toBeTruthy();
+    // RD-45 (Figma 91:1935).
+    expect(within(seccion()).getByText('JPG, JPEG o PNG · Máximo 20 MB')).toBeTruthy();
     elegir('C:/Fotos/playa.png');
     fireEvent.click(within(seccion()).getByRole('button', { name: 'Subir imagen' }));
     // ET06: el explorador solo deja elegir JPG, JPEG y PNG; la imagen se importa y pasa a ser el fondo.
@@ -842,8 +847,12 @@ describe('HE-02-HU13 · Cancelar los cambios sin guardar', () => {
     return nucleo;
   }
 
-  /** Elige otra pantalla en el Menú principal y devuelve el mensaje que aparece. */
+  /**
+   * Elige otra pantalla en el Menú principal y devuelve el mensaje que aparece. RD-42: en esta pantalla el menú se
+   * muestra con «Personalización».
+   */
   async function salir() {
+    fireEvent.click(screen.getByRole('button', { name: 'Personalización' }));
     fireEvent.click(within(menu()).getByRole('button', { name: 'Planificador diario' }));
     return screen.findByRole('dialog');
   }
@@ -1340,5 +1349,47 @@ describe('HE-15-HU04 · Personalización desde otro computador', () => {
         'Se aplicó una personalización más reciente desde otro computador. Tus cambios sin guardar se conservan.',
       ),
     ).toBeNull();
+  });
+});
+
+describe('Rediseño · Personalización del wallpaper (P32)', () => {
+  it('RD-43 · Título, subtítulo y «Tema en edición»', async () => {
+    await abrir();
+    expect(screen.getByRole('heading', { level: 1, name: 'Personalización del wallpaper' })).toBeTruthy();
+    expect(screen.getByText('Prueba los cambios aquí antes de aplicarlos a tu escritorio.')).toBeTruthy();
+    expect(lista().closest('.wg-wallpaper__tema')).toBeTruthy();
+  });
+
+  it('RD-44 · «Vista previa de <tema>» y el monitor', async () => {
+    await abrir();
+    expect(screen.getByRole('heading', { level: 2, name: 'Vista previa de Mi tema' })).toBeTruthy();
+    const previa = screen.getByRole('region', { name: 'Vista previa del escritorio' });
+    expect(previa.closest('.wg-wallpaper__monitor')).toBeTruthy();
+  });
+
+  it('RD-45 · Cada sección del inspector se abre y se cierra con su encabezado', async () => {
+    await abrir();
+    const colores = screen.getByRole('region', { name: 'Colores' });
+    const encabezado = within(colores).getByRole('button', { name: 'Colores' });
+    expect(encabezado.getAttribute('aria-expanded')).toBe('true');
+    expect(within(colores).getByText('−')).toBeTruthy();
+    fireEvent.click(encabezado);
+    expect(encabezado.getAttribute('aria-expanded')).toBe('false');
+    expect(within(colores).getByText('+')).toBeTruthy();
+    expect(within(colores).queryByRole('button', { name: 'Restablecer colores' })).toBeNull();
+    fireEvent.click(encabezado);
+    expect(within(colores).getByRole('button', { name: 'Restablecer colores' })).toBeTruthy();
+  });
+
+  it('RD-46 · La barra dice si hay cambios y el motivo de «Aplicar»', async () => {
+    await abrir();
+    const barra = screen.getByText('Este tema ya está aplicado.');
+    expect(barra.classList.contains('wg-wallpaper__estado')).toBe(true);
+    const aplicar = screen.getByRole('button', { name: 'Aplicar' });
+    expect(aplicar.getAttribute('aria-describedby')).toBe(barra.id);
+    const botones = Array.from(barra.parentElement?.querySelectorAll('button') ?? []).map(
+      (b) => b.textContent,
+    );
+    expect(botones).toEqual(['Cancelar', 'Guardar', 'Guardar como tema', 'Aplicar']);
   });
 });
