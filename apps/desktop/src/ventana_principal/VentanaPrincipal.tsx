@@ -14,10 +14,14 @@ import type { Invoke, ScreenId, ScreenParams } from '@/types';
 import textos from '@/types/messages.es.json';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { ProveedorDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
-import { MenuPrincipal, SECCIONES_MENU } from '@/ui/MenuPrincipal/MenuPrincipal';
+import { IconoDelMenu, TRAZO_ABRIR, TRAZO_CONTRAER } from '@/ui/MenuPrincipal/IconosDelMenu';
+import { MenuPrincipal } from '@/ui/MenuPrincipal/MenuPrincipal';
 import { useTemaAplicado } from '@/ui/tema/temaAplicado';
 import { AvisoDelWallpaper } from './AvisoDelWallpaper';
-import { IndicadorSincronizacion } from './IndicadorSincronizacion';
+import { EncabezadoDePantalla } from './EncabezadoDePantalla';
+import { AMPLIAR_MENU, OCULTAR_MENU, TITULO_DE_PANTALLA } from './textosDelMarco';
+import simbolo from '@/screens/cuenta/activos/simbolo.svg';
+import './marco.css';
 import { ContextoDeBloqueo } from '@/ui/VentanaEmergente/VentanaEmergente';
 import { ProveedorDeApariencia, RaizDeCuenta, type ModoDeCuenta } from '@/screens/cuenta/apariencia';
 import { useTemaInicial } from '@/screens/cuenta/temaInicial';
@@ -36,10 +40,6 @@ const NOMBRE_DE_CUENTA: Record<PantallaDeCuenta, string> = {
   register: 'Registro',
   recovery: 'Recuperar contraseña',
 };
-
-const NOMBRE_DE_PANTALLA = Object.fromEntries(
-  SECCIONES_MENU.flatMap(({ opciones }) => opciones.map((o) => [o.pantalla, o.texto])),
-) as Record<ScreenId, string>;
 
 /**
  * Pregunta a la pantalla actual si se puede salir de ella; `false` la mantiene abierta. La usa, por ejemplo,
@@ -227,7 +227,23 @@ export function VentanaPrincipal({
   const nucleo = useMemo(() => ({ invocar, escuchar }), [escuchar, invocar]);
 
   // HE-03-HU06: los colores y la tipografía del tema aplicado en toda la aplicación (ET01, ET02, ET05).
-  useTemaAplicado(invocar, escuchar, sesion === 'con_sesion');
+  const { modo: modoDelTema, releer: releerTema } = useTemaAplicado(
+    invocar,
+    escuchar,
+    sesion === 'con_sesion',
+  );
+  // docs/rediseno.md RD-28: con la sesión iniciada, la ventana toma los colores del Figma del modo del tema
+  // (`marco.css`). Va en `body` para alcanzar también las ventanas emergentes.
+  const modoDeLaVentana = sesion === 'con_sesion' ? modoDelTema : null;
+  useEffect(() => {
+    if (!modoDeLaVentana) return;
+    document.body.dataset.modo = modoDeLaVentana;
+    return () => {
+      delete document.body.dataset.modo;
+    };
+  }, [modoDeLaVentana]);
+  // RD-31: «Ocultar menú» y «Ampliar menú»; vale mientras la ventana esté abierta.
+  const [menuVisible, setMenuVisible] = useState(true);
 
   // HE-17-HU02-ET05 (D-156): cada pantalla que se abre queda como la última visitada en este computador.
   useEffect(() => {
@@ -267,14 +283,49 @@ export function VentanaPrincipal({
   if (sesion === 'con_sesion') {
     const Pantalla = pantallas[pantalla];
     contenido = (
-      <div ref={fondo} className="wg-ventana-principal">
-        <div className="wg-ventana-principal__menu">
-          <MenuPrincipal actual={pantalla} alElegir={(p) => void navegacion.abrir(p)} />
-          <IndicadorSincronizacion />
-        </div>
-        <div className="wg-ventana-principal__pantalla">
-          <AvisoDelWallpaper />
-          {Pantalla ? <Pantalla /> : <PantallaSinConstruir nombre={NOMBRE_DE_PANTALLA[pantalla]} />}
+      <div
+        ref={fondo}
+        className={`wg-ventana-principal${menuVisible ? '' : ' wg-ventana-principal--sin-menu'}`}
+      >
+        {menuVisible && (
+          // Figma 81:3 «Menú» (RD-30) con el símbolo y la palabra de 76:4 y 76:10.
+          <div className="wg-ventana-principal__menu wg-menu">
+            <div className="wg-menu__marca">
+              <img className="wg-menu__simbolo" src={simbolo} alt="" />
+              windgets
+            </div>
+            <button
+              type="button"
+              className="wg-menu__ocultar"
+              aria-label={OCULTAR_MENU}
+              title={OCULTAR_MENU}
+              aria-expanded="true"
+              onClick={() => setMenuVisible(false)}
+            >
+              <IconoDelMenu trazo={TRAZO_CONTRAER} className="wg-menu__icono" />
+            </button>
+            <MenuPrincipal actual={pantalla} alElegir={(p) => void navegacion.abrir(p)} />
+          </div>
+        )}
+        <div className="wg-ventana-principal__principal">
+          {!menuVisible && (
+            // Figma 85:400 «Ampliar menú».
+            <button
+              type="button"
+              className="wg-marco__ampliar"
+              aria-label={AMPLIAR_MENU}
+              title={AMPLIAR_MENU}
+              aria-expanded="false"
+              onClick={() => setMenuVisible(true)}
+            >
+              <IconoDelMenu trazo={TRAZO_ABRIR} className="wg-menu__icono" />
+            </button>
+          )}
+          <EncabezadoDePantalla pantalla={pantalla} modo={modoDelTema} alAplicar={releerTema} />
+          <div className="wg-ventana-principal__pantalla">
+            <AvisoDelWallpaper />
+            {Pantalla ? <Pantalla /> : <PantallaSinConstruir nombre={TITULO_DE_PANTALLA[pantalla]} />}
+          </div>
         </div>
       </div>
     );

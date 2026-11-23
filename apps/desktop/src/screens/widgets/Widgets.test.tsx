@@ -197,8 +197,10 @@ describe('HE-04-HU01 · Widgets', () => {
     expect(screen.getByRole('button', { name: 'Editar escritorio' })).toBeTruthy();
     const [reloj, clima, texto, noticias] = [fila(0), fila(4), fila(5), fila(6)];
     // ET02: primero los por defecto y luego los agregados; ET03: nombre, tipo, dato, interruptor y opciones.
+    // docs/rediseno.md RD-35 (Figma 81:115, 81:127): debajo del nombre, «Widget por defecto» o el dato que lo
+    // distingue; el tipo solo si no tiene dato.
     expect(within(reloj).getByText('Reloj')).toBeTruthy();
-    expect(within(reloj).getByText('Por defecto')).toBeTruthy();
+    expect(within(reloj).getByText('Widget por defecto')).toBeTruthy();
     expect(within(reloj).queryByRole('button', { name: 'Configurar' })).toBeNull();
     // HE-04-HU13-CA02 (ET04): en los widgets por defecto, «Eliminar» se muestra deshabilitada con su motivo.
     expect((within(reloj).getByRole('button', { name: 'Eliminar' }) as HTMLButtonElement).disabled).toBe(
@@ -206,14 +208,31 @@ describe('HE-04-HU01 · Widgets', () => {
     );
     expect(within(clima).getByText('Clima')).toBeTruthy();
     expect(within(clima).getByText('Bogotá')).toBeTruthy();
-    expect(within(clima).getByText('Externo')).toBeTruthy();
+    expect(within(clima).queryByText('Externo')).toBeNull();
     expect(within(clima).getByText('Activo')).toBeTruthy();
     expect(within(clima).getByRole('button', { name: 'Configurar' })).toBeTruthy();
     expect(within(clima).getByRole('button', { name: 'Eliminar' })).toBeTruthy();
-    expect(within(texto).getByText('Local')).toBeTruthy();
+    expect(within(texto).getByText('Hola')).toBeTruthy();
     expect(within(noticias).getByText('Externo')).toBeTruthy();
     expect(within(noticias).getByText('Inactivo')).toBeTruthy();
     expect(within(noticias).queryByRole('button', { name: 'Configurar' })).toBeNull();
+  });
+
+  it('RD-35 · «Eliminar» como texto y el motivo como descripción accesible', async () => {
+    await abrir([...POR_DEFECTO, ...AGREGADOS]);
+    const eliminar = within(fila(0)).getByRole('button', { name: 'Eliminar' });
+    expect(eliminar.classList.contains('wg-enlace-texto')).toBe(true);
+    const motivo = 'Los widgets por defecto no se pueden eliminar. Puedes desactivarlos.';
+    expect(eliminar.getAttribute('title')).toBe(motivo);
+    expect(document.getElementById(eliminar.getAttribute('aria-describedby') ?? '')?.textContent).toBe(
+      motivo,
+    );
+    // En un widget agregado no hay motivo.
+    expect(
+      within(fila(4)).getByRole('button', { name: 'Eliminar' }).getAttribute('aria-describedby'),
+    ).toBeNull();
+    // Sin dato que lo distinga, el tipo.
+    expect(within(fila(6)).getByText('Externo')).toBeTruthy();
   });
 
   it('HE-04-HU01-CA03 · Todos los widgets inactivos', async () => {
@@ -337,7 +356,7 @@ describe('HE-04-HU13 · Eliminar un widget', () => {
   async function eliminarYConfirmar(i: number) {
     fireEvent.click(eliminarDe(fila(i)));
     const dialogo = await screen.findByRole('dialog');
-    fireEvent.click(within(dialogo).getByRole('button', { name: 'Eliminar' }));
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar' }));
   }
 
   it('HE-04-HU13-CA01 · Eliminar un widget agregado', async () => {
@@ -406,7 +425,7 @@ describe('HE-04-HU13 · Eliminar un widget', () => {
     // ET01: ventana emergente con «Eliminar» y «Cancelar»; todavía no se elimina.
     const dialogo = await screen.findByRole('dialog');
     expect(within(dialogo).getByText(M07('Clima'))).toBeTruthy();
-    expect(within(dialogo).getByRole('button', { name: 'Eliminar' })).toBeTruthy();
+    expect(within(dialogo).getByRole('button', { name: 'Confirmar' })).toBeTruthy();
     expect(within(dialogo).getByRole('button', { name: 'Cancelar' })).toBeTruthy();
     expect(llamadasA(nucleo, 'widget_delete')).toEqual([]);
   });

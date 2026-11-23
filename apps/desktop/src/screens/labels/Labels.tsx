@@ -117,7 +117,7 @@ export function Labels() {
         <Confirmacion
           titulo="Eliminar"
           texto={porEliminar.texto}
-          opcionPrincipal="Eliminar"
+          opcionPrincipal="Confirmar"
           alConfirmar={() => void eliminar(porEliminar.etiqueta)}
           alCancelar={() => setPorEliminar(null)}
         />

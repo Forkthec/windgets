@@ -39,7 +39,7 @@ describe('HE-07-HU05 · Eliminar una tarjeta', () => {
     // ET01, ET02: confirmación con el título de la tarjeta y las opciones «Eliminar» y «Cancelar».
     const confirmacion = screen.getByRole('dialog');
     expect(within(confirmacion).getByText(PREGUNTA)).toBeTruthy();
-    expect(within(confirmacion).getByRole('button', { name: 'Eliminar' })).toBeTruthy();
+    expect(within(confirmacion).getByRole('button', { name: 'Confirmar' })).toBeTruthy();
     expect(within(confirmacion).getByRole('button', { name: 'Cancelar' })).toBeTruthy();
     // ET03: todavía no se elimina.
     expect(llamadasA(nucleo, 'card_delete')).toHaveLength(0);
@@ -48,7 +48,7 @@ describe('HE-07-HU05 · Eliminar una tarjeta', () => {
   it('HE-07-HU05-CA02 · Eliminar una tarjeta confirmada', async () => {
     const nucleo = await abrirConfirmacion();
     await act(async () => {
-      fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Eliminar' }));
+      fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirmar' }));
     });
     expect(llamadasA(nucleo, 'card_delete')).toHaveLength(1);
     // ET04, ET05: cierra la ventana, sigue en el tablero y la tarjeta ya no está.
@@ -94,7 +94,7 @@ describe('HE-07-HU05 · Eliminar una tarjeta', () => {
       fireEvent.click(screen.getByRole('menuitem', { name: 'Eliminar' }));
     });
     await act(async () => {
-      fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Eliminar' }));
+      fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirmar' }));
     });
     expect(llamadasA(nucleo, 'card_delete')).toHaveLength(1);
     expect(screen.queryByRole('dialog')).toBeNull();

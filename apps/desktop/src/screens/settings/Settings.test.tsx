@@ -34,9 +34,16 @@ async function seleccionarCerrarSesion() {
   return screen.findByRole('dialog');
 }
 
-/** Selecciona «Cerrar sesión» en el mensaje y comprueba que llega a Inicio de sesión con «Sesión cerrada.». */
-async function confirmaYCierra(nucleo: NucleoDelPlanificador, dialogo: HTMLElement) {
-  fireEvent.click(within(dialogo).getByRole('button', { name: 'Cerrar sesión' }));
+/**
+ * Selecciona la opción principal del mensaje («Cerrar sesión» en M-11 y «Confirmar» en M-12, docs/rediseno.md
+ * RD-34) y comprueba que llega a Inicio de sesión con «Sesión cerrada.».
+ */
+async function confirmaYCierra(
+  nucleo: NucleoDelPlanificador,
+  dialogo: HTMLElement,
+  opcion = 'Cerrar sesión',
+) {
+  fireEvent.click(within(dialogo).getByRole('button', { name: opcion }));
   expect(await screen.findByRole('main', { name: 'Inicio de sesión' })).toBeTruthy();
   expect(screen.queryByRole('navigation', { name: 'Menú principal' })).toBeNull();
   expect(screen.getByRole('status').textContent).toContain('Sesión cerrada.');
@@ -65,10 +72,10 @@ describe('HE-16-HU03 · Cerrar sesión desde la pantalla Configuración', () => 
 
   it('HE-16-HU03-CA03 · Cierre de sesión con cambios sin sincronizar', async () => {
     const nucleo = await abrirConfiguracion(2);
-    // ET04 y ET05: con cambios pendientes, el aviso M-12 con «Cerrar sesión» y «Cancelar».
+    // ET04 y ET05: con cambios pendientes, el aviso M-12 con «Confirmar» (RD-34, Figma 85:140) y «Cancelar».
     const dialogo = await seleccionarCerrarSesion();
     expect(within(dialogo).getByText(CON_CAMBIOS)).toBeTruthy();
-    expect(within(dialogo).getByRole('button', { name: 'Cerrar sesión' })).toBeTruthy();
+    expect(within(dialogo).getByRole('button', { name: 'Confirmar' })).toBeTruthy();
     expect(within(dialogo).getByRole('button', { name: 'Cancelar' })).toBeTruthy();
     expect(llamadasA(nucleo, 'auth_sign_out')).toHaveLength(0);
   });
@@ -77,7 +84,7 @@ describe('HE-16-HU03 · Cerrar sesión desde la pantalla Configuración', () => 
     const nucleo = await abrirConfiguracion(2);
     const dialogo = await seleccionarCerrarSesion();
     expect(within(dialogo).getByText(CON_CAMBIOS)).toBeTruthy();
-    await confirmaYCierra(nucleo, dialogo);
+    await confirmaYCierra(nucleo, dialogo, 'Confirmar');
   });
 
   it('HE-16-HU03-CA05 · Abrir el mensaje de confirmación de cierre de sesión', async () => {

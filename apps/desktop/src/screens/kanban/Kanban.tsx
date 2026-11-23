@@ -371,7 +371,7 @@ export function Kanban() {
         <Confirmacion
           titulo="Eliminar"
           texto={porEliminar.texto}
-          opcionPrincipal="Eliminar"
+          opcionPrincipal="Confirmar"
           alConfirmar={() => void eliminarColumna(porEliminar.columna)}
           alCancelar={() => setPorEliminar(null)}
         />

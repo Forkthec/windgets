@@ -146,7 +146,7 @@ describe('HE-08-HU04 · Eliminar una etiqueta', () => {
 
   it('HE-08-HU04-CA02 · Eliminar una etiqueta sin tarjetas', async () => {
     const { nucleo, ventana } = await eliminar(0);
-    fireEvent.click(within(ventana).getByRole('button', { name: 'Eliminar' }));
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Confirmar' }));
     expect(await screen.findByText('Etiqueta eliminada.')).toBeTruthy();
     expect(llamadasA(nucleo, 'label_delete')).toEqual([{ id: 'e1' }]);
   });
@@ -171,7 +171,7 @@ describe('HE-08-HU04 · Eliminar una etiqueta', () => {
 
   it('HE-08-HU04-CA05 · Eliminar una etiqueta asignada confirmada', async () => {
     const { nucleo, ventana } = await eliminar(2);
-    fireEvent.click(within(ventana).getByRole('button', { name: 'Eliminar' }));
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Confirmar' }));
     expect(await screen.findByText('Etiqueta eliminada.')).toBeTruthy();
     expect(llamadasA(nucleo, 'label_delete')).toEqual([{ id: 'e1' }]);
   });

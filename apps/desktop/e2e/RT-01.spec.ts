@@ -12,7 +12,8 @@ test.beforeEach(async ({ page }) => {
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
 });
 
-for (const pantalla of ['Personalización del wallpaper', 'Agente de IA']) {
+// docs/rediseno.md RD-30: la opción de Personalización del wallpaper dice «Wallpaper».
+for (const pantalla of ['Wallpaper', 'Agente de IA']) {
   test(`RT-01 · En ${pantalla} solo se desplaza la pantalla, no el menú principal`, async ({ page }) => {
     const menu = page.getByRole('navigation', { name: 'Menú principal' });
     await menu.getByRole('button', { name: pantalla }).click();

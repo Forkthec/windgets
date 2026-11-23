@@ -141,7 +141,7 @@ describe('HE-14-HU01 · Conversar con el agente de IA', () => {
     expect(enviar().disabled).toBe(true);
     // ET07, ET08, ET10: un solo mensaje del agente que saluda por el alias y se presenta como «Windi».
     expect(conversacion()).toEqual([SALUDO]);
-    expect(screen.getByText('Windi')).toBeTruthy();
+    expect(within(screen.getByRole('list', { name: 'Conversación' })).getByText('Windi')).toBeTruthy();
   });
 
   it('HE-14-HU01-CA02 · Enviar mensaje con el botón', async () => {
@@ -677,12 +677,29 @@ describe('HE-14-HU06 · Mover tarjetas con el agente de IA', () => {
     state: 'active',
   });
 
+  it('RD-36 · Windi con su ilustración y la propuesta con «PROPUESTA»', async () => {
+    await abrir(proponer(mover([])));
+    const conversacion = screen.getByRole('list', { name: 'Conversación' });
+    const deWindi = conversacion.querySelector('.wg-windi__mensaje--assistant') as HTMLElement;
+    expect(deWindi.querySelector('img.wg-windi__ilustracion')?.getAttribute('alt')).toBe('');
+    await pedir('Mueve el informe a Hecho');
+    const p = propuestas()[0] as HTMLElement;
+    expect(within(p).getByText('PROPUESTA').getAttribute('aria-hidden')).toBe('true');
+    expect(p.querySelector('.wg-windi__propuesta-titulo')).toBeTruthy();
+    // El campo, el contador y «Enviar» van en la caja «Redactar mensaje».
+    const caja = campo().closest('.wg-windi__escribir') as HTMLElement;
+    expect(within(caja).getByText('0 / 2000')).toBeTruthy();
+    expect(within(caja).getByRole('button', { name: 'Enviar' })).toBeTruthy();
+  });
+
   it('HE-14-HU06-CA01 · Mover con confirmación', async () => {
     // ET01: la columna actual y la de destino, con «Confirmar» y «Rechazar».
     await abrir(proponer(mover([])));
     await pedir('Mueve el informe a Hecho');
     const p = propuestas()[0] as HTMLElement;
-    expect(within(p).getByText('Columna: Por hacer → Hecho')).toBeTruthy();
+    // docs/rediseno.md RD-36 (Figma 76:46, 76:47): «Columna» y el cambio por separado.
+    expect(within(p).getByText('Columna')).toBeTruthy();
+    expect(within(p).getByText('Por hacer → Hecho')).toBeTruthy();
     expect(boton(p, 'Confirmar').disabled).toBe(false);
     expect(boton(p, 'Rechazar').disabled).toBe(false);
   });
@@ -721,7 +738,7 @@ describe('HE-14-HU06 · Mover tarjetas con el agente de IA', () => {
     await pedir('Mueve todas las de Por hacer a En progreso');
     expect(propuestas()).toHaveLength(1);
     const p = propuestas()[0] as HTMLElement;
-    expect(within(p).getAllByText('Columna: Por hacer → En progreso')).toHaveLength(3);
+    expect(within(p).getAllByText('Por hacer → En progreso')).toHaveLength(3);
     for (const t of ['Luz', 'Agua', 'Gas']) expect(p.textContent).toContain(t);
   });
 });

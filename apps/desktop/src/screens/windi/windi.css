@@ -1,0 +1,165 @@
+/* Rediseño de Agente de IA (docs/rediseno.md RD-36; Figma 76:26 «Conversación» de 76:2 «Agente de IA · Claro» y 76:81
+ * del oscuro). Medidas en px del Figma, relativas a la conversación; los colores son los tokens del marco
+ * (`ventana_principal/marco.css`). */
+.wg-windi {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  min-height: 0;
+}
+.wg-windi .wg-windi__conversacion {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  gap: 28px; /* 76:27 termina en y = 89,5 y 76:41 empieza en 117,5 */
+  padding: 2px 0 16px;
+}
+.wg-windi .wg-windi__mensaje {
+  max-width: none;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+/* 76:27 «Tu mensaje»: globo de radio 16, texto de 18 px a 21 px del borde (55 px de alto en una línea). */
+.wg-windi .wg-windi__mensaje--user {
+  align-self: flex-end;
+  max-width: 70%;
+  padding: 17px 21px;
+  border-radius: 16px;
+  background: var(--wgm-globo-propio);
+  font-size: 18px;
+}
+/* Windi: la ilustración de 77 × 48 (76:29) y, a 18 px, «Windi» (76:41, 19 px negrita) y el texto (76:42, 22 px). */
+.wg-windi .wg-windi__mensaje--assistant {
+  display: grid;
+  grid-template-columns: 77px minmax(0, 1fr);
+  column-gap: 18px;
+  align-self: stretch;
+}
+.wg-windi__ilustracion {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  margin-top: 7px;
+}
+.wg-windi .wg-windi__autor {
+  grid-column: 2;
+  color: var(--wgm-nombre-windi);
+  font-size: 19px;
+  font-weight: 700;
+}
+.wg-windi .wg-windi__mensaje--assistant .wg-windi__texto {
+  grid-column: 2;
+  margin-top: 9px;
+  font-size: 22px;
+}
+.wg-windi .wg-windi__mensaje--assistant > .wg-windi__propuesta {
+  grid-column: 2;
+}
+
+/* 76:43 «Propuesta de movimiento»: 620 px, radio 13, borde de 1,5 px; 34 px debajo del texto. */
+.wg-windi__propuesta {
+  box-sizing: border-box;
+  width: min(620px, 100%);
+  margin-top: 34px;
+  padding: 18.5px 22.5px 26.5px;
+  border: 1.5px solid var(--wgm-linea-windi);
+  border-radius: 13px;
+  background: var(--wgm-propuesta);
+}
+.wg-windi__propuesta-etiqueta {
+  margin: 0;
+  color: var(--wg-texto);
+  font-size: 12px;
+  font-weight: 700;
+}
+.wg-windi__propuesta-tarjetas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wg-windi__propuesta-titulo {
+  margin: 15px 0 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+/* 76:46 «Columna» (15 px) y 76:47 el cambio (19 px peso 500), a 109 px. */
+.wg-windi__dato {
+  display: grid;
+  grid-template-columns: 109px minmax(0, 1fr);
+  align-items: baseline;
+  margin: 17px 0 0;
+}
+.wg-windi__dato-nombre {
+  color: var(--wg-texto);
+  font-size: 15px;
+}
+.wg-windi__dato-valor {
+  font-size: 19px;
+  font-weight: 500;
+}
+/* 76:48 «Confirmar» (150 × 47) y 76:50 «Rechazar» (141 × 47), 37 px debajo del dato. */
+.wg-windi__propuesta-acciones {
+  gap: 14px;
+  margin-top: 37px;
+}
+body[data-modo] .wg-windi__propuesta-acciones .wg-boton {
+  min-height: 47px;
+  padding: 0 29px;
+  border-radius: 9px;
+  font-size: 17px;
+}
+body[data-modo] .wg-windi__propuesta-acciones .wg-boton--principal {
+  font-weight: 700;
+}
+body[data-modo] .wg-windi__propuesta-acciones .wg-boton:not(.wg-boton--principal):not(:disabled) {
+  background: var(--wg-superficie);
+}
+
+/* 76:52 «Redactar mensaje»: caja de 134 px, radio 14, con el campo arriba y el contador y «Enviar» abajo. */
+.wg-windi .wg-windi__escribir {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-height: 134px;
+  padding: 15.5px 18.5px 18.5px;
+  border: 1.5px solid var(--wgm-linea-windi);
+  border-radius: 14px;
+  background: var(--wgm-campo-windi);
+}
+.wg-windi .wg-windi__escribir:focus-within {
+  outline: 2px solid var(--wgm-seleccion-texto);
+  outline-offset: 2px;
+}
+.wg-windi .wg-windi__escribir textarea {
+  flex: 1;
+  min-height: 48px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--wg-tinta);
+  font: inherit;
+  font-size: 18px;
+  resize: none;
+}
+.wg-windi .wg-windi__escribir textarea:focus-visible {
+  outline: none;
+}
+.wg-windi .wg-windi__escribir textarea::placeholder {
+  color: var(--wg-texto);
+  opacity: 1;
+}
+.wg-windi__pie {
+  justify-content: space-between;
+  color: var(--wg-texto);
+  font-size: 14px;
+}
+/* 76:55 «Enviar»: 106 × 40, radio 9. */
+body[data-modo] .wg-windi__pie .wg-boton {
+  min-width: 106px;
+  min-height: 40px;
+  border-radius: 9px;
+  justify-content: center;
+}
