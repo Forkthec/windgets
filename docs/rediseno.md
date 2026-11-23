@@ -1,7 +1,9 @@
 # Rediseño visual · registro único de cambios
 
 Desde el 22-nov-2026 el equipo está en una fase de rediseño visual guiada por el Figma «Windgets»
-(<https://www.figma.com/design/M3aVx3tQdlofQd040l6p1B/Windgets>). Las HU, `interfaz.md` y `producto.md` quedan
+(<https://www.figma.com/design/M3aVx3tQdlofQd040l6p1B/Windgets>). Desde el 23-nov-2026 la versión vigente es «Windgets
+(Copy)» (<https://www.figma.com/design/h5LPoqlRnG5OTP6zru0pjS/Windgets--Copy->), con la página «00 · Fundamentos» y
+las pantallas sin sesión en «01 · Acceso». Las HU, `interfaz.md` y `producto.md` quedan
 desactualizadas en lo que toca el rediseño, y no se editan una por una: **todo cambio del rediseño se anota aquí**.
 Cuando el rediseño termine se hace una sola edición de las HU y los modelos con la lista de «Pendiente para la
 edición final».
@@ -49,6 +51,9 @@ Los commits del rediseño usan el prefijo `rediseno: <verbo y objeto>`.
 | RD-13 | 2026-11-22 | P28 | Inicio de sesión | Divisor «o» entre «Iniciar sesión» y «Continuar con Google», como en el Figma. | — | `SignIn.test.tsx` |
 | RD-14 | 2026-11-22 | P28 | Catálogo de paletas | Paletas nuevas «Claro» (`claro`) y «Oscuro» (`oscuro`), al principio del catálogo, para todas las cuentas. Oscuro: principal `#201B2B`, secundario `#5D566B`, texto `#F8F5FF`. Claro: principal `#F5F0FF`, secundario `#B6A560`, texto `#17131D`. En Claro el secundario se oscureció frente al Figma para que la acción tenga 3:1 sobre la superficie (R-13, queda en 3,12:1); por eso la nota con sesión es un crema más oscuro (`#E2DBBF`) que la de las pantallas de cuenta. | HE-02-HU07 (catálogo de paletas) | `pruebas_de_paletas_del_rediseno` (Rust) |
 | RD-15 | 2026-11-22 | P28 | Cuenta nueva | Al crear una cuenta (correo o Google), su primer tema toma la paleta del modo elegido en las pantallas de cuenta y la tipografía Rubik, y se aplica. Si no se puede, la cuenta sigue con su tema y se muestra el mensaje de resultado «No pudimos aplicar el tema <Claro u Oscuro>. Puedes elegirlo en Personalización.». Las cuentas existentes no cambian. | HE-01-HU03 y HE-01-HU05 (la cuenta empezaba con el tema por defecto) | `temaInicial.test.tsx` |
+| RD-16 | 2026-11-23 | P28 | Verificar correo, Recuperar contraseña (Correo electrónico, Diligenciar código, Nueva contraseña) | Figma «01 · Acceso»: nota centrada de 570 px debajo del logo centrado, sin Windi ni indicador de pasos. El selector «Apariencia» se queda a la derecha (el Figma no lo muestra en estas pantallas). Dentro de la nota: miga de pan con «/» (Verificar correo: «Registro / Verificar correo», donde «Registro» hace lo mismo que «Regresar»; Recuperar: «Inicio de sesión / Recuperar contraseña»), título y subtítulo: «Verifica tu correo» / «Escribe el código que enviamos a tu correo.» (ya no se muestra el correo); «Recupera tu contraseña» / «Te enviaremos un código a tu correo electrónico.»; «Verifica el código» / «Ingresa el código que recibiste por correo.»; «Nueva contraseña» / «Elige una contraseña para volver a entrar.». Correo electrónico con el texto de ejemplo «nombre@ejemplo.com». Nueva contraseña con la ayuda «8 a 64 caracteres, una mayúscula, una minúscula y un número.». Estos campos no llevan contador ni marca de obligatorio. Reemplaza en estas pantallas RD-08 (globo de Windi), RD-09 (indicador de pasos) y RD-10 (contadores). | RT-03-ET08 (Registro sin miga de pan), HE-01-HU03-ET01 (el correo en Verificar correo) | `Register.test.tsx`, `Recovery.test.tsx` |
+| RD-17 | 2026-11-23 | P28 | Las mismas pantallas de RD-16 | «Regresar» pasa de la parte superior al final de la nota, como texto de enlace a la izquierda del botón principal (260 px, sin borde ni sombra). «Reenviar código» queda debajo. | RT-03-ET01 («Regresar» en la parte superior) | `Register.test.tsx`, `Recovery.test.tsx` |
+| RD-18 | 2026-11-23 | P28 | Pantallas de cuenta | Avisos: recuadro sin borde con un 12 % del color de error sobre la nota (en oscuro #473941, el del Figma). Sin conexión, el paso Correo electrónico usa «Sin conexión. Conéctate para enviar el código.» y, debajo de las acciones de los pasos de RD-16, «<botón> requiere conexión a internet.» («Enviar código», «Verificar», «Guardar contraseña»). Los demás pasos conservan su aviso. | HE-01-HU06-ET11 (texto del aviso sin conexión) | `Register.test.tsx`, `Recovery.test.tsx` |
 
 ## Pendiente para la edición final
 
@@ -59,7 +64,9 @@ Al cerrar el rediseño, reescribir con las decisiones de arriba:
   «Tema a tokens» para las pantallas sin sesión (RD-02 a RD-07).
 - `HE-03.md`: HU06-CA07 y ET01 (RD-02, RD-06).
 - `HE-01.md`: HU01 (ET01, CA11, textos nuevos, contadores, ayuda, indicador de pasos), HU03 y HU05 (tema inicial),
-  HU06 (Recuperar contraseña) (RD-08 a RD-13, RD-15).
+  HU06 a HU08 (Recuperar contraseña) (RD-08 a RD-13, RD-15 a RD-18).
+- `HE-01.md` HU03-ET01 y `RT.md` RT-03-ET01 y ET08: miga de pan en Verificar correo, «Regresar» al
+  final y el correo que ya no se muestra (RD-16, RD-17).
 - `HE-02.md`: HU07 y su catálogo de paletas; HU06, catálogo de tipografías (RD-06, RD-14).
 - `plan_construccion.md`: agregar P25 a P28 (RD-01).
 - `arquitectura.md`: D-198 (RD-06).
