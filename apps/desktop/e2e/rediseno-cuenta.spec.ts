@@ -119,3 +119,12 @@ test('RD-21 · Windi se oculta por debajo de 1000 px y la nota no cambia de altu
   await page.setViewportSize({ width: 960, height: 600 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(960);
 });
+
+test('RD-22 · El selector «Apariencia» se maneja con las flechas', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.goto('/');
+  await page.getByRole('radio', { name: 'Claro' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('.wg-cuenta-raiz')).toHaveAttribute('data-modo', 'oscuro');
+  await expect(page.getByRole('radio', { name: 'Oscuro' })).toBeFocused();
+});

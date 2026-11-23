@@ -113,6 +113,7 @@ Aprobadas por Paula el 2026-11-22. Valen para toda pantalla que se construya o c
 | RD-19 | 2026-11-22 | P28 | Inicio de sesión y Registro | Composición medida sobre los marcos 66:4 y 66:162 (±2 px; Windi de Registro, ±7 px): a 1240 px la nota va en (602, 135) y mide 552 × 624 en Inicio de sesión; el globo y Windi se ubican en % de su columna para achicarse con ella. Campos y botones secundarios de 44 px. En Registro, el divisor y «Continuar con Google» (RD-12) hacen la nota más alta que el marco: a 1240 × 930 la pantalla se desplaza. | `interfaz.md` (R-07, R-08, alturas de campo y botón) | `e2e/rediseno-cuenta.spec.ts` |
 | RD-20 | 2026-11-22 | P28 | Las pantallas de RD-16 | La nota centrada mide al menos 420 px de alto, como los marcos 84:x, con el ritmo vertical del Figma. El logo va centrado con la nota y con la misma altura del Figma; los márgenes a los lados de la nota son iguales (el Figma los tiene desiguales y no se copia). | — | `e2e/rediseno-cuenta.spec.ts` |
 | RD-21 | 2026-11-22 | P28 | Pantallas de cuenta | El corte de RD-07 es `width < 1000px`: a 1000 px Windi todavía se ve. Por debajo, la nota queda a la misma altura y solo el margen lateral baja a 16 px; la nota centrada conserva sus 570 px mientras quepa. | — | `e2e/rediseno-cuenta.spec.ts` |
+| RD-22 | 2026-11-22 | P28 | Selector «Apariencia» | Como grupo de radios: solo la opción elegida entra en el orden de tabulación y las flechas cambian de modo y mueven el foco. | — | `SelectorDeModo.test.tsx`, `e2e/rediseno-cuenta.spec.ts` |
 
 ## Pendiente para la edición final
 
@@ -123,7 +124,7 @@ Al cerrar el rediseño, reescribir con las decisiones de arriba:
   «Tema a tokens» para las pantallas sin sesión (RD-02 a RD-07, RD-19).
 - `HE-03.md`: HU06-CA07 y ET01 (RD-02, RD-06).
 - `HE-01.md`: HU01 (ET01, CA11, textos nuevos, contadores, ayuda, indicador de pasos), HU03 y HU05 (tema inicial),
-  HU06 a HU08 (Recuperar contraseña) (RD-08 a RD-13, RD-15 a RD-21).
+  HU06 a HU08 (Recuperar contraseña) (RD-08 a RD-13, RD-15 a RD-22).
 - `HE-01.md` HU03-ET01 y `RT.md` RT-03-ET01 y ET08: miga de pan en Verificar correo, «Regresar» al
   final y el correo que ya no se muestra (RD-16, RD-17).
 - `HE-02.md`: HU07 y su catálogo de paletas; HU06, catálogo de tipografías (RD-06, RD-14).

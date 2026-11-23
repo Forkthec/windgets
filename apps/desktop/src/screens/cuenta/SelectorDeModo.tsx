@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from 'react';
 import { useApariencia, type ModoDeCuenta } from './apariencia';
 
 // docs/rediseno.md RD-02: el selector «Apariencia» con «Claro» (sol) y «Oscuro» (luna), arriba a la derecha de las
@@ -54,16 +55,33 @@ const OPCIONES: readonly { modo: ModoDeCuenta; texto: string; Icono: () => JSX.E
   { modo: 'oscuro', texto: 'Oscuro', Icono: Luna },
 ];
 
+// RD-22: como grupo de radios (WAI-ARIA APG), solo la opción elegida entra en el orden de tabulación y las flechas
+// cambian de opción, la eligen y le pasan el foco.
+const SIGUIENTE: Record<string, number> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+
 export function SelectorDeModo() {
   const { modo, cambiar } = useApariencia();
+  const alTeclear = (evento: KeyboardEvent<HTMLDivElement>) => {
+    const paso = SIGUIENTE[evento.key];
+    if (paso === undefined) return;
+    evento.preventDefault();
+    const actual = OPCIONES.findIndex((o) => o.modo === modo);
+    const destino = (actual + paso + OPCIONES.length) % OPCIONES.length;
+    const siguiente = OPCIONES[destino];
+    if (!siguiente) return;
+    cambiar(siguiente.modo);
+    const botones = evento.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]');
+    botones[destino]?.focus();
+  };
   return (
-    <div className="wg-selector-modo" role="radiogroup" aria-label="Apariencia">
+    <div className="wg-selector-modo" role="radiogroup" aria-label="Apariencia" onKeyDown={alTeclear}>
       {OPCIONES.map(({ modo: opcion, texto, Icono }) => (
         <button
           key={opcion}
           type="button"
           role="radio"
           aria-checked={modo === opcion}
+          tabIndex={modo === opcion ? 0 : -1}
           className="wg-selector-modo__opcion"
           onClick={() => cambiar(opcion)}
         >

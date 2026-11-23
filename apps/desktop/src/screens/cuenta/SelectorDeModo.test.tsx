@@ -77,6 +77,28 @@ describe('Apariencia de las pantallas de cuenta', () => {
     expect(raiz()?.getAttribute('data-modo')).toBe('oscuro');
   });
 
+  it('RD-22: con el teclado, solo la opción elegida se tabula y las flechas cambian de modo', () => {
+    windowsEnModo(false);
+    render(<Pantalla />);
+    expect(opcion('Claro').tabIndex).toBe(0);
+    expect(opcion('Oscuro').tabIndex).toBe(-1);
+    opcion('Claro').focus();
+    fireEvent.keyDown(opcion('Claro'), { key: 'ArrowRight' });
+    expect(raiz()?.getAttribute('data-modo')).toBe('oscuro');
+    expect(document.activeElement).toBe(opcion('Oscuro'));
+    expect(opcion('Oscuro').tabIndex).toBe(0);
+    expect(opcion('Claro').tabIndex).toBe(-1);
+    // Al final del grupo, la flecha vuelve a la primera opción.
+    fireEvent.keyDown(opcion('Oscuro'), { key: 'ArrowDown' });
+    expect(raiz()?.getAttribute('data-modo')).toBe('claro');
+    expect(document.activeElement).toBe(opcion('Claro'));
+    fireEvent.keyDown(opcion('Claro'), { key: 'ArrowLeft' });
+    expect(raiz()?.getAttribute('data-modo')).toBe('oscuro');
+    // Otras teclas no cambian el modo.
+    fireEvent.keyDown(opcion('Oscuro'), { key: 'a' });
+    expect(raiz()?.getAttribute('data-modo')).toBe('oscuro');
+  });
+
   it('RD-07, RD-08, RD-09: el marco muestra el globo de Windi, el título, el subtítulo y el paso actual', () => {
     render(<Pantalla />);
     expect(screen.getByRole('complementary', { name: 'Windi' }).textContent).toBe(
