@@ -39,6 +39,8 @@ El equipo está rediseñando la interfaz a partir del Figma «Windgets». Mientr
    `rediseno.md`, con lo que contradice en «Pendiente para la edición final». No se editan las HU ni los modelos uno
    por uno: se hace una sola edición al terminar el rediseño.
 3. Los commits del rediseño usan `rediseno: <verbo y objeto>`.
+4. Antes de construir o cambiar una pantalla del rediseño, lee «Reglas de implementación del rediseño» en
+   `rediseno.md` (fuente de verdad, tokens, tipografía, responsive, accesibilidad y verificación).
 
 ## Cómo tratar «NO DEFINIDO»
 

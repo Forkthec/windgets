@@ -32,6 +32,62 @@ se reescribe una decisión ya fusionada: se agrega una nueva que la reemplaza (�
 
 Los commits del rediseño usan el prefijo `rediseno: <verbo y objeto>`.
 
+## Reglas de implementación del rediseño
+
+Aprobadas por Paula el 2026-11-22. Valen para toda pantalla que se construya o cambie con el rediseño.
+
+1. **Fuente de verdad.** Manda el Figma «Windgets (Copy)» (`h5LPoqlRnG5OTP6zru0pjS`): «00 · Fundamentos» (`0:1`)
+   para colores, tipografía e íconos, y la página del área para las pantallas (hoy «01 · Acceso», `79:2`). Cada
+   componente cita su marco con el id de nodo en un comentario (`// Figma 84:22 «Recuperar contraseña · Claro»`) y
+   cada RD lo cita en «Alcance». Si el Figma choca con una HU, gana el RD que lo decide; si no hay RD, se pregunta a
+   Paula y se crea uno. Si el Figma cambia o tiene una imprecisión que no se copia (por ejemplo, un margen desigual),
+   se anota un RD con la fecha.
+2. **Tokens.** Cada color de «00 · Fundamentos» vive en una variable de nombre estable: `--wg-*` para lo global en
+   `apps/desktop/src/ui/tema/tokens.css` y `--wg<área>-*` para un área, en su propia hoja (`--wgc-*` en
+   `screens/cuenta/cuenta.css`; una hoja nueva por área, por ejemplo `screens/planificador/planificador.css`, para
+   que dos pasos no choquen al fusionar). Fuera de los bloques `[data-modo]` no hay hex sueltos. Los px son medidas
+   del Figma: las que se repiten van en una variable y las demás llevan el nodo en un comentario.
+3. **Tipografía.** Solo fuentes woff2 empaquetadas en `apps/desktop/assets/fonts`, con su `@font-face` en
+   `tokens.css` y `font-display: swap`. Rubik en pesos 400, 500 y 700. Escala de «00 · Fundamentos»: título 42,
+   sección 26 y texto 17 px; otro tamaño solo si el marco lo usa, con su nodo. Nunca fuentes del sistema (salvo el
+   respaldo «Segoe UI» de `--wg-fuente`) ni de internet.
+4. **Medidas y responsive.** Se compara con el Figma al tamaño de cada marco (1240×820, 1240×930, 1280×790…) y
+   además a 1200×800, el tamaño con que abre la ventana (mínimo 960×600, `tauri.conf.json`). Puntos de corte:
+   `width < 1000px` oculta a Windi y su globo, y la nota queda centrada con el mismo ancho; entre 1000 y 1240 px
+   Windi se escala con su columna y nunca queda cortado por el borde de la ventana; si no cabe en alto, hay scroll
+   vertical. Nunca hay scroll horizontal. Unidades: px del Figma, sin rem. Los bordes de 1,5 px de RD-05 se
+   mantienen y no se agregan grosores fraccionarios nuevos. El diseño aguanta la escala de Windows de 100 a 150 % y
+   el zoom del WebView de 90 a 125 % (125 % sobre la ventana mínima equivale a 768×480).
+5. **Modos.** Todo componente nuevo define sus colores en `[data-modo='claro']` y `[data-modo='oscuro']`. Antes de
+   iniciar sesión manda el modo (RD-02, RD-03); con la sesión, el tema (RD-14, RD-15).
+6. **Componentes.** Se reutilizan `MarcoDeCuenta`, `PasoCentrado`, `AccionesDelPaso`, `CampoTexto` (contador,
+   ayuda, obligatorio), `Boton`, `Aviso`, `Hipervinculo` e `IndicadorDePasos`. Si el Figma repite una pieza con otra
+   variante, se extiende el componente con una prop; solo se crea uno nuevo si la pieza aparece en dos o más marcos y
+   ninguno la cubre. Sin estilos en línea.
+7. **Estados sin Figma.** Error, vacío, cargando, sin conexión, deshabilitado y foco se arman con los componentes y
+   tokens existentes (Aviso, mensaje de campo, `--wgc-deshabilitado-*`, contorno de foco) y se anotan como RD con su
+   texto literal. Ningún camino previsible termina en el error genérico, y un error que llegue sin mensaje muestra
+   el texto genérico: nunca se queda en silencio.
+8. **Accesibilidad mínima.** Texto con contraste de 4,5:1 o más (3:1 si es grande); controles y bordes de campo de
+   3:1 o más (R-13). Enlaces subrayados (R-12), foco visible, nombre accesible igual a la etiqueta del CA, ayuda y
+   error en `aria-describedby`, y grupos de opciones con el patrón de ARIA (una parada de tabulación y flechas).
+   Contraste alto de Windows: no se fuerzan colores (`forced-colors: active`) y todo estado que dependa del fondo
+   lleva además un borde o un contorno. El tamaño de texto de Windows no llega al WebView2: se cubre con el zoom hasta
+   125 %.
+9. **Textos.** Literales del Figma o de un RD, centralizados por área (como `textosDelRediseno.ts`). Sin texto
+   inventado.
+10. **Recursos.** Todo se construye con código: CSS y SVG exportados del Figma (Exportar > SVG, con los colores de la
+    paleta), en `screens/<área>/activos/`. La app no usa PNG ni URLs temporales del MCP. Un PNG de un marco solo se
+    exporta para comparar cuando no hay otra forma y no es fuente de verdad.
+11. **Verificación antes de cada PR del rediseño.** Una prueba por RD. Pruebas de captura de Playwright
+    (`toHaveScreenshot`) que solo corren en el contenedor `windgets-ci`, para que el render sea igual en cualquier
+    computador: cada pantalla al tamaño de su marco y a 1200×800, en claro y oscuro, con `maxDiffPixelRatio` 0,01 y
+    las capturas de referencia en el repositorio. `herramientas/verificacion/verificar.sh` con todos los pasos en
+    `=== fin (0)`. Lista de chequeo: tamaños de los marcos, 1200×800, 1000 y 999 px, 960×600, zoom de 125 %, foco,
+    contraste y estados sin Figma.
+12. **Proceso.** Un RD por cambio («Reemplaza RD-nn» si cambia uno ya fusionado), commits `rediseno: <verbo y
+    objeto>` y «Pendiente para la edición final» al día. Aprueba Paula.
+
 ## Decisiones
 
 | RD | Fecha | Paso / PR | Alcance | Decisión | Contradice | Prueba |
