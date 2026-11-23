@@ -8,7 +8,8 @@ import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
 import { useNavegacion, useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { useConexion } from '../cuenta/conexion';
 import { MarcoDeCuenta } from '../cuenta/MarcoDeCuenta';
-import { MAXIMO, PANTALLAS, PASOS_DE_RECUPERACION } from '../cuenta/textosDelRediseno';
+import { AccionesDelPaso } from '../cuenta/PasoCentrado';
+import { PASOS_CENTRADOS, REQUIERE_CONEXION, SIN_CONEXION_ENVIAR_CODIGO } from '../cuenta/textosDelRediseno';
 import { validarCorreo } from '../cuenta/validaciones';
 import { DiligenciarCodigo } from './DiligenciarCodigo';
 import { NuevaContrasena } from './NuevaContrasena';
@@ -67,11 +68,7 @@ export function Recovery() {
 
   if (paso === 'nueva') {
     return (
-      <MarcoDeCuenta
-        nombre="Recuperar contraseña"
-        {...PANTALLAS.nueva}
-        pasos={{ lista: PASOS_DE_RECUPERACION, actual: 2 }}
-      >
+      <MarcoDeCuenta nombre="Recuperar contraseña">
         {/* HE-01-HU07-CA01, HE-01-HU08: el paso Nueva contraseña; «Regresar» vuelve a Diligenciar código. */}
         <NuevaContrasena alRegresar={regresarAlCodigo} />
       </MarcoDeCuenta>
@@ -80,11 +77,7 @@ export function Recovery() {
 
   if (paso === 'codigo') {
     return (
-      <MarcoDeCuenta
-        nombre="Recuperar contraseña"
-        {...PANTALLAS.recuperar}
-        pasos={{ lista: PASOS_DE_RECUPERACION, actual: 1 }}
-      >
+      <MarcoDeCuenta nombre="Recuperar contraseña">
         {/* HE-01-HU07-CA08, ET09: «Regresar» vuelve al paso Correo electrónico con el correo diligenciado.
             DUDA: HE-01-HU07 sin IPC para invalidar el código al regresar (ver docs/DUDAS.md). */}
         <DiligenciarCodigo
@@ -98,15 +91,13 @@ export function Recovery() {
   }
 
   return (
-    <MarcoDeCuenta
-      nombre="Recuperar contraseña"
-      {...PANTALLAS.recuperar}
-      pasos={{ lista: PASOS_DE_RECUPERACION, actual: 0 }}
-    >
+    <MarcoDeCuenta nombre="Recuperar contraseña">
+      {/* docs/rediseno.md RD-16 a RD-18: nota centrada, «Regresar» junto a «Enviar código» y el aviso del Figma. */}
       <PasoDeRecuperacion
         nombre="Correo electrónico"
+        {...PASOS_CENTRADOS.recuperar}
         enLinea={enLinea}
-        alRegresar={() => abrirCuenta('sign_in')}
+        avisoSinConexion={SIN_CONEXION_ENVIAR_CODIGO}
       >
         <form
           className="wg-formulario"
@@ -122,8 +113,7 @@ export function Recovery() {
             id={campos.ids.email}
             etiqueta="Correo electrónico"
             type="email"
-            obligatorio
-            maximo={MAXIMO.correo}
+            placeholder="nombre@ejemplo.com"
             valor={correo}
             alCambiar={(valor) => {
               setCorreo(valor);
@@ -132,9 +122,14 @@ export function Recovery() {
             mensaje={campos.mensajes.email}
           />
           {/* ET12: sin conexión, «Enviar código» se ve deshabilitado hasta que vuelva la conexión. */}
-          <Boton principal type="submit" disabled={!enLinea || envio.enCurso}>
-            Enviar código
-          </Boton>
+          <AccionesDelPaso
+            alRegresar={() => abrirCuenta('sign_in')}
+            motivoSinConexion={enLinea ? null : REQUIERE_CONEXION('Enviar código')}
+          >
+            <Boton principal type="submit" disabled={!enLinea || envio.enCurso}>
+              Enviar código
+            </Boton>
+          </AccionesDelPaso>
         </form>
       </PasoDeRecuperacion>
     </MarcoDeCuenta>

@@ -8,6 +8,8 @@ import { Recovery } from './Recovery';
 
 const ENVIADO = 'Si el correo está registrado, te enviamos un código de verificación.';
 const SIN_CONEXION = 'No hay conexión a internet. Conéctate para recuperar tu contraseña.';
+// docs/rediseno.md RD-18: el paso Correo electrónico usa el aviso del Figma.
+const SIN_CONEXION_CORREO = 'Sin conexión. Conéctate para enviar el código.';
 
 async function recuperar(conectado = true) {
   const nucleo = await abrirCuenta(
@@ -57,7 +59,7 @@ describe('HE-01-HU06 · Solicitar un código de verificación en Recuperar contr
     // ET01: miga de pan, Correo electrónico, «Enviar código» y «Regresar».
     const correo = paso('Correo electrónico');
     const miga = within(correo).getByRole('navigation', { name: 'Miga de pan' });
-    expect(miga.textContent).toBe('Inicio de sesión>Recuperar contraseña');
+    expect(miga.textContent).toBe('Inicio de sesión/Recuperar contraseña');
     expect(within(correo).getByRole('button', { name: 'Regresar' })).toBeTruthy();
     escribir('Correo electrónico', 'ana@example.com');
     await seleccionar('Enviar código');
@@ -103,7 +105,8 @@ describe('HE-01-HU06 · Solicitar un código de verificación en Recuperar contr
     const nucleo = await recuperar(false);
     escribir('Correo electrónico', 'ana@example.com');
     // ET11: el aviso arriba del paso; ET12: «Enviar código» deshabilitado hasta que vuelva la conexión.
-    expect(within(paso('Correo electrónico')).getByRole('alert').textContent).toBe(SIN_CONEXION);
+    expect(within(paso('Correo electrónico')).getByRole('alert').textContent).toBe(SIN_CONEXION_CORREO);
+    expect(screen.getByText('Enviar código requiere conexión a internet.')).toBeTruthy();
     const enviar = screen.getByRole('button', { name: 'Enviar código' });
     expect(enviar.hasAttribute('disabled')).toBe(true);
     await seleccionar('Enviar código');
@@ -122,7 +125,7 @@ describe('HE-01-HU06 · Solicitar un código de verificación en Recuperar contr
     }));
     escribir('Correo electrónico', 'ana@example.com');
     await seleccionar('Enviar código');
-    expect(screen.getByRole('alert').textContent).toBe(SIN_CONEXION);
+    expect(screen.getByRole('alert').textContent).toBe(SIN_CONEXION_CORREO);
     expect(paso('Correo electrónico')).toBeTruthy();
   });
 
@@ -174,7 +177,7 @@ describe('HE-01-HU07 · Verificar el código de verificación en Recuperar contr
     // ET01: campo, «Verificar», «Reenviar código», miga de pan y «Regresar».
     const codigo = paso('Diligenciar código');
     expect(within(codigo).getByRole('navigation', { name: 'Miga de pan' }).textContent).toBe(
-      'Inicio de sesión>Recuperar contraseña',
+      'Inicio de sesión/Recuperar contraseña',
     );
     expect(within(codigo).getByRole('button', { name: 'Regresar' })).toBeTruthy();
     expect(within(codigo).getByRole('link', { name: 'Reenviar código' })).toBeTruthy();
@@ -316,7 +319,7 @@ describe('HE-01-HU08 · Crear una contraseña nueva para la cuenta', () => {
     // ET01: los dos campos, «Guardar contraseña», miga de pan y «Regresar».
     const nueva = paso('Nueva contraseña');
     expect(within(nueva).getByRole('navigation', { name: 'Miga de pan' }).textContent).toBe(
-      'Inicio de sesión>Recuperar contraseña',
+      'Inicio de sesión/Recuperar contraseña',
     );
     expect(within(nueva).getByRole('button', { name: 'Regresar' })).toBeTruthy();
     // ET03: 8 y 64 caracteres son válidos.
@@ -415,24 +418,39 @@ describe('HE-01-HU08 · Crear una contraseña nueva para la cuenta', () => {
   });
 });
 
-// docs/rediseno.md: textos y elementos del rediseño en Recuperar contraseña.
+// docs/rediseno.md RD-16 a RD-18: Recuperar contraseña con la nota centrada del Figma «01 · Acceso».
 describe('Rediseño · Recuperar contraseña', () => {
-  afterEach(cleanup);
-
-  it('RD-08, RD-09, RD-10 · Título, Windi, el paso Correo marcado y el contador del correo', async () => {
+  it('RD-16 · Nota centrada sin Windi ni indicador de pasos, con miga de pan, título y subtítulo', async () => {
     await recuperar();
-    expect(screen.getByRole('heading', { level: 1, name: 'Recupera tu contraseña' })).toBeTruthy();
-    expect(screen.getByRole('complementary', { name: 'Windi' }).textContent).toContain(
-      'te ayudo a recuperarla.',
-    );
-    const pasos = screen.getByRole('list', { name: 'Pasos' });
+    expect(screen.queryByRole('complementary', { name: 'Windi' })).toBeNull();
+    expect(screen.queryByRole('list', { name: 'Pasos' })).toBeNull();
+    const correo = paso('Correo electrónico');
+    expect(within(correo).getByRole('heading', { level: 1, name: 'Recupera tu contraseña' })).toBeTruthy();
+    expect(within(correo).getByText('Te enviaremos un código a tu correo electrónico.')).toBeTruthy();
+    expect(campo('Correo electrónico').getAttribute('placeholder')).toBe('nombre@ejemplo.com');
+    // El selector «Apariencia» se queda en las pantallas secundarias.
+    expect(screen.getByRole('radiogroup', { name: 'Apariencia' })).toBeTruthy();
+  });
+
+  it('RD-17 · «Regresar» va a la izquierda del botón principal en los tres pasos', async () => {
+    const nucleo = await recuperar();
+    const acciones = () =>
+      Array.from(document.querySelectorAll('.wg-acciones button')).map((b) => b.textContent);
+    expect(acciones()).toEqual(['Regresar', 'Enviar código']);
+    escribir('Correo electrónico', 'ana@example.com');
+    await seleccionar('Enviar código');
     expect(
-      within(pasos)
-        .getAllByRole('listitem')
-        .map((p) => p.textContent),
-    ).toEqual(['1Correo', '2Código', '3Nueva contraseña']);
-    expect(pasos.querySelector('[aria-current="step"]')?.textContent).toBe('1Correo');
-    expect(screen.getByText('0/64')).toBeTruthy();
-    expect(campo('Correo electrónico').getAttribute('aria-required')).toBe('true');
+      within(paso('Diligenciar código')).getByRole('heading', { name: 'Verifica el código' }),
+    ).toBeTruthy();
+    expect(acciones()).toEqual(['Regresar', 'Verificar']);
+    nucleo.responder('auth_recovery_verify', () => ({ ok: true, value: null }));
+    escribir('Código de verificación', '482913');
+    await seleccionar('Verificar');
+    const nueva = paso('Nueva contraseña');
+    expect(within(nueva).getByRole('heading', { name: 'Nueva contraseña' })).toBeTruthy();
+    expect(
+      within(nueva).getByText('8 a 64 caracteres, una mayúscula, una minúscula y un número.'),
+    ).toBeTruthy();
+    expect(acciones()).toEqual(['Regresar', 'Guardar contraseña']);
   });
 });

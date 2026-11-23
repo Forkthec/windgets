@@ -8,6 +8,8 @@ import { SelectorDeModo } from './SelectorDeModo';
 // Pantallas de cuenta del rediseño (docs/rediseno.md RD-04 a RD-09; Figma «Nota de Windi · Inicio de sesión» y
 // «Saludo junto a la nota · Registro»): cabecera con el logo y el selector «Apariencia», Windi con su globo a la
 // izquierda y el formulario como una nota a la derecha. Por debajo de 1000 px de ancho Windi se oculta (RD-07).
+// Sin `windi`, la nota va centrada debajo del logo centrado (RD-16, Figma «Verificar correo», «Recuperar
+// contraseña»): el paso pone su miga de pan, su título y su subtítulo (PasoCentrado).
 // Los colores salen de `.wg-cuenta-raiz[data-modo]` (tokens.css), no del tema.
 
 export interface SaludoDeWindi {
@@ -64,8 +66,9 @@ function PuntaDelGlobo() {
 
 export function MarcoDeCuenta({ nombre, titulo, subtitulo, windi, pasos, children }: MarcoDeCuentaProps) {
   const pose = windi?.pose ?? 'saludo';
+  const cuerpo = windi ? `wg-cuenta__cuerpo--${pose}` : 'wg-cuenta__cuerpo--centrada';
   return (
-    <main aria-label={nombre} className="wg-cuenta">
+    <main aria-label={nombre} className={windi ? 'wg-cuenta' : 'wg-cuenta wg-cuenta--centrada'}>
       <header className="wg-cuenta__cabecera">
         <span className="wg-cuenta__logo">
           <img className="wg-cuenta__simbolo" src={simbolo} alt="" />
@@ -73,7 +76,7 @@ export function MarcoDeCuenta({ nombre, titulo, subtitulo, windi, pasos, childre
         </span>
         <SelectorDeModo />
       </header>
-      <div className={`wg-cuenta__cuerpo wg-cuenta__cuerpo--${pose}`}>
+      <div className={`wg-cuenta__cuerpo ${cuerpo}`}>
         {windi && (
           <aside className="wg-cuenta__windi" aria-label="Windi">
             <div className="wg-globo">

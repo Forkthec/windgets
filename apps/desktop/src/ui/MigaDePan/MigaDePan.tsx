@@ -7,10 +7,12 @@ export interface NivelDeMiga {
 export interface MigaDePanProps {
   /** Niveles de la ruta, por ejemplo «Widgets > Agregar widget > Clima» (RT-03-ET02). */
   niveles: readonly NivelDeMiga[];
+  /** Separador entre niveles; las pantallas de cuenta usan «/» (docs/rediseno.md RD-16). */
+  separador?: string;
 }
 
 // En la parte superior de la pantalla, subpantalla o paso con ruta definida (RT-03-ET01).
-export function MigaDePan({ niveles }: MigaDePanProps) {
+export function MigaDePan({ niveles, separador = '>' }: MigaDePanProps) {
   return (
     <nav aria-label="Miga de pan">
       <ol className="wg-miga">
@@ -18,7 +20,7 @@ export function MigaDePan({ niveles }: MigaDePanProps) {
           const actual = i === niveles.length - 1;
           return (
             <li key={`${i}-${nivel.texto}`} className="wg-fila" aria-current={actual ? 'page' : undefined}>
-              {i > 0 && <span aria-hidden="true">&gt;</span>}
+              {i > 0 && <span aria-hidden="true">{separador}</span>}
               {!actual && nivel.alElegir ? (
                 <button type="button" className="wg-miga__nivel" onClick={nivel.alElegir}>
                   {nivel.texto}

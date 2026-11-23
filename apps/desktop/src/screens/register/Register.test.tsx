@@ -335,9 +335,11 @@ describe('HE-01-HU03 · Verificar el correo', () => {
 
   it('HE-01-HU03-CA01 · Verificar el correo y crear la cuenta', async () => {
     const nucleo = await enVerificar();
-    // ET01: correo, campo, «Verificar», «Reenviar código» y «Regresar».
+    // ET01: campo, «Verificar», «Reenviar código» y «Regresar». docs/rediseno.md RD-16: el texto del Figma ya no
+    // muestra el correo.
     const paso = screen.getByRole('region', { name: 'Verificar correo' });
-    expect(within(paso).getByText('ana@example.com')).toBeTruthy();
+    expect(within(paso).getByText('Escribe el código que enviamos a tu correo.')).toBeTruthy();
+    expect(within(paso).queryByText('ana@example.com')).toBeNull();
     expect(within(paso).getByRole('link', { name: 'Reenviar código' })).toBeTruthy();
     expect(within(paso).getByRole('button', { name: 'Regresar' })).toBeTruthy();
     escribirCodigo('482913');
@@ -441,10 +443,12 @@ describe('HE-01-HU03 · Verificar el correo', () => {
     const nucleo = await enVerificar(false, 0);
     escribirCodigo('482913');
     const paso = screen.getByRole('region', { name: 'Verificar correo' });
-    // ET14: el aviso en la parte superior del paso, debajo de «Regresar».
+    // ET14 y docs/rediseno.md RD-16: el aviso arriba del paso, debajo de la miga de pan, el título y el subtítulo.
     const aviso = within(paso).getByRole('alert');
     expect(aviso.textContent).toBe('No hay conexión a internet. Conéctate para crear tu cuenta.');
-    expect(paso.children[1]).toBe(aviso);
+    expect(paso.children[3]).toBe(aviso);
+    // RD-18: debajo de las acciones, por qué «Verificar» está deshabilitado.
+    expect(within(paso).getByText('Verificar requiere conexión a internet.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Verificar' }).hasAttribute('disabled')).toBe(true);
     expect(screen.getByRole('link', { name: 'Reenviar código' }).getAttribute('aria-disabled')).toBe('true');
     await seleccionar('Verificar');
@@ -496,5 +500,29 @@ describe('Rediseño · Registro', () => {
     const formulario = screen.getByRole('form', { name: 'Formulario' });
     const orden = Array.from(formulario.querySelectorAll('button, .wg-divisor, a')).map((e) => e.textContent);
     expect(orden).toEqual(['Crear cuenta', 'o', 'Continuar con Google', 'Inicia sesión']);
+  });
+});
+
+// docs/rediseno.md RD-16, RD-17: Verificar correo con la nota centrada del Figma «01 · Acceso».
+describe('Rediseño · Verificar correo', () => {
+  it('RD-16 · Sin Windi ni indicador de pasos, con la miga «Registro / Verificar correo»', async () => {
+    await enVerificar();
+    expect(screen.queryByRole('complementary', { name: 'Windi' })).toBeNull();
+    expect(screen.queryByRole('list', { name: 'Pasos' })).toBeNull();
+    const paso = screen.getByRole('region', { name: 'Verificar correo' });
+    expect(within(paso).getByRole('navigation', { name: 'Miga de pan' }).textContent).toBe(
+      'Registro/Verificar correo',
+    );
+    expect(within(paso).getByRole('heading', { level: 1, name: 'Verifica tu correo' })).toBeTruthy();
+  });
+
+  it('RD-16, RD-17 · «Registro» en la miga y «Regresar» vuelven al formulario con lo diligenciado', async () => {
+    const nucleo = await enVerificar();
+    const acciones = Array.from(document.querySelectorAll('.wg-acciones button')).map((b) => b.textContent);
+    expect(acciones).toEqual(['Regresar', 'Verificar']);
+    fireEvent.click(screen.getByRole('button', { name: 'Registro' }));
+    expect(screen.getByRole('heading', { level: 1, name: 'Crea tu cuenta' })).toBeTruthy();
+    expect(screen.getByLabelText('Correo electrónico')).toHaveProperty('value', 'ana@example.com');
+    expect(llamadasA(nucleo, 'auth_register_cancel')).toHaveLength(1);
   });
 });

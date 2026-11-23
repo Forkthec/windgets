@@ -1,4 +1,4 @@
-// Textos del rediseño de las pantallas de cuenta (docs/rediseno.md RD-08 a RD-12, RD-15). No salen de un CA: los
+// Textos del rediseño de las pantallas de cuenta (docs/rediseno.md RD-08 a RD-12, RD-15 a RD-18). No salen de un CA: los
 // fija docs/rediseno.md, que gana sobre las HU mientras dure el rediseño.
 import type { SaludoDeWindi } from './MarcoDeCuenta';
 
@@ -8,7 +8,6 @@ export const AYUDA_CONTRASENA = '8 a 64 caracteres con al menos una mayúscula, 
 export const MAXIMO = { alias: 30, correo: 64, contrasena: 64 } as const;
 
 export const PASOS_DE_REGISTRO = ['Formulario', 'Verificar correo'] as const;
-export const PASOS_DE_RECUPERACION = ['Correo', 'Código', 'Nueva contraseña'] as const;
 
 export const PANTALLAS = {
   inicio: {
@@ -21,19 +20,28 @@ export const PANTALLAS = {
     subtitulo: 'Solo te toma un minuto.',
     windi: { lineas: ['¡Soy Windi!', '¿Creamos tu cuenta?'], pose: 'registro' } satisfies SaludoDeWindi,
   },
-  verificar: {
-    titulo: 'Verifica tu correo',
-    windi: { lineas: ['¡Revisa tu correo!', 'Te espero aquí.'], pose: 'registro' } satisfies SaludoDeWindi,
-  },
+} as const;
+
+/**
+ * RD-16: los pasos con la nota centrada (Figma «01 · Acceso»). Título y subtítulo literales del Figma; sin Windi
+ * ni indicador de pasos.
+ */
+export const PASOS_CENTRADOS = {
+  verificar: { titulo: 'Verifica tu correo', subtitulo: 'Escribe el código que enviamos a tu correo.' },
   recuperar: {
     titulo: 'Recupera tu contraseña',
-    windi: { lineas: ['Tranquilo,', 'te ayudo a recuperarla.'] } satisfies SaludoDeWindi,
+    subtitulo: 'Te enviaremos un código a tu correo electrónico.',
   },
-  nueva: {
-    titulo: 'Recupera tu contraseña',
-    windi: { lineas: ['Elige una', 'que recuerdes.'] } satisfies SaludoDeWindi,
-  },
+  codigo: { titulo: 'Verifica el código', subtitulo: 'Ingresa el código que recibiste por correo.' },
+  nueva: { titulo: 'Nueva contraseña', subtitulo: 'Elige una contraseña para volver a entrar.' },
 } as const;
+
+/** RD-16: la ayuda fija de Nueva contraseña, literal del Figma (distinta de la de Registro). */
+export const AYUDA_NUEVA_CONTRASENA = '8 a 64 caracteres, una mayúscula, una minúscula y un número.';
+/** RD-18: el aviso sin conexión del paso Correo electrónico, literal del Figma. */
+export const SIN_CONEXION_ENVIAR_CODIGO = 'Sin conexión. Conéctate para enviar el código.';
+/** RD-18: debajo de las acciones, por qué el botón principal está deshabilitado sin conexión. */
+export const REQUIERE_CONEXION = (accion: string) => `${accion} requiere conexión a internet.`;
 
 /** RD-15: la paleta del modo no se pudo aplicar al tema de una cuenta nueva. */
 export const TEMA_INICIAL_NO_APLICADO = (paleta: 'Claro' | 'Oscuro') =>

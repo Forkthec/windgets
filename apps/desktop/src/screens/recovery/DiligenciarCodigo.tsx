@@ -10,6 +10,8 @@ import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { useConexion } from '../cuenta/conexion';
 import { Hipervinculo } from '../cuenta/Hipervinculo';
 import { TEXTOS } from '../cuenta/textos';
+import { AccionesDelPaso } from '../cuenta/PasoCentrado';
+import { PASOS_CENTRADOS, REQUIERE_CONEXION } from '../cuenta/textosDelRediseno';
 import { PasoDeRecuperacion } from './PasoDeRecuperacion';
 
 // Recuperar contraseña > paso Diligenciar código (HE-01-HU07). Campo Código de verificación, «Verificar»,
@@ -93,7 +95,7 @@ export function DiligenciarCodigo({
   const puedeReenviar = enLinea && segundos === 0 && !envioReenviar.enCurso;
 
   return (
-    <PasoDeRecuperacion nombre="Diligenciar código" enLinea={enLinea} alRegresar={alRegresar}>
+    <PasoDeRecuperacion nombre="Diligenciar código" {...PASOS_CENTRADOS.codigo} enLinea={enLinea}>
       {aviso && enLinea && <Aviso texto={aviso} />}
       <form
         className="wg-formulario"
@@ -107,7 +109,6 @@ export function DiligenciarCodigo({
         <CampoTexto
           id={campos.ids.code}
           etiqueta="Código de verificación"
-          obligatorio
           inputMode="numeric"
           autoComplete="one-time-code"
           valor={codigo}
@@ -117,9 +118,15 @@ export function DiligenciarCodigo({
           }}
           mensaje={campos.mensajes.code}
         />
-        <Boton principal type="submit" disabled={!enLinea || envioVerificar.enCurso}>
-          Verificar
-        </Boton>
+        {/* docs/rediseno.md RD-17, RD-18: «Regresar» junto a «Verificar»; debajo, «Reenviar código». */}
+        <AccionesDelPaso
+          alRegresar={alRegresar}
+          motivoSinConexion={enLinea ? null : REQUIERE_CONEXION('Verificar')}
+        >
+          <Boton principal type="submit" disabled={!enLinea || envioVerificar.enCurso}>
+            Verificar
+          </Boton>
+        </AccionesDelPaso>
         <p className="wg-fila">
           <Hipervinculo deshabilitado={!puedeReenviar} alSeleccionar={() => void envioReenviar.ejecutar()}>
             Reenviar código

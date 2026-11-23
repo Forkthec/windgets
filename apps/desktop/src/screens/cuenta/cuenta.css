@@ -359,12 +359,15 @@
   outline: 2px solid var(--wgc-enlace);
   outline-offset: 2px;
 }
+/* RD-18 (Figma «Recuperar contraseña · Sin conexión»): el aviso es un recuadro sin borde con un tinte del color de
+ * error sobre la nota (en oscuro da #473941, el del Figma). */
 .wg-nota .wg-aviso {
-  padding: 12px 14px;
-  border: 1.5px solid var(--wg-estado-pendiente);
-  border-radius: 9px;
-  background: var(--wg-relleno-pendiente);
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--wg-estado-vencida) 12%, var(--wg-superficie));
   color: var(--wg-tinta);
+  font-size: 15px;
 }
 .wg-nota .wg-encabezado-ruta {
   margin-bottom: 0;
@@ -375,6 +378,103 @@
 }
 .wg-nota .wg-cuenta__derecha {
   margin: -6px 0 6px;
+  font-size: 15px;
+}
+
+/* RD-16, RD-17 (Figma «Verificar correo», «Recuperar contraseña», «Diligenciar código», «Nueva contraseña»): el
+ * logo centrado, la nota centrada de 570 px sin Windi, la miga de pan con «/», y al final «Regresar» a la
+ * izquierda del botón principal de 260 px. El selector «Apariencia» se queda a la derecha (RD-16). */
+.wg-cuenta--centrada .wg-cuenta__cabecera {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+}
+.wg-cuenta--centrada .wg-cuenta__logo {
+  grid-column: 2;
+  font-size: 30px;
+}
+.wg-cuenta--centrada .wg-selector-modo {
+  grid-column: 3;
+  justify-self: end;
+}
+.wg-cuenta__cuerpo--centrada {
+  grid-template-columns: minmax(0, 570px);
+  justify-content: center;
+  margin-top: 22px;
+}
+.wg-cuenta__cuerpo--centrada .wg-nota {
+  width: 570px;
+  padding: 34px 36px 32px;
+  border-radius: 9px;
+}
+.wg-paso-centrado {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.wg-paso-centrado .wg-nota__titulo {
+  margin-top: 2px;
+  font-size: 32px;
+}
+.wg-paso-centrado .wg-nota__subtitulo {
+  margin: -10px 0 14px;
+  font-size: 16px;
+}
+.wg-paso-centrado .wg-miga {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--wg-texto);
+  font-size: 13px;
+}
+.wg-paso-centrado .wg-miga li {
+  gap: 10px;
+}
+.wg-paso-centrado .wg-miga__nivel {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--wg-texto);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.wg-paso-centrado .wg-campo__entrada {
+  min-height: 48px;
+}
+.wg-acciones {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 12px;
+}
+.wg-acciones__regresar {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 15px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.wg-nota .wg-acciones .wg-boton--principal {
+  width: 260px;
+  min-height: 48px;
+  border: 0;
+  border-radius: 7px;
+  font-size: 17px;
+  box-shadow: none;
+}
+.wg-acciones__motivo {
+  margin: -6px 0 0;
+  color: var(--wg-texto);
+  font-size: 13px;
+}
+.wg-paso-centrado .wg-fila .wg-enlace {
   font-size: 15px;
 }
 

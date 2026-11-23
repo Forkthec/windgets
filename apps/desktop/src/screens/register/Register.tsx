@@ -17,7 +17,7 @@ import { VerificarCorreo } from './VerificarCorreo';
 import { TEXTOS } from '../cuenta/textos';
 import { validarAlias, validarConfirmacion, validarContrasena, validarCorreo } from '../cuenta/validaciones';
 
-// P-CTA-02 Registro (HE-01-HU01 a HU03): paso Formulario y paso Verificar correo. Sin miga de pan (RT-03-ET08).
+// P-CTA-02 Registro (HE-01-HU01 a HU03): paso Formulario y paso Verificar correo (este con miga de pan, docs/rediseno.md RD-16).
 
 const CAMPOS = ['alias', 'email', 'password', 'password_confirmation'] as const;
 type Campo = (typeof CAMPOS)[number];
@@ -88,16 +88,9 @@ export function Register() {
       setEnvio(null);
     };
     return (
-      <MarcoDeCuenta
-        nombre="Registro"
-        {...PANTALLAS.verificar}
-        pasos={{ lista: PASOS_DE_REGISTRO, actual: 1 }}
-      >
-        <VerificarCorreo
-          correo={correo}
-          reenvioDisponible={envio.resend_available_at}
-          alRegresar={regresar}
-        />
+      // docs/rediseno.md RD-16: Verificar correo va en la nota centrada, sin Windi ni indicador de pasos.
+      <MarcoDeCuenta nombre="Registro">
+        <VerificarCorreo reenvioDisponible={envio.resend_available_at} alRegresar={regresar} />
       </MarcoDeCuenta>
     );
   }
