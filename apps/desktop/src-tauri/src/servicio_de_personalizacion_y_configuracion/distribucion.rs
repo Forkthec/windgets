@@ -18,13 +18,15 @@ use crate::tipos::{
 
 /// HE-05-HU03-ET02 (P29): el tamaño mínimo de cada tipo de widget, en píxeles de pantalla (al 100 %), es el menor en
 /// que todo su contenido se lee completo: textos sin cortar, la cuadrícula del mes entera, una tarjeta o un titular
-/// con su casilla o su fuente, y los botones del reproductor.
+/// con su casilla o su fuente, y los botones del reproductor. Revisión manual pedida por Paula (P29): el Reloj en 12 horas
+/// cabe en una línea desde 240 px, los títulos de Tareas del día necesitan 150 px junto a la hora y la prioridad,
+/// y las columnas del Kanban muestran unas 19 letras de cada título con 560 px.
 pub fn tamano_minimo(tipo: &WidgetType) -> (i64, i64) {
     match tipo {
-        WidgetType::Clock => (200, 100),
+        WidgetType::Clock => (260, 100),
         WidgetType::Calendar => (260, 260),
-        WidgetType::DailyTasks => (260, 180),
-        WidgetType::Kanban => (400, 260),
+        WidgetType::DailyTasks => (320, 180),
+        WidgetType::Kanban => (560, 260),
         WidgetType::Weather => (200, 140),
         WidgetType::News => (260, 180),
         WidgetType::MusicPlayer => (260, 160),

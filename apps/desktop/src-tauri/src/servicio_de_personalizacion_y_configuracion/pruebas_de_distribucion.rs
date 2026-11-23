@@ -123,16 +123,16 @@ fn ca_he_05_hu03_ca01() {
 #[test]
 fn ca_he_05_hu03_ca02() {
     // HE-05-HU03-CA02 (P29) · Cada tipo tiene el mínimo en que su contenido se lee completo (ET02): el Reloj no baja
-    // de 200 × 100 ni el Kanban de 400 × 260.
+    // de 260 × 100 ni el Kanban de 560 × 260 (revisión manual de P29).
     let (_, servicio) = abrir();
     let r = servicio
         .redimensionar_en_edicion(RELOJ, 40, 40, 50, 20)
         .unwrap();
-    assert_eq!(rect(&r), (40, 40, 200, 100));
+    assert_eq!(rect(&r), (40, 40, 260, 100));
     let r = servicio
         .redimensionar_en_edicion(KANBAN, 760, 40, 120, 120)
         .unwrap();
-    assert_eq!(rect(&r), (760, 40, 400, 260));
+    assert_eq!(rect(&r), (760, 40, 560, 260));
     // Todos los tipos tienen un mínimo mayor que el antiguo 100 × 100 y menor que su tamaño inicial.
     for tipo in [
         WidgetType::Clock,
@@ -150,7 +150,7 @@ fn ca_he_05_hu03_ca02() {
         let (ancho, alto) = distribucion::tamano_minimo(&tipo);
         assert!(ancho >= 160 && alto >= 80, "{tipo:?}");
     }
-    // A 150 % el mínimo se mide en píxeles de pantalla: 200 × 100 son 300 × 150 físicos.
+    // A 150 % el mínimo se mide en píxeles de pantalla: 260 × 100 son 390 × 150 físicos.
     let monitor = Monitor {
         id: "0".into(),
         x: 0,
@@ -161,7 +161,7 @@ fn ca_he_05_hu03_ca02() {
     };
     assert_eq!(
         distribucion::tamano_minimo_fisico(&WidgetType::Clock, &monitor),
-        (300, 150)
+        (390, 150)
     );
 }
 
