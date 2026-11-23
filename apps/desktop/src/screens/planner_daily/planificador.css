@@ -1,0 +1,131 @@
+/* Rediseño del Planificador diario (docs/rediseno.md RD-37 a RD-40; Figma 81:21 «Contenido» de 81:2 «Planificador
+ * diario · Claro» y 81:64 del oscuro). Medidas en px del Figma, relativas a la tarjeta; los colores son los tokens del
+ * marco (`ventana_principal/marco.css`). */
+
+/* 81:22 la fecha (27 px negrita) y 81:23 «Nueva tarjeta» a la derecha. */
+.wg-fila.wg-planificador__cabecera {
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.wg-planificador__fecha {
+  margin: 0;
+  line-height: 32px;
+  font-size: 27px;
+  font-weight: 700;
+}
+/* 81:23 empieza 3 px más arriba que la fecha (y = 29 y 32). */
+.wg-planificador__cabecera > .wg-boton {
+  margin-top: -3px;
+}
+/* 81:25 «Completadas» (18 px) en y = 108 y 81:26 la barra de 8 px en y = 151. */
+.wg-planificador__resumen {
+  display: flex;
+  flex-direction: column;
+  gap: 21px;
+  margin-top: 35px;
+}
+.wg-planificador__completadas {
+  color: var(--wg-texto);
+  font-size: 18px;
+}
+.wg-planificador__barra {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--wg-superficie-baja);
+}
+/* 81:27 «Completadas»: #6604E6. En oscuro va el color de selección (#D3B2FF), porque #6604E6 sobre #1C1922 queda en
+ * 1,9:1 (RD-37). */
+.wg-planificador__avance {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--wgm-seleccion-texto, var(--wg-accion));
+}
+
+/* Filas cada 106 px (81:31, 81:36, 81:41): casilla en x = 0, hora en 52, título en 172 y prioridad en 820. */
+.wg-columna__tarjetas.wg-planificador {
+  display: flex;
+  flex-direction: column;
+  gap: 52px;
+  margin: 61px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.wg-planificador .wg-tarjeta.wg-planificador__fila {
+  display: grid;
+  grid-template-columns: 52px 120px minmax(0, 1fr) 70px 36px;
+  align-items: start;
+  gap: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.wg-planificador__fila .wg-planificador__casilla {
+  display: contents;
+}
+/* 81:28 «Casilla»: 22 × 22, radio 4; marcada, #6604E6 con la marca blanca (81:29). */
+.wg-planificador__marca {
+  appearance: none;
+  box-sizing: border-box;
+  width: 22px;
+  height: 22px;
+  margin: 4px 0 0;
+  border: 1.5px solid var(--wg-borde);
+  border-radius: 4px;
+  background: var(--wg-superficie-baja);
+  cursor: pointer;
+}
+.wg-planificador__marca:checked {
+  border-color: var(--wgm-interruptor, var(--wg-accion));
+  background: var(--wgm-interruptor, var(--wg-accion))
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M4 10L8 14L16 5' stroke='white' stroke-width='2'/%3E%3C/svg%3E")
+    center / 20px no-repeat;
+}
+.wg-planificador__marca:focus-visible {
+  outline: 2px solid var(--wgm-seleccion-texto, var(--wg-accion));
+  outline-offset: 2px;
+}
+.wg-planificador__hora {
+  margin-top: 4px;
+  color: var(--wg-texto);
+  font-size: 16px;
+}
+.wg-planificador__texto {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.wg-planificador__fila .wg-tarjeta__titulo {
+  overflow-wrap: anywhere;
+  color: var(--wg-tinta);
+  font-size: 22px;
+  font-weight: 500;
+}
+.wg-planificador__detalle {
+  color: var(--wg-texto);
+  font-size: 15px;
+  word-spacing: 2px;
+}
+.wg-planificador__prioridad {
+  margin-top: 4px;
+  font-size: 17px;
+}
+/* RD-39: la «i» se conserva al final de la fila (el Figma no la dibuja). */
+.wg-planificador .wg-planificador__fila .wg-boton-informacion {
+  justify-self: end;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  justify-content: center;
+}
+
+@media (width < 1000px) {
+  .wg-planificador .wg-tarjeta.wg-planificador__fila {
+    grid-template-columns: 40px 72px minmax(0, 1fr) auto 36px;
+    column-gap: 8px;
+  }
+}

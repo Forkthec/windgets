@@ -200,4 +200,13 @@ describe('HE-16-HU02 · Alternar el inicio automático en la pantalla Configurac
     expect(screen.getByRole('navigation', { name: 'Menú principal' })).toBeTruthy();
     expect(screen.queryByText('Sesión cerrada.')).toBeNull();
   });
+
+  it('RD-41 · «Inicio automático» y la sección «Sesión» con «Cerrar sesión»', async () => {
+    await abrirConfiguracion(0);
+    const configuracion = screen.getByRole('main', { name: 'Configuración' });
+    const sesion = within(configuracion).getByRole('region', { name: 'Sesión' });
+    expect(within(sesion).getByRole('heading', { level: 2, name: 'Sesión' })).toBeTruthy();
+    expect(within(sesion).getByRole('button', { name: 'Cerrar sesión' })).toBeTruthy();
+    expect(configuracion.querySelector('hr.wg-configuracion__divisor')).toBeTruthy();
+  });
 });

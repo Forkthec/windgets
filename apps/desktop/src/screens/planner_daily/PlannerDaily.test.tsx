@@ -26,14 +26,17 @@ function abrir(tarjetas: Parameters<typeof abrirPantalla>[3] = []) {
   return abrirPantalla('planner_daily', 'Planificador diario', PlannerDaily, tarjetas);
 }
 
-/** Cada tarjeta de la lista como «título · hora · prioridad» (sin la casilla ni la «i»). */
+/**
+ * Cada tarjeta de la lista como «título · hora · prioridad» (sin la casilla, la «i», el detalle de la fila ni «Sin
+ * hora»: docs/rediseno.md RD-39).
+ */
 function lista() {
   return within(screen.getByRole('list', { name: 'Tarjetas de hoy' }))
     .getAllByRole('listitem')
     .map((li) =>
-      Array.from(li.querySelector('label')?.children ?? [])
-        .filter((h) => h.tagName !== 'INPUT')
-        .map((h) => h.textContent)
+      ['.wg-tarjeta__titulo', '.wg-planificador__hora', '.wg-planificador__prioridad']
+        .map((clase) => li.querySelector(clase)?.textContent ?? '')
+        .filter((texto) => texto !== '' && texto !== 'Sin hora')
         .join(' · '),
     );
 }
@@ -47,7 +50,8 @@ describe('HE-12-HU01 · Planificador diario', () => {
       tarjeta({ title: 'Otro día', due_date: '2026-11-20' }),
     ]);
     // ET01: la fecha de hoy. ET02 a ET05: en ese orden, con hora HH:MM si la tiene y prioridad.
-    expect(screen.getByRole('heading', { name: '14/11/2026' })).toBeTruthy();
+    // docs/rediseno.md RD-40 (Figma 81:22): la fecha larga.
+    expect(screen.getByRole('heading', { name: 'Sábado, 14 de noviembre' })).toBeTruthy();
     expect(lista()).toEqual([
       'Leer capítulo 3 · 08:00 · Baja',
       'Estudiar redes · 10:00',
@@ -58,6 +62,22 @@ describe('HE-12-HU01 · Planificador diario', () => {
       expect(screen.getByRole('checkbox', { name: titulo })).toBeTruthy();
       expect(screen.getByRole('button', { name: `Ver detalle de ${titulo}` }).textContent).toBe('i');
     }
+  });
+
+  it('RD-39 · Debajo del título, el tipo y las etiquetas; «Sin hora» si no tiene hora', async () => {
+    await abrir([
+      tarjeta({ title: 'Pagar la luz', due_date: HOY, label_ids: ['e1'] }),
+      tarjeta({ title: 'Estudiar redes', type: 'event', scheduled_date: HOY, scheduled_hour: 10 }),
+    ]);
+    const [estudiar, pagar] = within(screen.getByRole('list', { name: 'Tarjetas de hoy' })).getAllByRole(
+      'listitem',
+    ) as [HTMLElement, HTMLElement];
+    expect(within(estudiar).getByText('Evento')).toBeTruthy();
+    expect(within(estudiar).getByText('10:00')).toBeTruthy();
+    expect(within(pagar).getByText('Sin hora')).toBeTruthy();
+    expect(pagar.querySelector('.wg-planificador__detalle')?.textContent).toBe('Tarea · Estudio');
+    // La «i» se conserva (HE-12-HU01-ET10).
+    expect(within(pagar).getByRole('button', { name: 'Ver detalle de Pagar la luz' })).toBeTruthy();
   });
 
   it('HE-12-HU01-CA02 · Tarjeta con fecha límite y bloque horario de hoy sin duplicados', async () => {
@@ -134,9 +154,10 @@ function tachada(titulo: string) {
 }
 
 /** Los textos del resumen de avance. */
+/** El resumen como lo leen los lectores de pantalla: la barra da su porcentaje (docs/rediseno.md RD-38). */
 function resumen() {
-  return Array.from(screen.getByRole('region', { name: 'Resumen de avance' }).children).map(
-    (h) => h.textContent,
+  return Array.from(screen.getByRole('region', { name: 'Resumen de avance' }).children).map((h) =>
+    h.getAttribute('role') === 'progressbar' ? h.getAttribute('aria-valuetext') : h.textContent,
   );
 }
 
@@ -260,6 +281,16 @@ describe('HE-12-HU03 · Resumen de avance del día', () => {
     await abrir(tres(3, true));
     // ET05 y ET07: sin «Te quedan 0».
     expect(resumen()).toEqual(['Completadas: 3 de 3', '100 %', '¡Completaste todas tus tarjetas de hoy!']);
+  });
+
+  it('RD-38 · Se ven «Completadas» y la barra; «Te quedan» queda para los lectores de pantalla', async () => {
+    await abrir(tres(2, false));
+    const region = screen.getByRole('region', { name: 'Resumen de avance' });
+    expect(within(region).getByText('Completadas: 2 de 3').classList.contains('wg-oculto')).toBe(false);
+    expect(within(region).getByText('Te quedan 1').classList.contains('wg-oculto')).toBe(true);
+    const barra = within(region).getByRole('progressbar', { name: 'Avance del día' });
+    expect(barra.getAttribute('aria-valuenow')).toBe('67');
+    expect((barra.firstElementChild as HTMLElement).style.width).toBe('67%');
   });
 
   it('HE-12-HU03-CA05 · Sin tarjetas para hoy', async () => {

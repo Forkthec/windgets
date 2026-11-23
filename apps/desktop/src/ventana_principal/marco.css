@@ -42,6 +42,7 @@ body[data-modo='claro'] {
   --wgm-linea-windi: #d6ccdf;
   --wgm-campo-windi: #f7f4fb;
   --wgm-nombre-windi: #6604e6;
+  --wgm-divisor: #e5dfe9; /* 81:203 */
   /* El selector «Apariencia» de las pantallas de cuenta (RD-29). */
   --wgc-selector: #ffffff;
   --wgc-selector-borde: #766b81;
@@ -86,6 +87,7 @@ body[data-modo='oscuro'] {
   --wgm-linea-windi: #70647c;
   --wgm-campo-windi: #1c1922;
   --wgm-nombre-windi: #d5b5ff;
+  --wgm-divisor: #53485d; /* 81:230 */
   --wgc-selector: #2b2534;
   --wgc-selector-borde: #948b9e;
   --wgc-selector-texto: #f8f5ff;

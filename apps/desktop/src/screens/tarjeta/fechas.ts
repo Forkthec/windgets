@@ -34,3 +34,18 @@ export function fechaVisible(iso: string): string {
   const [anio, mes, dia] = iso.split('-').map(Number);
   return anio && mes && dia ? escribirFecha(new Date(anio, mes - 1, dia)) : iso;
 }
+
+/**
+ * docs/rediseno.md RD-40 (Figma 81:22 «Domingo, 22 de noviembre»): el día de la semana con mayúscula inicial, el día
+ * y el mes. Solo en el Planificador diario.
+ */
+export function fechaLarga(iso: string): string {
+  const [anio, mes, dia] = iso.split('-').map(Number);
+  if (!anio || !mes || !dia) return iso;
+  const texto = new Date(anio, mes - 1, dia).toLocaleDateString('es-CO', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
