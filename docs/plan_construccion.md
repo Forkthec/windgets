@@ -418,6 +418,28 @@ Corrige lo que encontraron las pruebas de usuario de la v0.3.0 sobre HU ya const
 Puntos del paso: 0 (las HU ya están contadas en sus pasos).
 
 **Se prueba al terminar.** Todos los CA y ET nuevos o cambiados de la v12 en verde, y la prueba manual en Windows 11: escalas 100 %, 125 % y 150 % y dos monitores; fondo sin franjas; imagen de fondo propia y del catálogo, también al reabrir; editar → guardar → la capa coincide; el widget abre la misma ventana; casilla de Tareas del día; arrastre en el widget Kanban sin el rectángulo de Windows; Reloj al cambiar el formato de hora en Windows; cerrar sesión mientras se sincroniza; Windi con 10 pedidos por función (después de que Paula despliegue la Edge Function).
+
+## P29 · Correcciones de widgets, Windi, fondo y catálogo
+
+Corrige lo que pidió Paula el 23-nov-2026 (libro v13): tamaños mínimos legibles por tipo de widget, casilla más grande y sin «⋮» en Tareas del día, widgets con los íconos del escritorio ocultos, sin rectángulo de selección al arrastrar en el widget Kanban (gancho D-215 encendido), rueda del mouse sobre los widgets, sugerencias de ciudad en Clima, Windi que crea etiquetas, ajuste de la imagen de fondo por monitor y catálogo nuevo (plantilla por defecto con la marca, plantillas Claro y Oscuro, seis paletas y seis degradados; migración 0008).
+
+| Orden | HU | Historia | Prioridad | Puntos | CA nuevos o cambiados | ET nuevas o cambiadas | Depende de |
+|---|---|---|---|---|---|---|---|
+| — | HE-02-HU14 | Ajustar la imagen de fondo en cada monitor | Media | NO DEFINIDO | nuevos CA01 a CA08 | nuevas ET01 a ET08 | HE-02-HU01; HE-02-HU03 |
+| 99 | HE-04-HU05 | Agregar el widget Clima para una ciudad | Baja | 3 | nuevos CA10, CA11, CA12 | nuevas ET18 | HE-04-HU04 |
+| 66 | HE-05-HU03 | Redimensionar un widget en la pantalla de edición | Media | 3 | cambian CA02 | cambian ET02 | HE-05-HU01 |
+| 19 | HE-06-HU01 | Seleccionar un widget interactivo directamente en el escritorio | Alta | 8 | nuevos CA08, CA09 | nuevas ET09, ET10 | HE-04-HU01 |
+| 30 | HE-06-HU03 | Alternar la casilla de completada de una tarjeta desde el widget Tareas del día | Alta | 2 | — | cambian ET06 | HE-06-HU01; HE-06-HU02 |
+| 31 | HE-06-HU04 | Mover una tarjeta de columna con la opción «Mover a» desde el widget Tareas del día | Alta | 2 | nuevos CA06 (retirada del widget) | — | HE-06-HU01; HE-06-HU02 |
+| 70 | HE-06-HU06 | Mover tarjetas entre columnas mediante drag-and-drop en el widget Kanban | Media | 5 | — | cambian ET07 | HE-06-HU01; HE-06-HU05 |
+| 92 | HE-14-HU04 | Pedir al agente de IA que cree tarjetas | Media | 5 | cambian CA09 | cambian ET08 | HE-07-HU01; HE-14-HU03 |
+| 93 | HE-14-HU05 | Pedir al agente de IA que edite tarjetas | Media | 3 | cambian CA10 | — | HE-07-HU04; HE-14-HU03 |
+| — | HE-14-HU10 | Pedir al agente de IA que cree etiquetas | Media | NO DEFINIDO | nuevos CA01 a CA09 | nuevas ET01 a ET08 | HE-08-HU02; HE-14-HU03 |
+
+Puntos del paso: NO DEFINIDO (las dos HU nuevas no están estimadas; el resto ya está contado en sus pasos).
+
+**Se prueba al terminar.** Todos los CA y ET nuevos o cambiados de la v13 en verde, y la prueba manual en Windows 11 con el instalador de P29: íconos ocultos, arrastre en el widget Kanban sin rectángulo azul, rueda sobre Noticias y Tareas del día, sugerencias de Clima, ajuste del fondo con uno y dos monitores, y el catálogo nuevo después de cargar los archivos al bucket y aplicar 0008.
+
 ## Total
 
 115 ítems del Backlog y 316 puntos en 24 pasos (P00 y P01 no tienen HU; P24 corrige HU ya contadas).
