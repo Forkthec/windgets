@@ -42,10 +42,11 @@ use windows::Win32::UI::Input::{
 use windows::Win32::UI::WindowsAndMessaging::{
     CallNextHookEx, CreateWindowExW, DEVICE_NOTIFY_WINDOW_HANDLE, DefWindowProcW, DispatchMessageW,
     GetClassNameW, GetCursorPos, GetMessageW, GetParent, GetSystemMetrics,
-    GetWindowThreadProcessId, HHOOK, MSG, MSLLHOOKSTRUCT, RegisterClassW, RegisterWindowMessageW,
-    SM_SWAPBUTTON, SendMessageW, SetTimer, SetWindowsHookExW, TranslateMessage,
-    UnhookWindowsHookEx, WH_MOUSE_LL, WM_DISPLAYCHANGE, WM_INPUT, WM_POWERBROADCAST,
-    WM_SETTINGCHANGE, WM_TIMER, WNDCLASSW, WS_EX_TOOLWINDOW, WS_POPUP, WindowFromPoint,
+    GetWindowThreadProcessId, HHOOK, IsWindowVisible, MSG, MSLLHOOKSTRUCT, RegisterClassW,
+    RegisterWindowMessageW, SM_SWAPBUTTON, SendMessageW, SetTimer, SetWindowsHookExW,
+    TranslateMessage, UnhookWindowsHookEx, WH_MOUSE_LL, WM_DISPLAYCHANGE, WM_INPUT,
+    WM_POWERBROADCAST, WM_SETTINGCHANGE, WM_TIMER, WNDCLASSW, WS_EX_TOOLWINDOW, WS_POPUP,
+    WindowFromPoint,
 };
 use windows::core::{PCWSTR, w};
 
@@ -168,8 +169,12 @@ unsafe extern "system" fn procedimiento(
     lparam: LPARAM,
 ) -> LRESULT {
     if mensaje == WM_INPUT
-        && let Some((banderas, intercambiados)) = botones(HRAWINPUT(lparam.0 as *mut c_void))
+        && let Some((banderas, giro, intercambiados)) = botones(HRAWINPUT(lparam.0 as *mut c_void))
     {
+        // HE-06-HU01-CA09 (P29): la rueda sobre un widget desplaza su contenido.
+        if banderas & (RUEDA_VERTICAL | RUEDA_HORIZONTAL) != 0 {
+            al_girar(banderas, giro);
+        }
         if seleccion::es_el_boton_principal(banderas, intercambiados) {
             al_seleccionar();
         } else {
@@ -212,8 +217,13 @@ unsafe extern "system" fn procedimiento(
     unsafe { DefWindowProcW(ventana, mensaje, wparam, lparam) }
 }
 
-/// Las banderas de los botones de una entrada del mouse y si los botones están intercambiados en Windows.
-fn botones(entrada: HRAWINPUT) -> Option<(u16, bool)> {
+/// RI_MOUSE_WHEEL y RI_MOUSE_HWHEEL: la entrada trae un giro de la rueda en `usButtonData`.
+const RUEDA_VERTICAL: u16 = 0x0400;
+const RUEDA_HORIZONTAL: u16 = 0x0800;
+
+/// Las banderas de los botones de una entrada del mouse, su giro de la rueda y si los botones están intercambiados
+/// en Windows.
+fn botones(entrada: HRAWINPUT) -> Option<(u16, u16, bool)> {
     let mut datos = RAWINPUT::default();
     let mut tamano = size_of::<RAWINPUT>() as u32;
     // SAFETY: `datos` es un RAWINPUT local y `tamano` dice su tamaño; para el mouse alcanza.
@@ -231,9 +241,11 @@ fn botones(entrada: HRAWINPUT) -> Option<(u16, bool)> {
     }
     // SAFETY: el encabezado dice que es un mouse, así que la unión contiene un RAWMOUSE.
     let banderas = unsafe { datos.data.mouse.Anonymous.Anonymous.usButtonFlags };
+    // SAFETY: igual que arriba; con RI_MOUSE_WHEEL o RI_MOUSE_HWHEEL, usButtonData es el giro con signo.
+    let giro = unsafe { datos.data.mouse.Anonymous.Anonymous.usButtonData };
     // SAFETY: GetSystemMetrics no recibe punteros.
     let intercambiados = unsafe { GetSystemMetrics(SM_SWAPBUTTON) } != 0;
-    Some((banderas, intercambiados))
+    Some((banderas, giro, intercambiados))
 }
 
 /// El arrastre que sigue a una selección reenviada (HE-06-HU06): empieza en `al_seleccionar` y termina al soltar
@@ -267,6 +279,36 @@ fn al_arrastrar(soltado: bool) {
     }
 }
 
+/// El giro de la rueda sobre un widget del escritorio: la capa lo recibe como `pointer_wheel_forwarded` y desplaza
+/// el contenido que está bajo el cursor (HE-06-HU01-CA09; P29).
+fn al_girar(banderas: u16, giro: u16) {
+    let Some(app) = APLICACION.get() else {
+        return;
+    };
+    let nucleo = app.state::<Nucleo>();
+    if nucleo.host.anclaje_fallido() {
+        return;
+    }
+    let mut punto = POINT::default();
+    // SAFETY: `punto` es local.
+    if unsafe { GetCursorPos(&mut punto) }.is_err() {
+        return;
+    }
+    let delta = i64::from(giro as i16);
+    let deltas = if banderas & RUEDA_HORIZONTAL != 0 {
+        (delta, 0)
+    } else {
+        (0, delta)
+    };
+    recordar_la_capa(app);
+    // SAFETY: WindowFromPoint no recibe punteros.
+    let que_hay = que_hay_en(unsafe { WindowFromPoint(punto) });
+    if let Some(evento) = seleccion::rueda(&nucleo.host.capa(), (punto.x, punto.y), que_hay, deltas)
+    {
+        let _ = app.emit(seleccion::RUEDA_REENVIADA, evento);
+    }
+}
+
 /// La selección con el botón principal: si cae en un widget interactivo del escritorio sin un ícono encima, la
 /// capa la recibe como EV-18 (CA01); en otro caso queda para Windows (CA02 a CA07).
 fn al_seleccionar() {
@@ -284,11 +326,8 @@ fn al_seleccionar() {
     }
     // SAFETY: WindowFromPoint no recibe punteros.
     let bajo_el_cursor = unsafe { WindowFromPoint(punto) };
-    let que_hay = if es_el_escritorio(bajo_el_cursor) {
-        BajoElCursor::Escritorio
-    } else {
-        BajoElCursor::OtraVentana
-    };
+    recordar_la_capa(app);
+    let que_hay = que_hay_en(bajo_el_cursor);
     let evento = seleccion::decidir(
         &nucleo.host.capa(),
         &nucleo.host.monitores(),
@@ -331,6 +370,7 @@ fn revisar_gancho() {
         return;
     };
     let nucleo = app.state::<Nucleo>();
+    recordar_la_capa(app);
     let widgets = gancho::rectangulos_interactivos(&nucleo.host.capa());
     let instalar = gancho::debe_estar_instalado(
         gancho::GANCHO_HABILITADO,
@@ -346,10 +386,11 @@ fn revisar_gancho() {
         };
         // SAFETY: WindowFromPoint no recibe punteros.
         let lista = unsafe { WindowFromPoint(centro) };
-        if es_el_escritorio(lista) {
-            rectangulos_de_iconos(lista)
-        } else {
-            None
+        match que_hay_en(lista) {
+            // Con los íconos ocultos no hay ninguno que respetar (HE-06-HU01-CA08).
+            BajoElCursor::Escritorio if !es_la_lista_visible(lista) => Some(Vec::new()),
+            BajoElCursor::Escritorio => rectangulos_de_iconos(lista),
+            BajoElCursor::OtraVentana => None,
         }
     });
     if let Ok(mut g) = GANCHO.lock() {
@@ -389,11 +430,7 @@ unsafe extern "system" fn gancho_del_mouse(codigo: i32, wparam: WPARAM, lparam: 
         let boton = gancho::boton(wparam.0 as u32, intercambiados);
         if boton != gancho::Boton::Otro {
             // SAFETY: WindowFromPoint no recibe punteros.
-            let bajo_el_cursor = if es_el_escritorio(unsafe { WindowFromPoint(datos.pt) }) {
-                BajoElCursor::Escritorio
-            } else {
-                BajoElCursor::OtraVentana
-            };
+            let bajo_el_cursor = que_hay_en(unsafe { WindowFromPoint(datos.pt) });
             // try_lock: el gancho nunca espera; si la caché se está actualizando, el mensaje pasa a Windows.
             if let Ok(mut g) = GANCHO.try_lock() {
                 let (estado, cache) = &mut *g;
@@ -543,15 +580,42 @@ fn es_de_la_capa(ventana: HWND) -> bool {
     if capa == 0 {
         return false;
     }
-    // SAFETY: GetParent no recibe punteros.
-    match unsafe { GetParent(ventana) } {
-        Ok(padre) => clase_de(padre) == "SHELLDLL_DefView",
-        Err(_) => false,
+    let mut actual = ventana;
+    for _ in 0..6 {
+        if actual.0 as isize == capa {
+            return true;
+        }
+        // SAFETY: GetParent no recibe punteros.
+        match unsafe { GetParent(actual) } {
+            Ok(padre) if !padre.is_invalid() => actual = padre,
+            _ => return false,
+        }
     }
+    false
+}
+
+/// Qué hay bajo el cursor: el escritorio (la lista de íconos o, con los íconos ocultos, la ventana del escritorio
+/// que queda a la vista o la capa) u otra aplicación (`seleccion::clasificar`; D-186, HE-06-HU01-CA08).
+fn que_hay_en(ventana: HWND) -> BajoElCursor {
+    // SAFETY: GetParent no recibe punteros.
+    let padre = unsafe { GetParent(ventana) }
+        .map(clase_de)
+        .unwrap_or_default();
+    seleccion::clasificar(&clase_de(ventana), &padre, es_de_la_capa(ventana))
+}
+
+/// ¿Es la lista de íconos del escritorio y está a la vista? Con los íconos ocultos, Windows la esconde.
+fn es_la_lista_visible(ventana: HWND) -> bool {
+    // SAFETY: IsWindowVisible no recibe punteros.
+    clase_de(ventana) == "SysListView32" && unsafe { IsWindowVisible(ventana) }.as_bool()
 }
 
 /// `LVM_HITTEST` con la estructura en la memoria del proceso del explorador. `None` si no hay acceso.
 fn hay_icono(lista: HWND, punto: POINT) -> Option<bool> {
+    // HE-06-HU01-CA08: con los íconos ocultos (o bajo el cursor otra ventana del escritorio) no hay ícono encima.
+    if !es_la_lista_visible(lista) {
+        return Some(false);
+    }
     let mut pid = 0u32;
     // SAFETY: `pid` es local.
     unsafe { GetWindowThreadProcessId(lista, Some(&mut pid)) };

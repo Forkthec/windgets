@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { invocar as invocarNucleo } from '@/ipc/cliente';
 import { escuchar as escucharNucleo, type Escuchar } from '@/ipc/eventos';
 import { escucharArrastreReenviado, type EscucharArrastre } from '@/ipc/arrastreReenviado';
+import { desplazarConLaRueda, escucharRuedaReenviada, type EscucharRueda } from '@/ipc/ruedaReenviada';
 import { urlDeArchivo } from '@/ipc/archivos';
 import { Reloj } from './Reloj';
 import { TareasDelDia } from './TareasDelDia';
@@ -117,12 +118,15 @@ export interface CapaProps {
   escuchar?: Escuchar;
   /** El arrastre que sigue a una selección reenviada (HE-06-HU06). */
   escucharArrastre?: EscucharArrastre;
+  /** La rueda del mouse sobre un widget (HE-06-HU01-CA09). */
+  escucharRueda?: EscucharRueda;
 }
 
 export function Capa({
   invocar = invocarNucleo,
   escuchar = escucharNucleo,
   escucharArrastre = escucharArrastreReenviado,
+  escucharRueda = escucharRuedaReenviada,
 }: CapaProps) {
   const [pintado, setPintado] = useState<Pintado | null>(null);
   // HE-05-HU04-ET05: varias lecturas pueden cruzarse (guardar la distribución avisa con EV-13 y otros eventos);
@@ -160,6 +164,8 @@ export function Capa({
     // con la escala nueva, sin reiniciar la aplicación (RNF-34, HE-05-HU02-ET07; P26).
     const dejarMonitores = escuchar('monitors_changed', () => void leer());
     const dejarSeleccion = escuchar('pointer_released', (carga) => entregarSeleccion(carga));
+    // HE-06-HU01-CA09 (P29): la rueda sobre un widget desplaza su contenido.
+    const dejarRueda = escucharRueda((rueda) => void desplazarConLaRueda(rueda));
     return () => {
       vigente = false;
       dejarEstado();
@@ -168,8 +174,9 @@ export function Capa({
       dejarDistribucion();
       dejarMonitores();
       dejarSeleccion();
+      dejarRueda();
     };
-  }, [escuchar, invocar]);
+  }, [escuchar, escucharRueda, invocar]);
 
   // Sin sesión la capa no pinta y se ve el fondo original de Windows (HE-02-HU01-CA05, ET07).
   if (!pintado || pintado.estado.wallpaper_state === 'hidden') return null;
