@@ -426,7 +426,7 @@ export type EntityChange = { ids: Array<Uuid>, op: ChangeOp, origin: OriginKind,
 
 export type Err = { ok: false, error: AppError, };
 
-export type ErrorCode = "net.offline" | "service.unavailable" | "internal.unexpected" | "session.expired" | "alias.required" | "alias.too_long" | "email.required" | "email.invalid" | "email.too_long" | "email.already_registered" | "password.required" | "password.invalid" | "password.same_as_current" | "password_confirmation.required" | "password_confirmation.mismatch" | "code.required" | "code.incorrect" | "code.expired" | "code.resend_too_soon" | "auth.rate_limited" | "auth.invalid_credentials" | "auth.sign_out_failed" | "title.required" | "title.too_long" | "due_date.required" | "due_date.invalid" | "due_date.in_past" | "description.too_long" | "labels.too_many" | "labels.not_found" | "card.not_found" | "column.not_found" | "time_block.past" | "time_block.after_due_date" | "name.required" | "name.too_long" | "name.duplicate" | "color.required" | "color.invalid" | "label.limit_reached" | "label.not_found" | "column.limit_reached" | "column.order_invalid" | "column.default_not_deletable" | "range.start_required" | "range.end_required" | "range.invalid_date" | "range.start_after_end" | "range.too_long" | "draft.unsaved_changes" | "draft.unsaved_changes_on_apply" | "draft.no_changes" | "theme.limit_reached" | "theme.already_applied" | "theme.applied_not_deletable" | "theme.content_duplicate" | "background.already_default" | "template.not_found" | "font.not_found" | "image.not_found" | "image.format_not_allowed" | "image.too_large" | "image.unreadable" | "asset.unavailable" | "widget.not_found" | "widget.already_added" | "widget.default_not_deletable" | "layout.widget_missing" | "city.not_found" | "city.duplicate" | "city.too_long" | "text.too_long" | "carousel.too_few" | "carousel.too_many" | "interval.out_of_range" | "interval.required" | "url.not_allowed" | "autostart.failed" | "browser.open_failed" | "media.no_session" | "media.action_unsupported" | "message.too_long" | "windi.unavailable" | "proposal.discarded" | "windi.card_not_found" | "windi.column_not_found" | "windi.label_not_found" | "windi.same_value" | "windi.already_in_column" | "windi.apply_failed";
+export type ErrorCode = "net.offline" | "service.unavailable" | "internal.unexpected" | "session.expired" | "alias.required" | "alias.too_long" | "email.required" | "email.invalid" | "email.too_long" | "email.already_registered" | "password.required" | "password.invalid" | "password.same_as_current" | "password_confirmation.required" | "password_confirmation.mismatch" | "code.required" | "code.incorrect" | "code.expired" | "code.resend_too_soon" | "auth.rate_limited" | "auth.invalid_credentials" | "auth.sign_out_failed" | "title.required" | "title.too_long" | "due_date.required" | "due_date.invalid" | "due_date.in_past" | "description.too_long" | "labels.too_many" | "labels.not_found" | "card.not_found" | "column.not_found" | "time_block.past" | "time_block.after_due_date" | "name.required" | "name.too_long" | "name.duplicate" | "color.required" | "color.invalid" | "label.limit_reached" | "label.not_found" | "column.limit_reached" | "column.order_invalid" | "column.default_not_deletable" | "range.start_required" | "range.end_required" | "range.invalid_date" | "range.start_after_end" | "range.too_long" | "draft.unsaved_changes" | "draft.unsaved_changes_on_apply" | "draft.no_changes" | "theme.limit_reached" | "theme.already_applied" | "theme.applied_not_deletable" | "theme.content_duplicate" | "background.already_default" | "template.not_found" | "font.not_found" | "image.not_found" | "image.format_not_allowed" | "image.too_large" | "image.unreadable" | "asset.unavailable" | "widget.not_found" | "widget.already_added" | "widget.default_not_deletable" | "layout.widget_missing" | "city.not_found" | "city.duplicate" | "city.too_long" | "text.too_long" | "carousel.too_few" | "carousel.too_many" | "interval.out_of_range" | "interval.required" | "url.not_allowed" | "autostart.failed" | "browser.open_failed" | "media.no_session" | "media.action_unsupported" | "message.too_long" | "windi.unavailable" | "proposal.discarded" | "windi.card_not_found" | "windi.column_not_found" | "windi.label_not_found" | "windi.same_value" | "windi.already_in_column" | "windi.apply_failed" | "windi.label_color_required" | "windi.color_not_found";
 
 export type ErrorParams = { [key in string]: ErrorParamsValue };
 
@@ -644,7 +644,7 @@ export type PreferenceBoardCardView = "compact" | "expanded";
 
 export type Priority = "high" | "medium" | "low";
 
-export type ProposalAction = "create" | "edit" | "move" | "delete";
+export type ProposalAction = "create" | "edit" | "move" | "delete" | "create_label";
 
 export type ProposalState = "active" | "confirmed" | "rejected" | "discarded";
 
@@ -864,9 +864,18 @@ export type WidgetSetActiveParams = { widget_id: Uuid, active: boolean, };
 
 export type WidgetType = "clock" | "calendar" | "daily_tasks" | "kanban" | "weather" | "news" | "music_player" | "animation" | "image_carousel" | "static_image" | "text";
 
-export type WindiChatContext = { alias: string, today: DateIso, now_hour: Hour, columns: Array<WindiChatContextColumnsItem>, labels: Array<WindiChatContextLabelsItem>, cards: Array<WindiChatContextCard>, totals: WindiChatContextTotals, counts: WindiChatContextCounts, active_proposal: WindiChatProposal | null, };
+export type WindiChatContext = { alias: string, today: DateIso, now_hour: Hour, columns: Array<WindiChatContextColumnsItem>, labels: Array<WindiChatContextLabelsItem>, 
+/**
+ * HE-14-HU10 (P29): los colores del catálogo, para que Windi los ofrezca al crear una etiqueta.
+ */
+colors: Array<WindiChatContextColorsItem>, cards: Array<WindiChatContextCard>, totals: WindiChatContextTotals, counts: WindiChatContextCounts, active_proposal: WindiChatProposal | null, };
 
 export type WindiChatContextCard = { id: Uuid, type: CardType, title: string, due_date: DateIso, priority: Priority | null, column_id: Uuid, label_ids: Array<Uuid>, completed_on: DateIso | null, scheduled_date: DateIso | null, scheduled_hour: Hour | null, description: string | null, };
+
+/**
+ * HE-14-HU10 (P29): un color del catálogo para crear etiquetas.
+ */
+export type WindiChatContextColorsItem = { id: string, name: string, };
 
 export type WindiChatContextColumnsItem = { id: Uuid, name: string, role: ColumnRole, };
 

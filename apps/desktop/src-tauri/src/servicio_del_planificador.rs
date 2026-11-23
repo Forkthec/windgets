@@ -986,6 +986,31 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         user_id: &str,
         params: LabelCreateParams,
     ) -> Result<ConMensaje<Label>, AppError> {
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        let mut tx = pool.begin().await.map_err(de_sqlx)?;
+        let id = self.crear_etiqueta_en(&mut tx, user_id, params).await?;
+        tx.commit().await.map_err(de_sqlx)?;
+
+        let etiqueta = self
+            .etiquetas(user_id)
+            .await?
+            .into_iter()
+            .find(|e| e.id.0 == id)
+            .ok_or_else(inesperado)?;
+        Ok(ConMensaje {
+            valor: etiqueta,
+            mensaje: resultado("label_create", messages::ETIQUETA_CREADA),
+        })
+    }
+
+    /// Valida y crea una etiqueta dentro de la transacción de quien llama (HE-08-HU02; HE-14-HU10, P29: Windi crea
+    /// las etiquetas de su propuesta en una sola transacción). Devuelve el id.
+    pub(crate) async fn crear_etiqueta_en(
+        &self,
+        tx: &mut sqlx::SqliteConnection,
+        user_id: &str,
+        params: LabelCreateParams,
+    ) -> Result<String, AppError> {
         let nombre = params.name.trim().to_string();
         let color = params.color_id.trim().to_string();
         if nombre.is_empty() {
@@ -1009,9 +1034,6 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 Some("color_id"),
             ));
         }
-        let pool = self.base.pool().await.map_err(de_sqlx)?;
-        let mut tx = pool.begin().await.map_err(de_sqlx)?;
-
         let existentes: Vec<String> =
             sqlx::query_scalar("SELECT name FROM label WHERE user_id = ?")
                 .bind(user_id)
@@ -1071,21 +1093,10 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         .execute(&mut *tx)
         .await
         .map_err(de_sqlx)?;
-        encolar_cambio(&mut tx, "label", &id, "upsert", &fields, &ahora)
+        encolar_cambio(&mut *tx, "label", &id, "upsert", &fields, &ahora)
             .await
             .map_err(de_sqlx)?;
-        tx.commit().await.map_err(de_sqlx)?;
-
-        let etiqueta = self
-            .etiquetas(user_id)
-            .await?
-            .into_iter()
-            .find(|e| e.id.0 == id)
-            .ok_or_else(inesperado)?;
-        Ok(ConMensaje {
-            valor: etiqueta,
-            mensaje: resultado("label_create", messages::ETIQUETA_CREADA),
-        })
+        Ok(id)
     }
 
     /// IPC-CAT-01 `catalog_list` con `kind: 'color'`: el catálogo de colores activo, ordenado por `sort_order`

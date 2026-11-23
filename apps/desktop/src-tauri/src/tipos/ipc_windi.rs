@@ -34,6 +34,9 @@ pub enum ProposalAction {
     Move,
     #[serde(rename = "delete")]
     Delete,
+    /// HE-14-HU10 (P29): crear etiquetas con su nombre y su color.
+    #[serde(rename = "create_label")]
+    CreateLabel,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]

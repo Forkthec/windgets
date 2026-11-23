@@ -76,7 +76,8 @@ export type ErrorCode =
   | 'media.no_session' | 'media.action_unsupported'
   // agente de IA
   | 'message.too_long' | 'windi.unavailable' | 'proposal.discarded' | 'windi.card_not_found' | 'windi.column_not_found' | 'windi.label_not_found'
-  | 'windi.same_value' | 'windi.already_in_column' | 'windi.apply_failed';
+  | 'windi.same_value' | 'windi.already_in_column' | 'windi.apply_failed'
+  | 'windi.label_color_required' | 'windi.color_not_found';
 
 /** Parámetros con los que el Núcleo sustituye los marcadores del mensaje (contratos.md, 1.4). */
 export type ErrorParams = Record<string, string | number>;
@@ -615,7 +616,8 @@ export interface WindiMessage {
   /** El mensaje del usuario que no recibió respuesta; la vista agrega «Reintentar». */
   failed: boolean;
 }
-export type ProposalAction = 'create' | 'edit' | 'move' | 'delete';
+/** HE-14-HU10 (P29): `create_label` crea etiquetas con su nombre y su color. */
+export type ProposalAction = 'create' | 'edit' | 'move' | 'delete' | 'create_label';
 export type ProposalState = 'active' | 'confirmed' | 'rejected' | 'discarded';
 export interface WindiProposalItem {
   card_id: Uuid | null;
@@ -988,6 +990,8 @@ export interface WindiChatContext {
   now_hour: Hour;
   columns: Array<{ id: Uuid; name: string; role: ColumnRole }>;
   labels: Array<{ id: Uuid; name: string }>;
+  /** HE-14-HU10 (P29): los colores del catálogo para crear etiquetas. */
+  colors: Array<{ id: string; name: string }>;
   /** Solo las tarjetas necesarias para la pregunta, incluidos los cambios aún no sincronizados (D-193). */
   cards: WindiChatContextCard[];
   totals: { total: number; overdue: number; pending: number; completed: number };

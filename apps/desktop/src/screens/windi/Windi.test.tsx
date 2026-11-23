@@ -776,3 +776,28 @@ describe('HE-15-HU02 · Funciones que requieren conexión', () => {
     expect(enviar().disabled).toBe(true);
   });
 });
+
+describe('HE-14-HU10 · Crear etiquetas con el agente de IA (P29)', () => {
+  it('HE-14-HU10-CA01 · la propuesta muestra el nombre y el color de cada etiqueta nueva', async () => {
+    const propuesta: WindiProposal = {
+      id: 'p1',
+      action: 'create_label',
+      items: [
+        {
+          card_id: null,
+          current: null,
+          changes: { name: 'Universidad', color_id: 'blue', color_name: 'Azul', hex: '#2196F3' } as never,
+          title: 'Universidad',
+        },
+      ],
+      warnings: [],
+      state: 'active',
+    };
+    await abrir(proponer(propuesta));
+    await pedir('Crea la etiqueta Universidad azul');
+    const p = propuestas()[0] as HTMLElement;
+    expect(within(p).getByText('Universidad')).toBeTruthy();
+    expect(within(p).getByText('Color: Azul')).toBeTruthy();
+    expect(boton(p, 'Confirmar').disabled).toBe(false);
+  });
+});

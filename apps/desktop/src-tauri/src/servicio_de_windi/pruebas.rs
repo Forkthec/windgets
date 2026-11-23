@@ -60,6 +60,7 @@ pub(crate) fn contexto_vacio() -> WindiChatContext {
         now_hour: Hour(14),
         columns: Vec::new(),
         labels: Vec::new(),
+        colors: Vec::new(),
         cards: Vec::new(),
         totals: WindiChatContextTotals {
             total: 0,
@@ -2704,4 +2705,267 @@ fn ca_he_14_hu09_et07() {
     .unwrap();
     assert_eq!(c.cards.len(), 200);
     assert!(c.cards[0].id.0.eq_ignore_ascii_case(&tp));
+}
+
+// HE-14-HU10 (P29) · Pedir al agente de IA que cree etiquetas.
+
+fn propone_etiquetas(etiquetas: Value) -> WindiChatResponse {
+    WindiChatResponse {
+        reply: "Esta es la etiqueta que voy a crear. ¿Confirmas?".into(),
+        intent: WindiChatResponseIntent::Propose,
+        proposal: Some(WindiChatProposal {
+            action: crate::tipos::ProposalAction::CreateLabel,
+            items: etiquetas
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|e| WindiChatProposalItemsItem {
+                    card_id: None,
+                    changes: Some(e.clone()),
+                })
+                .collect(),
+        }),
+    }
+}
+
+fn pedir_etiquetas(
+    planificador: &Planificador,
+    windi: &ServicioDeWindi,
+    etiquetas: Value,
+) -> WindiProposal {
+    let nube = WindiSimulado::responde(vec![Ok(propone_etiquetas(etiquetas))]);
+    enviar_con(
+        windi,
+        &nube,
+        &manejador_de(planificador),
+        "Crea una etiqueta",
+        true,
+    )
+    .unwrap()
+    .proposal
+    .unwrap()
+}
+
+/// Las etiquetas del usuario: (nombre, color).
+fn etiquetas_creadas(planificador: &Planificador) -> Vec<(String, String)> {
+    bloquear(planificador.etiquetas(USUARIO))
+        .unwrap()
+        .into_iter()
+        .map(|e| (e.name, e.color_id))
+        .collect()
+}
+
+fn crear_etiqueta(planificador: &Planificador, nombre: &str) {
+    bloquear(planificador.crear_etiqueta(
+        USUARIO,
+        crate::tipos::LabelCreateParams {
+            name: nombre.into(),
+            color_id: "gray".into(),
+        },
+    ))
+    .unwrap();
+}
+
+#[test]
+fn ca_he_14_hu10_ca01() {
+    // HE-14-HU10-CA01 · Windi propone la etiqueta con su nombre y su color (por nombre, sin mayúsculas); al confirmar
+    // se crea con las reglas de «Nueva etiqueta» y Windi menciona el nombre o la cantidad.
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    let propuesta = pedir_etiquetas(
+        &planificador,
+        &windi,
+        serde_json::json!([{ "name": " Universidad ", "color": "Blue" }]),
+    );
+    assert_eq!(propuesta.action, crate::tipos::ProposalAction::CreateLabel);
+    assert_eq!(propuesta.items[0].title, "Universidad");
+    let cambios = propuesta.items[0].changes.as_ref().unwrap();
+    assert_eq!(
+        (cambios["color_id"].as_str(), cambios["hex"].as_str()),
+        (Some("blue"), Some("#2196F3"))
+    );
+    assert!(
+        etiquetas_creadas(&planificador).is_empty(),
+        "sin «Confirmar» no se crea nada"
+    );
+    let r = confirmar(&windi, &manejador_de(&planificador), &propuesta, true).unwrap();
+    assert_eq!(r.reply.text, "Listo, creé la etiqueta «Universidad».");
+    assert_eq!(
+        etiquetas_creadas(&planificador),
+        vec![("Universidad".into(), "blue".into())]
+    );
+    // Varias etiquetas en una propuesta, por el id del color.
+    let varias = pedir_etiquetas(
+        &planificador,
+        &windi,
+        serde_json::json!([{ "name": "Casa", "color": "green" }, { "name": "Gym", "color": "gray" }]),
+    );
+    let r = confirmar(&windi, &manejador_de(&planificador), &varias, true).unwrap();
+    assert_eq!(r.reply.text, "Listo, creé 2 etiquetas.");
+    assert_eq!(etiquetas_creadas(&planificador).len(), 3);
+}
+
+#[test]
+fn ca_he_14_hu10_ca02() {
+    // HE-14-HU10-CA02 · Sin color no hay propuesta: Windi pregunta de qué color y menciona los colores (D-162: el
+    // color no tiene valor por defecto).
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    for sin_color in [
+        serde_json::json!([{ "name": "Viaje" }]),
+        serde_json::json!([{ "name": "Viaje", "color": "  " }]),
+    ] {
+        let (codigo, texto) = rechazo(&planificador, &windi, propone_etiquetas(sin_color));
+        assert_eq!(codigo, ErrorCode::WindiLabelColorRequired);
+        assert!(
+            texto.starts_with("¿De qué color quieres la etiqueta “Viaje”? Los colores son: "),
+            "{texto}"
+        );
+        for color in ["gray", "blue", "green"] {
+            assert!(texto.contains(color), "{texto}");
+        }
+    }
+    assert!(etiquetas_creadas(&planificador).is_empty());
+}
+
+#[test]
+fn ca_he_14_hu10_ca03() {
+    // HE-14-HU10-CA03 · Sin nombre, Windi pregunta qué nombre ponerle.
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    let (codigo, texto) = rechazo(
+        &planificador,
+        &windi,
+        propone_etiquetas(serde_json::json!([{ "name": " ", "color": "blue" }])),
+    );
+    assert_eq!(codigo, ErrorCode::NameRequired);
+    assert_eq!(texto, "¿Qué nombre le pongo a la etiqueta?");
+}
+
+#[test]
+fn ca_he_14_hu10_ca04() {
+    // HE-14-HU10-CA04 · El nombre tiene de 1 a 30 caracteres, con el texto de HE-08-HU02. Valores límite: 30 y 31.
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    let (codigo, texto) = rechazo(
+        &planificador,
+        &windi,
+        propone_etiquetas(serde_json::json!([{ "name": "a".repeat(31), "color": "blue" }])),
+    );
+    assert_eq!(codigo, ErrorCode::NameTooLong);
+    assert_eq!(texto, messages::NOMBRE_DE_ETIQUETA_MUY_LARGO);
+    let treinta = pedir_etiquetas(
+        &planificador,
+        &windi,
+        serde_json::json!([{ "name": "á".repeat(30), "color": "blue" }]),
+    );
+    assert_eq!(treinta.items.len(), 1);
+}
+
+#[test]
+fn ca_he_14_hu10_ca05() {
+    // HE-14-HU10-CA05 · No repite el nombre de otra etiqueta, sin distinguir mayúsculas, ni dentro de la propuesta.
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    crear_etiqueta(&planificador, "Estudio");
+    let (codigo, texto) = rechazo(
+        &planificador,
+        &windi,
+        propone_etiquetas(serde_json::json!([{ "name": "ESTUDIO", "color": "blue" }])),
+    );
+    assert_eq!(codigo, ErrorCode::NameDuplicate);
+    assert_eq!(texto, messages::ETIQUETA_DUPLICADA);
+    let (_, texto) = rechazo(
+        &planificador,
+        &windi,
+        propone_etiquetas(serde_json::json!([
+            { "name": "Casa", "color": "blue" },
+            { "name": "casa", "color": "green" }
+        ])),
+    );
+    assert_eq!(texto, format!("“casa”: {}", messages::ETIQUETA_DUPLICADA));
+}
+
+#[test]
+fn ca_he_14_hu10_ca06() {
+    // HE-14-HU10-CA06 · Máximo 20 etiquetas, contando las que ya existen: con 19, proponer 2 no se puede.
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    for i in 0..19 {
+        crear_etiqueta(&planificador, &format!("E{i}"));
+    }
+    let (codigo, texto) = rechazo(
+        &planificador,
+        &windi,
+        propone_etiquetas(serde_json::json!([
+            { "name": "Casa", "color": "blue" },
+            { "name": "Gym", "color": "green" }
+        ])),
+    );
+    assert_eq!(codigo, ErrorCode::LabelLimitReached);
+    assert_eq!(texto, messages::MAXIMO_DE_ETIQUETAS_CREADAS);
+    // La vigésima sí.
+    let una = pedir_etiquetas(
+        &planificador,
+        &windi,
+        serde_json::json!([{ "name": "Casa", "color": "blue" }]),
+    );
+    confirmar(&windi, &manejador_de(&planificador), &una, true).unwrap();
+    assert_eq!(etiquetas_creadas(&planificador).len(), 20);
+}
+
+#[test]
+fn ca_he_14_hu10_ca07() {
+    // HE-14-HU10-CA07 · Si la etiqueta se creó por otro lado antes de confirmar, la propuesta queda descartada con
+    // el motivo y no se crea nada (HE-14-HU03-ET13: al confirmar se valida de nuevo).
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    let propuesta = pedir_etiquetas(
+        &planificador,
+        &windi,
+        serde_json::json!([{ "name": "Viaje", "color": "blue" }]),
+    );
+    crear_etiqueta(&planificador, "viaje");
+    let r = confirmar(&windi, &manejador_de(&planificador), &propuesta, true).unwrap();
+    assert_eq!(r.reply.text, messages::ETIQUETA_DUPLICADA);
+    assert_eq!(
+        estado_de_la_propuesta(&windi),
+        Some(ProposalState::Discarded)
+    );
+    assert_eq!(etiquetas_creadas(&planificador).len(), 1);
+}
+
+#[test]
+fn ca_he_14_hu10_ca08() {
+    // HE-14-HU10-CA08 · Un color que no está en el catálogo: Windi lo dice y menciona los colores.
+    let planificador = con_semilla();
+    let windi = ServicioDeWindi::nuevo();
+    let (codigo, texto) = rechazo(
+        &planificador,
+        &windi,
+        propone_etiquetas(serde_json::json!([{ "name": "Viaje", "color": "morado" }])),
+    );
+    assert_eq!(codigo, ErrorCode::WindiColorNotFound);
+    assert!(
+        texto.starts_with("No tengo el color “morado”. Los colores son: "),
+        "{texto}"
+    );
+}
+
+#[test]
+fn ca_he_14_hu10_ca09() {
+    // HE-14-HU10-CA09 · El contexto de windi-chat lleva los colores del catálogo para que Windi los ofrezca.
+    let planificador = con_semilla();
+    let contexto = bloquear(super::contexto(
+        &planificador,
+        USUARIO,
+        "Prueba",
+        chrono::NaiveDate::from_ymd_opt(2026, 11, 14).unwrap(),
+        10,
+        "Crea la etiqueta Viaje",
+    ))
+    .unwrap();
+    let mut colores: Vec<_> = contexto.colors.iter().map(|c| c.id.as_str()).collect();
+    colores.sort_unstable();
+    assert_eq!(colores, vec!["blue", "gray", "green"]);
 }

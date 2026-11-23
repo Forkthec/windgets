@@ -3001,6 +3001,8 @@ pub async fn windi_confirm_proposal(
     if matches!(&r, Ok(c) if c.outcome == crate::tipos::WindiConfirmProposalResultOutcome::Applied)
     {
         avisar_tarjetas(&app, Vec::new(), ChangeOp::Upsert);
+        // HE-14-HU10 (P29): una propuesta puede crear etiquetas; Etiquetas y el Formulario de tarjeta las muestran.
+        avisar_etiquetas(&app, Vec::new(), ChangeOp::Upsert);
     }
     Ok(leido(r))
 }
