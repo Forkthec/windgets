@@ -567,3 +567,24 @@
     display: none;
   }
 }
+
+/* RD-23: con un tema de contraste de Windows (forced-colors) se usan los colores del sistema; lo que hoy se distingue
+ * solo por el fondo (la opción elegida del selector, el paso actual, el botón principal sin borde y las líneas del
+ * divisor) recibe un borde o el color de selección del sistema para no perderse. */
+@media (forced-colors: active) {
+  .wg-selector-modo__opcion[aria-checked='true'] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+  .wg-pasos__paso--actual {
+    outline: 1px solid CanvasText;
+  }
+  .wg-nota .wg-acciones .wg-boton--principal {
+    border: 1.5px solid ButtonText;
+  }
+  .wg-divisor::before,
+  .wg-divisor::after {
+    background: CanvasText;
+  }
+}

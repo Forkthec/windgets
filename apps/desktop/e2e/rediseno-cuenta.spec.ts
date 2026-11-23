@@ -128,3 +128,18 @@ test('RD-22 · El selector «Apariencia» se maneja con las flechas', async ({ p
   await expect(page.locator('.wg-cuenta-raiz')).toHaveAttribute('data-modo', 'oscuro');
   await expect(page.getByRole('radio', { name: 'Oscuro' })).toBeFocused();
 });
+
+test('RD-23 · Con un tema de contraste, la opción elegida y el paso actual siguen distinguiéndose', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'light', forcedColors: 'active' });
+  await page.goto('/');
+  const fondo = (nombre: string) =>
+    page.getByRole('radio', { name: nombre }).evaluate((e) => getComputedStyle(e).backgroundColor);
+  expect(await fondo('Claro')).not.toBe(await fondo('Oscuro'));
+  await page.getByRole('link', { name: 'Regístrate' }).click();
+  const contorno = await page
+    .locator('.wg-pasos__paso--actual')
+    .evaluate((e) => getComputedStyle(e).outlineStyle);
+  expect(contorno).toBe('solid');
+});
