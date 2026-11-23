@@ -18,7 +18,7 @@ for p in ${PASOS:-lint build fmt clippy test tipos vitest e2e landing windows}; 
     tipos) paso tipos bash -c 'git status --porcelain -- apps/desktop/src/types; git diff --exit-code --stat -- apps/desktop/src/types && pnpm --filter desktop types:check' ;;
     vitest) paso vitest pnpm --filter desktop test ;;
     windows) paso windows bash -c "CARGO_TARGET_DIR=/cache/target-win cargo clippy --locked --manifest-path $M --target x86_64-pc-windows-msvc --all-targets -- -D warnings && CARGO_TARGET_DIR=/cache/target-win cargo clippy --locked --manifest-path $M --target x86_64-pc-windows-msvc --all-targets --features spike -- -D warnings" ;;
-    e2e) paso e2e bash -c 'pnpm --filter desktop exec playwright install --with-deps chromium >/dev/null 2>&1; pnpm --filter desktop test:e2e' ;;
+    e2e) paso e2e bash -c 'pnpm --filter desktop exec playwright install --with-deps chromium >/dev/null 2>&1; WG_CAPTURAS=1 pnpm --filter desktop test:e2e' ;;
     landing) paso landing bash -c 'pnpm --filter landing exec playwright install --with-deps chromium >/dev/null 2>&1; pnpm --filter landing test:e2e' ;;
   esac
 done
