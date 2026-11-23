@@ -4,7 +4,9 @@ import textos from '@/types/messages.es.json';
 import { Aviso } from '@/ui/Aviso/Aviso';
 import { Boton } from '@/ui/Boton/Boton';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import windiSaludo from '../cuenta/activos/windi-saludo.svg';
 import { Propuesta } from './Propuesta';
+import './windi.css';
 
 // P-IA-01 Agente de IA (Menú principal > Planificador > Agente de IA; HE-14-HU01). La conversación vive en el
 // Núcleo mientras la aplicación está abierta (IPC-WIN-01; ET14). Cada mensaje va a Windi por IPC-WIN-02, que
@@ -164,7 +166,7 @@ export function Windi() {
   };
 
   return (
-    <main aria-label="Agente de IA" aria-busy={mensajes === null}>
+    <main className="wg-windi" aria-label="Agente de IA" aria-busy={mensajes === null}>
       {/* ET13: sin conexión, el aviso (RT-04); el historial sigue visible. */}
       {!enLinea && <Aviso texto={textos.WINDI_SIN_CONEXION} />}
       {sinConexionAlConfirmar && <Aviso texto={textos.WINDI_SIN_CONEXION_AL_CONFIRMAR} />}
@@ -172,9 +174,14 @@ export function Windi() {
       {/* ET01: el área de conversación. */}
       <ol className="wg-windi__conversacion" aria-label="Conversación" aria-live="polite">
         {(mensajes ?? []).map((m) => (
+          // docs/rediseno.md RD-36 (Figma 76:27 «Tu mensaje», 76:29 a 76:42): tus mensajes en un globo a la derecha;
+          // los de Windi a la izquierda, con su ilustración y su nombre.
           <li key={m.id} className={`wg-windi__mensaje wg-windi__mensaje--${m.role}`}>
+            {m.role === 'assistant' && (
+              <img className="wg-windi__ilustracion" src={windiSaludo} alt="" width={77} height={48} />
+            )}
             {m.role === 'assistant' && <span className="wg-windi__autor">Windi</span>}
-            <p>{m.text}</p>
+            <p className="wg-windi__texto">{m.text}</p>
             {propuestas
               .filter((p) => p.despuesDe === m.id)
               .map(({ propuesta }) => (
@@ -200,6 +207,7 @@ export function Windi() {
           </Boton>
         </div>
       )}
+      {/* RD-36 (Figma 76:52 «Redactar mensaje»): el campo, el contador y «Enviar» en una caja. */}
       <div className="wg-windi__escribir">
         <label className="wg-oculto" htmlFor={idCampo}>
           Escribe un mensaje
@@ -215,7 +223,7 @@ export function Windi() {
           onChange={(e) => setTexto(e.target.value)}
           onKeyDown={alTeclear}
         />
-        <div className="wg-fila">
+        <div className="wg-fila wg-windi__pie">
           {/* ET01: el contador «<caracteres> / 2000». */}
           <span id={`${idCampo}-contador`}>{`${largo} / ${LARGO_MAXIMO}`}</span>
           {/* ET04 (RT-04): el motivo de «Enviar» deshabilitado. */}

@@ -81,12 +81,16 @@ export function Propuesta({
 }: PropuestaProps) {
   const activa = propuesta.state === 'active';
   return (
+    // docs/rediseno.md RD-36 (Figma 76:43 «Propuesta de movimiento»): «PROPUESTA», el título de la tarjeta y los datos.
     <section className="wg-windi__propuesta" aria-label="Propuesta">
+      <p className="wg-windi__propuesta-etiqueta" aria-hidden="true">
+        PROPUESTA
+      </p>
       {propuesta.state === 'discarded' && <p className="wg-indicador">Descartada</p>}
       <ul className="wg-windi__propuesta-tarjetas">
         {propuesta.items.map((item, i) => (
           <li key={item.card_id ?? `nueva-${i}`}>
-            {item.title}
+            <p className="wg-windi__propuesta-titulo">{item.title}</p>
             {propuesta.action === 'edit' && item.changes && (
               <ul aria-label="Cambios">
                 {Object.entries(item.changes).map(([dato, nuevo]) => (
@@ -128,7 +132,11 @@ export function Propuesta({
               </p>
             )}
             {propuesta.action === 'move' && item.changes && (
-              <p>{`Columna: ${String((item.changes as Record<string, unknown>).from_column)} → ${String((item.changes as Record<string, unknown>).to_column)}`}</p>
+              // RD-36 (76:46, 76:47): «Columna» y, a su lado, la columna actual → la nueva.
+              <p className="wg-windi__dato">
+                <span className="wg-windi__dato-nombre">Columna</span>
+                <span className="wg-windi__dato-valor">{`${String((item.changes as Record<string, unknown>).from_column)} → ${String((item.changes as Record<string, unknown>).to_column)}`}</span>
+              </p>
             )}
           </li>
         ))}
@@ -142,7 +150,7 @@ export function Propuesta({
           {w}
         </p>
       ))}
-      <div className="wg-fila">
+      <div className="wg-fila wg-windi__propuesta-acciones">
         <Boton principal disabled={!activa || !habilitada} onClick={alConfirmar}>
           Confirmar
         </Boton>

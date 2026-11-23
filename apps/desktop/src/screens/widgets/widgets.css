@@ -1,0 +1,83 @@
+/* Rediseño de Widgets (docs/rediseno.md RD-35; Figma 81:109 «Contenido» de 81:90 «Widgets · Claro»). Medidas en px del
+ * Figma, relativas a la tarjeta de 990 px con 32 px de margen interior. Los colores son los tokens del marco. */
+.wg-lista-widgets__acciones {
+  gap: 16px; /* 81:110 termina en x = 200 y 81:112 empieza en x = 216 */
+}
+.wg-lista.wg-lista-widgets {
+  display: flex;
+  flex-direction: column;
+  gap: 66px; /* filas cada 132 px (81:114, 81:120, 81:126) */
+  margin: 56px 0 0;
+  padding: 0;
+  list-style: none;
+}
+/* Nombre en x = 32; «Activo» en x = 530 con el interruptor en 610 (128 px), «Configurar» en 687 (112 px) y «Eliminar»
+ * en 835. Las columnas vacías son los espacios entre ellas. */
+.wg-lista-widgets__fila.wg-lista__elemento {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 128px 29px 112px 36px 123px;
+  grid-template-rows: 44px auto;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.wg-lista-widgets__fila .wg-lista__nombre {
+  grid-column: 1;
+  grid-row: 1;
+  overflow-wrap: anywhere;
+  color: var(--wg-tinta);
+  font-size: 24px;
+  font-weight: 500;
+}
+.wg-lista-widgets__descripcion {
+  grid-column: 1;
+  grid-row: 2;
+  margin-top: 3px;
+  color: var(--wg-texto);
+  font-size: 16px;
+}
+.wg-lista-widgets__estado {
+  grid-column: 2;
+  grid-row: 1;
+}
+/* 81:116 «Activo» (17 px) a la izquierda del interruptor 81:117. */
+.wg-lista-widgets__estado > .wg-fila {
+  flex-direction: row-reverse;
+  justify-content: space-between;
+  font-size: 17px;
+}
+.wg-lista-widgets__configurar {
+  grid-column: 4;
+  grid-row: 1;
+  justify-self: start;
+}
+.wg-lista-widgets__eliminar {
+  grid-column: 6;
+  grid-row: 1;
+  justify-self: start;
+}
+/* Ventana angosta: la descripción y las opciones bajan debajo del nombre. */
+@media (width < 1000px) {
+  .wg-lista.wg-lista-widgets {
+    gap: 32px;
+  }
+  .wg-lista-widgets__fila.wg-lista__elemento {
+    grid-template-columns: auto auto auto minmax(0, 1fr);
+    grid-template-rows: auto auto 44px;
+    column-gap: 24px;
+  }
+  .wg-lista-widgets__fila .wg-lista__nombre,
+  .wg-lista-widgets__descripcion {
+    grid-column: 1 / -1;
+  }
+  .wg-lista-widgets__estado,
+  .wg-lista-widgets__configurar,
+  .wg-lista-widgets__eliminar {
+    grid-row: 3;
+    grid-column: auto;
+  }
+  .wg-lista-widgets__estado > .wg-fila {
+    gap: 16px;
+  }
+}

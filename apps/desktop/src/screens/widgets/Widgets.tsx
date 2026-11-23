@@ -10,6 +10,7 @@ import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { AgregarWidget } from './AgregarWidget';
 import { FormularioDeWidget } from './FormularioDeWidget';
+import './widgets.css';
 
 // P-WID-01 Widgets (Menú principal > Personalización > Widgets; HE-04-HU01). La lista sale del Núcleo ya en
 // orden: primero los widgets por defecto y luego los agregados (IPC-WID-01 widget_list). «Editar escritorio»
@@ -20,6 +21,15 @@ import { FormularioDeWidget } from './FormularioDeWidget';
 export function tipoDeWidget(widget: WidgetItem): string {
   if (widget.is_default) return 'Por defecto';
   return widget.type === 'weather' || widget.type === 'news' ? 'Externo' : 'Local';
+}
+
+/**
+ * docs/rediseno.md RD-35: la línea debajo del nombre (81:115 «Widget por defecto», 81:127 «Un paso a la vez.»): en
+ * los widgets por defecto, «Widget por defecto»; en los demás, el dato que los distingue o, si no tienen, su tipo.
+ */
+export function descripcionDeWidget(widget: WidgetItem): string {
+  if (widget.is_default) return 'Widget por defecto';
+  return widget.distinguishing_value || tipoDeWidget(widget);
 }
 
 export function Widgets() {
@@ -83,8 +93,8 @@ export function Widgets() {
 
   return (
     <main aria-label="Widgets" aria-busy={widgets === null}>
-      {/* ET01: «Agregar widget» y «Editar escritorio» encima de la lista. */}
-      <div className="wg-fila">
+      {/* ET01: «Agregar widget» y «Editar escritorio» encima de la lista (81:110, 81:112). */}
+      <div className="wg-fila wg-lista-widgets__acciones">
         <Boton principal onClick={() => ruta.avanzar('agregar')}>
           Agregar widget
         </Boton>
@@ -92,28 +102,51 @@ export function Widgets() {
         <Boton onClick={() => void invocar('layout_edit_open', {})}>Editar escritorio</Boton>
       </div>
       {widgets && (
-        <ul className="wg-lista" aria-label="Lista de widgets">
+        // docs/rediseno.md RD-35 (Figma 81:109 «Contenido»): nombre y descripción a la izquierda; estado,
+        // «Configurar» y «Eliminar» a la derecha.
+        <ul className="wg-lista wg-lista-widgets" aria-label="Lista de widgets">
           {widgets.map((w) => (
             // ET03: nombre, tipo, dato que lo distingue, interruptor y las opciones que aplican.
-            <li key={w.widget_id} className="wg-fila wg-lista__elemento">
+            <li key={w.widget_id} className="wg-lista__elemento wg-lista-widgets__fila">
               <span className="wg-lista__nombre">{w.display_name}</span>
-              {w.distinguishing_value && <span>{w.distinguishing_value}</span>}
-              <span>{tipoDeWidget(w)}</span>
-              {w.paused_by_load && <span>{textos.ANIMACION_EN_PAUSA}</span>}
-              <Interruptor
-                etiqueta={w.is_active ? 'Activo' : 'Inactivo'}
-                activo={w.is_active}
-                alCambiar={(activo) => void alternar(w, activo)}
-              />
-              {w.can_configure && <Boton onClick={() => setPorConfigurar(w)}>Configurar</Boton>}
-              {/* HE-04-HU13-ET04: en los widgets por defecto, deshabilitada con su motivo (RT-04). */}
-              <Boton
+              <span className="wg-lista-widgets__descripcion">
+                {descripcionDeWidget(w)}
+                {w.paused_by_load && (
+                  <>
+                    {' · '}
+                    <span>{textos.ANIMACION_EN_PAUSA}</span>
+                  </>
+                )}
+              </span>
+              <span className="wg-lista-widgets__estado">
+                <Interruptor
+                  etiqueta={w.is_active ? 'Activo' : 'Inactivo'}
+                  activo={w.is_active}
+                  alCambiar={(activo) => void alternar(w, activo)}
+                />
+              </span>
+              {w.can_configure && (
+                <Boton className="wg-lista-widgets__configurar" onClick={() => setPorConfigurar(w)}>
+                  Configurar
+                </Boton>
+              )}
+              {/* HE-04-HU13-ET04: en los widgets por defecto, deshabilitada con su motivo (RT-04); RD-35: el motivo
+                  va al pasar el mouse y como descripción accesible. */}
+              <button
+                type="button"
+                className="wg-enlace-texto wg-lista-widgets__eliminar"
                 disabled={!w.can_delete}
-                motivo={textos.WIDGET_POR_DEFECTO_NO_ELIMINABLE}
+                title={w.can_delete ? undefined : textos.WIDGET_POR_DEFECTO_NO_ELIMINABLE}
+                aria-describedby={w.can_delete ? undefined : `${w.widget_id}-motivo`}
                 onClick={() => setPorEliminar(w)}
               >
                 Eliminar
-              </Boton>
+              </button>
+              {!w.can_delete && (
+                <span id={`${w.widget_id}-motivo`} className="wg-oculto">
+                  {textos.WIDGET_POR_DEFECTO_NO_ELIMINABLE}
+                </span>
+              )}
             </li>
           ))}
         </ul>
