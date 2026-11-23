@@ -524,9 +524,23 @@ fn clase_de(ventana: HWND) -> String {
     String::from_utf16_lossy(&nombre[..largo.max(0) as usize])
 }
 
-/// El escritorio es la clase SysListView32 dentro de SHELLDLL_DefView (D-186).
-fn es_el_escritorio(ventana: HWND) -> bool {
-    if clase_de(ventana) != "SysListView32" {
+/// La ventana de la capa, como número (`HWND` no se comparte entre hilos); 0 si aún no existe. Se lee fuera del
+/// gancho para que él no consulte a Tauri.
+static CAPA_HWND: AtomicIsize = AtomicIsize::new(0);
+
+fn recordar_la_capa(app: &AppHandle) {
+    if let Some(hwnd) = app
+        .get_webview_window(super::CAPA)
+        .and_then(|capa| capa.hwnd().ok())
+    {
+        CAPA_HWND.store(hwnd.0 as isize, Ordering::Relaxed);
+    }
+}
+
+/// ¿La ventana es la capa o uno de sus hijos (el WebView2)?
+fn es_de_la_capa(ventana: HWND) -> bool {
+    let capa = CAPA_HWND.load(Ordering::Relaxed);
+    if capa == 0 {
         return false;
     }
     // SAFETY: GetParent no recibe punteros.

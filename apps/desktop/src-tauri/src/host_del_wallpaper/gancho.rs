@@ -8,14 +8,15 @@
 //! recibe igual. El movimiento nunca se intercepta. Dentro del gancho no se consulta al explorador
 //! (`LVM_HITTEST`): los rectángulos de los widgets y de los íconos van en caché y se actualizan fuera de él.
 //!
-//! DUDA: HE-06-HU06 la técnica se valida antes con un spike en Windows 11 (D-215, RNF-35). Mientras el spike no
-//! se apruebe, el gancho queda apagado (`GANCHO_HABILITADO`) y HE-06-HU06-CA06 queda pendiente (docs/DUDAS.md).
+//! D-215: el gancho estuvo apagado hasta validar la técnica en Windows 11 (RNF-35). P29 lo enciende por decisión
+//! de Paula (el rectángulo de selección de Windows aparecía al arrastrar en el widget Kanban); se valida en la
+//! prueba manual de Windows 11 del paso y, si falla, se vuelve a apagar con `GANCHO_HABILITADO` (docs/DUDAS.md).
 
 use super::geometria::Rect;
 use super::seleccion::{BajoElCursor, GeometriaDeLaCapa, es_interactivo};
 
-/// D-215: el gancho se instala solo con el spike aprobado en Windows 11. Apagado, nada cambia para Windows.
-pub const GANCHO_HABILITADO: bool = false;
+/// D-215: el gancho se instala solo con esta bandera encendida (P29). Apagado, nada cambia para Windows.
+pub const GANCHO_HABILITADO: bool = true;
 
 /// Mensajes de `winuser.h` que llegan al gancho en `wParam`.
 pub const WM_LBUTTONDOWN: u32 = 0x0201;
