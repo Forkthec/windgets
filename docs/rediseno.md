@@ -79,10 +79,10 @@ Aprobadas por Paula el 2026-11-22. Valen para toda pantalla que se construya o c
 10. **Recursos.** Todo se construye con código: CSS y SVG exportados del Figma (Exportar > SVG, con los colores de la
     paleta), en `screens/<área>/activos/`. La app no usa PNG ni URLs temporales del MCP. Un PNG de un marco solo se
     exporta para comparar cuando no hay otra forma y no es fuente de verdad.
-11. **Verificación antes de cada PR del rediseño.** Una prueba por RD. Pruebas de captura de Playwright
-    (`toHaveScreenshot`) que solo corren en el contenedor `windgets-ci`, para que el render sea igual en cualquier
-    computador: cada pantalla al tamaño de su marco y a 1200×800, en claro y oscuro, con `maxDiffPixelRatio` 0,01 y
-    las capturas de referencia en el repositorio. `herramientas/verificacion/verificar.sh` con todos los pasos en
+11. **Verificación antes de cada PR del rediseño.** Una prueba por RD. La composición se fija con pruebas de
+    geometría de Playwright contra las medidas del marco (±2 px), no con capturas (`toHaveScreenshot`): con prototipos
+    en serie, regenerar y revisar capturas en cada cambio atrasa más de lo que protege (decisión de Paula,
+    23-nov-2026). `herramientas/verificacion/verificar.sh` con todos los pasos en
     `=== fin (0)`. Lista de chequeo: tamaños de los marcos, 1200×800, 1000 y 999 px, 960×600, zoom de 125 %, foco,
     contraste y estados sin Figma.
 12. **Proceso.** Un RD por cambio («Reemplaza RD-nn» si cambia uno ya fusionado), commits `rediseno: <verbo y
