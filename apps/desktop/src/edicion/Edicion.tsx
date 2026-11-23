@@ -11,7 +11,7 @@ import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 // C-03 Pantalla de edición de la distribución (HE-05): a pantalla completa sobre el escritorio, sin menú principal
 // (HE-05-HU01-ET01). Pinta el wallpaper y los widgets activos en su posición y tamaño reales (ET02), cada uno con
 // un borde que indica que se puede mover y redimensionar (ET03), y la barra superior (ET04). Las reglas de mover y
-// redimensionar (área visible, sin superponerse, 100 × 100) viven en el Núcleo (IPC-LAY-02, 03). La pantalla
+// redimensionar (área visible, sin superponerse, el mínimo de cada tipo) viven en el Núcleo (IPC-LAY-02, 03). La pantalla
 // representa a escala el monitor principal: las medidas son píxeles físicos y se dibujan divididas por la escala de
 // Windows; el puntero se multiplica por ella (HE-05-HU02-ET07, HE-05-HU03-CA06).
 
@@ -155,7 +155,7 @@ export function Edicion({ invocar = invocarNucleo, escuchar = escucharNucleo }: 
       a.modo === 'mover'
         ? { ...a.rect, x: a.rect.x + dx, y: a.rect.y + dy }
         : { ...a.rect, width: a.rect.width + dx, height: a.rect.height + dy };
-    // El widget se mueve con el puntero sin esperar al Núcleo; las reglas (área visible, sin superponerse, 100 ×
+    // El widget se mueve con el puntero sin esperar al Núcleo; las reglas (área visible, sin superponerse, mínimo
     // 100) las aplica la respuesta del Núcleo.
     setWidgets((ws) => ws.map((w) => (w.widget_id === a.widgetId ? pedido : w)));
     siguiente.current = { a, pedido };

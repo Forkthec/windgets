@@ -13,11 +13,42 @@ use crate::repositorios_y_archivos_locales::encolar_cambio;
 use crate::servicio_de_sesion::instante;
 use crate::servicio_del_planificador::{campos, resultado};
 use crate::tipos::{
-    LayoutEditOpenResult, LayoutEditRectResult, Monitor, ResultMessage, WidgetRect,
+    LayoutEditOpenResult, LayoutEditRectResult, Monitor, ResultMessage, WidgetRect, WidgetType,
 };
 
-/// HE-05-HU03-ET02: tamaño mínimo de un widget.
-pub const LADO_MINIMO: i64 = 100;
+/// HE-05-HU03-ET02 (P29): el tamaño mínimo de cada tipo de widget, en píxeles de pantalla (al 100 %), es el menor en
+/// que todo su contenido se lee completo: textos sin cortar, la cuadrícula del mes entera, una tarjeta o un titular
+/// con su casilla o su fuente, y los botones del reproductor.
+pub fn tamano_minimo(tipo: &WidgetType) -> (i64, i64) {
+    match tipo {
+        WidgetType::Clock => (200, 100),
+        WidgetType::Calendar => (260, 260),
+        WidgetType::DailyTasks => (260, 180),
+        WidgetType::Kanban => (400, 260),
+        WidgetType::Weather => (200, 140),
+        WidgetType::News => (260, 180),
+        WidgetType::MusicPlayer => (260, 160),
+        WidgetType::Animation => (160, 120),
+        WidgetType::ImageCarousel => (200, 120),
+        WidgetType::StaticImage => (160, 100),
+        WidgetType::Text => (160, 80),
+    }
+}
+
+/// El mínimo en píxeles físicos del monitor, como los rectángulos de los widgets (HE-05-HU02-ET07): al 150 % un
+/// mínimo de 200 px de pantalla son 300 físicos, para que se lea igual a cualquier escala.
+pub fn tamano_minimo_fisico(tipo: &WidgetType, monitor: &Monitor) -> (i64, i64) {
+    let escala = if monitor.scale_factor > 0.0 {
+        monitor.scale_factor
+    } else {
+        1.0
+    };
+    let (ancho, alto) = tamano_minimo(tipo);
+    (
+        (ancho as f64 * escala).ceil() as i64,
+        (alto as f64 * escala).ceil() as i64,
+    )
+}
 
 /// La distribución en edición.
 #[derive(Debug, Clone)]
@@ -156,7 +187,7 @@ impl ServicioDePersonalizacion {
         })
     }
 
-    /// IPC-LAY-03 `layout_edit_resize` (HE-05-HU03): mínimo 100 × 100 (ET02), máximo hasta el borde del área
+    /// IPC-LAY-03 `layout_edit_resize` (HE-05-HU03): el mínimo de su tipo (ET02), máximo hasta el borde del área
     /// visible (ET03) y se detiene en el borde de otro widget, con `collided` (ET04; D-042).
     pub fn redimensionar_en_edicion(
         &self,
@@ -169,10 +200,13 @@ impl ServicioDePersonalizacion {
         let (edicion, i) = self.en_edicion(widget_id)?;
         let actual = edicion.actual[i].clone();
         let m = &edicion.monitor;
-        let x = x.clamp(m.x, m.x + m.width - LADO_MINIMO);
-        let y = y.clamp(m.y, m.y + m.height - LADO_MINIMO);
-        let mut ancho = ancho.clamp(LADO_MINIMO, m.x + m.width - x);
-        let mut alto = alto.clamp(LADO_MINIMO, m.y + m.height - y);
+        // ET03: un monitor más chico que el mínimo deja el widget del tamaño del monitor.
+        let (minimo_ancho, minimo_alto) = tamano_minimo_fisico(&actual.r#type, m);
+        let (minimo_ancho, minimo_alto) = (minimo_ancho.min(m.width), minimo_alto.min(m.height));
+        let x = x.clamp(m.x, m.x + m.width - minimo_ancho);
+        let y = y.clamp(m.y, m.y + m.height - minimo_alto);
+        let mut ancho = ancho.clamp(minimo_ancho, m.x + m.width - x);
+        let mut alto = alto.clamp(minimo_alto, m.y + m.height - y);
         let mut choca = false;
         for (j, otro) in edicion.actual.iter().enumerate() {
             let pedido = WidgetRect {
@@ -196,7 +230,7 @@ impl ServicioDePersonalizacion {
                 alto = actual.height;
             }
         }
-        if ancho < LADO_MINIMO || alto < LADO_MINIMO {
+        if ancho < minimo_ancho || alto < minimo_alto {
             return Ok(LayoutEditRectResult {
                 rect: actual,
                 collided: true,

@@ -5,7 +5,7 @@
 use super::pruebas_de_widgets::{CALENDARIO, KANBAN, RELOJ, TAREAS, con_widgets_por_defecto};
 use super::*;
 use crate::servicio_del_planificador::pruebas::{USUARIO, bloquear};
-use crate::tipos::LayoutEditRectResult;
+use crate::tipos::{LayoutEditRectResult, Monitor, WidgetType};
 
 const AHORA_MS: i64 = 1_793_600_000_000;
 
@@ -122,12 +122,47 @@ fn ca_he_05_hu03_ca01() {
 
 #[test]
 fn ca_he_05_hu03_ca02() {
-    // HE-05-HU03-CA02 · El tamaño mínimo es 100 × 100 (ET02).
+    // HE-05-HU03-CA02 (P29) · Cada tipo tiene el mínimo en que su contenido se lee completo (ET02): el Reloj no baja
+    // de 200 × 100 ni el Kanban de 400 × 260.
     let (_, servicio) = abrir();
     let r = servicio
         .redimensionar_en_edicion(RELOJ, 40, 40, 50, 20)
         .unwrap();
-    assert_eq!(rect(&r), (40, 40, 100, 100));
+    assert_eq!(rect(&r), (40, 40, 200, 100));
+    let r = servicio
+        .redimensionar_en_edicion(KANBAN, 760, 40, 120, 120)
+        .unwrap();
+    assert_eq!(rect(&r), (760, 40, 400, 260));
+    // Todos los tipos tienen un mínimo mayor que el antiguo 100 × 100 y menor que su tamaño inicial.
+    for tipo in [
+        WidgetType::Clock,
+        WidgetType::Calendar,
+        WidgetType::DailyTasks,
+        WidgetType::Kanban,
+        WidgetType::Weather,
+        WidgetType::News,
+        WidgetType::MusicPlayer,
+        WidgetType::Animation,
+        WidgetType::ImageCarousel,
+        WidgetType::StaticImage,
+        WidgetType::Text,
+    ] {
+        let (ancho, alto) = distribucion::tamano_minimo(&tipo);
+        assert!(ancho >= 160 && alto >= 80, "{tipo:?}");
+    }
+    // A 150 % el mínimo se mide en píxeles de pantalla: 200 × 100 son 300 × 150 físicos.
+    let monitor = Monitor {
+        id: "0".into(),
+        x: 0,
+        y: 0,
+        width: 2880,
+        height: 1620,
+        scale_factor: 1.5,
+    };
+    assert_eq!(
+        distribucion::tamano_minimo_fisico(&WidgetType::Clock, &monitor),
+        (300, 150)
+    );
 }
 
 #[test]
