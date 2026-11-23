@@ -52,6 +52,7 @@ function capa(widgets: WidgetRect[], escala = 1): LayerInitialState {
     widgets,
     monitors: [{ id: '0', x: 0, y: 0, width: 1920, height: 1080, scale_factor: escala }],
     wallpaper_state: 'ok',
+    wallpaper_fit: [],
   };
 }
 

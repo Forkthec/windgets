@@ -65,6 +65,7 @@ export type ErrorCode =
   // imágenes y catálogos
   | 'image.format_not_allowed' | 'image.too_large' | 'image.unreadable' | 'asset.unavailable'
   // widgets
+  | 'monitor.not_found' | 'monitor.not_configurable'
   | 'widget.not_found' | 'widget.already_added' | 'widget.default_not_deletable' | 'layout.widget_missing'
   | 'city.not_found' | 'city.duplicate' | 'city.too_long'
   | 'text.too_long'
@@ -580,8 +581,16 @@ export interface LayerInitialState {
   widgets: WidgetRect[];
   monitors: Monitor[];
   wallpaper_state: WallpaperState;
+  /** HE-02-HU14 (P29): el ajuste de la imagen en cada monitor, en el orden de `monitors`. */
+  wallpaper_fit: WallpaperMonitorFit[];
 }
 export interface WallpaperStatus { state: WallpaperState }
+/** HE-02-HU14 (P29): Rellenar, Ajustar, Expandir, Mosaico, Centrar y Extender, como en Windows. */
+export type WallpaperFit = 'fill' | 'fit' | 'stretch' | 'tile' | 'center' | 'span';
+export interface WallpaperMonitorFit { monitor_id: string; number: number; is_primary: boolean; fit: WallpaperFit }
+/** Hasta 6 monitores; `other_monitors` usan el ajuste del principal. */
+export interface WallpaperFitSettings { monitors: WallpaperMonitorFit[]; other_monitors: number }
+export interface WallpaperFitSetParams { monitor_id: string; fit: WallpaperFit }
 export interface AppOpenScreenParams { screen: ScreenId; params?: ScreenParams }
 export interface LastScreen { screen: ScreenId | null }
 export interface AppSetLastScreenParams { screen: ScreenId }
@@ -752,6 +761,8 @@ export interface CommandMap {
   // a.10 escritorio, wallpaper y sistema
   layer_get_initial_state: { params: NoParams; result: LayerInitialState };
   wallpaper_get_status: { params: NoParams; result: WallpaperStatus };
+  wallpaper_fit_get: { params: NoParams; result: WallpaperFitSettings };
+  wallpaper_fit_set: { params: WallpaperFitSetParams; result: WallpaperFitSettings };
   app_open_screen: { params: AppOpenScreenParams; result: Void };
   app_get_last_screen: { params: NoParams; result: LastScreen };
   app_set_last_screen: { params: AppSetLastScreenParams; result: Void };
@@ -821,6 +832,8 @@ export interface EventMap {
   layout_edit_state_changed: { open: boolean; dirty: boolean };
   wallpaper_status_changed: { state: WallpaperState };
   monitors_changed: { monitors: Monitor[] };
+  /** EV-30 (HE-02-HU14; P29). */
+  wallpaper_fit_changed: { monitors: WallpaperMonitorFit[] };
   /** Coordenadas en el sistema de la capa. */
   pointer_forwarded: { x: number; y: number; monitor_id: string; button: 'primary' };
   /** EV-27: al soltar sin mover el puntero más de 4 px desde EV-18; coordenadas de la capa. */

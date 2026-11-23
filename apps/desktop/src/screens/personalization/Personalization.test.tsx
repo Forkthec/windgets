@@ -174,6 +174,7 @@ async function abrir(
           ],
           monitors: [{ id: '0', x: 0, y: 0, width: 1920, height: 1080, scale_factor: 1 }],
           wallpaper_state: 'ok',
+          wallpaper_fit: [],
         },
       }));
       n.responder('theme_draft_select', ({ theme_id, discard_changes }) =>

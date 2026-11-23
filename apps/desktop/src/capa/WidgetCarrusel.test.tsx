@@ -18,6 +18,7 @@ const ESTADO: LayerInitialState = {
   ],
   monitors: [],
   wallpaper_state: 'ok',
+  wallpaper_fit: [],
 };
 
 afterEach(() => vi.useRealTimers());

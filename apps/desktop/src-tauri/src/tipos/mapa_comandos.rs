@@ -563,6 +563,20 @@ pub struct CommandMapWallpaperGetStatus {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "index.ts")]
+pub struct CommandMapWallpaperFitGet {
+    pub params: NoParams,
+    pub result: WallpaperFitSettings,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
+pub struct CommandMapWallpaperFitSet {
+    pub params: WallpaperFitSetParams,
+    pub result: WallpaperFitSettings,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
 pub struct CommandMapAppOpenScreen {
     pub params: AppOpenScreenParams,
     pub result: (),
@@ -797,6 +811,8 @@ pub struct CommandMap {
     pub layout_edit_cancel: CommandMapLayoutEditCancel,
     pub layer_get_initial_state: CommandMapLayerGetInitialState,
     pub wallpaper_get_status: CommandMapWallpaperGetStatus,
+    pub wallpaper_fit_get: CommandMapWallpaperFitGet,
+    pub wallpaper_fit_set: CommandMapWallpaperFitSet,
     pub app_open_screen: CommandMapAppOpenScreen,
     pub app_get_last_screen: CommandMapAppGetLastScreen,
     pub app_set_last_screen: CommandMapAppSetLastScreen,

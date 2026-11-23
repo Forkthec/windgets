@@ -872,6 +872,7 @@ impl ServicioDePersonalizacion {
 
 pub mod agregar;
 pub mod ajuste;
+pub mod ajuste_del_fondo;
 mod aplicar;
 pub mod distribucion;
 mod eliminar_tema;

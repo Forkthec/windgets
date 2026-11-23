@@ -133,6 +133,7 @@ async function pintarCapa(widgets: WidgetRect[] | (() => WidgetRect[])) {
     widgets: leer(),
     monitors: [],
     wallpaper_state: 'ok',
+    wallpaper_fit: [],
   });
   const invocar = ((comando: string) =>
     Promise.resolve(

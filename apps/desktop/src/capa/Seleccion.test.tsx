@@ -25,6 +25,7 @@ const ESTADO: LayerInitialState = {
   widgets: WIDGETS,
   monitors: [],
   wallpaper_state: 'ok',
+  wallpaper_fit: [],
 };
 
 /** Pinta la capa y devuelve cómo emitir EV-18 `pointer_forwarded` y EV-27 `pointer_released`. */

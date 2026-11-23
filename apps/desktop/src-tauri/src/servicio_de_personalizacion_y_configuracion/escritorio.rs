@@ -172,12 +172,18 @@ impl ServicioDePersonalizacion {
                 WallpaperState::FallbackDefault,
             ),
         };
+        // HE-02-HU14 (P29): el ajuste de la imagen en cada monitor, propio de este computador.
+        let wallpaper_fit = super::ajuste_del_fondo::ajustes(
+            &super::ajuste_del_fondo::leer(base).await?,
+            &monitores,
+        );
         Ok(LayerInitialState {
             applied,
             // Los widgets activos del tema aplicado encima del wallpaper (HE-04-HU01-CA01, CA03).
             widgets: Self::rectangulos_ajustados(base, user_id, &monitores).await?,
             monitors: monitores,
             wallpaper_state,
+            wallpaper_fit,
         })
     }
 }

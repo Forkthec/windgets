@@ -32,6 +32,7 @@ const ESTADO: LayerInitialState = {
   ],
   monitors: [],
   wallpaper_state: 'ok',
+  wallpaper_fit: [],
 };
 
 const PUNTO = { x: 50, y: 50, monitor_id: '0', button: 'primary' } as const;
