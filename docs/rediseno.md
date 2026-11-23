@@ -116,6 +116,8 @@ Aprobadas por Paula el 2026-11-22. Valen para toda pantalla que se construya o c
 | RD-22 | 2026-11-22 | P28 | Selector «Apariencia» | Como grupo de radios: solo la opción elegida entra en el orden de tabulación y las flechas cambian de modo y mueven el foco. | — | `SelectorDeModo.test.tsx`, `e2e/rediseno-cuenta.spec.ts` |
 | RD-23 | 2026-11-22 | P28 | Pantallas de cuenta | Con un tema de contraste de Windows (`forced-colors`), la opción elegida del selector usa el color de selección del sistema; el paso actual, el botón principal sin borde y las líneas del divisor reciben borde o color del sistema. | — | `e2e/rediseno-cuenta.spec.ts` |
 | RD-24 | 2026-11-23 | P28 | Pantallas de cuenta | Si el Núcleo responde un error sin texto (`internal.unexpected`, DP-02), el aviso de la pantalla dice «Ocurrió un error inesperado. Intenta de nuevo.», también al fallar «Continuar con Google». Texto elegido por Paula. | `contratos.md` DP-02 (sin texto de interfaz), solo en las pantallas de cuenta | `SignIn.test.tsx`, `Register.test.tsx`, `Recovery.test.tsx`, `google.test.tsx` |
+| RD-25 | 2026-11-23 | P28 | Las pantallas de RD-16 | «Regresar», «Reenviar código» y los niveles de la miga de pan van subrayados y en peso 500; el Figma no los subraya y los pone en negrita. Se mantiene el subrayado porque el color solo no distingue un enlace del texto (R-12, «Reglas duras» 9). | — | `e2e/rediseno-cuenta.spec.ts` |
+| RD-26 | 2026-11-23 | P28 | Diligenciar código | El mensaje de resultado de la solicitud («Si el correo está registrado, te enviamos un código de verificación.») va dentro de la nota, encima del campo, como aviso del paso; el Figma no muestra ese estado. | — | `Recovery.test.tsx` |
 
 ## Pendiente para la edición final
 
@@ -126,7 +128,7 @@ Al cerrar el rediseño, reescribir con las decisiones de arriba:
   «Tema a tokens» para las pantallas sin sesión (RD-02 a RD-07, RD-19).
 - `HE-03.md`: HU06-CA07 y ET01 (RD-02, RD-06).
 - `HE-01.md`: HU01 (ET01, CA11, textos nuevos, contadores, ayuda, indicador de pasos), HU03 y HU05 (tema inicial),
-  HU06 a HU08 (Recuperar contraseña) (RD-08 a RD-13, RD-15 a RD-24).
+  HU06 a HU08 (Recuperar contraseña) (RD-08 a RD-13, RD-15 a RD-26).
 - `HE-01.md` HU03-ET01 y `RT.md` RT-03-ET01 y ET08: miga de pan en Verificar correo, «Regresar» al
   final y el correo que ya no se muestra (RD-16, RD-17).
 - `HE-02.md`: HU07 y su catálogo de paletas; HU06, catálogo de tipografías (RD-06, RD-14).

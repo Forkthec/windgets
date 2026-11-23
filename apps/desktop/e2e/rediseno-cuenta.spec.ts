@@ -146,3 +146,15 @@ test('RD-23 · Con un tema de contraste, la opción elegida y el paso actual sig
     .evaluate((e) => getComputedStyle(e).outlineStyle);
   expect(contorno).toBe('solid');
 });
+
+test('RD-25 · En las pantallas centradas, «Regresar» y la miga de pan van subrayados', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: '¿Olvidaste tu contraseña?' }).click();
+  const subrayado = (selector: string) =>
+    page
+      .locator(selector)
+      .first()
+      .evaluate((e) => getComputedStyle(e).textDecorationLine);
+  expect(await subrayado('.wg-acciones__regresar')).toContain('underline');
+  expect(await subrayado('.wg-miga__nivel')).toContain('underline');
+});
