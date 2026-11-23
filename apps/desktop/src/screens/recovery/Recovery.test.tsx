@@ -419,7 +419,7 @@ describe('HE-01-HU08 · Crear una contraseña nueva para la cuenta', () => {
 describe('Rediseño · Recuperar contraseña', () => {
   afterEach(cleanup);
 
-  it('RD-13 · Título, Windi, el paso Correo marcado y el contador del correo', async () => {
+  it('RD-08, RD-09, RD-10 · Título, Windi, el paso Correo marcado y el contador del correo', async () => {
     await recuperar();
     expect(screen.getByRole('heading', { level: 1, name: 'Recupera tu contraseña' })).toBeTruthy();
     expect(screen.getByRole('complementary', { name: 'Windi' }).textContent).toContain(

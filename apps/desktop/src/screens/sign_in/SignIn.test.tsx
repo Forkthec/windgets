@@ -216,7 +216,7 @@ describe('HE-01-HU04 · Inicio de sesión', () => {
 
 // docs/rediseno.md: textos y elementos del Figma en Inicio de sesión.
 describe('Rediseño · Inicio de sesión', () => {
-  it('RD-13 · Título, subtítulo, Windi, campos obligatorios y el divisor «o»', async () => {
+  it('RD-08, RD-11, RD-13 · Título, subtítulo, Windi, campos obligatorios y el divisor «o»', async () => {
     await inicio();
     expect(screen.getByRole('heading', { level: 1, name: 'Bienvenido a Windgets' })).toBeTruthy();
     expect(screen.getByText('Qué bueno verte de nuevo.')).toBeTruthy();

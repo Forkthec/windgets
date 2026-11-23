@@ -462,7 +462,7 @@ describe('HE-01-HU03 · Verificar el correo', () => {
 describe('Rediseño · Registro', () => {
   afterEach(cleanup);
 
-  it('RD-13 · Título, subtítulo, Windi y el paso Formulario marcado', async () => {
+  it('RD-08, RD-09 · Título, subtítulo, Windi y el paso Formulario marcado', async () => {
     await registro();
     expect(screen.getByRole('heading', { level: 1, name: 'Crea tu cuenta' })).toBeTruthy();
     expect(screen.getByText('Solo te toma un minuto.')).toBeTruthy();
