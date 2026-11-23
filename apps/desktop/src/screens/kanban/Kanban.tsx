@@ -26,9 +26,10 @@ import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import textos from '@/types/messages.es.json';
 import { FormularioColumna } from './FormularioColumna';
 import { useNucleo, useParametrosDeNavegacion } from '@/ventana_principal/VentanaPrincipal';
-import { fechaVisible } from '../tarjeta/fechas';
+import { fechaCorta } from '../tarjeta/fechas';
 import { opcionesDeMoverA } from '../tarjeta/MoverA';
 import { NOMBRE_DE_PRIORIDAD, NOMBRE_DE_TIPO } from '../tarjeta/nombres';
+import './kanban.css';
 import { useVentanasDeTarjeta } from '../tarjeta/useVentanasDeTarjeta';
 import { ENCABEZADO, type LugarDeSoltar, movimientoDelArrastre, ordenDelArrastre } from './arrastre';
 
@@ -66,6 +67,10 @@ function useTablero(): AccionesDelTablero {
 function Tarjeta({ tarjeta }: { tarjeta: Card }) {
   const { columnas, alAbrir, alEditarTarjeta, alEliminarTarjeta, alMover, vista, etiquetas } = useTablero();
   const expandida = vista === 'expanded';
+  // RD-48: las etiquetas de la tarjeta, en su orden; la primera da el color de la barra.
+  const suyas = tarjeta.label_ids.flatMap((id) => etiquetas.find((e) => e.id === id) ?? []);
+  const primera = suyas[0];
+  const nombres = suyas.map((e) => e.name);
   const arrastre = useDraggable({ id: tarjeta.id });
   const lugar: LugarDeSoltar = { columna: tarjeta.column_id, tarjeta: tarjeta.id };
   const soltar = useDroppable({ id: `tarjeta:${tarjeta.id}`, data: lugar });
@@ -76,29 +81,36 @@ function Tarjeta({ tarjeta }: { tarjeta: Card }) {
         arrastre.setNodeRef(nodo);
         soltar.setNodeRef(nodo);
       }}
-      className={`wg-tarjeta${arrastre.isDragging ? ' wg-tarjeta--arrastrada' : ''}${
+      className={`wg-tarjeta wg-kanban__tarjeta${arrastre.isDragging ? ' wg-tarjeta--arrastrada' : ''}${
         soltar.isOver && !arrastre.isDragging ? ' wg-tarjeta--destino' : ''
       }`}
       style={transform ? { transform: `translate(${transform.x}px, ${transform.y}px)` } : undefined}
       {...arrastre.listeners}
     >
-      <span className="wg-tarjeta__tipo">{NOMBRE_DE_TIPO[tarjeta.type]}</span>
+      {/* docs/rediseno.md RD-48 (Figma 93:9 a 93:12): la barra del color de la primera etiqueta, el título y debajo
+          «Tipo · etiquetas · fecha · prioridad». */}
+      {primera && (
+        <span className="wg-kanban__barra" style={{ background: primera.color_hex }} aria-hidden="true" />
+      )}
       {/* HE-07-HU03-ET02: el título abre el Detalle de tarjeta. */}
       <button type="button" className="wg-tarjeta__titulo" onClick={() => alAbrir(tarjeta.id)}>
         {tarjeta.title}
       </button>
-      <span className="wg-fila">
-        <span>{fechaVisible(tarjeta.due_date)}</span>
-        {/* HE-09-HU01-ET06, ET07: «Vencida» solo fuera de la columna Hecho. */}
-        {tarjeta.is_overdue && <span className="wg-indicador">Vencida</span>}
+      <span className="wg-kanban__detalle">
+        {/* HE-09-HU01-ET05 (tipo, fecha límite y prioridad) y RD-49: la fecha corta («27 nov»). */}
+        <span>{NOMBRE_DE_TIPO[tarjeta.type]}</span>
+        {!expandida && nombres.map((nombre) => <span key={nombre}>{nombre}</span>)}
+        <span>{fechaCorta(tarjeta.due_date)}</span>
+        {tarjeta.priority && <span>{NOMBRE_DE_PRIORIDAD[tarjeta.priority]}</span>}
       </span>
+      {/* HE-09-HU01-ET06, ET07: «Vencida» solo fuera de la columna Hecho. */}
+      {tarjeta.is_overdue && <span className="wg-indicador">Vencida</span>}
       {/* HE-09-HU07-ET04: en la vista expandida, la descripción (200 caracteres) y las etiquetas. */}
       {expandida && tarjeta.description && (
         <p className="wg-tarjeta__descripcion">
           {[...tarjeta.description].slice(0, DESCRIPCION_VISIBLE).join('')}
         </p>
       )}
-      {tarjeta.priority && <span>{NOMBRE_DE_PRIORIDAD[tarjeta.priority]}</span>}
       {expandida && tarjeta.label_ids.length > 0 && (
         <ul className="wg-fila wg-tarjeta__etiquetas" aria-label="Etiquetas">
           {tarjeta.label_ids.map((id) => {
@@ -329,12 +341,10 @@ export function Kanban() {
   const enElMaximo = (columnas?.length ?? 0) >= 10;
 
   return (
-    <main aria-label="Tablero Kanban" aria-busy={columnas === null}>
+    <main className="wg-kanban" aria-label="Tablero Kanban" aria-busy={columnas === null}>
       {/* ET03. El cambio de vista es de HE-09-HU07. */}
       <div className="wg-fila">
-        <Boton principal onClick={() => tarjetas.abrirNueva()}>
-          Nueva tarjeta
-        </Boton>
+        <Boton onClick={() => tarjetas.abrirNueva()}>Nueva tarjeta</Boton>
         {/* HE-09-HU03-ET01, ET08: con 10 columnas, deshabilitada con su texto (RT-04). */}
         <Boton
           disabled={enElMaximo}

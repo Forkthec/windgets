@@ -204,4 +204,15 @@ describe('HE-07-HU01 · Crear una tarjeta', () => {
     fireEvent.click(within(selector).getByRole('button', { name: /20 de noviembre/ }));
     expect((screen.getByLabelText('Fecha límite') as HTMLInputElement).value).toBe('20/11/2026');
   });
+
+  it('RD-51 · Los campos en dos columnas en el orden del Figma', async () => {
+    await abrirFormulario();
+    const formulario = screen.getByRole('form', { name: 'Formulario de tarjeta' });
+    expect(formulario.classList.contains('wg-formulario--tarjeta')).toBe(true);
+    const etiquetas = Array.from(formulario.querySelectorAll('.wg-campo__etiqueta')).map(
+      (e) => e.textContent,
+    );
+    expect(etiquetas.slice(0, 5)).toEqual(['Título', 'Tipo', 'Fecha límite', 'Prioridad', 'Etiquetas']);
+    expect(etiquetas.at(-1)).toBe('Descripción');
+  });
 });

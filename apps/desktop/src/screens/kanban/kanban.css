@@ -1,0 +1,111 @@
+/* Rediseño del Tablero Kanban (docs/rediseno.md RD-47 a RD-49; Figma 84:85 «Contenido» de 84:82 «Tablero Kanban ·
+ * Claro», con las columnas 93:6 a 93:31). Medidas en px del Figma; los colores son los tokens del marco. Va dentro de
+ * `.wg-kanban` para no tocar el widget Kanban del escritorio. */
+
+/* 93:2 «Nueva tarjeta» y 93:4 «Nueva columna»: 40 px, radio 8, 15 px peso 500, 12 px entre ellos. */
+.wg-kanban > .wg-fila {
+  gap: 12px;
+}
+body[data-modo] .wg-kanban > .wg-fila .wg-boton {
+  min-height: 40px;
+  padding: 0 12px;
+  font-size: 15px;
+}
+/* Columnas de 274 px cada 286, 27 px debajo de los botones. */
+.wg-kanban .wg-tablero {
+  gap: 12px;
+  padding-block: 27px 8px;
+}
+/* 93:6 «Por hacer»: fondo de columna, radio 12, sin borde; el nombre (19 px peso 500) en (15, 18) y la cantidad
+ * (15 px) a la derecha. */
+.wg-kanban .wg-columna {
+  flex: 0 0 274px;
+  padding: 18px 11px 11px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--wgm-columna);
+}
+.wg-kanban .wg-columna__encabezado {
+  min-height: 25px;
+  margin: 0 0 22px 4px;
+  font-size: 19px;
+  font-weight: 500;
+}
+.wg-kanban .wg-columna__cantidad {
+  margin-left: auto;
+  color: var(--wg-texto);
+  font-size: 15px;
+  font-weight: 400;
+}
+.wg-kanban .wg-columna__tarjetas {
+  gap: 16px;
+}
+/* 93:9 «Revisar los bocetos»: 252 px, radio 9, blanca, sin borde; la barra de 40 × 5 en (13, 14), el título (17 px
+ * peso 500) en y = 34 y el detalle (14 px) en y = 75. */
+.wg-kanban .wg-tarjeta.wg-kanban__tarjeta {
+  position: relative;
+  gap: 0;
+  min-height: 109px;
+  box-sizing: border-box;
+  padding: 14px 13px 13px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--wg-superficie);
+}
+.wg-kanban__barra {
+  display: block;
+  width: 40px;
+  height: 5px;
+  border-radius: 2px;
+}
+.wg-kanban__tarjeta .wg-tarjeta__titulo {
+  margin-top: 15px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--wg-tinta);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 500;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.wg-kanban__barra + .wg-tarjeta__titulo {
+  margin-top: 15px;
+}
+.wg-kanban__tarjeta > .wg-tarjeta__titulo:first-child {
+  margin-top: 20px;
+}
+.wg-kanban__tarjeta .wg-tarjeta__titulo:focus-visible {
+  outline: 2px solid var(--wgm-seleccion-texto);
+  outline-offset: 2px;
+}
+/* 93:12 «Proyecto · 27 nov»: los datos separados por « · ». */
+.wg-kanban__detalle {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 21px;
+  color: var(--wg-texto);
+  font-size: 14px;
+}
+.wg-kanban__detalle > span + span::before {
+  content: '·';
+  margin: 0 8px;
+}
+.wg-kanban__tarjeta .wg-indicador {
+  align-self: flex-start;
+  margin-top: 8px;
+}
+/* El botón de acciones «⋮» (RT-02-ET10) arriba a la derecha de la tarjeta; el Figma no lo dibuja (RD-48). */
+.wg-kanban__tarjeta > .wg-menu-acciones {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+body[data-modo] .wg-kanban__tarjeta > .wg-menu-acciones .wg-boton {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  justify-content: center;
+}

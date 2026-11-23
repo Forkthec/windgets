@@ -220,7 +220,7 @@ export function FormularioTarjeta({
     >
       <form
         id={idFormulario}
-        className="wg-formulario"
+        className="wg-formulario wg-formulario--tarjeta"
         aria-label="Formulario de tarjeta"
         noValidate
         onSubmit={(e: FormEvent) => {
@@ -228,12 +228,8 @@ export function FormularioTarjeta({
           void ejecutar();
         }}
       >
-        <Selector
-          etiqueta="Tipo"
-          opciones={TIPOS}
-          valor={valores.type}
-          alCambiar={(tipo) => setValores((v) => ({ ...v, type: tipo as CardType }))}
-        />
+        {/* docs/rediseno.md RD-51 (Figma 84:550): en dos columnas, Título y Tipo, Fecha límite y Prioridad,
+            Etiquetas y Descripción. */}
         <CampoTexto
           id={campos.ids.title}
           etiqueta="Título"
@@ -241,28 +237,28 @@ export function FormularioTarjeta({
           alCambiar={cambiar('title')}
           mensaje={campos.mensajes.title}
         />
-        <CampoTexto
-          id={campos.ids.due_date}
-          etiqueta="Fecha límite"
-          valor={valores.due_date}
-          alCambiar={cambiar('due_date')}
-          mensaje={campos.mensajes.due_date}
+        <Selector
+          etiqueta="Tipo"
+          opciones={TIPOS}
+          valor={valores.type}
+          alCambiar={(tipo) => setValores((v) => ({ ...v, type: tipo as CardType }))}
         />
-        {/* HE-07-HU01-ET04, ET27: el selector de fecha escribe la fecha elegida en DD/MM/AAAA. */}
-        <SelectorFecha
-          etiqueta="Selector de fecha"
-          etiquetaVisible={false}
-          valor={fechaElegida}
-          alCambiar={(fecha) => cambiar('due_date')(fecha ? escribirFecha(fecha) : '')}
-        />
-        <CampoTexto
-          id={campos.ids.description}
-          etiqueta="Descripción"
-          multilinea
-          valor={valores.description}
-          alCambiar={cambiar('description')}
-          mensaje={campos.mensajes.description}
-        />
+        <div className="wg-formulario__celda">
+          <CampoTexto
+            id={campos.ids.due_date}
+            etiqueta="Fecha límite"
+            valor={valores.due_date}
+            alCambiar={cambiar('due_date')}
+            mensaje={campos.mensajes.due_date}
+          />
+          {/* HE-07-HU01-ET04, ET27: el selector de fecha escribe la fecha elegida en DD/MM/AAAA. */}
+          <SelectorFecha
+            etiqueta="Selector de fecha"
+            etiquetaVisible={false}
+            valor={fechaElegida}
+            alCambiar={(fecha) => cambiar('due_date')(fecha ? escribirFecha(fecha) : '')}
+          />
+        </div>
         <Selector
           etiqueta="Prioridad"
           opciones={PRIORIDADES}
@@ -313,6 +309,14 @@ export function FormularioTarjeta({
               </div>
             ))}
         </div>
+        <CampoTexto
+          id={campos.ids.description}
+          etiqueta="Descripción"
+          multilinea
+          valor={valores.description}
+          alCambiar={cambiar('description')}
+          mensaje={campos.mensajes.description}
+        />
       </form>
       {/* ET08, ET09: el Formulario de etiqueta se abre encima; al guardar o cancelar, este formulario sigue
           abierto con sus datos. */}

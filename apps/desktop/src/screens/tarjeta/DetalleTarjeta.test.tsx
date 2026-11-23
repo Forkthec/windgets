@@ -120,4 +120,17 @@ describe('HE-07-HU03 · Detalle de tarjeta', () => {
     expect(within(detalle).getByText('Entregar informe')).toBeTruthy();
     expect(within(detalle).getByRole('button', { name: 'Editar' })).toBeTruthy();
   });
+
+  it('RD-50 · Cada dato en una fila y «Editar» como acción principal, primero', async () => {
+    await abrirPantalla('kanban', 'Tablero Kanban', Kanban, [tarjeta({ title: 'Pagar la luz' })]);
+    const detalle = await abrirDetalle('Pagar la luz');
+    const filas = detalle.querySelectorAll('.wg-detalle__fila');
+    expect(filas.length).toBeGreaterThan(0);
+    expect(filas[0]?.querySelector('dt')?.textContent).toBe('Tipo');
+    const editar = within(detalle).getByRole('button', { name: 'Editar' });
+    expect(editar.classList.contains('wg-boton--principal')).toBe(true);
+    expect(
+      within(detalle).getByRole('button', { name: 'Cerrar' }).classList.contains('wg-boton--principal'),
+    ).toBe(false);
+  });
 });

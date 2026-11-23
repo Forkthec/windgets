@@ -284,3 +284,27 @@ for (const [ancho, alto] of [
     await expect(page.getByRole('button', { name: 'Aplicar' })).toBeVisible();
   });
 }
+
+test('RD-47, RD-48 · Tablero Kanban a la medida de 84:85', async ({ page }) => {
+  await entrar(page);
+  await claro(page);
+  await abrir(page, 'Tablero Kanban');
+  await page.getByRole('button', { name: 'Nueva tarjeta' }).click();
+  await page.getByLabel('Título', { exact: true }).fill('Revisar los bocetos');
+  await page.getByLabel('Fecha límite', { exact: true }).fill('27/11/2026');
+  await page.getByRole('button', { name: 'Guardar' }).click();
+  // 93:2 «Nueva tarjeta»: 40 px de alto, en la esquina de la tarjeta de la pantalla.
+  await esperarCaja(page.getByRole('button', { name: 'Nueva tarjeta' }), [332, 206, null, 40]);
+  // 93:6 la columna de 274 px; 93:17 la siguiente a 12 px.
+  const columnas = page.locator('.wg-kanban .wg-columna');
+  const primera = await caja(columnas.nth(0));
+  const segunda = await caja(columnas.nth(1));
+  expect(Math.abs(primera.width - 274)).toBeLessThanOrEqual(TOLERANCIA);
+  expect(Math.abs(segunda.x - (primera.x + 274 + 12))).toBeLessThanOrEqual(TOLERANCIA);
+  // 93:9 la tarjeta de 252 px, a 11 px del borde de la columna.
+  const tarjeta = await caja(page.locator('.wg-kanban__tarjeta').first());
+  expect(Math.abs(tarjeta.width - 252)).toBeLessThanOrEqual(TOLERANCIA);
+  expect(Math.abs(tarjeta.x - primera.x - 11)).toBeLessThanOrEqual(TOLERANCIA);
+  await expect(page.locator('.wg-kanban__tarjeta').first().getByText('27 nov')).toBeVisible();
+  expect(await sinScrollHorizontal(page)).toBe(true);
+});

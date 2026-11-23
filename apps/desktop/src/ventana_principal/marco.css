@@ -46,6 +46,7 @@ body[data-modo='claro'] {
   --wgm-monitor: #251e30; /* 91:1648 */
   --wgm-pie-monitor: #9b8ba8; /* 91:1670 */
   --wgm-seccion-abierta: #f0eaf8; /* 91:1672 */
+  --wgm-columna: #f2ecf8; /* 93:6 */
   /* El selector «Apariencia» de las pantallas de cuenta (RD-29). */
   --wgc-selector: #ffffff;
   --wgc-selector-borde: #766b81;
@@ -94,6 +95,7 @@ body[data-modo='oscuro'] {
   --wgm-monitor: #251e30;
   --wgm-pie-monitor: #9b8ba8;
   --wgm-seccion-abierta: #463453;
+  --wgm-columna: #1c1922;
   --wgc-selector: #2b2534;
   --wgc-selector-borde: #948b9e;
   --wgc-selector-texto: #f8f5ff;
@@ -480,5 +482,63 @@ body[data-modo] .wg-ventana-principal--completa {
   .wg-cabecera-completa__marca {
     width: auto;
     margin-right: 24px;
+  }
+}
+
+/* ---------- Ventanas emergentes (RD-50, RD-51; Figma 84:514, 84:550, 84:594) ---------- */
+/* Como las confirmaciones (RD-34): las acciones abajo a la izquierda, con la principal primero. */
+body[data-modo] .wg-emergente__acciones {
+  justify-content: flex-start;
+  gap: 12px;
+}
+body[data-modo] .wg-emergente__acciones .wg-boton--principal {
+  order: -1;
+}
+body[data-modo] .wg-emergente:not(.wg-confirmacion) {
+  padding: 28px;
+}
+body[data-modo] .wg-emergente > h2 {
+  margin: 0 0 20px;
+  font-size: 24px;
+  font-weight: 700;
+}
+/* 84:514 «Detalle de tarjeta»: cada dato en una fila con fondo, radio 6, «Tipo · Tarea». */
+body[data-modo] .wg-detalle {
+  gap: 10px;
+}
+.wg-detalle__fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--wg-superficie-baja);
+}
+.wg-detalle__fila > dt::after {
+  content: ' ·';
+}
+body[data-modo] .wg-detalle__fila > dd {
+  margin: 0;
+}
+/* 84:550 «Formulario de tarjeta»: los campos en dos columnas de igual ancho. */
+body[data-modo] .wg-formulario--tarjeta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px 24px;
+  min-width: min(700px, calc(100vw - 120px));
+}
+.wg-formulario__celda {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+@media (width < 1000px) {
+  body[data-modo] .wg-formulario--tarjeta {
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
   }
 }
