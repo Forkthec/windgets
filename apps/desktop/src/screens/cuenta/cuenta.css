@@ -85,7 +85,8 @@
   max-width: 1176px;
   min-height: 100vh;
   margin: 0 auto;
-  padding: 34px 54px 48px;
+  /* Abajo 40 px: Inicio de sesión cabe sin desplazarse en la ventana de 1200 × 800 (RD-19). */
+  padding: 34px 54px 40px;
 }
 .wg-cuenta__cabecera {
   display: flex;

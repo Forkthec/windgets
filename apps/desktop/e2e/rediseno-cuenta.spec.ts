@@ -72,6 +72,9 @@ test('RD-19 · Inicio de sesión y Registro siguen la composición del Figma (66
   cerca(await caja(page, '.wg-cuenta__ilustracion'), [58, 361, 513, 319]);
   // A 1240 × 820 la pantalla cabe sin desplazarse.
   expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(820);
+  // Tampoco en la ventana de 1200 × 800, el tamaño con que abre.
+  await page.setViewportSize({ width: 1200, height: 800 });
+  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(800);
 
   await page.setViewportSize({ width: 1240, height: 930 });
   await page.getByRole('link', { name: 'Regístrate' }).click();
