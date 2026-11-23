@@ -8,6 +8,7 @@ import { Boton } from '@/ui/Boton/Boton';
 import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNavegacion, useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { useApariencia } from '../cuenta/apariencia';
 import { useConexion } from '../cuenta/conexion';
 import { Hipervinculo } from '../cuenta/Hipervinculo';
 import { TEXTOS } from '../cuenta/textos';
@@ -32,6 +33,7 @@ const segundosHasta = (instante: number, ahora: number) => Math.max(0, Math.ceil
 export function VerificarCorreo({ correo, reenvioDisponible, alRegresar }: VerificarCorreoProps) {
   const { invocar } = useNucleo();
   const { sesionIniciada } = useNavegacion();
+  const { modo } = useApariencia();
   const mostrarResultado = useMensajeDeResultado();
   const { enLinea, sinConexion } = useConexion();
   const [codigo, setCodigo] = useState('');
@@ -67,8 +69,9 @@ export function VerificarCorreo({ correo, reenvioDisponible, alRegresar }: Verif
     const r = await invocar('auth_register_verify', { code: codigo });
     if (!r.ok) return fallo(r.error);
     if (r.result_message) mostrarResultado(r.result_message.message);
-    sesionIniciada();
-  }, [campos, codigo, fallo, invocar, mostrarResultado, sesionIniciada]);
+    // docs/rediseno.md RD-15: la cuenta se acaba de crear; su primer tema toma la paleta del modo.
+    sesionIniciada({ paleta: modo });
+  }, [campos, codigo, fallo, invocar, modo, mostrarResultado, sesionIniciada]);
   const envioVerificar = useEnvioUnico(verificar);
 
   const reenviar = useCallback(async () => {

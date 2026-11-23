@@ -19,7 +19,8 @@ import { useTemaAplicado } from '@/ui/tema/temaAplicado';
 import { AvisoDelWallpaper } from './AvisoDelWallpaper';
 import { IndicadorSincronizacion } from './IndicadorSincronizacion';
 import { ContextoDeBloqueo } from '@/ui/VentanaEmergente/VentanaEmergente';
-import { ProveedorDeApariencia, RaizDeCuenta } from '@/screens/cuenta/apariencia';
+import { ProveedorDeApariencia, RaizDeCuenta, type ModoDeCuenta } from '@/screens/cuenta/apariencia';
+import { useTemaInicial } from '@/screens/cuenta/temaInicial';
 
 // Ventana principal (C-01, interfaz.md): RT-01 (menú principal y pantalla principal) y el bloqueo del fondo de
 // RT-02 (ventanas emergentes). Las pantallas de cada HU se registran en `pantallas` a medida que se construyen.
@@ -59,8 +60,10 @@ interface Navegacion {
   /**
    * La pantalla de cuenta inició la sesión o creó la cuenta: abre la pantalla principal (RT-01-ET04). Dentro de
    * Tauri llega también `session_changed` (EV-01); fuera de Tauri (Núcleo simulado) no llega ningún evento.
+   * Con `cuentaNueva`, el primer tema de la cuenta toma la paleta del modo de las pantallas de cuenta
+   * (docs/rediseno.md RD-15).
    */
-  sesionIniciada: () => void;
+  sesionIniciada: (cuentaNueva?: { paleta: ModoDeCuenta }) => void;
   /**
    * Se cerró la sesión (HE-16-HU03): abre Inicio de sesión. Dentro de Tauri llega también `session_changed`
    * (EV-01) con `reason: 'sign_out'`; fuera de Tauri (Núcleo simulado) no llega ningún evento.
@@ -147,6 +150,9 @@ export function VentanaPrincipal({
   const [correoDeCuenta, setCorreoDeCuenta] = useState('');
   const [emergentes, setEmergentes] = useState(0);
   const [confirmarSalida, setConfirmarSalida] = useState(false);
+  // docs/rediseno.md RD-15: la paleta que espera aplicarse al tema de una cuenta recién creada.
+  const [paletaInicial, setPaletaInicial] = useState<ModoDeCuenta | null>(null);
+  const temaInicialTerminado = useCallback(() => setPaletaInicial(null), []);
   const guardia = useRef<GuardiaDeSalida | null>(null);
   const fondo = useRef<HTMLDivElement>(null);
 
@@ -158,6 +164,7 @@ export function VentanaPrincipal({
   const cerrada = useCallback(() => {
     guardia.current = null;
     setSesion('sin_sesion');
+    setPaletaInicial(null);
     setCuenta('sign_in');
     setCorreoDeCuenta('');
   }, []);
@@ -206,7 +213,10 @@ export function VentanaPrincipal({
         setCorreoDeCuenta(correo);
       },
       correoDeCuenta,
-      sesionIniciada: iniciada,
+      sesionIniciada: (cuentaNueva) => {
+        if (cuentaNueva) setPaletaInicial(cuentaNueva.paleta);
+        iniciada();
+      },
       sesionCerrada: cerrada,
       registrarGuardia: (nueva) => {
         guardia.current = nueva;
@@ -290,6 +300,14 @@ export function VentanaPrincipal({
           <ContextoDePedido.Provider value={contextoDePedido}>
             <ContextoDeBloqueo.Provider value={bloquear}>
               <ProveedorDeResultado>
+                {sesion === 'con_sesion' && paletaInicial && (
+                  <TemaInicial
+                    invocar={invocar}
+                    escuchar={escuchar}
+                    paleta={paletaInicial}
+                    alTerminar={temaInicialTerminado}
+                  />
+                )}
                 {contenido}
                 {confirmarSalida && (
                   // DUDA: HE-17-HU03 el título de la confirmación no está definido; se usa «Salir».
@@ -311,4 +329,20 @@ export function VentanaPrincipal({
       </ProveedorDeApariencia>
     </ContextoDelNucleo.Provider>
   );
+}
+
+/** docs/rediseno.md RD-15: aplica la paleta del modo al tema de una cuenta nueva, con su mensaje si falla. */
+function TemaInicial({
+  invocar,
+  escuchar,
+  paleta,
+  alTerminar,
+}: {
+  invocar: Invoke;
+  escuchar: Escuchar;
+  paleta: ModoDeCuenta;
+  alTerminar: () => void;
+}) {
+  useTemaInicial(invocar, escuchar, paleta, alTerminar);
+  return null;
 }
