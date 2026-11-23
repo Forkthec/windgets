@@ -9,7 +9,9 @@ description: Cierra un paso de windgets. Verificación completa sobre la punta, 
 2. `/verificar` con todos los PASOS (y `sql` si el paso tocó `supabase/`). Si algo sale en rojo, se arregla
    antes de seguir.
 3. Revisión de reglas:
-   - `git diff --name-status <base>...HEAD -- docs/` muestra solo `docs/DUDAS.md` o archivos agregados.
+   - `git diff --name-status <base>...HEAD -- docs/` muestra solo `docs/DUDAS.md`, `docs/rediseno.md` o archivos
+     agregados (y, en el paso que la abrió, la sección «Rediseño visual» de `docs/AGENTS.md`).
+   - En un paso del rediseño, cada cambio visible tiene su RD-nn en `docs/rediseno.md`.
    - Ningún secreto: busca con grep `key|secret|password|token` en el diff.
    - Ninguna ruta previsible que termine en `internal.unexpected`. Pruébalo con una prueba, no solo
      leyendo el código.

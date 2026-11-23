@@ -28,7 +28,9 @@ async function crearCuenta() {
 /** Texto del mensaje de campo que quedó debajo del campo (RT-04). */
 function textoDebajoDe(etiqueta: string) {
   const id = screen.getByLabelText(etiqueta).getAttribute('aria-describedby');
-  return id ? document.getElementById(id)?.textContent : undefined;
+  // Con ayuda fija (RD-11) `aria-describedby` también lleva el id de la ayuda: se toma solo el del mensaje.
+  const mensaje = id?.split(' ').find((parte) => parte.endsWith('-mensaje'));
+  return mensaje ? document.getElementById(mensaje)?.textContent : undefined;
 }
 
 async function registro(conectado = true) {
@@ -80,7 +82,7 @@ describe('HE-01-HU01 · Registro', () => {
       expect(screen.getByLabelText(etiqueta)).toHaveProperty('value', '');
     }
     expect(screen.getByRole('button', { name: 'Continuar con Google' })).toBeTruthy();
-    expect(screen.getByText(/¿Ya tienes cuenta\?/).textContent).toBe('¿Ya tienes cuenta? Iniciar sesión');
+    expect(screen.getByText(/¿Ya tienes cuenta\?/).textContent).toBe('¿Ya tienes cuenta? Inicia sesión');
     diligenciar({ Alias: '  Ana ', 'Correo electrónico': ' ana@example.com ' });
     await crearCuenta();
     expect(llamadasA(nucleo, 'auth_register_start')[0]?.params).toEqual({
@@ -158,7 +160,7 @@ describe('HE-01-HU01 · Registro', () => {
 
   it('HE-01-HU01-CA11 · Ir a Inicio de sesión desde el texto de ayuda del formulario', async () => {
     const nucleo = await registro();
-    fireEvent.click(screen.getByRole('link', { name: 'Iniciar sesión' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Inicia sesión' }));
     expect(screen.getByRole('main', { name: 'Inicio de sesión' })).toBeTruthy();
     expect(llamadasA(nucleo, 'auth_register_start')).toHaveLength(0);
   });
@@ -333,9 +335,11 @@ describe('HE-01-HU03 · Verificar el correo', () => {
 
   it('HE-01-HU03-CA01 · Verificar el correo y crear la cuenta', async () => {
     const nucleo = await enVerificar();
-    // ET01: correo, campo, «Verificar», «Reenviar código» y «Regresar».
+    // ET01: campo, «Verificar», «Reenviar código» y «Regresar». docs/rediseno.md RD-16: el texto del Figma ya no
+    // muestra el correo.
     const paso = screen.getByRole('region', { name: 'Verificar correo' });
-    expect(within(paso).getByText('ana@example.com')).toBeTruthy();
+    expect(within(paso).getByText('Escribe el código que enviamos a tu correo.')).toBeTruthy();
+    expect(within(paso).queryByText('ana@example.com')).toBeNull();
     expect(within(paso).getByRole('link', { name: 'Reenviar código' })).toBeTruthy();
     expect(within(paso).getByRole('button', { name: 'Regresar' })).toBeTruthy();
     escribirCodigo('482913');
@@ -439,10 +443,12 @@ describe('HE-01-HU03 · Verificar el correo', () => {
     const nucleo = await enVerificar(false, 0);
     escribirCodigo('482913');
     const paso = screen.getByRole('region', { name: 'Verificar correo' });
-    // ET14: el aviso en la parte superior del paso, debajo de «Regresar».
+    // ET14 y docs/rediseno.md RD-16: el aviso arriba del paso, debajo de la miga de pan, el título y el subtítulo.
     const aviso = within(paso).getByRole('alert');
     expect(aviso.textContent).toBe('No hay conexión a internet. Conéctate para crear tu cuenta.');
-    expect(paso.children[1]).toBe(aviso);
+    expect(paso.children[3]).toBe(aviso);
+    // RD-18: debajo de las acciones, por qué «Verificar» está deshabilitado.
+    expect(within(paso).getByText('Verificar requiere conexión a internet.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Verificar' }).hasAttribute('disabled')).toBe(true);
     expect(screen.getByRole('link', { name: 'Reenviar código' }).getAttribute('aria-disabled')).toBe('true');
     await seleccionar('Verificar');
@@ -453,5 +459,97 @@ describe('HE-01-HU03 · Verificar el correo', () => {
     expect(screen.getByLabelText('Código de verificación')).toHaveProperty('value', '482913');
     nucleo.emitir('connectivity_changed', { online: true });
     expect(screen.getByRole('button', { name: 'Verificar' }).hasAttribute('disabled')).toBe(false);
+  });
+});
+
+// docs/rediseno.md: textos y elementos del Figma en Registro > Formulario.
+describe('Rediseño · Registro', () => {
+  afterEach(cleanup);
+
+  it('RD-08, RD-09 · Título, subtítulo, Windi y el paso Formulario marcado', async () => {
+    await registro();
+    expect(screen.getByRole('heading', { level: 1, name: 'Crea tu cuenta' })).toBeTruthy();
+    expect(screen.getByText('Solo te toma un minuto.')).toBeTruthy();
+    expect(screen.getByRole('complementary', { name: 'Windi' }).textContent).toContain('¿Creamos tu cuenta?');
+    const pasos = screen.getByRole('list', { name: 'Pasos' });
+    expect(
+      within(pasos)
+        .getAllByRole('listitem')
+        .map((p) => p.textContent),
+    ).toEqual(['1Formulario', '2Verificar correo']);
+    expect(pasos.querySelector('[aria-current="step"]')?.textContent).toBe('1Formulario');
+  });
+
+  it('RD-10, RD-11 · Contadores, ayuda fija de la contraseña y campos obligatorios', async () => {
+    await registro();
+    fireEvent.change(screen.getByLabelText('Alias'), { target: { value: 'Ana' } });
+    expect(screen.getByText('3/30')).toBeTruthy();
+    // Correo y Contraseña llevan 64; Confirmar contraseña no lleva contador.
+    expect(screen.getAllByText('0/64')).toHaveLength(2);
+    const ayuda = '8 a 64 caracteres con al menos una mayúscula, una minúscula y un número.';
+    expect(screen.getByLabelText('Contraseña').getAttribute('aria-describedby')).toContain(
+      screen.getByText(ayuda).id,
+    );
+    for (const etiqueta of Object.keys(CORRECTOS)) {
+      expect(screen.getByLabelText(etiqueta).getAttribute('aria-required')).toBe('true');
+    }
+  });
+
+  it('RD-12 · «Crear cuenta», divisor, «Continuar con Google» y «Inicia sesión» en ese orden', async () => {
+    await registro();
+    const formulario = screen.getByRole('form', { name: 'Formulario' });
+    const orden = Array.from(formulario.querySelectorAll('button, .wg-divisor, a')).map((e) => e.textContent);
+    expect(orden).toEqual(['Crear cuenta', 'o', 'Continuar con Google', 'Inicia sesión']);
+  });
+});
+
+// docs/rediseno.md RD-16, RD-17: Verificar correo con la nota centrada del Figma «01 · Acceso».
+describe('Rediseño · Verificar correo', () => {
+  it('RD-16 · Sin Windi ni indicador de pasos, con la miga «Registro / Verificar correo»', async () => {
+    await enVerificar();
+    expect(screen.queryByRole('complementary', { name: 'Windi' })).toBeNull();
+    expect(screen.queryByRole('list', { name: 'Pasos' })).toBeNull();
+    const paso = screen.getByRole('region', { name: 'Verificar correo' });
+    expect(within(paso).getByRole('navigation', { name: 'Miga de pan' }).textContent).toBe(
+      'Registro/Verificar correo',
+    );
+    expect(within(paso).getByRole('heading', { level: 1, name: 'Verifica tu correo' })).toBeTruthy();
+  });
+
+  it('RD-16, RD-17 · «Registro» en la miga y «Regresar» vuelven al formulario con lo diligenciado', async () => {
+    const nucleo = await enVerificar();
+    const acciones = Array.from(document.querySelectorAll('.wg-acciones button')).map((b) => b.textContent);
+    expect(acciones).toEqual(['Regresar', 'Verificar']);
+    fireEvent.click(screen.getByRole('button', { name: 'Registro' }));
+    expect(screen.getByRole('heading', { level: 1, name: 'Crea tu cuenta' })).toBeTruthy();
+    expect(screen.getByLabelText('Correo electrónico')).toHaveProperty('value', 'ana@example.com');
+    expect(llamadasA(nucleo, 'auth_register_cancel')).toHaveLength(1);
+  });
+});
+
+describe('Rediseño · Error sin texto', () => {
+  it('RD-24 · En el formulario, un error del Núcleo sin texto muestra el aviso de error inesperado', async () => {
+    const nucleo = await registro();
+    nucleo.responder('auth_register_start', () => ({
+      ok: false,
+      error: { code: 'internal.unexpected', message: '' },
+    }));
+    diligenciar({});
+    await crearCuenta();
+    expect(screen.getByRole('alert').textContent).toBe('Ocurrió un error inesperado. Intenta de nuevo.');
+  });
+
+  it('RD-24 · En Verificar correo, un error del Núcleo sin texto muestra el aviso de error inesperado', async () => {
+    const nucleo = await enVerificar();
+    nucleo.responder('auth_register_verify', () => ({
+      ok: false,
+      error: { code: 'internal.unexpected', message: '' },
+    }));
+    escribirCodigo('482913');
+    await seleccionar('Verificar');
+    const paso = screen.getByRole('region', { name: 'Verificar correo' });
+    expect(within(paso).getByRole('alert').textContent).toBe(
+      'Ocurrió un error inesperado. Intenta de nuevo.',
+    );
   });
 });

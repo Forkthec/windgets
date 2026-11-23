@@ -26,7 +26,9 @@ async function iniciar() {
 /** Texto del mensaje de campo que quedó debajo del campo (RT-04). */
 function textoDebajoDe(etiqueta: string) {
   const id = screen.getByLabelText(etiqueta).getAttribute('aria-describedby');
-  return id ? document.getElementById(id)?.textContent : undefined;
+  // Con ayuda fija (RD-11) `aria-describedby` también lleva el id de la ayuda: se toma solo el del mensaje.
+  const mensaje = id?.split(' ').find((parte) => parte.endsWith('-mensaje'));
+  return mensaje ? document.getElementById(mensaje)?.textContent : undefined;
 }
 
 async function inicio(conectado = true) {
@@ -209,5 +211,37 @@ describe('HE-01-HU04 · Inicio de sesión', () => {
     fireEvent.click(screen.getByRole('link', { name: 'Regístrate' }));
     expect(screen.getByRole('main', { name: 'Registro' })).toBeTruthy();
     expect(llamadasA(nucleo, 'auth_sign_in')).toHaveLength(0);
+  });
+});
+
+// docs/rediseno.md: textos y elementos del Figma en Inicio de sesión.
+describe('Rediseño · Inicio de sesión', () => {
+  it('RD-08, RD-11, RD-13 · Título, subtítulo, Windi, campos obligatorios y el divisor «o»', async () => {
+    await inicio();
+    expect(screen.getByRole('heading', { level: 1, name: 'Bienvenido a Windgets' })).toBeTruthy();
+    expect(screen.getByText('Qué bueno verte de nuevo.')).toBeTruthy();
+    expect(screen.getByRole('complementary', { name: 'Windi' }).textContent).toContain(
+      '¿Qué organizamos hoy?',
+    );
+    for (const etiqueta of Object.keys(CORRECTOS)) {
+      expect(screen.getByLabelText(etiqueta).getAttribute('aria-required')).toBe('true');
+    }
+    const orden = Array.from(document.querySelectorAll('.wg-nota button, .wg-nota .wg-divisor')).map(
+      (e) => e.textContent,
+    );
+    expect(orden).toEqual(['Iniciar sesión', 'o', 'Continuar con Google']);
+  });
+});
+
+describe('Rediseño · Error sin texto', () => {
+  it('RD-24 · Un error del Núcleo sin texto muestra el aviso de error inesperado', async () => {
+    const nucleo = await inicio();
+    nucleo.responder('auth_sign_in', () => ({
+      ok: false,
+      error: { code: 'internal.unexpected', message: '' },
+    }));
+    diligenciar({});
+    await iniciar();
+    expect(screen.getByRole('alert').textContent).toBe('Ocurrió un error inesperado. Intenta de nuevo.');
   });
 });

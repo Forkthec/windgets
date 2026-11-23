@@ -1,25 +1,26 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useEnvioUnico } from '@/reglas/envio';
 import { estaVacio, useMensajesDeCampo } from '@/reglas/formulario';
-import { EncabezadoDeRuta } from '@/reglas/ruta';
 import type { AppError } from '@/types';
 import { Aviso } from '@/ui/Aviso/Aviso';
 import { Boton } from '@/ui/Boton/Boton';
 import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNavegacion, useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { useApariencia } from '../cuenta/apariencia';
 import { useConexion } from '../cuenta/conexion';
 import { Hipervinculo } from '../cuenta/Hipervinculo';
+import { AccionesDelPaso, PasoCentrado } from '../cuenta/PasoCentrado';
+import { ERROR_INESPERADO, PASOS_CENTRADOS, REQUIERE_CONEXION } from '../cuenta/textosDelRediseno';
 import { TEXTOS } from '../cuenta/textos';
 
-// Registro > paso Verificar correo (HE-01-HU03). «Regresar» sin miga de pan (RT-03-ET08).
+// Registro > paso Verificar correo (HE-01-HU03). Con el rediseño lleva la miga de pan «Registro / Verificar
+// correo» y el texto del Figma sin el correo (docs/rediseno.md RD-16, que reemplaza RT-03-ET08 y HE-01-HU03-ET01).
 
 const CAMPOS = ['code'] as const;
 const VALIDADORES = { code: (v: string) => (estaVacio(v) ? TEXTOS.CAMPO_OBLIGATORIO : undefined) };
 
 export interface VerificarCorreoProps {
-  /** Correo al que se envió el código (ET01). */
-  correo: string;
   /** `resend_available_at` del último envío (ET05, ET12). */
   reenvioDisponible: string;
   /** Vuelve al paso Formulario con lo diligenciado (CA08, ET10). */
@@ -29,9 +30,10 @@ export interface VerificarCorreoProps {
 /** Segundos que faltan para poder reenviar, redondeados hacia arriba. */
 const segundosHasta = (instante: number, ahora: number) => Math.max(0, Math.ceil((instante - ahora) / 1000));
 
-export function VerificarCorreo({ correo, reenvioDisponible, alRegresar }: VerificarCorreoProps) {
+export function VerificarCorreo({ reenvioDisponible, alRegresar }: VerificarCorreoProps) {
   const { invocar } = useNucleo();
   const { sesionIniciada } = useNavegacion();
+  const { modo } = useApariencia();
   const mostrarResultado = useMensajeDeResultado();
   const { enLinea, sinConexion } = useConexion();
   const [codigo, setCodigo] = useState('');
@@ -56,7 +58,7 @@ export function VerificarCorreo({ correo, reenvioDisponible, alRegresar }: Verif
         const faltan = Number(error.params?.seconds ?? 0);
         setAhora(Date.now());
         setDisponibleEn(Date.now() + faltan * 1000);
-      } else if (error.message) setAviso(error.message);
+      } else setAviso(error.message || ERROR_INESPERADO);
     },
     [campos, sinConexion],
   );
@@ -67,8 +69,9 @@ export function VerificarCorreo({ correo, reenvioDisponible, alRegresar }: Verif
     const r = await invocar('auth_register_verify', { code: codigo });
     if (!r.ok) return fallo(r.error);
     if (r.result_message) mostrarResultado(r.result_message.message);
-    sesionIniciada();
-  }, [campos, codigo, fallo, invocar, mostrarResultado, sesionIniciada]);
+    // docs/rediseno.md RD-15: la cuenta se acaba de crear; su primer tema toma la paleta del modo.
+    sesionIniciada({ paleta: modo });
+  }, [campos, codigo, fallo, invocar, modo, mostrarResultado, sesionIniciada]);
   const envioVerificar = useEnvioUnico(verificar);
 
   const reenviar = useCallback(async () => {
@@ -84,12 +87,15 @@ export function VerificarCorreo({ correo, reenvioDisponible, alRegresar }: Verif
   const puedeReenviar = enLinea && segundos === 0 && !envioReenviar.enCurso;
 
   return (
-    <section className="wg-formulario" aria-label="Verificar correo">
-      <EncabezadoDeRuta alRegresar={alRegresar} />
+    <PasoCentrado
+      nombre="Verificar correo"
+      // «Registro» en la miga de pan hace lo mismo que «Regresar» (CA08): vuelve al formulario con lo diligenciado.
+      niveles={[{ texto: 'Registro', alElegir: alRegresar }, { texto: 'Verificar correo' }]}
+      {...PASOS_CENTRADOS.verificar}
+    >
       {/* ET14: sin conexión, el aviso va en la parte superior del paso. */}
       {!enLinea && <Aviso texto={TEXTOS.SIN_CONEXION_REGISTRO} />}
       {aviso && enLinea && <Aviso texto={aviso} />}
-      <p>{correo}</p>
       <form
         className="wg-formulario"
         noValidate
@@ -110,9 +116,15 @@ export function VerificarCorreo({ correo, reenvioDisponible, alRegresar }: Verif
           }}
           mensaje={campos.mensajes.code}
         />
-        <Boton principal type="submit" disabled={!enLinea || envioVerificar.enCurso}>
-          Verificar
-        </Boton>
+        {/* docs/rediseno.md RD-17, RD-18: «Regresar» junto a «Verificar»; debajo, «Reenviar código». */}
+        <AccionesDelPaso
+          alRegresar={alRegresar}
+          motivoSinConexion={enLinea ? null : REQUIERE_CONEXION('Verificar')}
+        >
+          <Boton principal type="submit" disabled={!enLinea || envioVerificar.enCurso}>
+            Verificar
+          </Boton>
+        </AccionesDelPaso>
         <p className="wg-fila">
           <Hipervinculo deshabilitado={!puedeReenviar} alSeleccionar={() => void envioReenviar.ejecutar()}>
             Reenviar código
@@ -125,6 +137,6 @@ export function VerificarCorreo({ correo, reenvioDisponible, alRegresar }: Verif
           )}
         </p>
       </form>
-    </section>
+    </PasoCentrado>
   );
 }

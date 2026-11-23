@@ -9,12 +9,14 @@ import { useNavegacion, useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { useConexion } from '../cuenta/conexion';
 import { useInicioConGoogle } from '../cuenta/google';
 import { Hipervinculo } from '../cuenta/Hipervinculo';
+import { Divisor } from '../cuenta/IndicadorDePasos';
 import { MarcoDeCuenta } from '../cuenta/MarcoDeCuenta';
 import { TEXTOS } from '../cuenta/textos';
+import { PANTALLAS, ERROR_INESPERADO } from '../cuenta/textosDelRediseno';
 import { validarCorreo } from '../cuenta/validaciones';
 
-// P-CTA-01 Inicio de sesión (HE-01-HU04). Disposición de la figura 01 del equipo (WG-MK-01); los textos salen
-// solo de los CA. Sin miga de pan (RT-03-ET08).
+// P-CTA-01 Inicio de sesión (HE-01-HU04). Disposición y textos del rediseño (docs/rediseno.md RD-07, RD-08, RD-13);
+// el resto de los textos sale de los CA. Sin miga de pan (RT-03-ET08).
 
 const CAMPOS = ['email', 'password'] as const;
 type Campo = (typeof CAMPOS)[number];
@@ -45,7 +47,7 @@ export function SignIn() {
     (error: AppError) => {
       if (error.field) campos.mostrarDelNucleo([error]);
       else if (error.code === 'net.offline') sinConexion();
-      else if (error.message) setAviso(error.message);
+      else setAviso(error.message || ERROR_INESPERADO);
     },
     [campos, sinConexion],
   );
@@ -60,7 +62,7 @@ export function SignIn() {
   const { ejecutar, enCurso } = useEnvioUnico(iniciar);
 
   return (
-    <MarcoDeCuenta nombre="Inicio de sesión">
+    <MarcoDeCuenta nombre="Inicio de sesión" {...PANTALLAS.inicio}>
       <form
         className="wg-formulario"
         aria-label="Formulario"
@@ -78,6 +80,7 @@ export function SignIn() {
           id={campos.ids.email}
           etiqueta="Correo electrónico"
           type="email"
+          obligatorio
           valor={valores.email}
           alCambiar={cambiar('email')}
           mensaje={campos.mensajes.email}
@@ -86,6 +89,7 @@ export function SignIn() {
           id={campos.ids.password}
           etiqueta="Contraseña"
           type="password"
+          obligatorio
           valor={valores.password}
           alCambiar={cambiar('password')}
           mensaje={campos.mensajes.password}
@@ -100,6 +104,8 @@ export function SignIn() {
         <Boton principal type="submit" disabled={!enLinea || enCurso}>
           Iniciar sesión
         </Boton>
+        {/* docs/rediseno.md RD-13: el divisor «o» del Figma. */}
+        <Divisor />
         {/* HE-01-HU05-ET10: sin conexión, deshabilitado y sin abrir la ventana de Google. */}
         <Boton disabled={!enLinea || google.enCurso} onClick={() => void google.continuar()}>
           Continuar con Google

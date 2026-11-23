@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Corre en el contenedor los pasos de ci.yml sobre una copia del árbol (sin node_modules de Windows).
 set -uo pipefail
-rsync -a --delete --exclude node_modules --exclude target --exclude dist /src/ /work/
+rsync -a --delete --exclude node_modules --exclude target --exclude dist --exclude .claude/worktrees /src/ /work/
 cd /work
 export CARGO_TARGET_DIR=/cache/target CI=1
 M=apps/desktop/src-tauri/Cargo.toml

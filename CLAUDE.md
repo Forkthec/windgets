@@ -9,3 +9,4 @@ La entrada única es [`docs/AGENTS.md`](docs/AGENTS.md). Léela completa antes d
 5. Nunca edites una migración aplicada: crea una nueva en `supabase/migrations/` y su equivalente en `docs/local/`.
 6. Trabaja en una rama `paso-NN-<tema>`, nunca en `main`.
 7. Lo «NO DEFINIDO» se registra en `docs/DUDAS.md` con el valor neutro usado.
+8. Rediseño visual: [`docs/rediseno.md`](docs/rediseno.md) es spec y gana sobre las HU que contradiga; todo cambio del rediseño se anota ahí como RD-nn, no en las HU. Commits `rediseno: <verbo y objeto>`.

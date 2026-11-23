@@ -3,8 +3,10 @@ import { useEnvioUnico } from '@/reglas/envio';
 import { Aviso } from '@/ui/Aviso/Aviso';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNavegacion, useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { useApariencia } from './apariencia';
 import { Hipervinculo } from './Hipervinculo';
 import { TEXTOS } from './textos';
+import { ERROR_INESPERADO } from './textosDelRediseno';
 
 // «Continuar con Google» (HE-01-HU05), igual en Inicio de sesión y en Registro > paso Formulario (ET01, CA09).
 // `auth_google_start` no lleva parámetros: no toma los datos del formulario (ET11). El resultado llega por
@@ -34,6 +36,7 @@ export function useInicioConGoogle(sinConexion: () => void): InicioConGoogle {
   const { invocar, escuchar } = useNucleo();
   const { abrirCuenta, sesionIniciada } = useNavegacion();
   const mostrarResultado = useMensajeDeResultado();
+  const { modo } = useApariencia();
   const [aviso, setAviso] = useState<ReactNode>(null);
 
   useEffect(
@@ -42,14 +45,15 @@ export function useInicioConGoogle(sinConexion: () => void): InicioConGoogle {
         if (r.status === 'success') {
           // CA01, CA03, CA04: cuenta nueva con la bienvenida; CA02: cuenta existente, sin mensaje.
           if (r.is_new_account && r.message) mostrarResultado(r.message);
-          sesionIniciada();
+          // docs/rediseno.md RD-15: solo una cuenta nueva toma la paleta del modo en su primer tema.
+          sesionIniciada(r.is_new_account ? { paleta: modo } : undefined);
         } else if (r.status === 'email_too_long') {
           setAviso(<CorreoMuyLargo alRegistrarse={() => abrirCuenta('register')} />);
         } else {
           setAviso(r.message);
         }
       }),
-    [abrirCuenta, escuchar, mostrarResultado, sesionIniciada],
+    [abrirCuenta, escuchar, modo, mostrarResultado, sesionIniciada],
   );
 
   const iniciar = useCallback(async () => {
@@ -58,7 +62,7 @@ export function useInicioConGoogle(sinConexion: () => void): InicioConGoogle {
     if (r.ok) return;
     // CA07, ET10: sin conexión el botón queda deshabilitado con el aviso de la pantalla.
     if (r.error.code === 'net.offline') sinConexion();
-    else if (r.error.message) setAviso(r.error.message);
+    else setAviso(r.error.message || ERROR_INESPERADO);
   }, [invocar, sinConexion]);
   const { ejecutar, enCurso } = useEnvioUnico(iniciar);
 

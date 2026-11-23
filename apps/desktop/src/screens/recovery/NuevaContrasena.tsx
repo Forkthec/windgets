@@ -9,6 +9,13 @@ import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNavegacion, useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { useConexion } from '../cuenta/conexion';
 import { TEXTOS } from '../cuenta/textos';
+import { AccionesDelPaso } from '../cuenta/PasoCentrado';
+import {
+  AYUDA_NUEVA_CONTRASENA,
+  ERROR_INESPERADO,
+  PASOS_CENTRADOS,
+  REQUIERE_CONEXION,
+} from '../cuenta/textosDelRediseno';
 import { validarContrasena } from '../cuenta/validaciones';
 import { PasoDeRecuperacion } from './PasoDeRecuperacion';
 
@@ -52,7 +59,7 @@ export function NuevaContrasena({ alRegresar }: NuevaContrasenaProps) {
       // CA03, CA07: debajo del campo; CA06: sin conexión, el aviso arriba y lo diligenciado se conserva.
       if (error.field) campos.mostrarDelNucleo([error]);
       else if (error.code === 'net.offline') sinConexion();
-      else if (error.message) setAviso(error.message);
+      else setAviso(error.message || ERROR_INESPERADO);
     },
     [campos, sinConexion],
   );
@@ -69,7 +76,7 @@ export function NuevaContrasena({ alRegresar }: NuevaContrasenaProps) {
   const envio = useEnvioUnico(guardar);
 
   return (
-    <PasoDeRecuperacion nombre="Nueva contraseña" enLinea={enLinea} alRegresar={alRegresar}>
+    <PasoDeRecuperacion nombre="Nueva contraseña" {...PASOS_CENTRADOS.nueva} enLinea={enLinea}>
       {aviso && enLinea && <Aviso texto={aviso} />}
       <form
         className="wg-formulario"
@@ -84,6 +91,7 @@ export function NuevaContrasena({ alRegresar }: NuevaContrasenaProps) {
           id={campos.ids.password}
           etiqueta="Nueva contraseña"
           type="password"
+          ayuda={AYUDA_NUEVA_CONTRASENA}
           autoComplete="new-password"
           valor={valores.password}
           alCambiar={cambiar('password')}
@@ -99,9 +107,15 @@ export function NuevaContrasena({ alRegresar }: NuevaContrasenaProps) {
           mensaje={campos.mensajes.password_confirmation}
         />
         {/* CA05, ET06, ET07: sin conexión, «Guardar contraseña» deshabilitado hasta que vuelva la conexión. */}
-        <Boton principal type="submit" disabled={!enLinea || envio.enCurso}>
-          Guardar contraseña
-        </Boton>
+        {/* docs/rediseno.md RD-17, RD-18: «Regresar» junto a «Guardar contraseña». */}
+        <AccionesDelPaso
+          alRegresar={alRegresar}
+          motivoSinConexion={enLinea ? null : REQUIERE_CONEXION('Guardar contraseña')}
+        >
+          <Boton principal type="submit" disabled={!enLinea || envio.enCurso}>
+            Guardar contraseña
+          </Boton>
+        </AccionesDelPaso>
       </form>
     </PasoDeRecuperacion>
   );
