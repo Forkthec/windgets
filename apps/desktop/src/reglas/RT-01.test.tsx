@@ -9,19 +9,20 @@ import { Boton } from '@/ui/Boton/Boton';
 import { VentanaEmergente } from '@/ui/VentanaEmergente/VentanaEmergente';
 import { useGuardiaDeSalida, useNavegacion, VentanaPrincipal } from '@/ventana_principal/VentanaPrincipal';
 
-const OPCIONES = {
-  Planificador: [
-    'Planificador diario',
-    'Tablero Kanban',
-    'Calendario',
-    'Agenda diaria',
-    'Reportes',
-    'Agente de IA',
-    'Etiquetas',
-  ],
-  Personalización: ['Personalización del wallpaper', 'Temas', 'Widgets'],
-  Configuración: ['Configuración'],
-};
+// docs/rediseno.md RD-30 (Figma 81:3): una sola lista, sin títulos de sección.
+const OPCIONES = [
+  'Planificador diario',
+  'Tablero Kanban',
+  'Calendario',
+  'Agenda diaria',
+  'Reportes',
+  'Etiquetas',
+  'Agente de IA',
+  'Wallpaper',
+  'Temas',
+  'Widgets',
+  'Configuración',
+];
 
 /** Núcleo de prueba: responde auth_get_session y deja emitir session_changed. */
 function nucleo(sesion: Result<AuthSessionState>) {
@@ -148,14 +149,12 @@ describe('RT-01 · Menú principal y pantalla principal', () => {
   it('RT-01-CA06 · Consultar el menú principal', async () => {
     render(<VentanaPrincipal {...nucleo(CON_SESION)} />);
     await esperarPantallaPrincipal();
-    const secciones = within(menu()).getAllByRole('heading');
-    expect(secciones.map((s) => s.textContent)).toEqual(Object.keys(OPCIONES));
-    for (const seccion of secciones) {
-      const opciones = within(seccion.parentElement as HTMLElement).getAllByRole('button');
-      expect(opciones.map((o) => o.textContent)).toEqual(
-        OPCIONES[seccion.textContent as keyof typeof OPCIONES],
-      );
-    }
+    expect(within(menu()).queryAllByRole('heading')).toEqual([]);
+    expect(
+      within(menu())
+        .getAllByRole('button')
+        .map((o) => o.textContent),
+    ).toEqual(OPCIONES);
   });
 
   it('RT-01-CA07 · Abrir una pantalla desde el menú principal', async () => {
@@ -175,7 +174,7 @@ describe('RT-01 · Menú principal y pantalla principal', () => {
     const Personalizacion = () => <PersonalizacionConCambios aplicados={false} />;
     render(<VentanaPrincipal {...nucleo(CON_SESION)} pantallas={{ personalization: Personalizacion }} />);
     await esperarPantallaPrincipal();
-    fireEvent.click(within(menu()).getByRole('button', { name: 'Personalización del wallpaper' }));
+    fireEvent.click(within(menu()).getByRole('button', { name: 'Wallpaper' }));
     await screen.findByRole('main', { name: 'Personalización del wallpaper' });
 
     fireEvent.click(within(menu()).getByRole('button', { name: 'Tablero Kanban' }));
@@ -196,7 +195,7 @@ describe('RT-01 · Menú principal y pantalla principal', () => {
     const Personalizacion = () => <PersonalizacionConCambios aplicados />;
     render(<VentanaPrincipal {...nucleo(CON_SESION)} pantallas={{ personalization: Personalizacion }} />);
     await esperarPantallaPrincipal();
-    fireEvent.click(within(menu()).getByRole('button', { name: 'Personalización del wallpaper' }));
+    fireEvent.click(within(menu()).getByRole('button', { name: 'Wallpaper' }));
     await screen.findByRole('main', { name: 'Personalización del wallpaper' });
 
     fireEvent.click(within(menu()).getByRole('button', { name: 'Tablero Kanban' }));

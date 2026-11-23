@@ -102,7 +102,58 @@ type Respuestas = {
   [K in CommandName]?: (params: CommandMap[K]['params']) => Result<CommandMap[K]['result']>;
 };
 
+// docs/rediseno.md RD-14, RD-29: las paletas «Claro» y «Oscuro» del catálogo, para el selector «Apariencia» con
+// sesión. El tema aplicado empieza con los colores de la plantilla por defecto (oscuro) y la paleta elegida se
+// aplica con el flujo de borrador (theme_draft_update → theme_draft_apply).
+const PALETAS_SIMULADAS = {
+  claro: { primary: '#F5F0FF', secondary: '#B6A560', text: '#17131D' },
+  oscuro: { primary: '#201B2B', secondary: '#5D566B', text: '#F8F5FF' },
+} as const;
+let contenidoAplicado = TEMA_SIMULADO.content;
+let paletaEnBorrador: keyof typeof PALETAS_SIMULADAS | null = null;
+
 const respuestas: Respuestas = {
+  theme_get_applied: () => ({
+    ok: true,
+    value: {
+      theme_id: TEMA_SIMULADO.theme_id,
+      name: TEMA_SIMULADO.name,
+      content: contenidoAplicado,
+      has_unapplied_changes: false,
+      has_unsaved_changes: false,
+    },
+  }),
+  theme_draft_update: ({ patch }) => {
+    if (patch.palette_id === 'claro' || patch.palette_id === 'oscuro') paletaEnBorrador = patch.palette_id;
+    return { ok: true, value: TEMA_SIMULADO };
+  },
+  theme_draft_apply: () => {
+    if (paletaEnBorrador) {
+      contenidoAplicado = {
+        ...contenidoAplicado,
+        palette_id: paletaEnBorrador,
+        colors: { ...PALETAS_SIMULADAS[paletaEnBorrador] },
+      };
+      paletaEnBorrador = null;
+    }
+    return { ok: true, value: { theme_id: TEMA_SIMULADO.theme_id } };
+  },
+  theme_draft_discard: () => {
+    paletaEnBorrador = null;
+    return { ok: true, value: TEMA_SIMULADO };
+  },
+  catalog_list: ({ kind }) => ({
+    ok: true,
+    value:
+      kind === 'palette'
+        ? [
+            { id: 'claro', name: 'Claro', thumbnail_url: '', is_cached: true },
+            { id: 'oscuro', name: 'Oscuro', thumbnail_url: '', is_cached: true },
+          ]
+        : kind === 'font'
+          ? [{ id: 'rubik', name: 'Rubik', thumbnail_url: '', is_cached: true }]
+          : [],
+  }),
   theme_list: () => ({
     ok: true,
     value: [

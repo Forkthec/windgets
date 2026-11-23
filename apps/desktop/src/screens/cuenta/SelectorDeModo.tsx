@@ -59,8 +59,17 @@ const OPCIONES: readonly { modo: ModoDeCuenta; texto: string; Icono: () => JSX.E
 // cambian de opción, la eligen y le pasan el foco.
 const SIGUIENTE: Record<string, number> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
 
-export function SelectorDeModo() {
-  const { modo, cambiar } = useApariencia();
+export interface SelectorDeModoProps {
+  /**
+   * Con la sesión iniciada (RD-29), el modo del tema aplicado y la acción de aplicarle la paleta; sin ellos, el
+   * modo de las pantallas de cuenta (RD-02).
+   */
+  conSesion?: { modo: ModoDeCuenta; cambiar: (modo: ModoDeCuenta) => void };
+}
+
+export function SelectorDeModo({ conSesion }: SelectorDeModoProps = {}) {
+  const deCuenta = useApariencia();
+  const { modo, cambiar } = conSesion ?? deCuenta;
   const alTeclear = (evento: KeyboardEvent<HTMLDivElement>) => {
     const paso = SIGUIENTE[evento.key];
     if (paso === undefined) return;

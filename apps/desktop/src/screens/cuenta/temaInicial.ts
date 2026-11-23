@@ -16,7 +16,7 @@ export const FUENTE_INICIAL = 'rubik';
 /** Cuánto se espera la primera descarga del catálogo antes de avisar que el tema no se aplicó. */
 export const ESPERA_DEL_CATALOGO_MS = 60_000;
 
-const NOMBRE_DEL_MODO: Record<ModoDeCuenta, 'Claro' | 'Oscuro'> = { claro: 'Claro', oscuro: 'Oscuro' };
+export const NOMBRE_DEL_MODO: Record<ModoDeCuenta, 'Claro' | 'Oscuro'> = { claro: 'Claro', oscuro: 'Oscuro' };
 
 type Intento = 'aplicado' | 'sin_catalogo' | 'fallo';
 
@@ -33,13 +33,20 @@ async function catalogoListo(invocar: Invoke, paleta: ModoDeCuenta): Promise<boo
   );
 }
 
-/** Un intento de aplicar la paleta del modo y Rubik al tema de la cuenta. */
-export async function aplicarTemaInicial(invocar: Invoke, paleta: ModoDeCuenta): Promise<Intento> {
+/**
+ * Un intento de aplicar la paleta del modo al tema de la cuenta: con `conFuente`, también Rubik (RD-15); sin ella,
+ * solo la paleta (selector «Apariencia» con sesión, RD-29).
+ */
+export async function aplicarTemaInicial(
+  invocar: Invoke,
+  paleta: ModoDeCuenta,
+  conFuente = true,
+): Promise<Intento> {
   if (!(await catalogoListo(invocar, paleta))) return 'sin_catalogo';
   const abierto = await invocar('theme_draft_open', {});
   if (!abierto.ok) return 'fallo';
   const cambiado = await invocar('theme_draft_update', {
-    patch: { palette_id: paleta, font_id: FUENTE_INICIAL },
+    patch: conFuente ? { palette_id: paleta, font_id: FUENTE_INICIAL } : { palette_id: paleta },
   });
   if (!cambiado.ok) {
     void invocar('theme_draft_discard', {});

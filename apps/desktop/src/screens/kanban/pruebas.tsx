@@ -27,6 +27,7 @@ import type {
   Result,
   ScreenId,
 } from '@/types';
+import { OPCIONES_MENU } from '@/ui/MenuPrincipal/MenuPrincipal';
 import { VentanaPrincipal } from '@/ventana_principal/VentanaPrincipal';
 
 export const POR_HACER: Column = {
@@ -546,7 +547,9 @@ export async function abrirPantalla(
   preparar?.(nucleo);
   render(<VentanaPrincipal invocar={invocar} escuchar={escuchar} pantallas={{ [pantalla]: componente }} />);
   const menu = await screen.findByRole('navigation', { name: 'Menú principal' });
-  fireEvent.click(within(menu).getByRole('button', { name: nombre }));
+  // docs/rediseno.md RD-30: la opción del menú puede decir otra cosa que la pantalla («Wallpaper»).
+  const opcion = OPCIONES_MENU.find((o) => o.pantalla === pantalla)?.texto ?? nombre;
+  fireEvent.click(within(menu).getByRole('button', { name: opcion }));
   await screen.findByRole('main', { name: nombre });
   await act(async () => {});
   return nucleo;

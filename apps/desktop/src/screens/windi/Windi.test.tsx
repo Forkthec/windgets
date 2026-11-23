@@ -141,7 +141,7 @@ describe('HE-14-HU01 · Conversar con el agente de IA', () => {
     expect(enviar().disabled).toBe(true);
     // ET07, ET08, ET10: un solo mensaje del agente que saluda por el alias y se presenta como «Windi».
     expect(conversacion()).toEqual([SALUDO]);
-    expect(screen.getByText('Windi')).toBeTruthy();
+    expect(within(screen.getByRole('list', { name: 'Conversación' })).getByText('Windi')).toBeTruthy();
   });
 
   it('HE-14-HU01-CA02 · Enviar mensaje con el botón', async () => {
