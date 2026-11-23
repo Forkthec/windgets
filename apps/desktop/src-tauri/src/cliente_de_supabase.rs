@@ -720,6 +720,23 @@ impl crate::motor_de_sincronizacion::archivos::AlmacenDeImagenes for ClienteDeSu
     }
 }
 
+impl crate::motor_de_sincronizacion::archivos_del_catalogo::AlmacenDelCatalogo
+    for ClienteDeSupabase
+{
+    async fn descargar_del_catalogo(
+        &self,
+        token: &str,
+        ruta: &str,
+    ) -> Result<Vec<u8>, FallaDeAuth> {
+        let origen = format!(
+            "authenticated/{}/{ruta}",
+            crate::motor_de_sincronizacion::archivos_del_catalogo::BUCKET_DEL_CATALOGO
+        );
+        self.storage(reqwest::Method::GET, &origen, token, None)
+            .await
+    }
+}
+
 #[cfg(test)]
 mod pruebas {
     use super::*;

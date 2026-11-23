@@ -1393,3 +1393,34 @@ describe('Rediseño · Personalización del wallpaper (P32)', () => {
     expect(botones).toEqual(['Cancelar', 'Guardar', 'Guardar como tema', 'Aplicar']);
   });
 });
+
+describe('INT-09 · Miniaturas del catálogo que todavía no se descargaron', () => {
+  it('HE-02-HU02-ET01 · Sin la miniatura en el computador, un espacio en lugar de una imagen rota', async () => {
+    await abrir(false, false, (n) => {
+      n.responder('catalog_list', ({ kind }) => ({
+        ok: true,
+        value:
+          kind === 'template'
+            ? [
+                {
+                  id: 'default',
+                  name: 'Windgets',
+                  thumbnail_url: 'templates/default/thumbnail.png',
+                  is_cached: true,
+                },
+                { id: 'claro', name: 'Claro', thumbnail_url: '', is_cached: false },
+              ]
+            : [],
+      }));
+    });
+    const catalogo = await screen.findByRole('list', { name: 'Catálogo de plantillas' });
+    const claro = within(catalogo).getByRole('button', { name: /Claro/ });
+    expect(claro.querySelector('img')).toBeNull();
+    expect(claro.querySelector('.wg-wallpaper__sin-miniatura')).toBeTruthy();
+    expect(
+      within(catalogo)
+        .getByRole('button', { name: /Windgets/ })
+        .querySelector('img'),
+    ).toBeTruthy();
+  });
+});

@@ -64,7 +64,8 @@ export interface RespuestaWindi {
   proposal: Propuesta | null;
 }
 
-export type CodigoDeError = 'unauthorized' | 'invalid_request' | 'quota_exceeded' | 'provider_error' | 'timeout';
+export type CodigoDeError =
+  'unauthorized' | 'invalid_request' | 'quota_exceeded' | 'provider_error' | 'timeout';
 
 /** Estado HTTP de cada código de error (EF-01). */
 export const ESTADO_DEL_ERROR: Record<CodigoDeError, number> = {
@@ -149,7 +150,12 @@ function cantidades(contexto: Contexto): string {
   if (counts) {
     const nombre = (lista: { id: string; name: string }[], id: string) =>
       lista.find((x) => x.id.toLowerCase() === id.toLowerCase())?.name ?? id;
-    const prioridades: Record<string, string> = { high: 'alta', medium: 'media', low: 'baja', none: 'sin prioridad' };
+    const prioridades: Record<string, string> = {
+      high: 'alta',
+      medium: 'media',
+      low: 'baja',
+      none: 'sin prioridad',
+    };
     const unir = (lista: Cantidad[], texto: (k: string) => string) =>
       lista.length ? lista.map((c) => `${texto(c.key)} ${c.count}`).join(', ') : 'ninguna';
     partes.push(
@@ -176,7 +182,8 @@ function lineaDeTarjeta(t: Record<string, unknown>, contexto: Contexto): string 
   const etiquetas = Array.isArray(t.label_ids)
     ? t.label_ids.map((id) => contexto.labels.find((e) => e.id === id)?.name).filter(Boolean)
     : [];
-  const prioridad = typeof t.priority === 'string' ? { high: 'alta', medium: 'media', low: 'baja' }[t.priority] : null;
+  const prioridad =
+    typeof t.priority === 'string' ? { high: 'alta', medium: 'media', low: 'baja' }[t.priority] : null;
   // HE-14-HU09-ET07: el tipo, el bloque horario y la descripción (recortada) de cada tarjeta.
   const hora = (h: number) => `${String(h).padStart(2, '0')}:00`;
   const bloque =
@@ -385,7 +392,8 @@ export const FUNCIONES = [
         intent: {
           type: 'STRING',
           enum: ['answer', 'clarify', 'out_of_scope'],
-          description: 'answer al responder, clarify al pedir un dato que falta, out_of_scope fuera del alcance.',
+          description:
+            'answer al responder, clarify al pedir un dato que falta, out_of_scope fuera del alcance.',
         },
       },
       required: ['text', 'intent'],
@@ -407,7 +415,11 @@ export const FUNCIONES = [
               due_date: { type: 'STRING', description: 'Fecha límite AAAA-MM-DD, no anterior a hoy.' },
               description: { type: 'STRING' },
               priority: { type: 'STRING', enum: ['high', 'medium', 'low'] },
-              label_ids: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Solo ids de etiquetas que existen.' },
+              label_ids: {
+                type: 'ARRAY',
+                items: { type: 'STRING' },
+                description: 'Solo ids de etiquetas que existen.',
+              },
               time_block: BLOQUE,
             },
             required: ['title', 'due_date'],
@@ -428,7 +440,10 @@ export const FUNCIONES = [
           items: {
             type: 'OBJECT',
             properties: {
-              card_id: { type: 'STRING', description: 'El id de una tarjeta de las relacionadas con el mensaje.' },
+              card_id: {
+                type: 'STRING',
+                description: 'El id de una tarjeta de las relacionadas con el mensaje.',
+              },
               changes: {
                 type: 'OBJECT',
                 description: 'Solo los datos que cambian.',
@@ -467,9 +482,20 @@ export const FUNCIONES = [
           items: {
             type: 'OBJECT',
             properties: {
-              card_id: { type: 'STRING', description: 'El id de una tarjeta de las relacionadas con el mensaje.' },
-              add: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Nombres de etiquetas que se agregan.' },
-              remove: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Nombres de etiquetas que se quitan.' },
+              card_id: {
+                type: 'STRING',
+                description: 'El id de una tarjeta de las relacionadas con el mensaje.',
+              },
+              add: {
+                type: 'ARRAY',
+                items: { type: 'STRING' },
+                description: 'Nombres de etiquetas que se agregan.',
+              },
+              remove: {
+                type: 'ARRAY',
+                items: { type: 'STRING' },
+                description: 'Nombres de etiquetas que se quitan.',
+              },
             },
             required: ['card_id'],
           },
@@ -492,7 +518,10 @@ export const FUNCIONES = [
             type: 'OBJECT',
             properties: {
               name: { type: 'STRING', description: 'El nombre de la etiqueta, de 1 a 30 caracteres.' },
-              color: { type: 'STRING', description: 'El id o el nombre de un color de la lista; nunca uno inventado.' },
+              color: {
+                type: 'STRING',
+                description: 'El id o el nombre de un color de la lista; nunca uno inventado.',
+              },
             },
             required: ['name', 'color'],
           },
@@ -583,12 +612,14 @@ export interface ResumenDeGemini {
 
 /** El resumen de una respuesta de Gemini para el log: el motivo de cierre, la cantidad de partes y las funciones. */
 export function resumenDeGemini(respuesta: unknown): ResumenDeGemini {
-  const candidato = esObjeto(respuesta) && Array.isArray(respuesta.candidates) ? respuesta.candidates[0] : null;
+  const candidato =
+    esObjeto(respuesta) && Array.isArray(respuesta.candidates) ? respuesta.candidates[0] : null;
   const contenido = esObjeto(candidato) && esObjeto(candidato.content) ? candidato.content : null;
   const lista: unknown[] = contenido && Array.isArray(contenido.parts) ? contenido.parts : [];
   const retro = esObjeto(respuesta) && esObjeto(respuesta.promptFeedback) ? respuesta.promptFeedback : null;
   return {
-    finishReason: esObjeto(candidato) && typeof candidato.finishReason === 'string' ? candidato.finishReason : null,
+    finishReason:
+      esObjeto(candidato) && typeof candidato.finishReason === 'string' ? candidato.finishReason : null,
     blockReason: retro && typeof retro.blockReason === 'string' ? retro.blockReason : null,
     partes: lista.length,
     llamadas: lista
@@ -600,22 +631,54 @@ export function resumenDeGemini(respuesta: unknown): ResumenDeGemini {
 /** Escribe una línea en el log de la función. */
 export type Registro = (nivel: 'info' | 'error', datos: Record<string, unknown>) => void;
 
+/** Lo que el reintento de `responderConGemini` puede usar en lugar de lo de siempre (para las pruebas y el respaldo). */
+export interface OpcionesDeGemini {
+  /** Llama al modelo de respaldo (`GEMINI_MODEL_RESPALDO`); sin él, el reintento usa el mismo modelo. */
+  llamarRespaldo?: () => Promise<Response>;
+  /** Espera antes de reintentar tras un error pasajero; por defecto, `ESPERA_DEL_REINTENTO_MS`. */
+  esperar?: (ms: number) => Promise<void>;
+}
+
+/** Cuánto se espera antes de reintentar un 500, 503 o 504 de Gemini (cabe en los 13 s de `ESPERA_MS`). */
+export const ESPERA_DEL_REINTENTO_MS = 1_500;
+
+/** Los estados de Gemini que son pasajeros (modelo saturado o caído un momento) y vale la pena reintentar. */
+export function esFallaPasajera(estado: number): boolean {
+  return estado === 500 || estado === 503 || estado === 504;
+}
+
+const esperarMs = (ms: number) => new Promise<void>((listo) => setTimeout(listo, ms));
+
 /**
  * P27 (C5): llama a Gemini y lee su respuesta. Si Gemini responde 200 pero sin nada que mostrar (candidato vacío o
- * `MALFORMED_FUNCTION_CALL`), reintenta una sola vez; `llamar` usa la misma señal de corte, así que el reintento
- * cabe en los 13 s (RNF-11). Cada respuesta deja una línea en el log con su resumen (`resumenDeGemini`). Los errores
- * de red y el corte los lanza `llamar`; los atiende quien la usa.
+ * `MALFORMED_FUNCTION_CALL`), reintenta una sola vez. P36: si responde 500, 503 o 504 (el modelo está saturado; en la
+ * prueba del 23-nov todas las fallas fueron 503), espera `ESPERA_DEL_REINTENTO_MS` y reintenta una sola vez con el
+ * modelo de respaldo, si lo hay. `llamar` usa la misma señal de corte, así que el reintento cabe en los 13 s
+ * (RNF-11). Cada respuesta deja una línea en el log con su resumen (`resumenDeGemini`). Los errores de red y el
+ * corte los lanza `llamar`; los atiende quien la usa.
  */
 export async function responderConGemini(
   llamar: () => Promise<Response>,
   registrar: Registro,
+  opciones: OpcionesDeGemini = {},
 ): Promise<RespuestaWindi | CodigoDeError> {
+  let siguiente = llamar;
   for (let intento = 1; ; intento++) {
-    const respuesta = await llamar();
+    const respuesta = await siguiente();
     if (!respuesta.ok) {
       const codigo = errorDeGemini(respuesta.status);
-      registrar('error', { evento: 'gemini_http', intento, estado: respuesta.status, codigo });
-      return codigo;
+      const reintentar = intento < 2 && esFallaPasajera(respuesta.status);
+      registrar('error', {
+        evento: 'gemini_http',
+        intento,
+        estado: respuesta.status,
+        codigo,
+        ...(reintentar ? { reintento: opciones.llamarRespaldo ? 'respaldo' : 'mismo_modelo' } : {}),
+      });
+      if (!reintentar) return codigo;
+      await (opciones.esperar ?? esperarMs)(ESPERA_DEL_REINTENTO_MS);
+      siguiente = opciones.llamarRespaldo ?? llamar;
+      continue;
     }
     const cuerpo: unknown = await respuesta.json().catch(() => null);
     const leida = leerGemini(cuerpo);
@@ -662,7 +725,9 @@ function elementos(nombre: string, args: Record<string, unknown>): Propuesta['it
   if (nombre === 'propose_move_cards') {
     const ids = Array.isArray(args.card_ids) ? args.card_ids.filter((id) => typeof id === 'string') : [];
     const columna = args.column_id;
-    return typeof columna === 'string' ? ids.map((id) => ({ card_id: id, changes: { column_id: columna } })) : [];
+    return typeof columna === 'string'
+      ? ids.map((id) => ({ card_id: id, changes: { column_id: columna } }))
+      : [];
   }
   const tarjetas = Array.isArray(args.cards) ? args.cards.filter(esObjeto) : [];
   return tarjetas.map((t) => ({ card_id: null, changes: t }));
@@ -671,7 +736,10 @@ function elementos(nombre: string, args: Record<string, unknown>): Propuesta['it
 /** El cuerpo de `generateContent` (INT-03): instrucción, historial y mensaje, y la configuración de generación. */
 export function cuerpoParaGemini(peticion: PeticionWindi): Record<string, unknown> {
   const contents = [
-    ...peticion.history.map((t) => ({ role: t.role === 'assistant' ? 'model' : 'user', parts: [{ text: t.text }] })),
+    ...peticion.history.map((t) => ({
+      role: t.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: t.text }],
+    })),
     { role: 'user', parts: [{ text: peticion.message }] },
   ];
   return {
@@ -713,7 +781,9 @@ export function leerGemini(respuesta: unknown): RespuestaWindi | CodigoDeError {
   // El texto llega en los argumentos de `responder` o en partes de texto; si llegan los dos, vale `responder`,
   // para no repetir la respuesta.
   const deResponder = llamadas
-    .map((f) => (f.name === 'responder' && esObjeto(f.args) && typeof f.args.text === 'string' ? f.args.text : ''))
+    .map((f) =>
+      f.name === 'responder' && esObjeto(f.args) && typeof f.args.text === 'string' ? f.args.text : '',
+    )
     .join('')
     .trim();
   const reply =

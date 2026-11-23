@@ -305,7 +305,29 @@ pub fn sincronizar(app: AppHandle) {
                     } else {
                         Vec::new()
                     };
-                    Ok::<_, sqlx::Error>((envio, descarga, subidas, bajadas))
+                    // INT-09, «Descargar», del bucket `catalog`: las miniaturas y los fondos del catálogo que
+                    // faltan en el computador. Al bajar alguno, la vista vuelve a leer el catálogo (EV-25).
+                    let del_catalogo = if consultar && cliente.en_linea() {
+                        motor_de_sincronizacion::archivos_del_catalogo::descargar_archivos_del_catalogo(
+                            base,
+                            cliente,
+                            &credenciales,
+                            &carpeta_de_archivos(),
+                            ahora,
+                        )
+                        .await?
+                    } else {
+                        Vec::new()
+                    };
+                    if !del_catalogo.is_empty() {
+                        let _ = app.emit(
+                            "catalog_updated",
+                            EventMapCatalogUpdated {
+                                kinds: del_catalogo.clone(),
+                            },
+                        );
+                    }
+                    Ok::<_, sqlx::Error>((envio, descarga, subidas, bajadas, !del_catalogo.is_empty()))
                 }))
             else {
                 continue;
@@ -313,7 +335,7 @@ pub fn sincronizar(app: AppHandle) {
             en_linea_antes = Some(cliente.en_linea());
             // HE-15-HU02-ET05: un envío que no encuentra la red avisa que se perdió la conexión (EV-03).
             avisar_conectividad(&app, antes);
-            if let Ok((envio, descarga, subidas, bajadas)) = resultado {
+            if let Ok((envio, descarga, subidas, bajadas, catalogo_bajado)) = resultado {
                 if descarga.llamo {
                     ultima_consulta = ahora;
                 }
@@ -322,7 +344,9 @@ pub fn sincronizar(app: AppHandle) {
                 }
                 avisar_ciclo(&app, &envio, &descarga, reconectado && hubo_pendientes);
                 avisar_personalizacion(&app, &descarga);
-                if !bajadas.is_empty() {
+                // Con la imagen ya en el computador, el wallpaper se vuelve a mostrar y el aviso de
+                // HE-02-HU01-ET05 se quita (también cuando llega un fondo o una plantilla del catálogo).
+                if !bajadas.is_empty() || catalogo_bajado {
                     avisar_imagenes_descargadas(&app);
                 }
             }
@@ -980,13 +1004,13 @@ pub async fn catalog_list(
         CatalogKind::Template => {
             nucleo
                 .personalizacion
-                .plantillas(nucleo.planificador.base(), &carpetas(&app).recursos)
+                .plantillas(nucleo.planificador.base(), &carpetas(&app))
                 .await
         }
         CatalogKind::Image => {
             nucleo
                 .personalizacion
-                .imagenes(nucleo.planificador.base())
+                .imagenes(nucleo.planificador.base(), &carpeta_de_archivos())
                 .await
         }
         CatalogKind::Font => {

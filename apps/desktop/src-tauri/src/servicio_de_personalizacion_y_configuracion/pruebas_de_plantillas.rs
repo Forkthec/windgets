@@ -39,7 +39,12 @@ fn ca_he_02_hu02_ca01() {
     // catálogo del equipo (ET03, ET04): no hay comando para crear plantillas ni subir archivos (ET05).
     let (base, servicio) = con_otra_plantilla();
     let recursos = std::path::Path::new("recursos");
-    let plantillas = bloquear(servicio.plantillas(&base, recursos)).unwrap();
+    let carpetas = escritorio::Carpetas {
+        archivos: std::env::temp_dir()
+            .join(format!("windgets-sin-catalogo-{}", uuid::Uuid::new_v4())),
+        recursos: recursos.to_path_buf(),
+    };
+    let plantillas = bloquear(servicio.plantillas(&base, &carpetas)).unwrap();
     // La miniatura de la plantilla por defecto es el archivo que trae el instalador.
     let miniatura = recursos
         .join("assets/templates/default/thumbnail.png")
@@ -53,8 +58,13 @@ fn ca_he_02_hu02_ca01() {
         datos,
         [
             ("default", "Windgets", miniatura.as_str()),
-            ("minimal", "Minimal", "templates/minimal/thumbnail.png"),
+            // INT-09: la miniatura de una plantilla del catálogo llega con su descarga; mientras tanto va vacía.
+            ("minimal", "Minimal", ""),
         ]
+    );
+    assert_eq!(
+        plantillas.iter().map(|p| p.is_cached).collect::<Vec<_>>(),
+        [true, false]
     );
     // La plantilla del tema en edición, para la etiqueta «Seleccionada» (ET02).
     let vista = bloquear(servicio.abrir_borrador(&base, USUARIO, None)).unwrap();

@@ -1,7 +1,8 @@
 // EF-01 `windi-chat` (contratos.md; HE-14). Exige el JWT del usuario (`verify_jwt = true` en config.toml) y lee
 // `GEMINI_API_KEY` y `GEMINI_MODEL` de los secretos de Supabase: el ejecutable no tiene la clave (D-192). Corta a
 // los 13 s (RNF-11; D-172). No habilita CORS (la llama el Núcleo) ni registra el contenido (D-196): el log lleva
-// solo el resumen de cada respuesta de Gemini y reintenta una vez la que llega vacía (P27, `responderConGemini`).
+// solo el resumen de cada respuesta de Gemini y reintenta una vez la que llega vacía (P27) o con 500, 503 o 504, con el
+// modelo `GEMINI_MODEL_RESPALDO` si está (P36, `responderConGemini`).
 import {
   type CodigoDeError,
   cuerpoParaGemini,
@@ -47,20 +48,22 @@ Deno.serve(async (peticion) => {
   const clave = Deno.env.get('GEMINI_API_KEY');
   if (!clave) return fallo('provider_error');
   const modelo = Deno.env.get('GEMINI_MODEL') || MODELO_POR_DEFECTO;
+  // P36: un segundo modelo para reintentar cuando el principal está saturado (503); opcional.
+  const respaldo = Deno.env.get('GEMINI_MODEL_RESPALDO') || '';
   const tiempo = new AbortController();
   const corte = setTimeout(() => tiempo.abort(), ESPERA_MS);
   try {
     const cuerpoGemini = JSON.stringify(cuerpoParaGemini(cuerpo));
-    const leida = await responderConGemini(
-      () =>
-        fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': clave },
-          body: cuerpoGemini,
-          signal: tiempo.signal,
-        }),
-      registrar,
-    );
+    const llamarA = (nombre: string) => () =>
+      fetch(`https://generativelanguage.googleapis.com/v1beta/models/${nombre}:generateContent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': clave },
+        body: cuerpoGemini,
+        signal: tiempo.signal,
+      });
+    const leida = await responderConGemini(llamarA(modelo), registrar, {
+      llamarRespaldo: respaldo && respaldo !== modelo ? llamarA(respaldo) : undefined,
+    });
     return typeof leida === 'string' ? fallo(leida) : json(200, leida);
   } catch {
     return fallo(tiempo.signal.aborted ? 'timeout' : 'provider_error');
