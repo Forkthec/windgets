@@ -7,6 +7,7 @@ import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { Interruptor } from '@/ui/Interruptor/Interruptor';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNavegacion, useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import './configuracion.css';
 
 // P-CFG-01 Configuración (Menú principal > Configuración).
 // - HE-16-HU02 (inicio automático): el interruptor muestra siempre el estado que tiene Windows (ET06) y al
@@ -82,18 +83,28 @@ export function Settings() {
   return (
     <main aria-label="Configuración" aria-busy={inicio === null} className="wg-configuracion">
       {aviso && <Aviso texto={aviso} />}
-      {/* ET01 (HE-16-HU02): el interruptor «Inicio automático». */}
-      {inicio !== null && (
-        <Interruptor
-          etiqueta="Inicio automático"
-          activo={inicio}
-          deshabilitado={cambiarInicio.enCurso}
-          alCambiar={(activo) => void cambiarInicio.ejecutar(activo)}
-        />
-      )}
-      <Boton disabled={abrir.enCurso} onClick={() => void abrir.ejecutar()}>
-        Cerrar sesión
-      </Boton>
+      {/* ET01 (HE-16-HU02): el interruptor «Inicio automático». docs/rediseno.md RD-41 (Figma 81:200, 81:201): el
+          nombre a la izquierda y el interruptor a la derecha. */}
+      <div className="wg-configuracion__fila wg-configuracion__inicio">
+        {inicio !== null && (
+          <Interruptor
+            etiqueta="Inicio automático"
+            activo={inicio}
+            deshabilitado={cambiarInicio.enCurso}
+            alCambiar={(activo) => void cambiarInicio.ejecutar(activo)}
+          />
+        )}
+      </div>
+      <hr className="wg-configuracion__divisor" />
+      {/* RD-41 (81:204, 81:205): la sección «Sesión» con «Cerrar sesión» a la derecha. */}
+      <section className="wg-configuracion__fila" aria-labelledby="wg-configuracion-sesion">
+        <h2 id="wg-configuracion-sesion" className="wg-configuracion__nombre">
+          Sesión
+        </h2>
+        <Boton disabled={abrir.enCurso} onClick={() => void abrir.ejecutar()}>
+          Cerrar sesión
+        </Boton>
+      </section>
       {confirmar && (
         // DUDA: HE-16-HU03 el título de M-11 y M-12 no está definido; se usa «Cerrar sesión».
         <Confirmacion

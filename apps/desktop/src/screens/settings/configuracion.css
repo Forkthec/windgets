@@ -1,0 +1,63 @@
+/* Rediseño de Configuración (docs/rediseno.md RD-41; Figma 81:199 «Contenido» de 81:180 «Configuración · Claro» y
+ * 81:226 del oscuro). Medidas en px del Figma, relativas a la tarjeta. */
+/* Las filas terminan a 53 px del borde derecho de la tarjeta (81:201 y 81:205 llegan a x = 936 de 990). */
+body[data-modo] .wg-configuracion {
+  align-items: stretch;
+  gap: 0;
+  padding-right: 21px;
+}
+/* 81:200 «Inicio automático» (24 px peso 500) centrado con 81:201 en y ≈ 66; 81:204 «Sesión» (23 px) con 81:205 en
+ * y ≈ 198. */
+.wg-configuracion__fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 69px;
+}
+.wg-configuracion__inicio > .wg-fila {
+  flex: 1;
+  flex-direction: row-reverse;
+  justify-content: space-between;
+}
+.wg-configuracion__inicio label {
+  font-size: 24px;
+  font-weight: 500;
+}
+.wg-configuracion__nombre {
+  margin: 0;
+  font-size: 23px;
+  font-weight: 500;
+}
+/* 81:203 «Divisor»: 1 px en y = 135, a lo ancho. */
+.wg-configuracion__divisor {
+  width: calc(100% + 17px); /* 81:203 mide 922 px, hasta x = 954 */
+  height: 1px;
+  margin: 34px 0 31px;
+  border: 0;
+  background: var(--wgm-divisor, var(--wg-linea));
+}
+/* 81:201 «Interruptor activo»: 58 × 30, control de 22 px. */
+body[data-modo] .wg-configuracion__inicio .wg-interruptor {
+  width: 58px;
+  height: 30px;
+  border-radius: 15px;
+}
+body[data-modo] .wg-configuracion__inicio .wg-interruptor::after {
+  top: 2.5px;
+  left: 2.5px;
+  width: 22px;
+  height: 22px;
+  border-radius: 11px;
+}
+body[data-modo] .wg-configuracion__inicio .wg-interruptor[aria-checked='true']::after {
+  left: 30.5px;
+}
+/* 81:205 «Cerrar sesión» empieza en y = 176 y 81:204 «Sesión» en 189 (sin centrar entre sí). El ancho de 164 px no
+ * tiene regla: mide su texto (RD-33). */
+.wg-configuracion__fila:not(.wg-configuracion__inicio) {
+  align-items: flex-start;
+  padding-top: 9px;
+}
+.wg-configuracion__fila:not(.wg-configuracion__inicio) .wg-configuracion__nombre {
+  margin-top: 12px;
+}

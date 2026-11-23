@@ -196,3 +196,39 @@ test('RD-33 · Foco visible en el menú y en los botones', async ({ page }) => {
   const contorno = await opcion.evaluate((e) => getComputedStyle(e).outlineStyle);
   expect(contorno).toBe('solid');
 });
+
+test('RD-37 · Planificador diario a la medida de 81:21', async ({ page }) => {
+  await entrar(page);
+  await claro(page);
+  await page.getByRole('button', { name: 'Nueva tarjeta' }).click();
+  await page.getByLabel('Título', { exact: true }).fill('Revisar los bocetos');
+  await page.getByRole('button', { name: 'Guardar' }).click();
+  const fila = page.getByRole('list', { name: 'Tarjetas de hoy' }).getByRole('listitem').first();
+  await expect(fila).toBeVisible();
+  // 81:22 la fecha en (330, 206) y 81:23 «Nueva tarjeta» en y = 203, terminando en x = 1257.
+  await esperarCaja(page.locator('.wg-planificador__fecha'), [330, 206, null, null]);
+  const nueva = await caja(page.getByRole('button', { name: 'Nueva tarjeta' }));
+  expect(Math.abs(nueva.y - 203)).toBeLessThanOrEqual(TOLERANCIA);
+  expect(Math.abs(nueva.x + nueva.width - 1257)).toBeLessThanOrEqual(TOLERANCIA);
+  // 81:25 «Completadas» en y = 282 y 81:26 la barra de 8 px en y = 325.
+  await esperarCaja(page.getByText('Completadas: 0 de 1'), [330, 282, null, null]);
+  await esperarCaja(page.getByRole('progressbar', { name: 'Avance del día' }), [330, 325, 925, 8]);
+  // 81:28 la casilla de 22 × 22 en (330, 398), 81:31 la hora en x = 382 y 81:32 el título en (502, 394).
+  await esperarCaja(fila.getByRole('checkbox'), [330, 398, 22, 22]);
+  await esperarCaja(fila.locator('.wg-planificador__hora'), [382, null, null, null]);
+  await esperarCaja(fila.locator('.wg-tarjeta__titulo'), [502, 394, null, null]);
+});
+
+test('RD-41 · Configuración a la medida de 81:199', async ({ page }) => {
+  await entrar(page);
+  await claro(page);
+  await abrir(page, 'Configuración');
+  // 81:201 el interruptor de 58 × 30 en (1178, 225); 81:203 el divisor en y = 309; 81:205 «Cerrar sesión» termina
+  // en x = 1237 con y = 350.
+  await esperarCaja(page.getByRole('switch', { name: 'Inicio automático' }), [1178, 225, 58, 30]);
+  await esperarCaja(page.locator('.wg-configuracion__divisor'), [332, 309, 922, 1]);
+  const cerrar = await caja(page.getByRole('button', { name: 'Cerrar sesión' }));
+  expect(Math.abs(cerrar.x + cerrar.width - 1237)).toBeLessThanOrEqual(TOLERANCIA);
+  expect(Math.abs(cerrar.y - 350)).toBeLessThanOrEqual(TOLERANCIA);
+  await esperarCaja(page.getByRole('heading', { level: 2, name: 'Sesión' }), [332, null, null, null]);
+});
