@@ -332,30 +332,8 @@ body {
   color: var(--wg-tinta);
 }
 
-/* Pantallas de cuenta (P-CTA-01 Inicio de sesión, P-CTA-02 Registro; mockups del equipo, figuras 1 a 3): el
- * isotipo centrado arriba y una tarjeta centrada con borde y sombra sólida; un campo debajo de otro. */
-.wg-cuenta {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: calc(var(--wg-unidad) * 6);
-  min-height: 100vh;
-  box-sizing: border-box;
-  padding: calc(var(--wg-unidad) * 12) calc(var(--wg-unidad) * 4);
-}
-.wg-cuenta__isotipo {
-  width: calc(var(--wg-unidad) * 14);
-  height: calc(var(--wg-unidad) * 14);
-}
-.wg-cuenta__tarjeta {
-  width: 100%;
-  max-width: calc(var(--wg-unidad) * 135);
-  box-sizing: border-box;
-  padding: calc(var(--wg-unidad) * 7);
-  border: var(--wg-borde-ancho) solid var(--wg-borde);
-  border-radius: var(--wg-radio);
-  box-shadow: var(--wg-sombra);
-}
+/* Formularios: un campo debajo de otro (pantallas de cuenta y ventanas emergentes). Las pantallas de cuenta están en
+ * `screens/cuenta/cuenta.css` (docs/rediseno.md). */
 .wg-formulario {
   display: flex;
   flex-direction: column;
@@ -366,11 +344,6 @@ body {
 .wg-formulario > .wg-boton,
 .wg-formulario > .wg-fila > .wg-boton:only-child {
   width: 100%;
-}
-/* Pie con el texto de ayuda a la izquierda y la acción principal a la derecha (figura 2). */
-.wg-cuenta__pie {
-  justify-content: space-between;
-  flex-wrap: wrap;
 }
 .wg-cuenta__derecha {
   align-self: flex-end;

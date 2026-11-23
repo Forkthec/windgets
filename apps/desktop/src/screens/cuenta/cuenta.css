@@ -1,0 +1,393 @@
+/* ============================================================================================================
+ * Rediseño de las pantallas de cuenta (docs/rediseno.md RD-02 a RD-13; Figma «Windgets»). Sin sesión, la
+ * apariencia es Claro u Oscuro y no sale del tema: `.wg-cuenta-raiz[data-modo]` redefine los tokens dentro de las
+ * pantallas de cuenta, así Boton, CampoTexto, Aviso e Hipervinculo toman la paleta del Figma sin cambiar. Las
+ * medidas son las del Figma (RD-05): no siguen R-07, R-08 ni R-14. Va en su propio archivo para que el rediseño de
+ * otras pantallas no choque con este al fusionar.
+ * ============================================================================================================ */
+.wg-cuenta-raiz[data-modo='claro'] {
+  --wg-marco: #f5f0ff;
+  --wg-superficie: #fffbea;
+  --wg-superficie-alta: #ffffff;
+  --wg-borde: #241c30;
+  --wg-tinta: #17131d;
+  --wg-texto: #554f5e;
+  --wg-accion: #00d9e2;
+  --wg-sobre-accion: #17131d;
+  --wg-estado-vencida: #b3261e;
+  --wg-estado-pendiente: #8f6a00;
+  --wg-relleno-pendiente: #ffeeb8;
+  --wgc-campo-borde: #766b81;
+  --wgc-boton: #ffffff;
+  --wgc-sombra: #241c30;
+  --wgc-enlace: #6604e6;
+  --wgc-globo: #ffffff;
+  --wgc-esquina: #e9d893;
+  --wgc-paso-fondo: #ede3ff;
+  --wgc-paso-texto: #6604e6;
+  --wgc-selector: #ffffff;
+  --wgc-selector-borde: #766b81;
+  --wgc-selector-texto: #352d41;
+  --wgc-seleccion: #6604e6;
+  --wgc-sobre-seleccion: #ffffff;
+  --wgc-deshabilitado: #e6e1ec;
+  --wgc-deshabilitado-borde: #9c93a6;
+  --wgc-deshabilitado-texto: #625b6d;
+  --wgc-logo: #121216;
+}
+.wg-cuenta-raiz[data-modo='oscuro'] {
+  --wg-marco: #201b2b;
+  --wg-superficie: #302d38;
+  --wg-superficie-alta: #201c26;
+  --wg-borde: #afa1c0;
+  --wg-tinta: #f8f5ff;
+  --wg-texto: #cec7d6;
+  --wg-accion: #00d9e2;
+  --wg-sobre-accion: #17131d;
+  --wg-estado-vencida: #ff8a80;
+  --wg-estado-pendiente: #e0b640;
+  --wg-relleno-pendiente: #4a3b12;
+  --wgc-campo-borde: #948b9e;
+  --wgc-boton: #302d38;
+  --wgc-sombra: #100d15;
+  --wgc-enlace: #d3b2ff;
+  --wgc-globo: #292531;
+  --wgc-esquina: #71627f;
+  --wgc-paso-fondo: #433258;
+  --wgc-paso-texto: #d3b2ff;
+  --wgc-selector: #292531;
+  --wgc-selector-borde: #afa1c0;
+  --wgc-selector-texto: #f8f5ff;
+  --wgc-seleccion: #d3b2ff;
+  --wgc-sobre-seleccion: #201b2b;
+  --wgc-deshabilitado: #3a3642;
+  --wgc-deshabilitado-borde: #6b6375;
+  --wgc-deshabilitado-texto: #a79fb2;
+  --wgc-logo: #ffffff;
+}
+.wg-cuenta-raiz {
+  --wg-fuente: 'Rubik', 'Segoe UI', sans-serif;
+  --wg-tamano-fuente: 16px;
+  min-height: 100vh;
+  background: var(--wg-marco);
+  color: var(--wg-tinta);
+  font-family: var(--wg-fuente);
+  font-size: var(--wg-tamano-fuente);
+}
+
+.wg-cuenta {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  box-sizing: border-box;
+  max-width: 1176px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 34px 54px 48px;
+}
+.wg-cuenta__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.wg-cuenta__logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--wgc-logo);
+  font-size: 32px;
+  font-weight: 700;
+}
+.wg-cuenta__simbolo {
+  width: 42px;
+  height: 38px;
+}
+
+/* Selector «Apariencia» (RD-02). */
+.wg-selector-modo {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--wgc-selector-borde);
+  border-radius: 11px;
+  background: var(--wgc-selector);
+}
+.wg-selector-modo__opcion {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 106px;
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--wgc-selector-texto);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.wg-selector-modo__opcion[aria-checked='true'] {
+  background: var(--wgc-seleccion);
+  color: var(--wgc-sobre-seleccion);
+}
+
+/* Windi a la izquierda y la nota a la derecha (RD-07). */
+.wg-cuenta__cuerpo {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 552px;
+  align-items: start;
+  gap: 24px;
+}
+.wg-cuenta__windi {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 78px;
+}
+.wg-cuenta__ilustracion {
+  display: block;
+  width: 100%;
+  max-width: 521px;
+  height: auto;
+  margin-top: 56px;
+}
+/* Registro: el globo junto a la nota y Windi con el guiño, girado y detrás de la nota. */
+.wg-cuenta__cuerpo--registro .wg-cuenta__windi {
+  align-items: flex-end;
+  padding-top: 36px;
+}
+.wg-cuenta__cuerpo--registro .wg-globo {
+  margin-right: -40px;
+}
+.wg-cuenta__cuerpo--registro .wg-cuenta__ilustracion {
+  position: absolute;
+  top: 190px;
+  right: -150px;
+  width: 560px;
+  max-width: none;
+  margin: 0;
+  transform: rotate(-48deg);
+  transform-origin: center;
+}
+
+.wg-globo {
+  position: relative;
+  z-index: 2;
+  padding: 10px 22px 12px;
+  border: 1.5px solid var(--wg-borde);
+  border-radius: 15px;
+  background: var(--wgc-globo);
+  box-shadow: 3px 5px 0 var(--wgc-sombra);
+}
+.wg-globo__texto {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.wg-globo__punta {
+  position: absolute;
+  right: 75px;
+  bottom: -18px;
+}
+.wg-globo__punta-cuerpo {
+  fill: var(--wgc-globo);
+  stroke: var(--wg-borde);
+}
+.wg-globo__punta-union {
+  stroke: var(--wgc-globo);
+}
+
+/* La nota: el formulario con la esquina doblada y la sombra sólida (RD-05). */
+.wg-nota {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  width: 552px;
+  max-width: 100%;
+  padding: 40px 46px 34px;
+  border: 1.5px solid var(--wg-borde);
+  border-radius: 5px;
+  background: var(--wg-superficie);
+  box-shadow: 4px 5px 0 var(--wgc-sombra);
+  color: var(--wg-tinta);
+}
+.wg-nota__esquina {
+  position: absolute;
+  top: -1.5px;
+  right: -1.5px;
+}
+.wg-nota__esquina-fondo {
+  fill: var(--wg-marco);
+}
+.wg-nota__esquina-pliegue {
+  fill: var(--wgc-esquina);
+  stroke: var(--wg-borde);
+}
+.wg-nota__titulo {
+  margin: 0;
+  font-size: 38px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.wg-nota__subtitulo {
+  margin: 8px 0 0;
+  color: var(--wg-texto);
+  font-size: 17px;
+}
+.wg-nota > .wg-formulario {
+  margin-top: 28px;
+}
+
+/* Indicador de pasos (RD-09). */
+.wg-pasos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+  color: var(--wg-texto);
+  font-size: 14px;
+}
+.wg-pasos__paso {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.wg-pasos__paso + .wg-pasos__paso::before {
+  content: '—' / '';
+  margin-right: 4px;
+}
+.wg-pasos__paso--actual {
+  padding: 6px 12px;
+  border-radius: 7px;
+  background: var(--wgc-paso-fondo);
+  color: var(--wgc-paso-texto);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* Divisor «o» (RD-12, RD-13). */
+.wg-divisor {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0;
+  color: var(--wg-texto);
+  font-size: 15px;
+}
+.wg-divisor::before,
+.wg-divisor::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--wg-borde);
+}
+
+/* Campos, botones, enlaces y avisos dentro de la nota. */
+.wg-nota .wg-formulario {
+  gap: 18px;
+}
+.wg-nota .wg-campo {
+  gap: 6px;
+}
+.wg-nota .wg-campo__etiqueta {
+  color: var(--wg-tinta);
+  font-weight: 500;
+}
+.wg-nota .wg-campo__entrada {
+  min-height: 45px;
+  padding: 0 14px;
+  border: 1.3px solid var(--wgc-campo-borde);
+  border-radius: 9px;
+  background: var(--wg-superficie-alta);
+}
+.wg-nota .wg-campo__entrada[aria-invalid='true'] {
+  border: 2px solid var(--wg-estado-vencida);
+}
+.wg-nota .wg-campo__mensaje {
+  color: var(--wg-estado-vencida);
+  font-size: 15px;
+}
+.wg-nota .wg-boton {
+  min-height: 45px;
+  justify-content: center;
+  border: 1.5px solid var(--wg-borde);
+  border-radius: 9px;
+  background: var(--wgc-boton);
+  color: var(--wg-tinta);
+  font-weight: 500;
+}
+.wg-nota .wg-boton--principal {
+  min-height: 47px;
+  border-color: #18131c;
+  background: var(--wg-accion);
+  color: var(--wg-sobre-accion);
+  font-size: 18px;
+  font-weight: 700;
+  box-shadow: 3px 4px 0 var(--wgc-sombra);
+}
+.wg-nota .wg-boton:disabled {
+  border-color: var(--wgc-deshabilitado-borde);
+  background: var(--wgc-deshabilitado);
+  color: var(--wgc-deshabilitado-texto);
+  box-shadow: none;
+}
+.wg-nota .wg-motivo {
+  color: var(--wg-texto);
+}
+/* El subrayado se mantiene (R-12): el color del enlace no basta para distinguirlo del texto. */
+.wg-cuenta-raiz .wg-enlace {
+  color: var(--wgc-enlace);
+  font-weight: 500;
+  text-underline-offset: 3px;
+}
+.wg-cuenta-raiz .wg-enlace[aria-disabled='true'] {
+  color: var(--wgc-deshabilitado-texto);
+}
+.wg-cuenta-raiz .wg-boton:focus-visible,
+.wg-cuenta-raiz .wg-campo__entrada:focus-visible,
+.wg-cuenta-raiz .wg-enlace:focus-visible,
+.wg-cuenta-raiz .wg-miga__nivel:focus-visible,
+.wg-selector-modo__opcion:focus-visible {
+  outline: 2px solid var(--wgc-enlace);
+  outline-offset: 2px;
+}
+.wg-nota .wg-aviso {
+  padding: 12px 14px;
+  border: 1.5px solid var(--wg-estado-pendiente);
+  border-radius: 9px;
+  background: var(--wg-relleno-pendiente);
+  color: var(--wg-tinta);
+}
+.wg-nota .wg-encabezado-ruta {
+  margin-bottom: 0;
+}
+.wg-nota .wg-cuenta__centro {
+  margin: 4px 0 0;
+  color: var(--wg-texto);
+}
+.wg-nota .wg-cuenta__derecha {
+  margin: -6px 0 6px;
+  font-size: 15px;
+}
+
+/* RD-07: por debajo de 1000 px de ancho, Windi y su globo se ocultan y la nota queda centrada. */
+@media (max-width: 1000px) {
+  .wg-cuenta {
+    padding: 24px 16px 40px;
+  }
+  .wg-cuenta__cuerpo {
+    grid-template-columns: minmax(0, 552px);
+    justify-content: center;
+  }
+  .wg-cuenta__windi {
+    display: none;
+  }
+}

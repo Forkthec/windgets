@@ -19,6 +19,7 @@ import { useTemaAplicado } from '@/ui/tema/temaAplicado';
 import { AvisoDelWallpaper } from './AvisoDelWallpaper';
 import { IndicadorSincronizacion } from './IndicadorSincronizacion';
 import { ContextoDeBloqueo } from '@/ui/VentanaEmergente/VentanaEmergente';
+import { ProveedorDeApariencia, RaizDeCuenta } from '@/screens/cuenta/apariencia';
 
 // Ventana principal (C-01, interfaz.md): RT-01 (menú principal y pantalla principal) y el bloqueo del fondo de
 // RT-02 (ventanas emergentes). Las pantallas de cada HU se registran en `pantallas` a medida que se construyen.
@@ -270,41 +271,44 @@ export function VentanaPrincipal({
   } else if (sesion === 'sin_sesion') {
     // Sin sesión no hay menú principal (RT-01-ET06).
     const Cuenta = pantallasDeCuenta[cuenta];
+    // docs/rediseno.md RD-02, RD-04: las pantallas de cuenta llevan la apariencia Claro u Oscuro, no el tema.
     contenido = (
-      <div ref={fondo}>
+      <RaizDeCuenta ref={fondo}>
         {Cuenta ? (
           <Cuenta key={`${cuenta}-${correoDeCuenta}`} />
         ) : (
           <PantallaSinConstruir nombre={NOMBRE_DE_CUENTA[cuenta]} />
         )}
-      </div>
+      </RaizDeCuenta>
     );
   }
 
   return (
     <ContextoDelNucleo.Provider value={nucleo}>
-      <ContextoDeNavegacion.Provider value={navegacion}>
-        <ContextoDePedido.Provider value={contextoDePedido}>
-          <ContextoDeBloqueo.Provider value={bloquear}>
-            <ProveedorDeResultado>
-              {contenido}
-              {confirmarSalida && (
-                // DUDA: HE-17-HU03 el título de la confirmación no está definido; se usa «Salir».
-                <Confirmacion
-                  titulo="Salir"
-                  texto={textos.SALIR_SIN_GUARDAR}
-                  opcionPrincipal="Salir sin guardar"
-                  opcionSalir="Seguir editando"
-                  // CA03: descarta los cambios y cierra la aplicación sin cerrar la sesión.
-                  alConfirmar={() => void invocar('app_exit', { discard_changes: true })}
-                  // CA04: cierra el mensaje; la vista previa conserva sus cambios.
-                  alCancelar={() => setConfirmarSalida(false)}
-                />
-              )}
-            </ProveedorDeResultado>
-          </ContextoDeBloqueo.Provider>
-        </ContextoDePedido.Provider>
-      </ContextoDeNavegacion.Provider>
+      <ProveedorDeApariencia>
+        <ContextoDeNavegacion.Provider value={navegacion}>
+          <ContextoDePedido.Provider value={contextoDePedido}>
+            <ContextoDeBloqueo.Provider value={bloquear}>
+              <ProveedorDeResultado>
+                {contenido}
+                {confirmarSalida && (
+                  // DUDA: HE-17-HU03 el título de la confirmación no está definido; se usa «Salir».
+                  <Confirmacion
+                    titulo="Salir"
+                    texto={textos.SALIR_SIN_GUARDAR}
+                    opcionPrincipal="Salir sin guardar"
+                    opcionSalir="Seguir editando"
+                    // CA03: descarta los cambios y cierra la aplicación sin cerrar la sesión.
+                    alConfirmar={() => void invocar('app_exit', { discard_changes: true })}
+                    // CA04: cierra el mensaje; la vista previa conserva sus cambios.
+                    alCancelar={() => setConfirmarSalida(false)}
+                  />
+                )}
+              </ProveedorDeResultado>
+            </ContextoDeBloqueo.Provider>
+          </ContextoDePedido.Provider>
+        </ContextoDeNavegacion.Provider>
+      </ProveedorDeApariencia>
     </ContextoDelNucleo.Provider>
   );
 }
