@@ -18,6 +18,8 @@ import {
   BLOQUEO_DE_SEGURIDAD,
   resumenDeGemini,
   responderConGemini,
+  ESPERA_DEL_REINTENTO_MS,
+  esFallaPasajera,
   type Contexto,
   type Registro,
 } from '../../../../supabase/functions/windi-chat/logica';
@@ -186,6 +188,47 @@ describe('EF-01 windi-chat · HE-14-HU01', () => {
         estado: 429,
         codigo: 'quota_exceeded',
       });
+    });
+
+    // P36 (prueba del 23-nov): Gemini respondía 503 («modelo saturado») y Windi fallaba de inmediato.
+    it('503 se reintenta una vez con el modelo de respaldo, tras esperar', async () => {
+      const llamar = simulado(respuesta({}, 503));
+      const llamarRespaldo = simulado(respuesta(buena));
+      const esperar = vi.fn(() => Promise.resolve());
+      const registrar = vi.fn<Registro>();
+      expect(await responderConGemini(llamar, registrar, { llamarRespaldo, esperar })).toEqual({
+        reply: 'Hola',
+        intent: 'answer',
+        proposal: null,
+      });
+      expect(esperar).toHaveBeenCalledWith(ESPERA_DEL_REINTENTO_MS);
+      expect(llamar).toHaveBeenCalledTimes(1);
+      expect(llamarRespaldo).toHaveBeenCalledTimes(1);
+      expect(registrar).toHaveBeenCalledWith('error', {
+        evento: 'gemini_http',
+        intento: 1,
+        estado: 503,
+        codigo: 'provider_error',
+        reintento: 'respaldo',
+      });
+    });
+
+    it('sin modelo de respaldo, 500 y 504 se reintentan con el mismo; dos fallas seguidas son provider_error', async () => {
+      const esperar = () => Promise.resolve();
+      const unaVez = simulado(respuesta({}, 504), respuesta(buena));
+      expect(await responderConGemini(unaVez, vi.fn(), { esperar })).toMatchObject({ reply: 'Hola' });
+      expect(unaVez).toHaveBeenCalledTimes(2);
+      const dosVeces = simulado(respuesta({}, 500), respuesta({}, 503));
+      expect(await responderConGemini(dosVeces, vi.fn(), { esperar })).toBe('provider_error');
+      expect(dosVeces).toHaveBeenCalledTimes(2);
+    });
+
+    it('400 no se reintenta', async () => {
+      const llamar = simulado(respuesta({}, 400));
+      expect(await responderConGemini(llamar, vi.fn())).toBe('provider_error');
+      expect(llamar).toHaveBeenCalledTimes(1);
+      expect([500, 503, 504].every(esFallaPasajera)).toBe(true);
+      expect([400, 404, 429].some(esFallaPasajera)).toBe(false);
     });
 
     it('el bloqueo de seguridad no se reintenta', async () => {
