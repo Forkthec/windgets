@@ -326,36 +326,33 @@ body[data-sesion] .wg-interruptor[aria-checked='true']::after {
   cursor: not-allowed;
 }
 
-/* ---------- Ventanas emergentes y confirmaciones (RD-34; Figma 85:2, 85:8) ---------- */
+/* ---------- Ventanas emergentes y confirmaciones (RD-34, RD-72) ---------- */
 body[data-sesion] .wg-emergente {
-  border: var(--wgm-borde-control) solid var(--wg-borde);
-  border-radius: 15px;
+  border: 1px solid var(--wg-linea);
+  border-radius: 12px;
   background: var(--wgm-emergente);
   box-shadow: none;
   color: var(--wg-tinta);
 }
 body[data-sesion] .wg-confirmacion {
-  display: flex;
-  flex-direction: column;
-  width: min(800px, calc(100vw - 64px));
-  min-height: 250px;
-  padding: 32px 28px 36px;
+  width: min(480px, calc(100vw - 64px));
+  padding: 20px 24px 24px;
 }
 .wg-confirmacion__pregunta {
   margin: 0;
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 500;
-  line-height: 24px;
+  line-height: 22px;
   white-space: pre-line;
 }
 body[data-sesion] .wg-confirmacion .wg-emergente__acciones {
-  justify-content: flex-start;
+  justify-content: flex-end;
   gap: 12px;
   margin-top: auto;
   padding-top: 24px;
 }
 body[data-sesion] .wg-confirmacion .wg-boton {
-  min-height: 45px;
+  min-height: 34px;
   font-weight: 400;
 }
 body[data-sesion] .wg-confirmacion .wg-boton:not(.wg-boton--principal) {
@@ -439,21 +436,24 @@ body[data-sesion] .wg-ventana-principal--completa {
 }
 
 /* ---------- Ventanas emergentes (RD-50, RD-51; Figma 84:514, 84:550, 84:594) ---------- */
-/* Como las confirmaciones (RD-34): las acciones abajo a la izquierda, con la principal primero. */
+/* RD-72 (D-23; reemplaza RD-34 y RD-50 en ese punto): las acciones abajo a la derecha, la principal a la derecha. */
 body[data-sesion] .wg-emergente__acciones {
-  justify-content: flex-start;
-  gap: 12px;
-}
-body[data-sesion] .wg-emergente__acciones .wg-boton--principal {
-  order: -1;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
 }
 body[data-sesion] .wg-emergente:not(.wg-confirmacion) {
-  padding: 28px;
+  padding: 20px 24px 24px;
 }
-body[data-sesion] .wg-emergente > h2 {
-  margin: 0 0 20px;
-  font-size: 24px;
+body[data-sesion] .wg-emergente__cabecera {
+  margin-bottom: 16px;
+}
+body[data-sesion] .wg-emergente__cabecera > h2 {
+  font-size: 18px;
   font-weight: 700;
+}
+body[data-sesion] .wg-confirmacion .wg-emergente__cabecera {
+  margin-bottom: 0;
 }
 /* 84:514 «Detalle de tarjeta»: cada dato en una fila con fondo, radio 6, «Tipo · Tarea». */
 body[data-sesion] .wg-detalle {

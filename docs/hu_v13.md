@@ -56,3 +56,21 @@ aplicación.
 | ET02 | Tamaño inicial 120 × 120; mínimo 80 × 80 (HE-05-HU03-ET02). |
 | ET03 | Es interactivo (HE-06-HU01-ET01): al soltar el botón sin arrastrar pide `app_open_screen { screen: 'windi' }`. |
 | ET04 | Sin configuración (como Noticias). La apariencia propia llega con la HU v13 de «Apariencia del widget» (D-18). |
+
+---
+
+## HE-07-HU01-CA13 y HE-07-HU04-CA14 · Bloque horario en el Formulario de tarjeta (D-20) · P41
+
+CA nuevos de HU existentes (`docs/rediseno_final_backend.md` §4.5). No es una funcionalidad 🆕: reutiliza HE-11-HU02
+(`card_assign_time_block`) y HE-11-HU03 (`card_unassign_time_block`).
+
+| CA | Dado | Cuando | Entonces |
+|---|---|---|---|
+| HE-07-HU01-CA13 | que tengo abierto el Formulario de tarjeta en modo creación | diligencio los campos obligatorios, elijo en «Bloque horario» una fecha y una hora en punto, y selecciono «Guardar» | se crea la tarjeta y queda asignada a ese bloque horario |
+| HE-07-HU04-CA14 | que edito una tarjeta con bloque horario | elijo «Sin bloque horario» y guardo | la tarjeta se actualiza y se quita de su bloque horario |
+
+| ET | Especificación |
+|---|---|
+| ET-a | «Bloque horario» es opcional: fecha (DD/MM/AAAA con calendario flotante, sin días pasados ni posteriores a la fecha límite) y hora en punto de 00:00 a 23:00 con «Sin bloque horario» primero; las horas que ya pasaron hoy quedan deshabilitadas. |
+| ET-b | Con fecha y sin hora, o con hora y sin fecha, el campo vacío muestra «Este campo es obligatorio.». |
+| ET-c | Al guardar, primero `card_create` o `card_update` y, si el bloque cambió, `card_assign_time_block` o `card_unassign_time_block`. Si el bloque falla (`time_block.past`, `time_block.after_due_date`), la tarjeta queda guardada y se muestra el error del bloque como mensaje de error. |

@@ -79,7 +79,7 @@ describe('HE-07-HU04 · Editar una tarjeta', () => {
     expect((screen.getByLabelText('Título') as HTMLInputElement).value).toBe('Informe');
     expect((screen.getByLabelText('Fecha límite') as HTMLInputElement).value).toBe('20/11/2026');
     expect((screen.getByLabelText('Descripción') as HTMLTextAreaElement).value).toBe('Borrador');
-    expect((screen.getByLabelText('Prioridad') as HTMLSelectElement).value).toBe('medium');
+    expect(screen.getByRole('radio', { name: 'Media' }).getAttribute('aria-checked')).toBe('true');
     escribir('Título', 'Informe final');
     await guardar();
     const [params] = llamadasA(nucleo, 'card_update') as CardUpdateParams[];
@@ -102,7 +102,7 @@ describe('HE-07-HU04 · Editar una tarjeta', () => {
 
   it('HE-07-HU04-CA03 · Editar una tarjeta vencida sin cambiar la fecha límite', async () => {
     const nucleo = await abrirEdicion({ ...INFORME, due_date: '2026-11-10', is_overdue: true });
-    fireEvent.change(screen.getByLabelText('Prioridad'), { target: { value: 'low' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Baja' }));
     await guardar();
     // ET08: la fecha de siempre no se compara con hoy.
     const [params] = llamadasA(nucleo, 'card_update') as CardUpdateParams[];

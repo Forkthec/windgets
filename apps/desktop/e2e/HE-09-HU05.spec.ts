@@ -48,9 +48,10 @@ test('HE-09-HU05-CA01 · Reordenar las columnas', async ({ page }) => {
 
 test('HE-09-HU05-CA02 · Soltar una columna fuera del tablero', async ({ page }) => {
   // ET02: fuera del área de columnas (sobre la fila de opciones del tablero) se mantiene el orden anterior.
-  const fila = await page.getByRole('button', { name: 'Nueva tarjeta' }).boundingBox();
+  // RD-74: la fila de opciones es la del interruptor de vista.
+  const fila = await page.getByRole('group', { name: 'Vista de las tarjetas' }).boundingBox();
   if (!fila) throw new Error('La opción no tiene caja');
-  await arrastrarEncabezado(page, 'Hecho', fila.x + fila.width + 200, fila.y + fila.height / 2);
+  await arrastrarEncabezado(page, 'Hecho', fila.x - 300, fila.y + fila.height / 2);
   await page.waitForTimeout(300);
   expect(await nombresDeColumnas(page)).toEqual(['Por hacer', 'En progreso', 'Hecho']);
 });

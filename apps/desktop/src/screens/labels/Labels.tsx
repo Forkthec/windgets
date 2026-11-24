@@ -118,6 +118,7 @@ export function Labels() {
         // M-10 o M-14. DUDA: HE-08-HU04 las ventanas no definen título. Valor usado: «Eliminar».
         <Confirmacion
           titulo="Eliminar"
+          destructiva
           texto={porEliminar.texto}
           opcionPrincipal="Confirmar"
           alConfirmar={() => void eliminar(porEliminar.etiqueta)}

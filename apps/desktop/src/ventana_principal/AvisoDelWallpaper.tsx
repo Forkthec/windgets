@@ -20,10 +20,15 @@ export function AvisoDelWallpaper() {
         mostrar(textos.NO_SE_PUDO_MOSTRAR_EL_WALLPAPER, 'advertencia');
       anterior.current = estado;
     };
+    // Si EV-16 llega antes que la lectura inicial, la lectura ya no vale (es más vieja).
+    let llegoEvento = false;
     void invocar('wallpaper_get_status', {}).then((r) => {
-      if (vigente && r.ok) recibir(r.value.state);
+      if (vigente && r.ok && !llegoEvento) recibir(r.value.state);
     });
-    const dejar = escuchar('wallpaper_status_changed', (carga) => recibir(carga.state));
+    const dejar = escuchar('wallpaper_status_changed', (carga) => {
+      llegoEvento = true;
+      recibir(carga.state);
+    });
     return () => {
       vigente = false;
       dejar();

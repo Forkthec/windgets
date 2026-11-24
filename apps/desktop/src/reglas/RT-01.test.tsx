@@ -190,7 +190,9 @@ describe('RT-01 · Menú principal y pantalla principal', () => {
     expect(
       within(mensaje)
         .getAllByRole('button')
+        .filter((b) => !b.classList.contains('wg-emergente__cerrar'))
         .map((b) => b.textContent),
+      // RD-72: sin el «×» de la ventana.
     ).toEqual(['Salir sin guardar', 'Seguir editando']);
     expect(screen.queryByRole('main', { name: 'Tablero Kanban' })).toBeNull();
 
@@ -215,7 +217,9 @@ describe('RT-01 · Menú principal y pantalla principal', () => {
     expect(
       within(mensaje)
         .getAllByRole('button')
+        .filter((b) => !b.classList.contains('wg-emergente__cerrar'))
         .map((b) => b.textContent),
+      // RD-72: sin el «×» de la ventana.
     ).toEqual(['Guardar', 'Salir sin guardar', 'Seguir editando']);
 
     // «Seguir editando» no confirma la salida: sigue en Personalización del wallpaper.

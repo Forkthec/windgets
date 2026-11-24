@@ -3,6 +3,7 @@ import type { CardDetail } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { VentanaEmergente } from '@/ui/VentanaEmergente/VentanaEmergente';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { IndicadorDeEstado } from './EstadoDeTarjeta';
 import { fechaVisible } from './fechas';
 import { NOMBRE_DE_PRIORIDAD, NOMBRE_DE_TIPO } from './nombres';
 
@@ -56,14 +57,18 @@ export function DetalleTarjeta({ id, alCerrar, alNoExistir, alEditar, alEliminar
       acciones={
         // ET04
         <>
-          {/* RD-50 (84:514): «Editar» es la acción principal, primero; «Cerrar» va al final. */}
+          {/* RD-72 (rediseno_final_prototipos.md §6.7): «×» arriba cierra; abajo a la derecha «Eliminar» (secundaria,
+              texto rojo) y «Editar» (principal). */}
+          <Boton
+            className="wg-boton--texto-peligro"
+            disabled={!detalle}
+            onClick={() => detalle && alEliminar?.(detalle)}
+          >
+            Eliminar
+          </Boton>
           <Boton principal disabled={!detalle} onClick={() => detalle && alEditar?.(detalle)}>
             Editar
           </Boton>
-          <Boton disabled={!detalle} onClick={() => detalle && alEliminar?.(detalle)}>
-            Eliminar
-          </Boton>
-          <Boton onClick={alCerrar}>Cerrar</Boton>
         </>
       }
     >
@@ -77,7 +82,7 @@ export function DetalleTarjeta({ id, alCerrar, alNoExistir, alEditar, alEliminar
             <span className="wg-fila">
               <span>{fechaVisible(detalle.due_date)}</span>
               {/* ET06, ET07 */}
-              {detalle.is_overdue && <span className="wg-indicador">Vencida</span>}
+              <IndicadorDeEstado tarjeta={detalle} />
             </span>
           </Dato>
           <Dato nombre="Descripción">{detalle.description ?? 'Sin descripción'}</Dato>
