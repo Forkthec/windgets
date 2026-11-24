@@ -74,7 +74,7 @@ export function MenuPrincipal({ actual, alElegir, contraido = false, pie }: Menu
   return (
     <nav aria-label="Menú principal" className="wg-menu__navegacion">
       {bloques.map((bloque) => (
-        <section key={bloque} className="wg-menu__bloque" aria-label={TITULO_DEL_BLOQUE[bloque]}>
+        <div key={bloque} role="group" className="wg-menu__bloque" aria-label={TITULO_DEL_BLOQUE[bloque]}>
           {/* El nombre del bloque ya lo da `aria-label`; el título visible no es un encabezado de la pantalla. */}
           {!contraido && (
             <p className="wg-menu__titulo-bloque" aria-hidden="true">
@@ -86,7 +86,7 @@ export function MenuPrincipal({ actual, alElegir, contraido = false, pie }: Menu
               <Opcion key={o.pantalla} {...o} actual={actual} contraido={contraido} alElegir={alElegir} />
             ))}
           </ul>
-        </section>
+        </div>
       ))}
       <ul className="wg-menu__lista wg-menu__pie">
         {OPCIONES_MENU.filter((o) => o.bloque === 'pie').map((o) => (

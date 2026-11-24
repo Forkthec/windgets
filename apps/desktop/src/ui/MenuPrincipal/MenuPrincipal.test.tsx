@@ -16,7 +16,7 @@ describe('Menú principal', () => {
       Array.from(document.querySelectorAll('.wg-menu__titulo-bloque')).map((t) => t.textContent),
     ).toEqual(['Planificador', 'Personalización']);
     const textos = (nombre: string) =>
-      within(screen.getByRole('region', { name: nombre }))
+      within(screen.getByRole('group', { name: nombre }))
         .getAllByRole('button')
         .map((b) => b.textContent);
     expect(textos('Planificador')).toEqual([

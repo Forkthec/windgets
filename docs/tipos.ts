@@ -594,6 +594,8 @@ export interface WallpaperFitSetParams { monitor_id: string; fit: WallpaperFit }
 export interface AppOpenScreenParams { screen: ScreenId; params?: ScreenParams }
 export interface LastScreen { screen: ScreenId | null }
 export interface AppSetLastScreenParams { screen: ScreenId }
+// IPC-DESK-17, IPC-DESK-18 (docs/rediseno.md RD-65, D-25): el menú lateral contraído en este computador.
+export interface MenuCollapsed { collapsed: boolean }
 export interface AppRequestExitResult { requires_confirmation: boolean }
 export interface AppExitParams { discard_changes: boolean }
 export interface SystemOpenUrlParams { url: string }
@@ -766,6 +768,8 @@ export interface CommandMap {
   app_open_screen: { params: AppOpenScreenParams; result: Void };
   app_get_last_screen: { params: NoParams; result: LastScreen };
   app_set_last_screen: { params: AppSetLastScreenParams; result: Void };
+  app_get_menu_collapsed: { params: NoParams; result: MenuCollapsed };
+  app_set_menu_collapsed: { params: MenuCollapsed; result: Void };
   app_hide_main_window: { params: NoParams; result: Void };
   app_request_exit: { params: NoParams; result: AppRequestExitResult };
   app_exit: { params: AppExitParams; result: Void };
