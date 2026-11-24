@@ -1,5 +1,5 @@
 // HE-02-HU01-CA04 · Error al mostrar el wallpaper: el aviso de la ventana principal (ET06, tipo aviso de RT-04).
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { Escuchar } from '@/ipc/eventos';
 import type { Invoke, WallpaperState } from '@/types';
@@ -9,13 +9,17 @@ const AVISO = 'No pudimos mostrar tu wallpaper. Se aplicó el wallpaper por defe
 
 function nucleo(inicial: WallpaperState) {
   const oyentes: Array<(c: { state: WallpaperState }) => void> = [];
+  let leido = false;
   const invocar = ((comando: string) => {
     if (comando === 'auth_get_session')
       return Promise.resolve({
         ok: true,
         value: { state: 'signed_in', user_id: 'u-1', alias: 'Prueba', token: 'valid' },
       });
-    if (comando === 'wallpaper_get_status') return Promise.resolve({ ok: true, value: { state: inicial } });
+    if (comando === 'wallpaper_get_status') {
+      leido = true;
+      return Promise.resolve({ ok: true, value: { state: inicial } });
+    }
     if (comando === 'sync_get_status')
       return Promise.resolve({ ok: true, value: { status: 'synced', pending_count: 0, last_sync_at: null } });
     return Promise.resolve({ ok: false, error: { code: 'internal.unexpected' } });
@@ -25,7 +29,12 @@ function nucleo(inicial: WallpaperState) {
     return () => {};
   }) as unknown as Escuchar;
   const emitir = (state: WallpaperState) => act(() => oyentes.forEach((o) => o({ state })));
-  return { invocar, escuchar, emitir };
+  // Espera a que la ventana escuche EV-16 y haya leído el estado inicial antes de emitir.
+  const listo = () =>
+    waitFor(() => {
+      if (oyentes.length === 0 || !leido) throw new Error('aún no escucha');
+    });
+  return { invocar, escuchar, emitir, listo };
 }
 
 describe('HE-02-HU01 · Aviso del wallpaper', () => {
@@ -43,6 +52,8 @@ describe('HE-02-HU01 · Aviso del wallpaper', () => {
     render(<VentanaPrincipal invocar={n.invocar} escuchar={n.escuchar} />);
     await screen.findByRole('main');
     expect(screen.queryByText(AVISO)).toBeNull();
+    await n.listo();
+    await act(async () => {});
     n.emitir('fallback_default');
     n.emitir('fallback_default');
     expect(await screen.findAllByText(AVISO)).toHaveLength(1);
