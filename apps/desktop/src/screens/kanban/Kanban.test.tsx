@@ -1,6 +1,6 @@
 // HE-09-HU01 · Consultar las tarjetas en el tablero Kanban organizadas por columnas. Una prueba por CA en la
 // vista; las reglas del Núcleo tienen su prueba ca_he_09_hu01_* en servicio_del_planificador.rs.
-import { within } from '@testing-library/react';
+import { fireEvent, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Kanban } from './Kanban';
 import { abrirPantalla, EN_PROGRESO, fijarHoy, HECHO, screen, tarjeta } from './pruebas';
@@ -57,23 +57,71 @@ describe('HE-09-HU01 · Tablero Kanban', () => {
     expect(within(columna('En progreso')).getByText('Baja')).toBeTruthy();
   });
 
-  it('RD-48, RD-49 · La barra de la primera etiqueta y el detalle «Tipo · etiquetas · fecha · prioridad»', async () => {
+  it('RD-74 · Una barra por etiqueta (hasta 3), sin barra sin etiquetas, y «Tipo · fecha · prioridad»', async () => {
     await abrirPantalla('kanban', 'Tablero Kanban', Kanban, [
-      tarjeta({ title: 'Leer el capítulo 3', due_date: '2026-11-18', priority: 'high', label_ids: ['e1'] }),
+      tarjeta({
+        title: 'Leer el capítulo 3',
+        due_date: '2026-11-18',
+        priority: 'high',
+        label_ids: ['e1', 'e2'],
+      }),
       tarjeta({ title: 'Ensayo', due_date: '2027-01-05' }),
     ]);
     const leer = within(columna('Por hacer')).getByText('Leer el capítulo 3').closest('li') as HTMLElement;
-    const barra = leer.querySelector('.wg-kanban__barra') as HTMLElement;
-    expect(barra.style.background).toBe('rgb(33, 150, 243)');
-    expect(barra.getAttribute('aria-hidden')).toBe('true');
+    const barras = Array.from(leer.querySelectorAll<HTMLElement>('.wg-kanban__barra'));
+    // D-11: todas las etiquetas, no solo la primera.
+    expect(barras).toHaveLength(2);
+    expect(barras[0]?.style.background).toBe('rgb(33, 150, 243)');
+    expect(leer.querySelector('.wg-kanban__barras')?.getAttribute('aria-hidden')).toBe('true');
     const detalle = Array.from(leer.querySelectorAll('.wg-kanban__detalle > span')).map((e) => e.textContent);
-    expect(detalle).toEqual(['Tarea', 'Estudio', '18 nov', 'Alta']);
-    // Sin etiquetas no hay barra; de otro año, la fecha lleva el año.
+    expect(detalle).toEqual(['Tarea', '18 nov', 'Alta']);
+    // Sin etiquetas no hay barra (antes salía roja); de otro año, la fecha lleva el año.
     const ensayo = within(columna('Por hacer')).getByText('Ensayo').closest('li') as HTMLElement;
     expect(ensayo.querySelector('.wg-kanban__barra')).toBeNull();
     expect(within(ensayo).getByText('5 ene 2027')).toBeTruthy();
     // El menú «⋮» se conserva (RT-02-ET10).
     expect(within(ensayo).getByRole('button', { name: 'Acciones de Ensayo' })).toBeTruthy();
+  });
+
+  it('RD-74 · Cualquier parte de la tarjeta abre el detalle; el «⋮» no', async () => {
+    await abrirPantalla('kanban', 'Tablero Kanban', Kanban, [tarjeta({ title: 'Ensayo' })]);
+    const ensayo = within(columna('Por hacer')).getByText('Ensayo').closest('li') as HTMLElement;
+    fireEvent.click(within(ensayo).getByRole('button', { name: 'Acciones de Ensayo' }));
+    expect(screen.queryByRole('dialog', { name: 'Detalle de tarjeta' })).toBeNull();
+    fireEvent.click(ensayo.querySelector('.wg-kanban__detalle') as HTMLElement);
+    expect(await screen.findByRole('dialog', { name: 'Detalle de tarjeta' })).toBeTruthy();
+  });
+
+  it('RD-74 · «+» de nueva tarjeta solo en Por hacer y «Nueva columna» como columna fantasma (D-08, D-09)', async () => {
+    await abrirPantalla('kanban', 'Tablero Kanban', Kanban);
+    expect(within(columna('Por hacer')).getByRole('button', { name: 'Nueva tarjeta' })).toBeTruthy();
+    expect(within(columna('En progreso')).queryByRole('button', { name: 'Nueva tarjeta' })).toBeNull();
+    expect(screen.getAllByRole('button', { name: 'Nueva tarjeta' })).toHaveLength(1);
+    const fantasma = screen.getByRole('button', { name: 'Nueva columna' });
+    expect(fantasma.classList.contains('wg-columna-fantasma')).toBe(true);
+    expect(fantasma.textContent).toBe('+');
+  });
+
+  it('RD-74 · El interruptor de vista resalta la vista actual', async () => {
+    await abrirPantalla('kanban', 'Tablero Kanban', Kanban);
+    const compacta = screen.getByRole('button', { name: 'Vista compacta' });
+    const expandida = screen.getByRole('button', { name: 'Vista expandida' });
+    expect(compacta.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(expandida);
+    expect(expandida.getAttribute('aria-pressed')).toBe('true');
+    expect(compacta.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('RD-73 · La tarjeta que vence hoy o mañana se marca en amarillo con «Vence…» (D-03)', async () => {
+    await abrirPantalla('kanban', 'Tablero Kanban', Kanban, [
+      tarjeta({ title: 'Hoy', due_date: '2026-11-14' }),
+      tarjeta({ title: 'Lejos', due_date: '2026-11-30' }),
+    ]);
+    const hoy = screen.getByText('Hoy').closest('li') as HTMLElement;
+    expect(hoy.classList.contains('wg-kanban__tarjeta--proxima')).toBe(true);
+    expect(within(hoy).getByText('Vence hoy')).toBeTruthy();
+    const lejos = screen.getByText('Lejos').closest('li') as HTMLElement;
+    expect(lejos.className).not.toContain('--proxima');
   });
 
   it('HE-09-HU01-CA03 · Columna sin tarjetas entre columnas con tarjetas', async () => {

@@ -341,3 +341,11 @@ Datos «NO DEFINIDO» y contradicciones encontradas al construir (AGENTS.md, «C
 - **P40 · 0009 en la nube** · `0009_widget_windi.sql` cambia `widget_type_check` y `uq_widget_singleton`. **Pendiente con personas:** aplicarla en Supabase antes de publicar la versión; sin ella, el widget Windi que se agregue se rechaza al sincronizar y queda solo en el computador.
 - **P40 · Descripción del widget Windi** · La v13 no la trae. Valor usado: «Abrir el chat con Windi desde el escritorio.» (a confirmar).
 - **P40 · Nombre accesible de la conversación** · La pantalla «Agente de IA» (`main`) pasa a ser una sección del panel: «Conversación con Windi».
+
+## P41 · Kanban, tarjeta y ventanas emergentes
+
+- **P41 · D-03, texto de «próxima a vencer»** · El rediseño fija el color y el ícono, no el texto. Valor usado: «Vence hoy» o «Vence mañana» junto al reloj amarillo.
+- **P41 · §4.4, «Vista detallada» en el «⋮»** · `rediseno_final_prototipos.md` §6.2 deja en el «⋮» Editar, Mover a y Eliminar, pero HE-07-HU03-CA05 abre el detalle desde ese menú. Valor usado: se conserva «Vista detallada» (manda el CA).
+- **P41 · §3.8, desplegables nativos** · El rediseño pide reemplazar todos los `<select>` nativos por un componente propio. Valor usado: Tipo y Prioridad pasan a controles segmentados; la hora del bloque horario y los demás `<select>` siguen nativos hasta que exista el componente desplegable del sistema de diseño.
+- **P41 · D-20, error del bloque** · `card_assign_time_block` puede fallar después de guardar la tarjeta. Valor usado: el formulario se cierra con el mensaje de la tarjeta y el error del bloque sale como mensaje de error.
+- **P41 · Límite de etiquetas** · El formulario mantiene 5 (HE-07-HU02-ET04) hasta la HU v13 de D-14 (límite de 3), que va en su propio paso con la migración de recorte.

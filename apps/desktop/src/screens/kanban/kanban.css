@@ -1,111 +1,203 @@
-/* Rediseño del Tablero Kanban (docs/rediseno.md RD-47 a RD-49; Figma 84:85 «Contenido» de 84:82 «Tablero Kanban ·
- * Claro», con las columnas 93:6 a 93:31). Medidas en px del Figma; los colores son los tokens del marco. Va dentro de
+/* Tablero Kanban del rediseño final (docs/rediseno.md RD-74, que reemplaza las medidas de RD-47 a RD-49;
+ * docs/rediseno_final_prototipos.md §3.1 y §6.2). Escala compacta; los colores son los tokens del tema. Va dentro de
  * `.wg-kanban` para no tocar el widget Kanban del escritorio. */
 
-/* 93:2 «Nueva tarjeta» y 93:4 «Nueva columna»: 40 px, radio 8, 15 px peso 500, 12 px entre ellos. */
-.wg-kanban > .wg-fila {
-  gap: 12px;
+.wg-kanban {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
 }
-body[data-sesion] .wg-kanban > .wg-fila .wg-boton {
-  min-height: 40px;
-  padding: 0 12px;
-  font-size: 15px;
+/* El interruptor de vista a la derecha. */
+.wg-kanban__barra-superior {
+  flex: none;
+  justify-content: flex-end;
 }
-/* Columnas de 274 px cada 286, 27 px debajo de los botones. */
+
+/* D-10: las columnas usan todo el alto, con scroll interno; se estrechan hasta 200 px y recién ahí el tablero (no la
+ * página) hace scroll horizontal. */
 .wg-kanban .wg-tablero {
+  display: flex;
+  flex: 1;
   gap: 12px;
-  padding-block: 27px 8px;
+  min-height: 0;
+  padding-block: 12px 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
-/* 93:6 «Por hacer»: fondo de columna, radio 12, sin borde; el nombre (19 px peso 500) en (15, 18) y la cantidad
- * (15 px) a la derecha. */
 .wg-kanban .wg-columna {
-  flex: 0 0 274px;
-  padding: 18px 11px 11px;
+  display: flex;
+  flex: 1 1 260px;
+  flex-direction: column;
+  min-width: 200px;
+  max-width: 320px;
+  min-height: 0;
+  box-sizing: border-box;
+  padding: 10px 8px 8px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--wgm-columna);
 }
 .wg-kanban .wg-columna__encabezado {
-  min-height: 25px;
-  margin: 0 0 22px 4px;
-  font-size: 19px;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  margin: 0 0 8px 4px;
+  font-size: 14px;
   font-weight: 500;
+  cursor: grab;
 }
 .wg-kanban .wg-columna__cantidad {
   margin-left: auto;
   color: var(--wg-texto);
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 400;
 }
-.wg-kanban .wg-columna__tarjetas {
-  gap: 16px;
+.wg-kanban .wg-columna__tarjetas,
+.wg-kanban .wg-columna > .wg-vacio {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
-/* 93:9 «Revisar los bocetos»: 252 px, radio 9, blanca, sin borde; la barra de 40 × 5 en (13, 14), el título (17 px
- * peso 500) en y = 34 y el detalle (14 px) en y = 75. */
+.wg-kanban .wg-columna__tarjetas {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0 0 4px;
+  list-style: none;
+}
+
+/* D-09: la columna fantasma estrecha (40 px) con el «+» gris. */
+.wg-columna-fantasma {
+  flex: 0 0 40px;
+  min-height: 80px;
+  border: 1px dashed var(--wg-linea);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--wg-texto);
+  font: inherit;
+  font-size: 20px;
+  cursor: pointer;
+}
+.wg-columna-fantasma:hover:not(:disabled) {
+  background: var(--wgm-columna);
+  color: var(--wg-tinta);
+}
+.wg-columna-fantasma:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* La tarjeta: toda ella abre el detalle; el estado tiene su borde izquierdo de 3 px (§3.4). */
 .wg-kanban .wg-tarjeta.wg-kanban__tarjeta {
   position: relative;
-  gap: 0;
-  min-height: 109px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   box-sizing: border-box;
-  padding: 14px 13px 13px;
+  padding: 8px 36px 8px 10px;
   border: 0;
-  border-radius: 9px;
+  border-left: 3px solid transparent;
+  border-radius: 8px;
   background: var(--wg-superficie);
+  cursor: pointer;
+}
+.wg-kanban .wg-tarjeta.wg-kanban__tarjeta--vencida {
+  border-left-color: var(--wg-estado-vencida);
+}
+.wg-kanban .wg-tarjeta.wg-kanban__tarjeta--proxima {
+  border-left-color: var(--wg-estado-pendiente);
+}
+.wg-kanban__tarjeta:hover {
+  outline: 1px solid var(--wg-linea);
+}
+/* D-11: una barra por etiqueta, hasta 3. */
+.wg-kanban__barras {
+  display: flex;
+  gap: 4px;
 }
 .wg-kanban__barra {
   display: block;
-  width: 40px;
-  height: 5px;
+  width: 28px;
+  height: 4px;
   border-radius: 2px;
 }
+/* El título, sin subrayado (§3.9), en dos líneas como máximo. */
 .wg-kanban__tarjeta .wg-tarjeta__titulo {
-  margin-top: 15px;
+  display: -webkit-box;
   padding: 0;
+  overflow: hidden;
   border: 0;
   background: none;
   color: var(--wg-tinta);
   font: inherit;
-  font-size: 17px;
+  font-size: 14px;
   font-weight: 500;
   text-align: left;
+  text-decoration: none;
   overflow-wrap: anywhere;
   cursor: pointer;
-}
-.wg-kanban__barra + .wg-tarjeta__titulo {
-  margin-top: 15px;
-}
-.wg-kanban__tarjeta > .wg-tarjeta__titulo:first-child {
-  margin-top: 20px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 .wg-kanban__tarjeta .wg-tarjeta__titulo:focus-visible {
   outline: 2px solid var(--wgm-seleccion-texto);
   outline-offset: 2px;
 }
-/* 93:12 «Proyecto · 27 nov»: los datos separados por « · ». */
 .wg-kanban__detalle {
   display: flex;
   flex-wrap: wrap;
-  margin-top: 21px;
+  align-items: center;
+  gap: 6px;
   color: var(--wg-texto);
-  font-size: 14px;
+  font-size: 12px;
 }
-.wg-kanban__detalle > span + span::before {
-  content: '·';
-  margin: 0 8px;
+.wg-kanban__fecha--vencida {
+  color: var(--wg-estado-vencida);
+  font-weight: 500;
 }
-.wg-kanban__tarjeta .wg-indicador {
-  align-self: flex-start;
-  margin-top: 8px;
+.wg-kanban__fecha--proxima {
+  color: var(--wg-estado-pendiente);
+  font-weight: 500;
 }
-/* El botón de acciones «⋮» (RT-02-ET10) arriba a la derecha de la tarjeta; el Figma no lo dibuja (RD-48). */
+.wg-kanban .wg-tarjeta__etiquetas {
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wg-kanban .wg-tarjeta__descripcion {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--wg-texto);
+  font-size: 12px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+.wg-kanban__bloque {
+  color: var(--wg-texto);
+  font-size: 12px;
+}
+.wg-estado--completada {
+  color: var(--wg-estado-completada);
+}
+/* El botón de acciones «⋮» (RT-02-ET10) arriba a la derecha de la tarjeta. */
 .wg-kanban__tarjeta > .wg-menu-acciones {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 4px;
+  right: 4px;
 }
-body[data-sesion] .wg-kanban__tarjeta > .wg-menu-acciones .wg-boton {
-  min-width: 32px;
-  min-height: 32px;
+body[data-sesion] .wg-kanban__tarjeta > .wg-menu-acciones .wg-boton,
+body[data-sesion] .wg-kanban .wg-columna__encabezado .wg-menu-acciones .wg-boton {
+  min-width: 28px;
+  min-height: 28px;
   padding: 0;
+  border: 0;
+  background: transparent;
   justify-content: center;
 }

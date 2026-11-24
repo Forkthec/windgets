@@ -175,6 +175,7 @@ export function Widgets() {
         // M-07 (HE-04-HU13-CA06, ET01). DUDA: HE-04-HU13 M-07 no define el título. Valor usado: «Eliminar», como M-08.
         <Confirmacion
           titulo="Eliminar"
+          destructiva
           texto={textos.CONFIRMAR_ELIMINAR_WIDGET.replace('<nombre del widget>', porEliminar.display_name)}
           opcionPrincipal="Confirmar"
           alConfirmar={() => void eliminar(porEliminar)}

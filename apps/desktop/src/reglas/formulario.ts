@@ -22,7 +22,7 @@ export interface MensajesDeCampo<C extends string> {
   /** Al cambiar un campo con mensaje, lo vuelve a validar y lo quita si ya es válido (RT-04-ET07). */
   alCorregir: (campo: C, valor: string) => void;
   /** Muestra los errores de campo que devolvió el Núcleo (`AppError.field`), todos a la vez. */
-  mostrarDelNucleo: (errores: readonly AppError[]) => void;
+  mostrarDelNucleo: (errores: ReadonlyArray<Pick<AppError, 'field' | 'message'>>) => void;
 }
 
 /**
@@ -78,7 +78,7 @@ export function useMensajesDeCampo<C extends string>(
   );
 
   const mostrarDelNucleo = useCallback(
-    (errores: readonly AppError[]) => {
+    (errores: ReadonlyArray<Pick<AppError, 'field' | 'message'>>) => {
       const nuevos: Partial<Record<C, string>> = {};
       for (const error of errores) {
         const campo = orden.find((c) => c === error.field);

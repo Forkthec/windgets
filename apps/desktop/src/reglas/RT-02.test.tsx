@@ -119,7 +119,8 @@ describe('RT-02 · Ventanas emergentes', () => {
   it('RT-02-CA02 · Cerrar el detalle de una tarjeta', async () => {
     const { tablero, desplazable } = await abrirTablero();
     const detalle = abrirDetalle();
-    fireEvent.click(within(detalle).getByRole('button', { name: 'Cerrar' }));
+    // RD-72: el «×» de la ventana (el primero con ese nombre) la cierra.
+    fireEvent.click(within(detalle).getAllByRole('button', { name: 'Cerrar' })[0] as HTMLElement);
     sigueIgual(tablero, desplazable);
   });
 
@@ -184,7 +185,7 @@ describe('RT-02 · Ventanas emergentes', () => {
     // La pantalla de fondo queda inerte: el navegador no le entrega la selección (e2e/RT-02.spec.ts).
     expect(tablero.closest('[inert]')).not.toBeNull();
     expect(screen.getByRole('dialog', { name: 'Detalle de tarjeta' }).closest('[inert]')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Cerrar' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Cerrar' })[0] as HTMLElement);
     await act(() => Promise.resolve());
     expect(tablero.closest('[inert]')).toBeNull();
   });

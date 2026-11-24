@@ -3,6 +3,7 @@ import { useId } from 'react';
 export interface OpcionSelector {
   valor: string;
   texto: string;
+  deshabilitada?: boolean;
 }
 
 export interface SelectorProps {
@@ -12,6 +13,8 @@ export interface SelectorProps {
   alCambiar: (valor: string) => void;
   mensaje?: string;
   deshabilitado?: boolean;
+  /** El id del campo, para llevar el cursor a él con un error (RT-04-ET06). */
+  id?: string;
 }
 
 export function Selector({
@@ -21,8 +24,10 @@ export function Selector({
   alCambiar,
   mensaje,
   deshabilitado = false,
+  id: idPropio,
 }: SelectorProps) {
-  const id = useId();
+  const idGenerado = useId();
+  const id = idPropio ?? idGenerado;
   return (
     <div className="wg-campo">
       <label className="wg-campo__etiqueta" htmlFor={id}>
@@ -34,15 +39,20 @@ export function Selector({
         value={valor}
         disabled={deshabilitado}
         aria-invalid={mensaje ? true : undefined}
+        aria-describedby={mensaje ? `${id}-mensaje` : undefined}
         onChange={(e) => alCambiar(e.target.value)}
       >
         {opciones.map((o) => (
-          <option key={o.valor} value={o.valor}>
+          <option key={o.valor} value={o.valor} disabled={o.deshabilitada}>
             {o.texto}
           </option>
         ))}
       </select>
-      {mensaje && <span className="wg-campo__mensaje">{mensaje}</span>}
+      {mensaje && (
+        <span id={`${id}-mensaje`} className="wg-campo__mensaje">
+          {mensaje}
+        </span>
+      )}
     </div>
   );
 }

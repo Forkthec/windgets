@@ -160,6 +160,7 @@ export function Themes() {
         // M-06 (HE-03-HU05-ET01). DUDA: HE-03-HU05 M-06 no define el título. Valor usado: «Eliminar».
         <Confirmacion
           titulo="Eliminar"
+          destructiva
           texto={textos.CONFIRMAR_ELIMINAR_TEMA.replace('<nombre del tema>', porEliminar.name)}
           opcionPrincipal="Confirmar"
           alConfirmar={() => void eliminar(porEliminar)}

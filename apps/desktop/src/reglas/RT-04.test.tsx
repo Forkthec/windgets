@@ -259,9 +259,11 @@ describe('RT-04 · Mensajes, opciones deshabilitadas y alineación', () => {
     expect(ventana.textContent).toContain(
       '¿Deseas eliminar el tema “Oficina”? Esta acción no se puede deshacer.',
     );
-    const opciones = Array.from(ventana.querySelectorAll('button')).map((b) => b.textContent);
-    // docs/rediseno.md RD-34: la opción principal va primero.
-    expect(opciones).toEqual(['Eliminar', 'Cancelar']);
+    const opciones = Array.from(ventana.querySelectorAll('button:not(.wg-emergente__cerrar)')).map(
+      (b) => b.textContent,
+    );
+    // docs/rediseno.md RD-72 (D-23): la opción principal va a la derecha.
+    expect(opciones).toEqual(['Cancelar', 'Eliminar']);
     expect(ventana.querySelector('.wg-boton--principal')?.textContent).toBe('Eliminar');
     expect(screen.getByText('Oficina')).toBeTruthy(); // sigue en la lista hasta confirmar
   });

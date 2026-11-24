@@ -13,6 +13,8 @@ export interface ConfirmacionProps {
   alConfirmar: () => void;
   alElegirSecundaria?: () => void;
   alCancelar: () => void;
+  /** RD-72: la acción principal destruye algo («Eliminar», M-06 a M-10): va en rojo. */
+  destructiva?: boolean;
 }
 
 export function Confirmacion({
@@ -24,9 +26,10 @@ export function Confirmacion({
   alConfirmar,
   alElegirSecundaria,
   alCancelar,
+  destructiva = false,
 }: ConfirmacionProps) {
-  // docs/rediseno.md RD-34 (Figma 85:2 «M-01 · Claro», 85:8 «M-01 · Oscuro»): sin título visible, la pregunta
-  // arriba y las opciones abajo a la izquierda, primero la principal y al final la de salir.
+  // docs/rediseno.md RD-34: sin título visible y la pregunta arriba. RD-72 (D-23, reemplaza RD-34 en ese punto): las
+  // opciones abajo a la derecha, primero la de salir y al final, a la derecha, la principal.
   return (
     <VentanaEmergente
       titulo={titulo}
@@ -35,11 +38,11 @@ export function Confirmacion({
       tituloOculto
       acciones={
         <>
-          <Boton principal onClick={alConfirmar}>
+          <Boton onClick={alCancelar}>{opcionSalir}</Boton>
+          {opcionSecundaria && <Boton onClick={alElegirSecundaria}>{opcionSecundaria}</Boton>}
+          <Boton principal className={destructiva ? 'wg-boton--peligro' : undefined} onClick={alConfirmar}>
             {opcionPrincipal}
           </Boton>
-          {opcionSecundaria && <Boton onClick={alElegirSecundaria}>{opcionSecundaria}</Boton>}
-          <Boton onClick={alCancelar}>{opcionSalir}</Boton>
         </>
       }
     >

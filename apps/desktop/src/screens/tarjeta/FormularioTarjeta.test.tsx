@@ -50,12 +50,16 @@ describe('HE-07-HU01 · Crear una tarjeta', () => {
     const nucleo = await abrirFormulario();
     const formulario = screen.getByRole('dialog', { name: 'Formulario de tarjeta' });
     // ET02, ET03, ET25, ET27: los seis campos, «Guardar» y «Cancelar»; Tipo en «Tarea» y lo demás vacío.
-    const tipo = within(formulario).getByLabelText('Tipo') as HTMLSelectElement;
-    expect(tipo.selectedOptions[0]?.textContent).toBe('Tarea');
+    // RD-75: Tipo y Prioridad son controles segmentados; «Tarea» y «Sin prioridad» elegidos.
+    expect(within(formulario).getByRole('radio', { name: 'Tarea' }).getAttribute('aria-checked')).toBe(
+      'true',
+    );
     for (const etiqueta of ['Título', 'Fecha límite', 'Descripción']) {
       expect((within(formulario).getByLabelText(etiqueta) as HTMLInputElement).value).toBe('');
     }
-    expect((within(formulario).getByLabelText('Prioridad') as HTMLSelectElement).value).toBe('');
+    expect(
+      within(formulario).getByRole('radio', { name: 'Sin prioridad' }).getAttribute('aria-checked'),
+    ).toBe('true');
     expect(within(formulario).getByRole('group', { name: 'Etiquetas' })).toBeTruthy();
     expect(within(formulario).getByRole('group', { name: 'Selector de fecha' })).toBeTruthy(); // ET04
     expect(screen.getByRole('button', { name: 'Cancelar' })).toBeTruthy();
@@ -76,11 +80,11 @@ describe('HE-07-HU01 · Crear una tarjeta', () => {
 
   it('HE-07-HU01-CA02 · Crear una tarjeta con todos los campos', async () => {
     const nucleo = await abrirFormulario();
-    fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'event' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Evento' }));
     escribir('Título', 'Feria');
     escribir('Fecha límite', '20/11/2026');
     escribir('Descripción', 'Stand 4');
-    fireEvent.change(screen.getByLabelText('Prioridad'), { target: { value: 'high' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Alta' }));
     fireEvent.click(screen.getByRole('button', { name: 'Etiquetas asignadas' }));
     fireEvent.click(screen.getByLabelText('Casa'));
     await guardar();
@@ -101,11 +105,11 @@ describe('HE-07-HU01 · Crear una tarjeta', () => {
   it('HE-07-HU01-CA03 · Crear una tarjeta de tipo Recordatorio o Evento', async () => {
     await abrirFormulario();
     const formulario = screen.getByRole('dialog', { name: 'Formulario de tarjeta' });
-    const opciones = within(within(formulario).getByLabelText('Tipo'))
-      .getAllByRole('option')
+    const opciones = within(within(formulario).getByRole('radiogroup', { name: 'Tipo' }))
+      .getAllByRole('radio')
       .map((o) => o.textContent);
     expect(opciones).toEqual(['Tarea', 'Recordatorio', 'Evento']);
-    fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'reminder' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Recordatorio' }));
     escribir('Título', 'Llamar');
     escribir('Fecha límite', '15/11/2026');
     await guardar();
@@ -201,6 +205,8 @@ describe('HE-07-HU01 · Crear una tarjeta', () => {
   it('el selector de fecha escribe la fecha elegida en DD/MM/AAAA (ET27)', async () => {
     await abrirFormulario();
     const selector = screen.getByRole('group', { name: 'Selector de fecha' });
+    // RD-75: el calendario se abre flotando desde el botón con el ícono.
+    fireEvent.click(within(selector).getByRole('button', { name: 'Abrir selector de fecha' }));
     fireEvent.click(within(selector).getByRole('button', { name: /20 de noviembre/ }));
     expect((screen.getByLabelText('Fecha límite') as HTMLInputElement).value).toBe('20/11/2026');
   });
@@ -212,7 +218,60 @@ describe('HE-07-HU01 · Crear una tarjeta', () => {
     const etiquetas = Array.from(formulario.querySelectorAll('.wg-campo__etiqueta')).map(
       (e) => e.textContent,
     );
-    expect(etiquetas.slice(0, 5)).toEqual(['Título', 'Tipo', 'Fecha límite', 'Prioridad', 'Etiquetas']);
-    expect(etiquetas.at(-1)).toBe('Descripción');
+    expect(etiquetas).toEqual([
+      'Título',
+      'Tipo',
+      'Fecha límite',
+      'Prioridad',
+      'Etiquetas',
+      'Descripción',
+      // D-20 (RD-75): el bloque horario al final.
+      'Bloque horario',
+      'Fecha del bloque',
+      'Hora del bloque',
+    ]);
+  });
+});
+
+describe('RD-75 · Formulario de tarjeta del rediseño final', () => {
+  it('§3.6-1 · El calendario deshabilita los días anteriores a hoy', async () => {
+    await abrirFormulario();
+    const selector = screen.getByRole('group', { name: 'Selector de fecha' });
+    fireEvent.click(within(selector).getByRole('button', { name: 'Abrir selector de fecha' }));
+    // Hoy es el 14/11/2026 (fijarHoy).
+    expect(
+      (within(selector).getByRole('button', { name: /13 de noviembre/ }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(
+      (within(selector).getByRole('button', { name: /14 de noviembre/ }) as HTMLButtonElement).disabled,
+    ).toBe(false);
+  });
+
+  it('D-20 · Con bloque horario, crea la tarjeta y después la asigna al bloque (HU v13 HE-07-HU01-CA13)', async () => {
+    const nucleo = await abrirFormulario();
+    escribir('Título', 'Llamar al banco');
+    escribir('Fecha límite', '20/11/2026');
+    escribir('Fecha del bloque', '18/11/2026');
+    fireEvent.change(screen.getByLabelText('Hora del bloque'), { target: { value: '9' } });
+    await guardar();
+    const creada = llamadasA(nucleo, 'card_create');
+    expect(creada).toHaveLength(1);
+    const asignaciones = llamadasA(nucleo, 'card_assign_time_block') as Array<{ date: string; hour: number }>;
+    expect(asignaciones.map(({ date, hour }) => ({ date, hour }))).toEqual([{ date: '2026-11-18', hour: 9 }]);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('D-20 · Sin bloque horario no llama a asignar; la fecha del bloque sin hora pide la hora', async () => {
+    const nucleo = await abrirFormulario();
+    escribir('Título', 'Llamar al banco');
+    escribir('Fecha límite', '20/11/2026');
+    escribir('Fecha del bloque', '18/11/2026');
+    await guardar();
+    expect(textoDebajoDe('Hora del bloque')).toBe('Este campo es obligatorio.');
+    expect(llamadasA(nucleo, 'card_create')).toHaveLength(0);
+    escribir('Fecha del bloque', '');
+    await guardar();
+    expect(llamadasA(nucleo, 'card_create')).toHaveLength(1);
+    expect(llamadasA(nucleo, 'card_assign_time_block')).toHaveLength(0);
   });
 });

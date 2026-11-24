@@ -8,7 +8,7 @@ import {
   useSensors,
   type DragEndEvent,
 } from '@dnd-kit/core';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   BoardColumn,
   Card,
@@ -18,7 +18,6 @@ import type {
   PreferenceBoardCardView,
   ScreenParams,
 } from '@/types';
-import { Boton } from '@/ui/Boton/Boton';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
 import { MenuDeAcciones } from '@/ui/MenuDeAcciones/MenuDeAcciones';
@@ -26,7 +25,8 @@ import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import textos from '@/types/messages.es.json';
 import { FormularioColumna } from './FormularioColumna';
 import { useNucleo, useParametrosDeNavegacion } from '@/ventana_principal/VentanaPrincipal';
-import { fechaCorta } from '../tarjeta/fechas';
+import { IndicadorDeEstado, estadoDeTarjeta } from '../tarjeta/EstadoDeTarjeta';
+import { fechaCorta, fechaIso, hoy } from '../tarjeta/fechas';
 import { opcionesDeMoverA } from '../tarjeta/MoverA';
 import { NOMBRE_DE_PRIORIDAD, NOMBRE_DE_TIPO } from '../tarjeta/nombres';
 import './kanban.css';
@@ -47,10 +47,36 @@ interface AccionesDelTablero {
   /** HE-09-HU07: la vista de las tarjetas y las etiquetas para mostrar sus nombres en la vista expandida. */
   vista: PreferenceBoardCardView;
   etiquetas: readonly Label[];
+  /** ¿Acaba de terminar un arrastre? Soltar una tarjeta no abre su detalle. */
+  recienArrastrada: () => boolean;
+  /** D-08: «+» del encabezado de Por hacer. */
+  alNuevaTarjeta: () => void;
 }
 
 /** HE-09-HU07-ET04: los primeros 200 caracteres de la descripción. */
 const DESCRIPCION_VISIBLE = 200;
+
+/** Filas cortas o filas largas: el ícono de cada vista. */
+function IconoDeVista({ expandida }: { expandida: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      {expandida ? (
+        <path
+          d="M2.7 2.7H15.3V7.2H2.7V2.7ZM2.7 10.8H15.3V15.3H2.7V10.8Z"
+          stroke="currentColor"
+          strokeWidth="1.44"
+        />
+      ) : (
+        <path
+          d="M2.7 3.6H15.3M2.7 7.2H15.3M2.7 10.8H15.3M2.7 14.4H15.3"
+          stroke="currentColor"
+          strokeWidth="1.44"
+          strokeLinecap="round"
+        />
+      )}
+    </svg>
+  );
+}
 
 const ContextoDelTablero = createContext<AccionesDelTablero | null>(null);
 
@@ -60,67 +86,114 @@ function useTablero(): AccionesDelTablero {
   return tablero;
 }
 
+/** D-11: hasta 3 barras de color, una por etiqueta. */
+const BARRAS_MAX = 3;
+
+/** «Hoy · 09:00», «Mañana · 09:00» o «27 nov · 09:00»: el bloque horario en la vista expandida (§6.2). */
+function bloqueHorario(tarjeta: Card): string | null {
+  if (!tarjeta.scheduled_date || tarjeta.scheduled_hour === null) return null;
+  const hora = `${String(tarjeta.scheduled_hour).padStart(2, '0')}:00`;
+  const dia = hoy();
+  const manana = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate() + 1);
+  const fecha =
+    tarjeta.scheduled_date === fechaIso(dia)
+      ? 'Hoy'
+      : tarjeta.scheduled_date === fechaIso(manana)
+        ? 'Mañana'
+        : fechaCorta(tarjeta.scheduled_date);
+  return `${fecha} · ${hora}`;
+}
+
 /**
- * Una tarjeta en la vista compacta (HE-09-HU01-ET05): tipo (HE-07-HU01-ET15), título, fecha límite y prioridad.
- * Se arrastra a otra columna o a otra posición (HE-09-HU02-ET01) y tiene «Mover a» (ET10).
+ * Una tarjeta del tablero (HE-09-HU01-ET05; docs/rediseno.md RD-74, que reemplaza RD-48; rediseno_final_prototipos.md
+ * §6.2). Compacta: una barra de color por etiqueta (hasta 3, D-11; sin etiquetas, sin barra), el título en dos
+ * líneas, la fecha corta con su estado (D-03) y la prioridad. Expandida (HE-09-HU07): además el tipo, las etiquetas
+ * como chips de su color, la descripción en 3 líneas, el bloque horario y la marca de completada. Toda la tarjeta
+ * abre el Detalle de tarjeta (HE-07-HU03, P37); el «⋮» y el arrastre no lo abren.
  */
 function Tarjeta({ tarjeta }: { tarjeta: Card }) {
-  const { columnas, alAbrir, alEditarTarjeta, alEliminarTarjeta, alMover, vista, etiquetas } = useTablero();
+  const {
+    columnas,
+    alAbrir,
+    alEditarTarjeta,
+    alEliminarTarjeta,
+    alMover,
+    vista,
+    etiquetas,
+    recienArrastrada,
+  } = useTablero();
   const expandida = vista === 'expanded';
-  // RD-48: las etiquetas de la tarjeta, en su orden; la primera da el color de la barra.
   const suyas = tarjeta.label_ids.flatMap((id) => etiquetas.find((e) => e.id === id) ?? []);
-  const primera = suyas[0];
-  const nombres = suyas.map((e) => e.name);
   const arrastre = useDraggable({ id: tarjeta.id });
   const lugar: LugarDeSoltar = { columna: tarjeta.column_id, tarjeta: tarjeta.id };
   const soltar = useDroppable({ id: `tarjeta:${tarjeta.id}`, data: lugar });
   const { transform } = arrastre;
+  const estado = estadoDeTarjeta(tarjeta);
+  const bloque = expandida ? bloqueHorario(tarjeta) : null;
   return (
     <li
       ref={(nodo) => {
         arrastre.setNodeRef(nodo);
         soltar.setNodeRef(nodo);
       }}
-      className={`wg-tarjeta wg-kanban__tarjeta${arrastre.isDragging ? ' wg-tarjeta--arrastrada' : ''}${
-        soltar.isOver && !arrastre.isDragging ? ' wg-tarjeta--destino' : ''
-      }`}
+      className={`wg-tarjeta wg-kanban__tarjeta${estado ? ` wg-kanban__tarjeta--${estado}` : ''}${
+        arrastre.isDragging ? ' wg-tarjeta--arrastrada' : ''
+      }${soltar.isOver && !arrastre.isDragging ? ' wg-tarjeta--destino' : ''}`}
       style={transform ? { transform: `translate(${transform.x}px, ${transform.y}px)` } : undefined}
       {...arrastre.listeners}
+      onClick={(e) => {
+        // El «⋮», su menú y el título (que ya abre) no cuentan; un arrastre que termina tampoco.
+        if ((e.target as Element).closest('.wg-menu-acciones, button') || recienArrastrada()) return;
+        alAbrir(tarjeta.id);
+      }}
     >
-      {/* docs/rediseno.md RD-48 (Figma 93:9 a 93:12): la barra del color de la primera etiqueta, el título y debajo
-          «Tipo · etiquetas · fecha · prioridad». */}
-      {primera && (
-        <span className="wg-kanban__barra" style={{ background: primera.color_hex }} aria-hidden="true" />
+      {suyas.length > 0 && (
+        <span className="wg-kanban__barras" aria-hidden="true">
+          {suyas.slice(0, BARRAS_MAX).map((e) => (
+            <span key={e.id} className="wg-kanban__barra" style={{ background: e.color_hex }} />
+          ))}
+        </span>
       )}
-      {/* HE-07-HU03-ET02: el título abre el Detalle de tarjeta. */}
+      {/* HE-07-HU03-ET02: el título es el nombre accesible del botón que abre el Detalle de tarjeta. */}
       <button type="button" className="wg-tarjeta__titulo" onClick={() => alAbrir(tarjeta.id)}>
         {tarjeta.title}
       </button>
       <span className="wg-kanban__detalle">
-        {/* HE-09-HU01-ET05 (tipo, fecha límite y prioridad) y RD-49: la fecha corta («27 nov»). */}
+        {/* HE-07-HU01-ET15: el nombre del tipo, también en la compacta. */}
         <span>{NOMBRE_DE_TIPO[tarjeta.type]}</span>
-        {!expandida && nombres.map((nombre) => <span key={nombre}>{nombre}</span>)}
-        <span>{fechaCorta(tarjeta.due_date)}</span>
-        {tarjeta.priority && <span>{NOMBRE_DE_PRIORIDAD[tarjeta.priority]}</span>}
+        {/* HE-09-HU01-ET05 y RD-49: la fecha corta («27 nov») con su estado (RD-73). */}
+        <span className={estado ? `wg-kanban__fecha wg-kanban__fecha--${estado}` : 'wg-kanban__fecha'}>
+          {fechaCorta(tarjeta.due_date)}
+        </span>
+        {tarjeta.priority && <span className="wg-chip">{NOMBRE_DE_PRIORIDAD[tarjeta.priority]}</span>}
+        {tarjeta.is_completed && expandida && (
+          <span className="wg-estado wg-estado--completada">
+            <span aria-hidden="true">✓</span>
+            Completada
+          </span>
+        )}
       </span>
-      {/* HE-09-HU01-ET06, ET07: «Vencida» solo fuera de la columna Hecho. */}
-      {tarjeta.is_overdue && <span className="wg-indicador">Vencida</span>}
-      {/* HE-09-HU07-ET04: en la vista expandida, la descripción (200 caracteres) y las etiquetas. */}
+      {/* HE-09-HU01-ET06, ET07 y RD-73: «Vencida» en rojo o la próxima a vencer en amarillo. */}
+      <IndicadorDeEstado tarjeta={tarjeta} />
+      {expandida && suyas.length > 0 && (
+        <ul className="wg-fila wg-tarjeta__etiquetas" aria-label="Etiquetas">
+          {suyas.map((e) => (
+            <li key={e.id} className="wg-chip wg-chip--etiqueta">
+              <span className="wg-muestra-color" style={{ background: e.color_hex }} aria-hidden="true" />
+              {e.name}
+            </li>
+          ))}
+        </ul>
+      )}
+      {/* HE-09-HU07-ET04: en la vista expandida, la descripción (200 caracteres; en 3 líneas, §6.2). */}
       {expandida && tarjeta.description && (
         <p className="wg-tarjeta__descripcion">
           {[...tarjeta.description].slice(0, DESCRIPCION_VISIBLE).join('')}
         </p>
       )}
-      {expandida && tarjeta.label_ids.length > 0 && (
-        <ul className="wg-fila wg-tarjeta__etiquetas" aria-label="Etiquetas">
-          {tarjeta.label_ids.map((id) => {
-            const e = etiquetas.find((x) => x.id === id);
-            return e ? <li key={id}>{e.name}</li> : null;
-          })}
-        </ul>
-      )}
-      {/* HE-07-HU04-ET22 (RT-02-ET10): las acciones de la tarjeta en su botón de acciones «⋮». «Mover a» es la
-          alternativa sin drag-and-drop (HE-09-HU02-ET10): sus columnas reemplazan las opciones del menú. */}
+      {bloque && <span className="wg-kanban__bloque">{bloque}</span>}
+      {/* HE-07-HU04-ET22 (RT-02-ET10): Editar, Mover a y Eliminar en el «⋮» de la tarjeta. «Mover a» es la
+          alternativa sin drag-and-drop (HE-09-HU02-ET10). */}
       <MenuDeAcciones
         nombre={tarjeta.title}
         opciones={[
@@ -131,6 +204,7 @@ function Tarjeta({ tarjeta }: { tarjeta: Card }) {
               alMover({ card_id: tarjeta.id, column_id: columna, placement: { kind: 'end' } }),
             ),
           },
+          // HE-07-HU03-CA05: el detalle también se abre desde el menú.
           { etiqueta: 'Vista detallada', alElegir: () => alAbrir(tarjeta.id) },
           { etiqueta: 'Eliminar', alElegir: () => alEliminarTarjeta(tarjeta.id) },
         ]}
@@ -138,7 +212,6 @@ function Tarjeta({ tarjeta }: { tarjeta: Card }) {
     </li>
   );
 }
-
 /** Una columna con su nombre, su color y su cantidad de tarjetas (HE-09-HU01-ET01); se suelta al final. */
 function Columna({
   columna,
@@ -150,6 +223,7 @@ function Columna({
   alEliminar: (columna: Column) => void;
 }) {
   const { column, cards } = columna;
+  const { alNuevaTarjeta } = useTablero();
   const lugar: LugarDeSoltar = { columna: column.id };
   const soltar = useDroppable({ id: `columna:${column.id}`, data: lugar });
   // HE-09-HU05-ET01: el encabezado se arrastra para cambiar el orden de las columnas.
@@ -167,6 +241,19 @@ function Columna({
         <span className="wg-muestra-color" style={{ background: column.color_hex }} aria-hidden="true" />
         <span>{column.name}</span>
         <span className="wg-columna__cantidad">{column.card_count}</span>
+        {/* D-08 (RD-74): «+» solo en el encabezado de Por hacer; la tarjeta nace allí (HE-07-HU01). */}
+        {column.role === 'todo' && (
+          <button
+            type="button"
+            className="wg-icono-boton wg-columna__nueva"
+            aria-label="Nueva tarjeta"
+            title="Nueva tarjeta"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={alNuevaTarjeta}
+          >
+            +
+          </button>
+        )}
         {/* HE-09-HU04-ET01, HE-09-HU06-ET01 (RT-02-ET10): «Editar» y «Eliminar» en el botón de acciones «⋮» de
             cada columna. En las por defecto, «Eliminar» está deshabilitada y su motivo aparece al pasar el mouse
             (HE-09-HU06-ET02, RT-04-ET11). */}
@@ -234,11 +321,15 @@ export function Kanban() {
   }, [escuchar, invocar]);
 
   // HE-09-HU07-CA01 a CA03: cambia de vista y la guarda.
-  const alternarVista = async () => {
-    const nueva: PreferenceBoardCardView = vista === 'compact' ? 'expanded' : 'compact';
+  const cambiarVista = async (nueva: PreferenceBoardCardView) => {
+    if (nueva === vista) return;
     setVista(nueva);
     await invocar('preference_set', { board_card_view: nueva });
   };
+
+  // Un arrastre que termina dispara un clic sobre la tarjeta: durante ese instante no se abre el detalle.
+  const arrastrando = useRef(false);
+  const recienArrastrada = useCallback(() => arrastrando.current, []);
 
   // HE-09-HU06-CA01, CA03, CA07: M-09 sin tarjetas o M-13 con la cantidad y el nombre actual de Por hacer.
   const preguntarEliminar = async (columna: Column) => {
@@ -324,6 +415,7 @@ export function Kanban() {
       [abrirDetalle],
     ),
   );
+  const { abrirNueva } = tarjetas;
   const acciones = useMemo<AccionesDelTablero>(
     () => ({
       columnas: columnas?.map((c) => c.column) ?? [],
@@ -333,8 +425,20 @@ export function Kanban() {
       alMover: (m) => void mover(m),
       vista,
       etiquetas,
+      recienArrastrada,
+      alNuevaTarjeta: () => abrirNueva(),
     }),
-    [abrirDetalle, abrirEdicion, abrirEliminacion, columnas, etiquetas, mover, vista],
+    [
+      abrirDetalle,
+      abrirEdicion,
+      abrirEliminacion,
+      abrirNueva,
+      columnas,
+      etiquetas,
+      mover,
+      recienArrastrada,
+      vista,
+    ],
   );
 
   /** Columnas del tablero, contadas las tres por defecto (HE-09-HU03-ET07, D-167). */
@@ -342,26 +446,52 @@ export function Kanban() {
 
   return (
     <main className="wg-kanban" aria-label="Tablero Kanban" aria-busy={columnas === null}>
-      {/* ET03. El cambio de vista es de HE-09-HU07. */}
-      <div className="wg-fila">
-        <Boton onClick={() => tarjetas.abrirNueva()}>Nueva tarjeta</Boton>
-        {/* HE-09-HU03-ET01, ET08: con 10 columnas, deshabilitada con su texto (RT-04). */}
-        <Boton
-          disabled={enElMaximo}
-          motivo={enElMaximo ? textos.MAXIMO_DE_COLUMNAS : undefined}
-          onClick={() => setFormularioColumna({ columna: null })}
-        >
-          Nueva columna
-        </Boton>
-        {/* HE-09-HU07-ET01: el nombre de la vista a la que cambia. */}
-        <Boton onClick={() => void alternarVista()}>
-          {vista === 'compact' ? 'Vista expandida' : 'Vista compacta'}
-        </Boton>
+      {/* HE-09-HU07-ET01 y RD-74 (§3.6): el cambio de vista es un interruptor de dos íconos, con la vista actual
+          resaltada (`aria-pressed`). «Nueva tarjeta» va en Por hacer y «Nueva columna» es la columna fantasma. */}
+      <div className="wg-fila wg-kanban__barra-superior">
+        <div className="wg-segmentado" role="group" aria-label="Vista de las tarjetas">
+          <button
+            type="button"
+            className="wg-segmentado__opcion"
+            aria-label="Vista compacta"
+            title="Vista compacta"
+            aria-pressed={vista === 'compact'}
+            onClick={() => void cambiarVista('compact')}
+          >
+            <IconoDeVista expandida={false} />
+          </button>
+          <button
+            type="button"
+            className="wg-segmentado__opcion"
+            aria-label="Vista expandida"
+            title="Vista expandida"
+            aria-pressed={vista === 'expanded'}
+            onClick={() => void cambiarVista('expanded')}
+          >
+            <IconoDeVista expandida />
+          </button>
+        </div>
       </div>
       {columnas && (
         <ContextoDelTablero.Provider value={acciones}>
           {/* ET09: cuenta el punto donde se suelta (el puntero), no lo que tapa la tarjeta arrastrada. */}
-          <DndContext sensors={sensores} collisionDetection={pointerWithin} onDragEnd={soltada}>
+          <DndContext
+            sensors={sensores}
+            collisionDetection={pointerWithin}
+            onDragStart={() => {
+              arrastrando.current = true;
+            }}
+            onDragEnd={(evento) => {
+              soltada(evento);
+              setTimeout(() => {
+                arrastrando.current = false;
+              }, 0);
+            }}
+            onDragCancel={() => {
+              arrastrando.current = false;
+            }}
+          >
+            {/* D-10: las columnas se estrechan hasta su ancho mínimo; recién ahí el tablero hace scroll horizontal. */}
             <div className="wg-tablero">
               {columnas.map((c) => (
                 <Columna
@@ -371,6 +501,24 @@ export function Kanban() {
                   alEliminar={(columna) => void preguntarEliminar(columna)}
                 />
               ))}
+              {/* D-09 (RD-74): «+» gris tras la última columna. HE-09-HU03-ET01, ET08: con 10 columnas,
+                  deshabilitada con su motivo (RT-04). */}
+              <button
+                type="button"
+                className="wg-columna-fantasma"
+                aria-label="Nueva columna"
+                title={enElMaximo ? textos.MAXIMO_DE_COLUMNAS : 'Nueva columna'}
+                disabled={enElMaximo}
+                aria-describedby={enElMaximo ? 'wg-motivo-nueva-columna' : undefined}
+                onClick={() => setFormularioColumna({ columna: null })}
+              >
+                +
+              </button>
+              {enElMaximo && (
+                <span id="wg-motivo-nueva-columna" className="wg-oculto">
+                  {textos.MAXIMO_DE_COLUMNAS}
+                </span>
+              )}
             </div>
           </DndContext>
         </ContextoDelTablero.Provider>
@@ -380,6 +528,7 @@ export function Kanban() {
         // M-09 o M-13. DUDA: HE-09-HU06 las ventanas no definen título. Valor usado: «Eliminar».
         <Confirmacion
           titulo="Eliminar"
+          destructiva
           texto={porEliminar.texto}
           opcionPrincipal="Confirmar"
           alConfirmar={() => void eliminarColumna(porEliminar.columna)}

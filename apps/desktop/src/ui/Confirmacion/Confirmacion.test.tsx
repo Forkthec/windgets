@@ -21,7 +21,7 @@ describe('Confirmación', () => {
     expect(alConfirmar).toHaveBeenCalled();
   });
 
-  it('RD-34 · Sin título visible, la pregunta y las opciones con la principal primero', () => {
+  it('RD-34, RD-72 · Sin título visible, «×» arriba y las opciones con la principal a la derecha', () => {
     render(
       <Confirmacion
         titulo="Aplicar"
@@ -40,10 +40,27 @@ describe('Confirmación', () => {
     expect(screen.getByText(/¿Qué deseas hacer\?/).classList.contains('wg-confirmacion__pregunta')).toBe(
       true,
     );
-    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual([
-      'Guardar y aplicar',
-      'Aplicar sin guardar',
+    expect(screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent)).toEqual([
+      'Cerrar',
       'Cancelar',
+      'Aplicar sin guardar',
+      'Guardar y aplicar',
     ]);
+  });
+
+  it('RD-72 · Una confirmación destructiva pinta la principal en rojo', () => {
+    render(
+      <Confirmacion
+        titulo="Eliminar"
+        texto="¿Seguro?"
+        opcionPrincipal="Confirmar"
+        destructiva
+        alConfirmar={() => {}}
+        alCancelar={() => {}}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Confirmar' }).classList.contains('wg-boton--peligro')).toBe(
+      true,
+    );
   });
 });

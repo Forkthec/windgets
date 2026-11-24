@@ -16,6 +16,7 @@ import textos from '@/types/messages.es.json';
 import { Boton } from '@/ui/Boton/Boton';
 import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
 import { Casilla } from '@/ui/Casilla/Casilla';
+import { Segmentado } from '@/ui/Segmentado/Segmentado';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { Selector } from '@/ui/Selector/Selector';
 import { SelectorFecha } from '@/ui/SelectorFecha/SelectorFecha';
@@ -23,6 +24,10 @@ import { VentanaEmergente } from '@/ui/VentanaEmergente/VentanaEmergente';
 import { FormularioEtiqueta } from '../labels/FormularioEtiqueta';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { escribirFecha, fechaIso, fechaVisible, hoy, leerFecha } from './fechas';
+
+// docs/rediseno.md RD-75 (rediseno_final_prototipos.md §3.8 y §6.7; rediseno_final_backend.md §4.5): Tipo y Prioridad
+// como controles segmentados («Sin prioridad» elegido por defecto), la fecha con un calendario flotante sin días
+// pasados, las etiquetas en un desplegable con chips de color y el bloque horario opcional (D-20).
 
 // P-TAR-02 Formulario de tarjeta. Modo creación (HE-07-HU01) y modo edición (HE-07-HU04, con las mismas reglas
 // de campos, ET04). Ventana emergente sobre la pantalla de origen (RT-02). La vista repite solo las validaciones
@@ -33,7 +38,7 @@ const TITULO_MAX = 100;
 const ETIQUETAS_MAX = 5;
 const DESCRIPCION_MAX = 1000;
 
-const CAMPOS = ['title', 'due_date', 'description'] as const;
+const CAMPOS = ['title', 'due_date', 'description', 'block_date', 'block_hour'] as const;
 type Campo = (typeof CAMPOS)[number];
 
 // HE-07-HU01-ET05: los tres tipos, con «Tarea» preseleccionado.
@@ -43,10 +48,9 @@ const TIPOS: Array<{ valor: CardType; texto: string }> = [
   { valor: 'event', texto: 'Evento' },
 ];
 
-// HE-07-HU01-ET11: Alta, Media y Baja; opcional, así que empieza vacío (ET27). DUDA: HE-07-HU01 el texto de la
-// opción vacía no está definido; se usa una opción sin texto.
+// HE-07-HU01-ET11: Alta, Media y Baja; opcional (ET27). RD-75 (§3.8): «Sin prioridad» elegido por defecto.
 const PRIORIDADES: Array<{ valor: Priority | ''; texto: string }> = [
-  { valor: '', texto: '' },
+  { valor: '', texto: 'Sin prioridad' },
   { valor: 'high', texto: 'Alta' },
   { valor: 'medium', texto: 'Media' },
   { valor: 'low', texto: 'Baja' },
@@ -70,6 +74,10 @@ function validadores(fechaOriginal?: string): Record<Campo, Validador> {
       return fecha < hoy() ? textos.FECHA_LIMITE_ANTERIOR_A_HOY : undefined;
     },
     description: (v) => ([...v].length > DESCRIPCION_MAX ? textos.DESCRIPCION_MUY_LARGA : undefined),
+    // D-20: el bloque horario es opcional; si tiene fecha, la fecha debe ser válida. Que no sea pasado ni posterior
+    // a la fecha límite lo valida el Núcleo (`time_block.past`, `time_block.after_due_date`).
+    block_date: (v) => (estaVacio(v) || leerFecha(v) ? undefined : textos.FECHA_INVALIDA),
+    block_hour: () => undefined,
   };
 }
 
@@ -80,6 +88,9 @@ interface Valores {
   description: string;
   priority: Priority | '';
   label_ids: string[];
+  /** D-20: el bloque horario, DD/MM/AAAA y la hora de inicio («» = sin bloque horario). */
+  block_date: string;
+  block_hour: string;
 }
 
 // HE-07-HU01-ET25, ET27: Tipo en «Tarea» y los demás campos vacíos.
@@ -90,6 +101,8 @@ const VACIO: Valores = {
   description: '',
   priority: '',
   label_ids: [],
+  block_date: '',
+  block_hour: '',
 };
 
 /** HE-07-HU04-ET02: en modo edición, los datos actuales de la tarjeta. */
@@ -101,6 +114,8 @@ function valoresDe(tarjeta: CardDetail): Valores {
     description: tarjeta.description ?? '',
     priority: tarjeta.priority ?? '',
     label_ids: [...tarjeta.label_ids],
+    block_date: tarjeta.scheduled_date ? fechaVisible(tarjeta.scheduled_date) : '',
+    block_hour: tarjeta.scheduled_hour === null ? '' : String(tarjeta.scheduled_hour),
   };
 }
 
@@ -172,6 +187,13 @@ export function FormularioTarjeta({
 
   const guardar = useCallback(async () => {
     if (!campos.validarTodo(valores)) return;
+    // D-20: fecha y hora del bloque horario van juntas.
+    const faltan: Array<Pick<AppError, 'field' | 'message'>> = [];
+    if (!estaVacio(valores.block_date) && !valores.block_hour)
+      faltan.push({ message: textos.CAMPO_OBLIGATORIO, field: 'block_hour' });
+    if (estaVacio(valores.block_date) && valores.block_hour)
+      faltan.push({ message: textos.CAMPO_OBLIGATORIO, field: 'block_date' });
+    if (faltan.length > 0) return campos.mostrarDelNucleo(faltan);
     const fecha = leerFecha(valores.due_date);
     if (!fecha) return;
     let r: Result<Card>;
@@ -199,11 +221,48 @@ export function FormularioTarjeta({
     }
     if (!r.ok) return fallo(r.error);
     const porDefecto = tarjeta ? textos.TARJETA_ACTUALIZADA : textos.TARJETA_CREADA;
-    alGuardar(r.value, r.result_message?.message ?? porDefecto);
-  }, [alGuardar, campos, fallo, invocar, tarjeta, valores]);
+    // D-20 (rediseno_final_backend.md §4.5): después de guardar la tarjeta, el bloque horario con
+    // `card_assign_time_block` o `card_unassign_time_block` si cambió. La interfaz los muestra como una sola
+    // operación; si el bloque falla, la tarjeta ya quedó guardada y se muestra el error del bloque.
+    const antes = tarjeta?.scheduled_date ? `${tarjeta.scheduled_date} ${tarjeta.scheduled_hour}` : '';
+    const diaDelBloque = leerFecha(valores.block_date);
+    const despues =
+      diaDelBloque && valores.block_hour ? `${fechaIso(diaDelBloque)} ${valores.block_hour}` : '';
+    let tarjetaFinal = r.value;
+    let errorDelBloque: string | null = null;
+    if (antes !== despues) {
+      const b =
+        diaDelBloque && valores.block_hour
+          ? await invocar('card_assign_time_block', {
+              card_id: r.value.id,
+              date: fechaIso(diaDelBloque),
+              hour: Number(valores.block_hour),
+            })
+          : await invocar('card_unassign_time_block', { card_id: r.value.id });
+      if (b.ok) tarjetaFinal = b.value;
+      else errorDelBloque = b.error.message || textos.SERVICIO_NO_DISPONIBLE;
+    }
+    alGuardar(tarjetaFinal, r.result_message?.message ?? porDefecto);
+    if (errorDelBloque) mostrarResultado(errorDelBloque, 'error');
+  }, [alGuardar, campos, fallo, invocar, mostrarResultado, tarjeta, valores]);
   const { ejecutar, enCurso } = useEnvioUnico(guardar);
 
   const fechaElegida = useMemo(() => leerFecha(valores.due_date), [valores.due_date]);
+  const elegidas = etiquetas.filter((e) => valores.label_ids.includes(e.id));
+  // D-20: «Sin bloque horario» y las horas en punto de 00:00 a 23:00; si el bloque es hoy, las horas que ya
+  // pasaron quedan deshabilitadas (el Núcleo valida `time_block.past`).
+  const horasDelBloque = useMemo(() => {
+    const esHoy = valores.block_date === escribirFecha(hoy());
+    const ahora = new Date().getHours();
+    return [
+      { valor: '', texto: 'Sin bloque horario' },
+      ...Array.from({ length: 24 }, (_, h) => ({
+        valor: String(h),
+        texto: `${String(h).padStart(2, '0')}:00`,
+        deshabilitada: esHoy && h < ahora,
+      })),
+    ];
+  }, [valores.block_date]);
 
   return (
     <VentanaEmergente
@@ -228,8 +287,8 @@ export function FormularioTarjeta({
           void ejecutar();
         }}
       >
-        {/* docs/rediseno.md RD-51 (Figma 84:550): en dos columnas, Título y Tipo, Fecha límite y Prioridad,
-            Etiquetas y Descripción. */}
+        {/* RD-51 y RD-75: en dos columnas, Título y Tipo, Fecha límite y Prioridad, Etiquetas y Descripción, y
+            debajo el bloque horario (D-20). */}
         <CampoTexto
           id={campos.ids.title}
           etiqueta="Título"
@@ -237,77 +296,94 @@ export function FormularioTarjeta({
           alCambiar={cambiar('title')}
           mensaje={campos.mensajes.title}
         />
-        <Selector
+        <Segmentado
           etiqueta="Tipo"
           opciones={TIPOS}
           valor={valores.type}
-          alCambiar={(tipo) => setValores((v) => ({ ...v, type: tipo as CardType }))}
+          alCambiar={(tipo) => setValores((v) => ({ ...v, type: tipo }))}
         />
-        <div className="wg-formulario__celda">
+        <div className="wg-formulario__celda wg-formulario__fecha">
           <CampoTexto
             id={campos.ids.due_date}
             etiqueta="Fecha límite"
+            placeholder="DD/MM/AAAA"
             valor={valores.due_date}
             alCambiar={cambiar('due_date')}
             mensaje={campos.mensajes.due_date}
           />
-          {/* HE-07-HU01-ET04, ET27: el selector de fecha escribe la fecha elegida en DD/MM/AAAA. */}
+          {/* HE-07-HU01-ET04, ET27: el calendario escribe la fecha elegida en DD/MM/AAAA. RD-75 (§3.6-1): los días
+              anteriores a hoy no se pueden elegir (ET08, ET09); el Núcleo sigue validando `due_date.in_past`. */}
           <SelectorFecha
             etiqueta="Selector de fecha"
-            etiquetaVisible={false}
+            flotante
             valor={fechaElegida}
+            deshabilitados={{ before: hoy() }}
             alCambiar={(fecha) => cambiar('due_date')(fecha ? escribirFecha(fecha) : '')}
           />
         </div>
-        <Selector
+        <Segmentado
           etiqueta="Prioridad"
           opciones={PRIORIDADES}
           valor={valores.priority}
-          alCambiar={(p) => setValores((v) => ({ ...v, priority: p as Priority | '' }))}
+          alCambiar={(p) => setValores((v) => ({ ...v, priority: p }))}
         />
-        {/* HE-07-HU02-ET01: lista desplegable con las etiquetas creadas; las asignadas se ven en el campo. */}
-        <div className="wg-campo" role="group" aria-label="Etiquetas">
+        {/* HE-07-HU02-ET01 y RD-75 (§3.8): desplegable con casillas; las elegidas se ven como chips de su color. */}
+        <div className="wg-campo wg-etiquetas-desplegable" role="group" aria-label="Etiquetas">
           <span className="wg-campo__etiqueta">Etiquetas</span>
           <button
             type="button"
-            className="wg-campo__entrada"
+            className="wg-campo__entrada wg-etiquetas-desplegable__campo"
             aria-expanded={listaAbierta}
             aria-label="Etiquetas asignadas"
             onClick={() => setListaAbierta((a) => !a)}
           >
-            {etiquetas
-              .filter((e) => valores.label_ids.includes(e.id))
-              .map((e) => e.name)
-              .join(', ')}
-          </button>
-          {listaAbierta &&
-            (etiquetas.length === 0 ? (
-              // ET07: estado vacío con «Nueva etiqueta».
-              <span className="wg-fila">
-                <span>Aún no tienes etiquetas.</span>
-                <Boton onClick={() => setCreandoEtiqueta(true)}>Nueva etiqueta</Boton>
-              </span>
+            {elegidas.length === 0 ? (
+              <span className="wg-etiquetas-desplegable__vacio">Elige etiquetas</span>
             ) : (
-              <div className="wg-lista" role="list" aria-label="Lista de etiquetas">
-                {etiquetas.map((e) => {
-                  const marcada = valores.label_ids.includes(e.id);
-                  return (
-                    <span key={e.id} role="listitem">
-                      <Casilla
-                        etiqueta={e.name}
-                        marcada={marcada}
-                        // ET04, ET06: con 5 asignadas, las demás quedan deshabilitadas.
-                        deshabilitada={!marcada && valores.label_ids.length >= ETIQUETAS_MAX}
-                        alCambiar={(m) => marcarEtiqueta(e.id, m)}
-                      />
-                    </span>
-                  );
-                })}
-                {valores.label_ids.length >= ETIQUETAS_MAX && (
-                  <span className="wg-motivo">{textos.MAXIMO_ETIQUETAS}</span>
-                )}
-              </div>
-            ))}
+              elegidas.map((e) => (
+                <span key={e.id} className="wg-chip">
+                  <span className="wg-muestra-color" style={{ background: e.color_hex }} aria-hidden="true" />
+                  {e.name}
+                </span>
+              ))
+            )}
+          </button>
+          {listaAbierta && (
+            <div className="wg-etiquetas-desplegable__lista">
+              {etiquetas.length === 0 ? (
+                // ET07: estado vacío con «Nueva etiqueta».
+                <span className="wg-fila">
+                  <span>Aún no tienes etiquetas.</span>
+                  <Boton onClick={() => setCreandoEtiqueta(true)}>Nueva etiqueta</Boton>
+                </span>
+              ) : (
+                <div className="wg-lista" role="list" aria-label="Lista de etiquetas">
+                  {etiquetas.map((e) => {
+                    const marcada = valores.label_ids.includes(e.id);
+                    return (
+                      <span key={e.id} role="listitem" className="wg-fila">
+                        <span
+                          className="wg-muestra-color"
+                          style={{ background: e.color_hex }}
+                          aria-hidden="true"
+                        />
+                        <Casilla
+                          etiqueta={e.name}
+                          marcada={marcada}
+                          // ET04, ET06: en el máximo, las demás quedan deshabilitadas con su motivo.
+                          deshabilitada={!marcada && valores.label_ids.length >= ETIQUETAS_MAX}
+                          alCambiar={(m) => marcarEtiqueta(e.id, m)}
+                        />
+                      </span>
+                    );
+                  })}
+                  {valores.label_ids.length >= ETIQUETAS_MAX && (
+                    <span className="wg-motivo">{textos.MAXIMO_ETIQUETAS}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <CampoTexto
           id={campos.ids.description}
@@ -317,6 +393,39 @@ export function FormularioTarjeta({
           alCambiar={cambiar('description')}
           mensaje={campos.mensajes.description}
         />
+        {/* D-20 (rediseno_final_backend.md §4.5; HU v13 HE-07-HU01-CA13): bloque horario opcional, fecha y hora en
+            punto, sin horas pasadas y no después de la fecha límite. */}
+        <fieldset className="wg-formulario__bloque">
+          <legend className="wg-campo__etiqueta">Bloque horario</legend>
+          <div className="wg-formulario__celda wg-formulario__fecha">
+            <CampoTexto
+              id={campos.ids.block_date}
+              etiqueta="Fecha del bloque"
+              placeholder="DD/MM/AAAA"
+              valor={valores.block_date}
+              alCambiar={cambiar('block_date')}
+              mensaje={campos.mensajes.block_date}
+            />
+            <SelectorFecha
+              etiqueta="Selector de fecha del bloque"
+              flotante
+              valor={leerFecha(valores.block_date)}
+              deshabilitados={[{ before: hoy() }, ...(fechaElegida ? [{ after: fechaElegida }] : [])]}
+              alCambiar={(fecha) => cambiar('block_date')(fecha ? escribirFecha(fecha) : '')}
+            />
+          </div>
+          <Selector
+            id={campos.ids.block_hour}
+            etiqueta="Hora del bloque"
+            opciones={horasDelBloque}
+            valor={valores.block_hour}
+            alCambiar={(hora) => {
+              setValores((v) => ({ ...v, block_hour: hora }));
+              campos.alCorregir('block_hour', hora);
+            }}
+            mensaje={campos.mensajes.block_hour}
+          />
+        </fieldset>
       </form>
       {/* ET08, ET09: el Formulario de etiqueta se abre encima; al guardar o cancelar, este formulario sigue
           abierto con sus datos. */}

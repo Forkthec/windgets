@@ -35,6 +35,7 @@ export function ConfirmarEliminacion({
     // DUDA: HE-07-HU05 el título de la ventana de confirmación no está definido; se usa «Eliminar».
     <Confirmacion
       titulo="Eliminar"
+      destructiva
       texto={`¿Deseas eliminar la tarjeta “${tarjeta.title}”? Esta acción no se puede deshacer.`}
       opcionPrincipal="Confirmar"
       alConfirmar={() => void ejecutar()}

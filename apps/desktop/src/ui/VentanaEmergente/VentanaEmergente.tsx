@@ -19,9 +19,11 @@ export const ContextoDeBloqueo = createContext<((abierta: boolean) => void) | nu
 /** Ventanas emergentes abiertas, de la de abajo a la de arriba: Esc cierra solo la de arriba (RT-02-ET05). */
 const abiertas: symbol[] = [];
 
-// Se abre sobre la pantalla actual, que sigue visible de fondo (RT-02-ET02): la capa de fondo no tiene color
-// (sin transparencias apiladas, interfaz.md) pero recibe la selección, así que la pantalla de fondo y el menú
-// principal no responden (ET08). Se dibuja fuera de la pantalla para que el bloqueo no la alcance.
+// Se abre sobre la pantalla actual (RT-02-ET02). docs/rediseno.md RD-72 (rediseno_final_prototipos.md §3.7, D-23): el
+// fondo se oscurece con una sola capa del color del marco, la ventana queda al centro con «×» arriba a la derecha y
+// sus acciones abajo a la derecha, la principal a la derecha; si el contenido no cabe (85 % del alto), solo el cuerpo
+// se desplaza. La capa recibe la selección: la pantalla de fondo y el menú no responden (ET08). Se dibuja fuera de la
+// pantalla para que el bloqueo no la alcance.
 export function VentanaEmergente({
   titulo,
   children,
@@ -63,8 +65,19 @@ export function VentanaEmergente({
         aria-label={titulo}
         tabIndex={-1}
       >
-        <h2 className={tituloOculto ? 'wg-oculto' : undefined}>{titulo}</h2>
-        {children}
+        <div className="wg-emergente__cabecera">
+          <h2 className={tituloOculto ? 'wg-oculto' : undefined}>{titulo}</h2>
+          <button
+            type="button"
+            className="wg-emergente__cerrar"
+            aria-label="Cerrar"
+            title="Cerrar"
+            onClick={() => salir.current()}
+          >
+            ×
+          </button>
+        </div>
+        <div className="wg-emergente__cuerpo">{children}</div>
         {acciones && <div className="wg-fila wg-emergente__acciones">{acciones}</div>}
       </div>
     </div>,
