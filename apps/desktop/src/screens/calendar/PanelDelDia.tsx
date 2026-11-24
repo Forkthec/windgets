@@ -38,20 +38,33 @@ export function PanelDelDia({ fecha, alAbrirTarjeta, alNuevaTarjeta, alCerrar }:
 
   return (
     <section className="wg-panel-del-dia" aria-label="Panel del día" aria-busy={dia === null}>
-      <div className="wg-fila">
+      {/* RD-78 (rediseno_final_prototipos.md §6.3): panel lateral derecho de 360 px junto al calendario, con «×»
+          arriba, la fecha y «+ Nueva tarjeta». */}
+      <div className="wg-fila wg-panel-del-dia__cabecera">
         {/* ET02: la fecha del día. */}
         <h3>{fechaVisible(fecha)}</h3>
+        <button
+          type="button"
+          className="wg-icono-boton wg-panel-del-dia__cerrar"
+          aria-label="Cerrar"
+          title="Cerrar"
+          onClick={alCerrar}
+        >
+          ×
+        </button>
+      </div>
+      <div className="wg-fila">
         {/* HE-10-HU04-ET01, ET07: abre el Formulario de tarjeta; en un día pasado va deshabilitada con su texto. */}
         {/* docs/rediseno.md RD-53 (84:334): «Nueva tarjeta» es la acción principal. */}
         <Boton
           principal
+          className="wg-boton--mas"
           disabled={dia?.can_create === false}
           motivo={dia?.can_create === false ? textos.NO_CREAR_EN_DIAS_PASADOS : undefined}
           onClick={() => dia && alNuevaTarjeta(dia)}
         >
           Nueva tarjeta
         </Boton>
-        <Boton onClick={alCerrar}>Cerrar</Boton>
       </div>
       {dia &&
         (dia.cards.length === 0 ? (

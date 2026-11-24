@@ -1,38 +1,53 @@
-/* Rediseño de Agenda diaria (docs/rediseno.md RD-52; Figma 84:361 «Contenido» de 84:358 «Agenda diaria · Claro», nodos
- * 93:38 a 93:66). Medidas en px del Figma; los colores son los tokens del marco. */
-
-/* 93:38 la fecha (25 px peso 500) a la izquierda y 93:39 a 93:43 «Día anterior», «Hoy» y «Día siguiente» (40 px,
- * 15 px peso 500) a la derecha. */
-.wg-fila.wg-agenda__cabecera {
-  flex-wrap: wrap;
-  gap: 10px;
+/* Agenda diaria del rediseño final (docs/rediseno.md RD-79, que reemplaza las medidas de RD-52;
+ * rediseno_final_prototipos.md §6.4). La fecha, la navegación y la tira semanal quedan fijas arriba; solo la
+ * cuadrícula de horas y la lista de tarjetas sin horario se desplazan. Bloques de 40 px, sin subrayados. */
+.wg-agenda-diaria {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+}
+.wg-agenda__navegacion {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
 }
 .wg-agenda-diaria .wg-agenda__fecha {
-  flex: 1;
   margin: 0;
-  font-size: 25px;
-  font-weight: 500;
+  font-size: 18px;
+  font-weight: 700;
 }
-body[data-sesion] .wg-agenda__cabecera .wg-boton {
-  min-height: 40px;
-  padding: 0 12px;
-  font-size: 15px;
+/* D-26: la tira semanal; el día elegido con el color de acción del tema. */
+.wg-agenda__tira {
+  display: flex;
+  gap: 4px;
 }
-/* Los bloques a la izquierda y «Tarjetas sin horario» (371 px) a la derecha, 30 px entre ellos, 24 px debajo de la
- * cabecera. */
+.wg-agenda__dia-de-la-tira {
+  flex: 1;
+  max-width: 72px;
+  border: 1px solid var(--wg-linea);
+}
+.wg-agenda__dia-de-la-tira[aria-current='date']:not([aria-pressed='true']) {
+  border-color: var(--wg-accion);
+}
 .wg-agenda-diaria .wg-agenda {
-  grid-template-columns: minmax(0, 1fr) 371px;
-  gap: 30px;
-  margin-top: 24px;
-  padding-block: 0;
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
 }
-@media (width < 1000px) {
-  .wg-agenda-diaria .wg-agenda {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.wg-agenda-diaria .wg-agenda__bloques {
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
 }
-/* Un bloque cada 65 px: la hora (16 px) a la izquierda y las tarjetas desde x = 81; la línea (#E8DEED) abajo, desde
- * x = 73 (93:45, 93:46). */
 .wg-agenda-diaria .wg-agenda__bloque {
   padding: 0;
   border-top: 0;
@@ -40,88 +55,95 @@ body[data-sesion] .wg-agenda__cabecera .wg-boton {
 }
 .wg-agenda-diaria .wg-agenda__bloque > section {
   display: grid;
-  grid-template-columns: 73px minmax(0, 1fr);
+  grid-template-columns: 56px minmax(0, 1fr);
   align-content: start;
-  min-height: 64px;
+  min-height: 40px;
 }
 .wg-agenda-diaria .wg-agenda__bloque--actual {
-  border-bottom-width: 4px;
-  border-bottom-color: var(--wgm-seleccion-texto);
+  border-bottom-width: 3px;
+  border-bottom-color: var(--wg-accion);
 }
 .wg-agenda-diaria .wg-agenda__hora {
   grid-column: 1;
   margin: 0;
-  padding-top: 6px;
+  padding-top: 4px;
   color: var(--wg-texto);
-  font-size: 16px;
+  font-size: 12px;
   font-weight: 400;
 }
 .wg-agenda-diaria .wg-agenda__bloque .wg-columna__tarjetas {
-  grid-column: 2;
   display: flex;
+  grid-column: 2;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   margin: 0;
-  padding: 0 14px 6px 8px;
+  padding: 4px 8px 4px 4px;
   list-style: none;
 }
-/* 93:49 «Tarjeta asignada»: 37 px, radio 6, fondo de columna, el título en 16 px. */
-.wg-agenda-diaria .wg-agenda__bloque .wg-tarjeta {
+.wg-agenda-diaria .wg-tarjeta {
   flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  min-height: 37px;
+  gap: 6px;
+  min-height: 30px;
   box-sizing: border-box;
-  padding: 0 6px 0 13px;
+  padding: 2px 6px 2px 10px;
   border: 0;
   border-radius: 6px;
   background: var(--wgm-columna);
-}
-body[data-sesion] .wg-agenda-diaria .wg-agenda__bloque .wg-tarjeta .wg-boton {
-  min-height: 30px;
-  padding: 0 8px;
   font-size: 13px;
 }
-/* 93:61 «Tarjetas sin horario»: 371 px, radio 12, fondo de columna; el título en 20 px peso 500 y las tarjetas
- * blancas de 62 px con radio 8 (93:63). */
+body[data-sesion] .wg-agenda-diaria .wg-tarjeta .wg-boton {
+  min-height: 26px;
+  padding: 0 8px;
+  font-size: 12px;
+}
 .wg-agenda-diaria .wg-agenda__sin-horario {
-  min-height: 424px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   box-sizing: border-box;
-  padding: 19px 13px 13px;
+  padding: 12px 10px 10px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--wgm-columna);
 }
 .wg-agenda-diaria .wg-agenda__sin-horario h3 {
-  margin: 0 0 32px 4px;
-  font-size: 20px;
+  flex: none;
+  margin: 0 0 8px 4px;
+  font-size: 14px;
   font-weight: 500;
 }
 .wg-agenda-diaria .wg-agenda__sin-horario .wg-columna__tarjetas {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  gap: 16px;
+  gap: 6px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
 }
 .wg-agenda-diaria .wg-agenda__sin-horario .wg-tarjeta {
-  justify-content: center;
-  min-height: 62px;
-  box-sizing: border-box;
-  padding: 0 13px;
-  border: 0;
-  border-radius: 8px;
+  min-height: 40px;
   background: var(--wg-superficie);
 }
+/* §6.4: los títulos sin la línea debajo. */
 .wg-agenda-diaria .wg-tarjeta__titulo {
   padding: 0;
   border: 0;
   background: none;
   color: var(--wg-tinta);
   font: inherit;
-  font-size: 16px;
+  font-size: 13px;
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
 }
-.wg-agenda-diaria .wg-agenda__sin-horario .wg-tarjeta__titulo {
-  font-size: 17px;
+@media (width < 1000px) {
+  .wg-agenda-diaria .wg-agenda {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

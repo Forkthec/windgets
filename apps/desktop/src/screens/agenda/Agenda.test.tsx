@@ -49,7 +49,7 @@ describe('HE-11-HU01 · Agenda diaria', () => {
     // ET02: la fecha de hoy y las tres opciones.
     // docs/rediseno.md RD-52 (Figma 93:38): la fecha larga.
     expect(screen.getByRole('heading', { name: 'Sábado, 14 de noviembre' })).toBeTruthy();
-    for (const opcion of ['Día anterior', 'Día siguiente', 'Hoy']) {
+    for (const opcion of ['Día anterior', 'Día siguiente', 'Ir a hoy']) {
       expect(screen.getByRole('button', { name: opcion })).toBeTruthy();
     }
     // ET01: 24 bloques de 00:00 a 23:00 y la vista en el bloque de la hora actual.
@@ -100,7 +100,7 @@ describe('HE-11-HU01 · Agenda diaria', () => {
     await elegir('Día siguiente');
     await elegir('Día siguiente');
     ubicados = [];
-    await elegir('Hoy');
+    await elegir('Ir a hoy');
     // ET07: la fecha de hoy y la vista en el bloque de la hora actual (D-169).
     expect(screen.getByRole('heading', { name: 'Sábado, 14 de noviembre' })).toBeTruthy();
     expect(bloqueUbicado()).toBe('14:00 – 15:00');
@@ -123,15 +123,27 @@ describe('HE-11-HU01 · Agenda diaria', () => {
 });
 
 describe('Rediseño · Agenda diaria (P34)', () => {
-  it('RD-52 · La fecha larga con la navegación a su derecha y la hora de inicio de cada bloque', async () => {
+  it('RD-79 · La fecha larga abre el mini calendario, con flechas, «Ir a hoy» y la tira semanal (D-26)', async () => {
     await abrirPantalla('agenda', 'Agenda diaria', Agenda, []);
     const fecha = screen.getByRole('heading', { level: 2, name: 'Sábado, 14 de noviembre' });
-    const cabecera = fecha.parentElement as HTMLElement;
-    expect(Array.from(cabecera.querySelectorAll('button')).map((b) => b.textContent)).toEqual([
-      'Día anterior',
-      'Hoy',
-      'Día siguiente',
-    ]);
+    const fila = fecha.closest('.wg-navegacion-fecha') as HTMLElement;
+    for (const opcion of ['Día anterior', 'Día siguiente', 'Ir a hoy'])
+      expect(within(fila).getByRole('button', { name: opcion })).toBeTruthy();
+    // La tira semanal: de lunes 9 a domingo 15, con el sábado 14 elegido; otro día cambia la agenda.
+    const tira = screen.getByRole('group', { name: 'Días de la semana' });
+    expect(
+      within(tira)
+        .getAllByRole('button')
+        .map((b) => b.textContent),
+    ).toEqual(['L 9', 'M 10', 'X 11', 'J 12', 'V 13', 'S 14', 'D 15']);
+    expect(within(tira).getByRole('button', { name: 'sábado 14' }).getAttribute('aria-pressed')).toBe('true');
+    await act(async () => {
+      fireEvent.click(within(tira).getByRole('button', { name: 'lunes 9' }));
+    });
+    expect(screen.getByRole('heading', { level: 2, name: 'Lunes, 9 de noviembre' })).toBeTruthy();
+    // El mini calendario se abre desde la fecha.
+    fireEvent.click(screen.getByRole('button', { name: 'Lunes, 9 de noviembre' }));
+    expect(screen.getByRole('dialog', { name: 'Elegir un día' })).toBeTruthy();
     const nueve = bloque('09:00 – 10:00');
     expect(nueve.querySelector('h3')?.textContent).toBe('09:00');
   });

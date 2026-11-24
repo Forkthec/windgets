@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { CalendarMonth, CalendarMonthDay, CalendarWeek, CalendarWeekDay, ScreenParams } from '@/types';
-import { Boton } from '@/ui/Boton/Boton';
+import { NavegacionDeFecha } from '@/ui/NavegacionDeFecha/NavegacionDeFecha';
 import { IconoAlerta, IconoReloj } from '@/ui/Iconos/Iconos';
 import { useNucleo, useParametrosDeNavegacion } from '@/ventana_principal/VentanaPrincipal';
 import { fechaIso, fechaVisible, hoy } from '../tarjeta/fechas';
 import { useVentanasDeTarjeta } from '../tarjeta/useVentanasDeTarjeta';
 import { DIAS, nombreDelMes, semanasDelMes } from './mes';
 import { PanelDelDia } from './PanelDelDia';
+import { SelectorMesAnio } from './SelectorMesAnio';
 import './calendario.css';
 
 // P-CAL-01 Calendario (Menú principal > Planificador > Calendario). Al abrir muestra la vista mensual del mes
@@ -231,59 +232,71 @@ export function Calendario() {
       : `Semana del ${fechaVisible(fechaIso(vista.lunes))} al ${fechaVisible(fechaIso(masDias(vista.lunes, 6)))}`;
   return (
     <main className="wg-calendario-pantalla" aria-label="Calendario" aria-busy={datos === null}>
-      {/* docs/rediseno.md RD-53 (Figma 84:184, 84:120): el mes o la semana a la izquierda y el anterior y el
-          siguiente a la derecha, como en Agenda diaria (RD-52). */}
-      <div className="wg-fila wg-calendario__cabecera">
-        <h2 className="wg-calendario__titulo">{titulo}</h2>
-        <Boton onClick={() => mover(-1)}>{esMes ? 'Mes anterior' : 'Semana anterior'}</Boton>
-        <Boton onClick={() => mover(1)}>{esMes ? 'Mes siguiente' : 'Semana siguiente'}</Boton>
-      </div>
-      {vista.tipo === 'mes' && (
-        <VistaMensual
-          vista={vista}
-          mes={datos?.tipo === 'mes' ? datos.mes : null}
-          hoyEs={hoyEs}
-          titulo={titulo}
-          alSeleccionar={setDiaAbierto}
-        />
-      )}
-      {vista.tipo === 'semana' && datos?.tipo === 'semana' && (
-        <div className="wg-calendario-semana" aria-label={titulo}>
-          {datos.semana.days.map((dia, i) => (
-            <DiaDeLaSemana
-              key={dia.date}
-              nombre={DIAS[i] ?? ''}
-              dia={dia}
-              esHoy={dia.date === hoyEs}
-              alSeleccionar={() => setDiaAbierto(dia.date)}
+      {/* docs/rediseno.md RD-76 y RD-77 (rediseno_final_prototipos.md §6.3; reemplaza la disposición de RD-53): toda la
+          navegación arriba. El mes es un botón que abre «Mes y año»; flechas ‹ ›, «Ir a hoy» y, a la derecha, Mes | Semana
+          siempre visibles (HE-10-HU01-ET04, ET07; HE-10-HU02-ET04, ET06, ET08). */}
+      <NavegacionDeFecha
+        titulo={
+          vista.tipo === 'mes' ? (
+            <SelectorMesAnio
+              anio={vista.anio}
+              mes={vista.mes}
+              alElegir={(anio, mes) => setVista({ tipo: 'mes', anio, mes })}
             />
-          ))}
-        </div>
-      )}
-      {/* HE-10-HU01-ET04 y HE-10-HU02-ET04: las opciones de cada vista. RD-53 (84:253 a 84:257): abajo a la
-          izquierda, «Hoy» como acción principal. */}
-      <div className="wg-fila wg-calendario__vistas">
-        <Boton principal onClick={irAHoy}>
-          Hoy
-        </Boton>
-        <Boton aria-pressed={esMes} onClick={aMes}>
-          Mes
-        </Boton>
-        {esMes && (
-          <Boton aria-pressed={false} onClick={aSemana}>
-            Semana
-          </Boton>
+          ) : (
+            <h2 className="wg-calendario__titulo">{titulo}</h2>
+          )
+        }
+        anterior={esMes ? 'Mes anterior' : 'Semana anterior'}
+        siguiente={esMes ? 'Mes siguiente' : 'Semana siguiente'}
+        alAnterior={() => mover(-1)}
+        alSiguiente={() => mover(1)}
+        alIrAHoy={irAHoy}
+        diaDeHoy={Number(hoyEs.slice(8))}
+        derecha={
+          <div className="wg-segmentado" role="group" aria-label="Vista del calendario">
+            <button type="button" className="wg-segmentado__opcion" aria-pressed={esMes} onClick={aMes}>
+              Mes
+            </button>
+            <button type="button" className="wg-segmentado__opcion" aria-pressed={!esMes} onClick={aSemana}>
+              Semana
+            </button>
+          </div>
+        }
+      />
+      <div className={`wg-calendario__cuerpo${diaAbierto ? ' wg-calendario__cuerpo--con-panel' : ''}`}>
+        {vista.tipo === 'mes' && (
+          <VistaMensual
+            vista={vista}
+            mes={datos?.tipo === 'mes' ? datos.mes : null}
+            hoyEs={hoyEs}
+            titulo={titulo}
+            alSeleccionar={setDiaAbierto}
+          />
+        )}
+        {vista.tipo === 'semana' && datos?.tipo === 'semana' && (
+          <div className="wg-calendario-semana" aria-label={titulo}>
+            {datos.semana.days.map((dia, i) => (
+              <DiaDeLaSemana
+                key={dia.date}
+                nombre={DIAS[i] ?? ''}
+                dia={dia}
+                esHoy={dia.date === hoyEs}
+                alSeleccionar={() => setDiaAbierto(dia.date)}
+              />
+            ))}
+          </div>
+        )}
+        {diaAbierto && (
+          <PanelDelDia
+            fecha={diaAbierto}
+            alAbrirTarjeta={tarjetas.abrirDetalle}
+            // HE-10-HU04-ET02: el Formulario de tarjeta con la fecha límite del día ya diligenciada.
+            alNuevaTarjeta={(dia) => tarjetas.abrirNueva(dia.date)}
+            alCerrar={() => setDiaAbierto(null)}
+          />
         )}
       </div>
-      {diaAbierto && (
-        <PanelDelDia
-          fecha={diaAbierto}
-          alAbrirTarjeta={tarjetas.abrirDetalle}
-          // HE-10-HU04-ET02: el Formulario de tarjeta con la fecha límite del día ya diligenciada.
-          alNuevaTarjeta={(dia) => tarjetas.abrirNueva(dia.date)}
-          alCerrar={() => setDiaAbierto(null)}
-        />
-      )}
       {tarjetas.ventanas}
     </main>
   );

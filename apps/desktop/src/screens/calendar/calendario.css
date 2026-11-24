@@ -1,86 +1,180 @@
-/* Rediseño del Calendario (docs/rediseno.md RD-53; Figma 84:187 «Contenido» de 84:184 «Calendario · Mes · Claro» y
- * 84:123 de la semana). Son bocetos: se toman la disposición y los textos, y las medidas que el boceto fija. Los
- * colores son los tokens del marco. */
-.wg-fila.wg-calendario__cabecera {
-  flex-wrap: wrap;
-  gap: 10px;
+/* Calendario del rediseño final (docs/rediseno.md RD-76 a RD-78, que reemplazan RD-53; rediseno_final_prototipos.md
+ * §6.3). Escala compacta; colores del tema y de estado. Sin scroll de página: la cuadrícula ocupa el alto. */
+.wg-calendario-pantalla {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
 }
 .wg-calendario__titulo {
-  flex: 1;
   margin: 0;
-  font-size: 25px;
-  font-weight: 500;
+  font-size: 18px;
+  font-weight: 700;
 }
-body[data-sesion] .wg-calendario__cabecera .wg-boton {
-  min-height: 40px;
-  padding: 0 12px;
-  font-size: 15px;
+.wg-calendario__cuerpo {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
 }
-/* 84:253 a 84:257: «Hoy», «Mes» y «Semana» abajo a la izquierda, 14 px entre ellos. */
-.wg-fila.wg-calendario__vistas {
-  gap: 14px;
-  margin-top: 24px;
+/* El panel del día va al lado, sin tapar el calendario. */
+.wg-calendario__cuerpo--con-panel {
+  grid-template-columns: minmax(0, 1fr) 320px;
 }
-body[data-sesion] .wg-calendario__vistas .wg-boton[aria-pressed='true'] {
-  outline: 2px solid var(--wgm-seleccion-texto);
-  outline-offset: -2px;
+.wg-selector-mes {
+  position: relative;
 }
-/* 84:188 los días abreviados (16 px peso 500) y 84:189 cada día en una celda de fondo de columna con radio 6,
- * 11 px entre columnas y 7 entre semanas. */
+.wg-selector-mes__flotante {
+  width: 240px;
+}
+.wg-selector-mes__anio {
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.wg-selector-mes__anio input {
+  width: 72px;
+  min-height: 32px;
+  text-align: center;
+}
+.wg-selector-mes__meses {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+.wg-selector-mes__meses .wg-segmentado__opcion:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Mes: celdas compactas que reparten el alto. */
 .wg-calendario-pantalla .wg-calendario {
-  margin-top: 16px;
+  width: 100%;
+  height: 100%;
+  table-layout: fixed;
   border-collapse: separate;
-  border-spacing: 11px 7px;
+  border-spacing: 4px;
 }
 .wg-calendario-pantalla .wg-calendario th {
-  padding: 0 0 6px 13px;
+  padding: 0 0 2px 6px;
   border: 0;
   color: var(--wg-texto);
-  font-size: 16px;
+  font-size: 12px;
   font-weight: 500;
   text-align: left;
 }
 .wg-calendario-pantalla .wg-calendario td {
-  height: 55px;
-  padding: 9px 11px;
+  padding: 4px 6px;
+  overflow: hidden;
   border: 0;
   border-radius: 6px;
+  vertical-align: top;
 }
 .wg-calendario-pantalla .wg-calendario td.wg-calendario__celda {
+  border: 1px solid transparent;
   background: var(--wgm-columna);
+  cursor: pointer;
 }
 .wg-calendario-pantalla .wg-calendario__numero {
-  font-size: 16px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--wg-tinta);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.wg-calendario-pantalla .wg-calendario__tarjetas {
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
 }
 .wg-calendario-pantalla .wg-calendario__tarjeta {
-  margin-top: 4px;
-  font-size: 13px;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-/* El día de hoy: borde del color de selección y el número en negrita. */
+.wg-calendario-pantalla .wg-calendario__mas,
+.wg-calendario-pantalla .wg-calendario__vencidas {
+  font-size: 11px;
+}
+/* §3.4 (A-02): rojo claro con borde rojo si tiene vencidas; amarillo claro con borde amarillo si tiene pendientes y
+ * ninguna vencida; hoy con borde de la acción del tema. */
+.wg-calendario-pantalla .wg-calendario__celda.wg-calendario__dia--pendiente {
+  border-color: var(--wg-estado-pendiente);
+  background: var(--wg-relleno-pendiente);
+}
+.wg-calendario-pantalla .wg-calendario__celda.wg-calendario__dia--vencida {
+  border-color: var(--wg-estado-vencida);
+  background: var(--wg-relleno-vencida);
+}
+.wg-calendario-pantalla .wg-calendario__vencidas {
+  color: var(--wg-estado-vencida);
+}
+.wg-calendario-pantalla .wg-calendario__dia--pendiente .wg-icono {
+  color: var(--wg-estado-pendiente);
+}
 .wg-calendario-pantalla .wg-calendario__dia--hoy {
-  outline: 2px solid var(--wgm-seleccion-texto);
+  outline: 2px solid var(--wg-accion);
   outline-offset: -2px;
 }
-/* 84:123 la semana: siete días en columnas con la misma celda. */
+/* Semana: siete columnas que reparten el ancho; cada día con scroll propio y chips de una línea. */
 .wg-calendario-pantalla .wg-calendario-semana {
-  gap: 11px;
-  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  min-height: 0;
 }
 .wg-calendario-pantalla .wg-calendario-semana .wg-calendario__dia {
-  min-height: 180px;
-  padding: 9px 11px;
-  border: 0;
+  min-height: 0;
+  padding: 6px;
+  overflow-y: auto;
+  border: 1px solid transparent;
   border-radius: 6px;
   background: var(--wgm-columna);
 }
-/* 84:337 «Panel del día»: cada tarjeta en una fila de fondo de columna con radio 6 («09:00  Revisar bocetos»). */
+.wg-calendario-pantalla .wg-calendario-semana h3 {
+  margin: 0 0 4px;
+  font-size: 12px;
+}
+.wg-calendario-pantalla .wg-calendario-semana .wg-calendario__tarjeta {
+  gap: 4px;
+  margin-top: 2px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: var(--wg-superficie);
+}
+
+/* Panel del día (RD-78): panel lateral con su lista con scroll. */
+.wg-panel-del-dia {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  padding: 12px;
+  border-left: 1px solid var(--wg-linea);
+  overflow-y: auto;
+}
+.wg-panel-del-dia__cabecera {
+  justify-content: space-between;
+}
+.wg-panel-del-dia__cabecera h3 {
+  margin: 0;
+  font-size: 15px;
+}
 body[data-sesion] .wg-panel-del-dia .wg-tarjeta {
   flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  min-height: 40px;
-  padding: 8px 12px;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 10px;
   border: 0;
   border-radius: 6px;
   background: var(--wgm-columna);
+  font-size: 12px;
 }

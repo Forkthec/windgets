@@ -57,3 +57,15 @@ de quien dirige, 24-nov).
   base local anterior; registro con correo y Google (widgets por defecto); arrastre en el Kanban sin abrir el
   detalle.
 - `TRASPASO.md` de la raíz (18-nov) está desactualizado y no está en git: se puede borrar.
+
+## Actualización (24-nov, corte por límite de uso)
+
+- P41 (#66) fusionado.
+- **P42 en curso, sin verificar ni PR**: rama `paso-42-calendario-agenda-reportes` (commit «wip»). Hecho:
+  Calendario (selector de mes y año, navegación arriba con `ui/NavegacionDeFecha`, Mes | Semana, panel del día
+  lateral, colores por día), Agenda (`NavegacionDeLaAgenda` con mini calendario y tira semanal, cabecera fija,
+  bloques de 40 px, estado D-03), Reportes: completadas en verde en el anillo. Pruebas de Calendario y Agenda
+  actualizadas. **Falta**: en `screens/reports/SelectorRango.tsx`, validar en la vista fin ≥ inicio y ≤ 366 días
+  (`textos.INICIO_POSTERIOR_AL_FIN`, `textos.RANGO_MUY_LARGO`) y poner `SelectorFecha flotante` junto a cada fecha
+  (un intento con perl lo rompió; hacerlo con Edit); reportes de un vistazo en 3 columnas; ojo de la contraseña
+  (§3.6-8); RD-76 a RD-80 en `docs/rediseno.md` y DUDAS P42 (letras de la tira: L M X J V S D); verificar y abrir PR.
