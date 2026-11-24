@@ -1,5 +1,6 @@
 import {
   DndContext,
+  MeasuringStrategy,
   pointerWithin,
   PointerSensor,
   useDraggable,
@@ -204,6 +205,11 @@ export function Agenda() {
           onDragStart={() => setArrastrando(true)}
           onDragCancel={() => setArrastrando(false)}
           onDragEnd={(e) => void soltada(e)}
+          // RD-79: la cuadrícula de horas tiene su propio desplazamiento: los bloques se vuelven a medir durante el
+          // arrastre para que soltar caiga en el bloque que está bajo el puntero.
+          measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+          // Sin compensar el desplazamiento del diseño al empezar a arrastrar: movía la cuadrícula bajo el puntero.
+          autoScroll={{ layoutShiftCompensation: false, threshold: { x: 0, y: 0.05 } }}
         >
           <div className="wg-agenda">
             {/* ET01, ET03: 24 bloques de una hora con sus tarjetas. */}

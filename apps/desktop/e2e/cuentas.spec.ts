@@ -10,7 +10,7 @@ test('HE-01-HU04-CA01 · Iniciar sesión con la cuenta de prueba abre el Planifi
   await page.goto('/');
   await expect(page.getByRole('main', { name: 'Inicio de sesión' })).toBeVisible();
   await page.getByLabel('Correo electrónico').fill('usuario.prueba@example.com');
-  await page.getByLabel('Contraseña').fill('Clave123');
+  await page.getByLabel('Contraseña', { exact: true }).fill('Clave123');
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
   // El Planificador diario aún no está construido (P09): la pantalla vacía existe pero no tiene alto.
   await expect(page.getByRole('main', { name: 'Planificador diario', includeHidden: true })).toBeAttached();
@@ -21,7 +21,7 @@ test('HE-01-HU04-CA08 · Contraseña incorrecta muestra el mensaje sin abrir la 
 }) => {
   await page.goto('/');
   await page.getByLabel('Correo electrónico').fill('usuario.prueba@example.com');
-  await page.getByLabel('Contraseña').fill('Otra123');
+  await page.getByLabel('Contraseña', { exact: true }).fill('Otra123');
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
   await expect(page.getByRole('alert')).toHaveText('Correo electrónico o contraseña incorrectos.');
   await expect(page.getByRole('main', { name: 'Planificador diario' })).toHaveCount(0);

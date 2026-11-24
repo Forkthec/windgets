@@ -25,7 +25,7 @@ function nombresDeColumnas(page: Page) {
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Correo electrónico').fill('usuario.prueba@example.com');
-  await page.getByLabel('Contraseña').fill('Clave123');
+  await page.getByLabel('Contraseña', { exact: true }).fill('Clave123');
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
   await page
     .getByRole('navigation', { name: 'Menú principal' })

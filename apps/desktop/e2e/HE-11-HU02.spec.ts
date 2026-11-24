@@ -14,11 +14,19 @@ function fecha(dias: number) {
 }
 
 async function arrastrar(page: Page, desde: Locator, hasta: Locator) {
-  const origen = await desde.boundingBox();
-  if (!origen) throw new Error('La tarjeta no tiene caja');
   // El bloque se centra en la pantalla: pegado al borde de la tarjeta, el desplazamiento automático de dnd-kit
   // movería la lista mientras se arrastra (P30, docs/rediseno.md RD-32: la pantalla se desplaza dentro de la tarjeta).
-  await hasta.evaluate((e) => e.scrollIntoView({ block: 'center' }));
+  // RD-79: solo la cuadrícula de horas se desplaza; se centra el bloque dentro de ella sin mover la pantalla.
+  await hasta.evaluate((e) => {
+    const lista = e.closest('ol');
+    if (!lista) return;
+    const caja = e.getBoundingClientRect();
+    const marco = lista.getBoundingClientRect();
+    lista.scrollTop += caja.top - marco.top - lista.clientHeight / 2 + caja.height / 2;
+  });
+  // RD-79: la tarjeta se mide después de ubicar el bloque, que puede mover la pantalla.
+  const origen = await desde.boundingBox();
+  if (!origen) throw new Error('La tarjeta no tiene caja');
   await page.mouse.move(origen.x + origen.width / 2, origen.y + 6);
   await page.mouse.down();
   await page.mouse.move(origen.x + origen.width / 2 + 10, origen.y + 16, { steps: 4 });
@@ -51,7 +59,7 @@ function sinHorario(page: Page) {
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Correo electrónico').fill('usuario.prueba@example.com');
-  await page.getByLabel('Contraseña').fill('Clave123');
+  await page.getByLabel('Contraseña', { exact: true }).fill('Clave123');
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
   await menu(page, 'Tablero Kanban').click();
   await crearTarjeta(page, 'Estudiar redes', fecha(3));
