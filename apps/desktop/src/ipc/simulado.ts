@@ -221,6 +221,8 @@ const respuestas: Respuestas = {
   // HE-16-HU02: el simulado guarda el inicio automático en memoria (fuera de Tauri no hay registro de Windows).
   // HE-17-HU02: el simulado no guarda la última pantalla (fuera de Tauri no hay área de notificación).
   app_set_last_screen: () => ({ ok: true, value: null }),
+  app_get_menu_collapsed: () => ({ ok: true, value: { collapsed: false } }),
+  app_set_menu_collapsed: () => ({ ok: true, value: null }),
   windi_get_conversation: () => {
     if (conversacionSimulada.length === 0) {
       const text = textos.WINDI_SALUDO.replace('<alias>', 'Prueba');

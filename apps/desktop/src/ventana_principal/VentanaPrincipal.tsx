@@ -13,11 +13,17 @@ import { escuchar as escucharNucleo, type Escuchar } from '@/ipc/eventos';
 import type { Invoke, ScreenId, ScreenParams } from '@/types';
 import textos from '@/types/messages.es.json';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
-import { ProveedorDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
-import { IconoDelMenu, TRAZO_ABRIR, TRAZO_CONTRAER } from '@/ui/MenuPrincipal/IconosDelMenu';
+import { ProveedorDeResultado, useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
+import {
+  IconoDelMenu,
+  TRAZO_ABRIR,
+  TRAZO_CERRAR_SESION,
+  TRAZO_CONTRAER,
+} from '@/ui/MenuPrincipal/IconosDelMenu';
 import { MenuPrincipal } from '@/ui/MenuPrincipal/MenuPrincipal';
 import { useTemaAplicado } from '@/ui/tema/temaAplicado';
 import { AvisoDelWallpaper } from './AvisoDelWallpaper';
+import { bloquearZoom } from './bloquearZoom';
 import { EncabezadoDePantalla } from './EncabezadoDePantalla';
 import { IndicadorSincronizacion } from './IndicadorSincronizacion';
 import { AMPLIAR_MENU, OCULTAR_MENU, TITULO_DE_PANTALLA } from './textosDelMarco';
@@ -26,6 +32,7 @@ import './marco.css';
 import { ContextoDeBloqueo } from '@/ui/VentanaEmergente/VentanaEmergente';
 import { ProveedorDeApariencia, RaizDeCuenta, type ModoDeCuenta } from '@/screens/cuenta/apariencia';
 import { useTemaInicial } from '@/screens/cuenta/temaInicial';
+import { CerrarSesion } from '@/screens/settings/CerrarSesion';
 
 // Ventana principal (C-01, interfaz.md): RT-01 (menú principal y pantalla principal) y el bloqueo del fondo de
 // RT-02 (ventanas emergentes). Las pantallas de cada HU se registran en `pantallas` a medida que se construyen.
@@ -228,23 +235,38 @@ export function VentanaPrincipal({
   const nucleo = useMemo(() => ({ invocar, escuchar }), [escuchar, invocar]);
 
   // HE-03-HU06: los colores y la tipografía del tema aplicado en toda la aplicación (ET01, ET02, ET05).
-  const { modo: modoDelTema, releer: releerTema } = useTemaAplicado(
-    invocar,
-    escuchar,
-    sesion === 'con_sesion',
-  );
-  // docs/rediseno.md RD-28: con la sesión iniciada, la ventana toma los colores del Figma del modo del tema
-  // (`marco.css`). Va en `body` para alcanzar también las ventanas emergentes.
-  const modoDeLaVentana = sesion === 'con_sesion' ? modoDelTema : null;
+  // docs/rediseno.md RD-62 (D-01; reemplaza RD-28 y RD-29): con la sesión iniciada no hay colores fijos por modo; la
+  // ventana usa los tokens del tema. `body[data-sesion]` deriva de ellos los tonos de las áreas (`marco.css`) y
+  // alcanza también las ventanas emergentes.
+  useTemaAplicado(invocar, escuchar, sesion === 'con_sesion');
   useEffect(() => {
-    if (!modoDeLaVentana) return;
-    document.body.dataset.modo = modoDeLaVentana;
+    if (sesion !== 'con_sesion') return;
+    document.body.dataset.sesion = '';
     return () => {
-      delete document.body.dataset.modo;
+      delete document.body.dataset.sesion;
     };
-  }, [modoDeLaVentana]);
-  // RD-31: «Ocultar menú» y «Ampliar menú»; vale mientras la ventana esté abierta.
-  const [menuVisible, setMenuVisible] = useState(true);
+  }, [sesion]);
+  // RD-69 (D-04): sin zoom de la página.
+  useEffect(() => bloquearZoom(), []);
+  // D-25 (RD-65): el menú contraído se recuerda en este computador (IPC-DESK-17, IPC-DESK-18).
+  const [menuContraido, setMenuContraido] = useState(false);
+  useEffect(() => {
+    if (sesion !== 'con_sesion') return;
+    let vigente = true;
+    void invocar('app_get_menu_collapsed', {}).then((r) => {
+      if (vigente && r.ok) setMenuContraido(r.value.collapsed);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [invocar, sesion]);
+  const contraerMenu = useCallback(
+    (contraido: boolean) => {
+      setMenuContraido(contraido);
+      void invocar('app_set_menu_collapsed', { collapsed: contraido });
+    },
+    [invocar],
+  );
   // docs/rediseno.md RD-42: Personalización del wallpaper ocupa la ventana sin el menú lateral (Figma 91:1638);
   // «Personalización» en su encabezado vuelve al marco con el menú. Se reinicia al cambiar de pantalla.
   const [marcoEnWallpaper, setMarcoEnWallpaper] = useState(false);
@@ -304,7 +326,6 @@ export function VentanaPrincipal({
           <IndicadorSincronizacion />
         </header>
         <div className="wg-ventana-principal__completa">
-          <AvisoDelWallpaper />
           {Pantalla ? <Pantalla /> : <PantallaSinConstruir nombre={TITULO_DE_PANTALLA[pantalla]} />}
         </div>
       </div>
@@ -314,48 +335,40 @@ export function VentanaPrincipal({
     contenido = (
       <div
         ref={fondo}
-        className={`wg-ventana-principal${menuVisible ? '' : ' wg-ventana-principal--sin-menu'}`}
+        className={`wg-ventana-principal${menuContraido ? ' wg-ventana-principal--menu-contraido' : ''}`}
       >
-        {menuVisible && (
-          // Figma 81:3 «Menú» (RD-30) con el símbolo y la palabra de 76:4 y 76:10.
-          <div className="wg-ventana-principal__menu wg-menu">
-            <div className="wg-menu__marca">
-              <img className="wg-menu__simbolo" src={simbolo} alt="" />
-              windgets
-            </div>
+        {/* RD-65 (rediseno_final_prototipos.md §4.1): el logo con el botón de contraer o ampliar a su lado; contraído
+            quedan solo los íconos (56 px). */}
+        <div className="wg-ventana-principal__menu wg-menu">
+          <div className="wg-menu__cabeza">
+            {!menuContraido && (
+              <div className="wg-menu__marca">
+                <img className="wg-menu__simbolo" src={simbolo} alt="" />
+                windgets
+              </div>
+            )}
             <button
               type="button"
               className="wg-menu__ocultar"
-              aria-label={OCULTAR_MENU}
-              title={OCULTAR_MENU}
-              aria-expanded="true"
-              onClick={() => setMenuVisible(false)}
+              aria-label={menuContraido ? AMPLIAR_MENU : OCULTAR_MENU}
+              title={menuContraido ? AMPLIAR_MENU : OCULTAR_MENU}
+              aria-expanded={!menuContraido}
+              onClick={() => contraerMenu(!menuContraido)}
             >
-              <IconoDelMenu trazo={TRAZO_CONTRAER} className="wg-menu__icono" />
+              <IconoDelMenu trazo={menuContraido ? TRAZO_ABRIR : TRAZO_CONTRAER} className="wg-menu__icono" />
             </button>
-            <MenuPrincipal actual={pantalla} alElegir={(p) => void navegacion.abrir(p)} />
           </div>
-        )}
+          <MenuPrincipal
+            actual={pantalla}
+            alElegir={(p) => void navegacion.abrir(p)}
+            contraido={menuContraido}
+            pie={<CerrarSesionDelMenu contraido={menuContraido} />}
+          />
+        </div>
         <div className="wg-ventana-principal__principal">
-          {!menuVisible && (
-            // Figma 85:400 «Ampliar menú».
-            <button
-              type="button"
-              className="wg-marco__ampliar"
-              aria-label={AMPLIAR_MENU}
-              title={AMPLIAR_MENU}
-              aria-expanded="false"
-              onClick={() => setMenuVisible(true)}
-            >
-              <IconoDelMenu trazo={TRAZO_ABRIR} className="wg-menu__icono" />
-            </button>
-          )}
           {/* RD-43: Personalización del wallpaper lleva su propio título y «Tema en edición». */}
-          {pantalla !== 'personalization' && (
-            <EncabezadoDePantalla pantalla={pantalla} modo={modoDelTema} alAplicar={releerTema} />
-          )}
+          {pantalla !== 'personalization' && <EncabezadoDePantalla pantalla={pantalla} />}
           <div className="wg-ventana-principal__pantalla">
-            <AvisoDelWallpaper />
             {Pantalla ? <Pantalla /> : <PantallaSinConstruir nombre={TITULO_DE_PANTALLA[pantalla]} />}
           </div>
         </div>
@@ -391,6 +404,7 @@ export function VentanaPrincipal({
                     alTerminar={temaInicialTerminado}
                   />
                 )}
+                {sesion === 'con_sesion' && <AvisoDelWallpaper />}
                 {contenido}
                 {confirmarSalida && (
                   // DUDA: HE-17-HU03 el título de la confirmación no está definido; se usa «Salir».
@@ -411,6 +425,29 @@ export function VentanaPrincipal({
         </ContextoDeNavegacion.Provider>
       </ProveedorDeApariencia>
     </ContextoDelNucleo.Provider>
+  );
+}
+
+/** RD-65 (P09): «Cerrar sesión» como ícono al pie del menú, con el flujo de HE-16-HU03. */
+function CerrarSesionDelMenu({ contraido }: { contraido: boolean }) {
+  const mostrar = useMensajeDeResultado();
+  return (
+    <CerrarSesion
+      alFallar={(mensaje) => mostrar(mensaje, 'error')}
+      disparador={(abrir, enCurso) => (
+        <button
+          type="button"
+          className="wg-boton wg-menu__opcion wg-menu__cerrar-sesion"
+          aria-label="Cerrar sesión"
+          title="Cerrar sesión"
+          disabled={enCurso}
+          onClick={abrir}
+        >
+          <IconoDelMenu trazo={TRAZO_CERRAR_SESION} />
+          {!contraido && <span aria-hidden="true">Cerrar sesión</span>}
+        </button>
+      )}
+    />
   );
 }
 

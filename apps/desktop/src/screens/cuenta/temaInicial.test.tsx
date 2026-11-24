@@ -52,7 +52,7 @@ async function entrar(boton: 'Cuenta nueva' | 'Cuenta existente') {
 }
 
 const NO_APLICADO = (paleta: string) =>
-  `No pudimos aplicar el tema ${paleta}. Puedes elegirlo en Personalización.`;
+  `No pudimos aplicar la paleta ${paleta}. Puedes elegirla en Personalización › 3 Colores y tipografía.`;
 
 beforeEach(() => window.localStorage.clear());
 afterEach(() => {

@@ -1,4 +1,4 @@
-// docs/rediseno.md RD-28, RD-29, RD-31 y RD-32 · El marco de la ventana principal con sesión. Una prueba por RD. La
+// docs/rediseno.md RD-62, RD-65 y RD-66 (rediseno_final_backend.md §4.1 y §4.2) · El marco de la ventana principal con sesión. Una prueba por RD. La
 // geometría contra el Figma está en e2e/rediseno-marco.spec.ts.
 import { fireEvent, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -38,7 +38,7 @@ function aplicado(paleta: keyof typeof PALETAS): AppliedThemeView {
   };
 }
 
-/** Abre Widgets con el tema aplicado en `inicial`; `aplicar` decide si el Núcleo acepta aplicar la paleta. */
+/** Abre Widgets con el tema aplicado en `inicial`. */
 async function abrir(inicial: keyof typeof PALETAS, aplicar = true): Promise<NucleoDelPlanificador> {
   let paleta = inicial;
   let enBorrador: keyof typeof PALETAS | null = null;
@@ -73,64 +73,62 @@ async function abrir(inicial: keyof typeof PALETAS, aplicar = true): Promise<Nuc
   });
 }
 
-const modoDeLaVentana = () => document.body.dataset.modo;
-
-describe('Rediseño · marco de la ventana principal con sesión', () => {
-  it('RD-28 · La ventana toma el modo del tema aplicado', async () => {
+describe('Rediseño final · marco de la ventana principal con sesión', () => {
+  it('RD-62 · Con sesión no hay modo fijo: la ventana usa los tokens del tema aplicado', async () => {
     await abrir('oscuro');
-    await waitFor(() => expect(modoDeLaVentana()).toBe('oscuro'));
+    await waitFor(() =>
+      expect(document.documentElement.style.getPropertyValue('--wg-marco')).toBe('#201B2B'),
+    );
+    expect(document.body.dataset.modo).toBeUndefined();
+    expect('sesion' in document.body.dataset).toBe(true);
   });
 
-  it('RD-28 · Un tema de fondo claro deja la ventana en modo claro', async () => {
+  it('RD-62 · Sin selector Claro/Oscuro en el encabezado (D-01)', async () => {
     await abrir('claro');
-    await waitFor(() => expect(modoDeLaVentana()).toBe('claro'));
+    expect(screen.queryByRole('radiogroup', { name: 'Apariencia' })).toBeNull();
   });
 
-  it('RD-29 · «Claro» aplica la paleta Claro al tema sin cambiar la tipografía', async () => {
-    const nucleo = await abrir('oscuro');
-    const selector = await screen.findByRole('radiogroup', { name: 'Apariencia' });
-    expect(within(selector).getByRole('radio', { name: 'Oscuro' }).getAttribute('aria-checked')).toBe('true');
-    fireEvent.click(within(selector).getByRole('radio', { name: 'Claro' }));
-    await waitFor(() => expect(modoDeLaVentana()).toBe('claro'));
-    expect(llamadasA(nucleo, 'theme_draft_update')).toEqual([{ patch: { palette_id: 'claro' } }]);
-    expect(llamadasA(nucleo, 'theme_draft_apply')).toEqual([{ mode: 'save_and_apply' }]);
-    expect(within(selector).getByRole('radio', { name: 'Claro' }).getAttribute('aria-checked')).toBe('true');
-  });
-
-  it('RD-29 · Si no se puede aplicar, el mensaje de RD-15 y el modo no cambia', async () => {
-    await abrir('oscuro', false);
-    const selector = await screen.findByRole('radiogroup', { name: 'Apariencia' });
-    fireEvent.click(within(selector).getByRole('radio', { name: 'Claro' }));
-    expect(
-      await screen.findByText('No pudimos aplicar el tema Claro. Puedes elegirlo en Personalización.'),
-    ).toBeTruthy();
-    expect(modoDeLaVentana()).toBe('oscuro');
-    expect(within(selector).getByRole('radio', { name: 'Oscuro' }).getAttribute('aria-checked')).toBe('true');
-  });
-
-  it('RD-31 · «Ocultar menú» y «Ampliar menú»', async () => {
-    await abrir('claro');
+  it('RD-65 · Contraer el menú deja solo los íconos y se recuerda en este computador (D-25)', async () => {
+    const nucleo = await abrir('claro');
     fireEvent.click(screen.getByRole('button', { name: 'Ocultar menú' }));
-    expect(screen.queryByRole('navigation', { name: 'Menú principal' })).toBeNull();
-    // La pantalla sigue abierta.
-    expect(screen.getByRole('main', { name: 'Widgets' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Ampliar menú' }));
     const menu = screen.getByRole('navigation', { name: 'Menú principal' });
+    // La pantalla sigue abierta y su opción sigue marcada.
+    expect(screen.getByRole('main', { name: 'Widgets' })).toBeTruthy();
     expect(within(menu).getByRole('button', { name: 'Widgets' }).getAttribute('aria-current')).toBe('page');
+    expect(within(menu).getByRole('button', { name: 'Widgets' }).textContent).toBe('');
+    fireEvent.click(screen.getByRole('button', { name: 'Ampliar menú' }));
+    expect(within(menu).getByRole('button', { name: 'Widgets' }).textContent).toBe('Widgets');
+    expect(llamadasA(nucleo, 'app_set_menu_collapsed')).toEqual([{ collapsed: true }, { collapsed: false }]);
   });
 
-  it('RD-32 · La sección y el título de la pantalla', async () => {
+  it('RD-65 · El menú abre contraído si así quedó', async () => {
+    await abrirPantalla('widgets', 'Widgets', Widgets, [], (n) => {
+      n.responder('app_get_menu_collapsed', () => ({ ok: true, value: { collapsed: true } }));
+      n.responder('widget_list', () => ({ ok: true, value: [] }));
+    });
+    expect(await screen.findByRole('button', { name: 'Ampliar menú' })).toBeTruthy();
+  });
+
+  it('RD-65 · «Cerrar sesión» al pie del menú abre M-11', async () => {
+    await abrir('claro');
+    const menu = screen.getByRole('navigation', { name: 'Menú principal' });
+    fireEvent.click(within(menu).getByRole('button', { name: 'Cerrar sesión' }));
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+  });
+
+  it('RD-66 · La miga de pan y el título de la pantalla', async () => {
     await abrir('claro');
     const encabezado = screen.getByRole('banner');
-    expect(within(encabezado).getByText('Personalización')).toBeTruthy();
+    expect(within(encabezado).getByText('Personalización › Widgets')).toBeTruthy();
     expect(within(encabezado).getByRole('heading', { level: 1, name: 'Widgets' })).toBeTruthy();
     // El indicador de sincronización va en el encabezado (91:1558).
     expect(within(encabezado).getByText('Sincronizado')).toBeTruthy();
     const menu = screen.getByRole('navigation', { name: 'Menú principal' });
-    fireEvent.click(within(menu).getByRole('button', { name: 'Agente de IA' }));
-    expect(await within(encabezado).findByRole('heading', { level: 1, name: 'Windi' })).toBeTruthy();
-    expect(within(encabezado).getByText('Planificador')).toBeTruthy();
+    fireEvent.click(within(menu).getByRole('button', { name: 'Tablero Kanban' }));
+    expect(await within(encabezado).findByText('Planificador › Tablero Kanban')).toBeTruthy();
     fireEvent.click(within(menu).getByRole('button', { name: 'Configuración' }));
-    expect(await within(encabezado).findByText('Preferencias')).toBeTruthy();
+    // A-04: la miga de Configuración es «Configuración».
+    expect(await within(encabezado).findByRole('heading', { level: 1, name: 'Configuración' })).toBeTruthy();
+    expect(encabezado.querySelector('.wg-encabezado-pantalla__seccion')?.textContent).toBe('Configuración');
   });
 });

@@ -598,6 +598,20 @@ pub struct CommandMapAppSetLastScreen {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "index.ts")]
+pub struct CommandMapAppGetMenuCollapsed {
+    pub params: NoParams,
+    pub result: MenuCollapsed,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
+pub struct CommandMapAppSetMenuCollapsed {
+    pub params: MenuCollapsed,
+    pub result: (),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
 pub struct CommandMapAppHideMainWindow {
     pub params: NoParams,
     pub result: (),
@@ -816,6 +830,8 @@ pub struct CommandMap {
     pub app_open_screen: CommandMapAppOpenScreen,
     pub app_get_last_screen: CommandMapAppGetLastScreen,
     pub app_set_last_screen: CommandMapAppSetLastScreen,
+    pub app_get_menu_collapsed: CommandMapAppGetMenuCollapsed,
+    pub app_set_menu_collapsed: CommandMapAppSetMenuCollapsed,
     pub app_hide_main_window: CommandMapAppHideMainWindow,
     pub app_request_exit: CommandMapAppRequestExit,
     pub app_exit: CommandMapAppExit,

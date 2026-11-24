@@ -184,3 +184,11 @@ pub struct MediaSession {
     pub can_next: bool,
     pub can_play_pause: bool,
 }
+
+/// IPC-DESK-17 `app_get_menu_collapsed` / IPC-DESK-18 `app_set_menu_collapsed` (rediseno_final_backend.md §4.2,
+/// D-25): si el menú lateral quedó contraído en este computador.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
+pub struct MenuCollapsed {
+    pub collapsed: bool,
+}

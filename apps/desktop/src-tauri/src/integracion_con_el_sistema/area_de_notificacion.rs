@@ -60,6 +60,8 @@ pub fn abrir_ventana(app: &AppHandle) {
     if let Some(ventana) = app.get_webview_window(VENTANA_PRINCIPAL) {
         let _ = ventana.show();
         let _ = ventana.unminimize();
+        // rediseno_final_backend.md §4.9 (D-04): la ventana vuelve siempre maximizada.
+        let _ = ventana.maximize();
         let _ = ventana.set_focus();
     }
     let app = app.clone();
@@ -85,6 +87,8 @@ pub fn abrir_pantalla(app: &AppHandle, screen: ScreenId, params: Option<ScreenPa
     if let Some(ventana) = app.get_webview_window(VENTANA_PRINCIPAL) {
         let _ = ventana.show();
         let _ = ventana.unminimize();
+        // rediseno_final_backend.md §4.9 (D-04): la ventana vuelve siempre maximizada.
+        let _ = ventana.maximize();
         let _ = ventana.set_focus();
     }
     let _ = app.emit(
@@ -111,6 +115,8 @@ pub fn pedir_salida(app: &AppHandle) {
     if let Some(ventana) = app.get_webview_window(VENTANA_PRINCIPAL) {
         let _ = ventana.show();
         let _ = ventana.unminimize();
+        // rediseno_final_backend.md §4.9 (D-04): la ventana vuelve siempre maximizada.
+        let _ = ventana.maximize();
         let _ = ventana.set_focus();
     }
     let _ = app.emit(

@@ -34,6 +34,8 @@ export const TRAZO_DEL_MENU: Record<ScreenId, string> = {
 /** Figma 85:330 «Contraer» (Ocultar menú) y 85:401 «Abrir» (Ampliar menú). */
 export const TRAZO_CONTRAER = 'M6.3 2.7V15.3M11.7 5.4L9 9L11.7 12.6M2.7 2.7H15.3V15.3H2.7V2.7Z';
 export const TRAZO_ABRIR = 'M1.8 3.6H16.2M1.8 9H16.2M1.8 14.4H16.2';
+/** rediseno_final_prototipos.md §3.6: «Cerrar sesión», ícono de salida al pie del menú. */
+export const TRAZO_CERRAR_SESION = 'M7.2 2.7H2.7V15.3H7.2M11.7 5.4L15.3 9L11.7 12.6M15.3 9H6.3';
 
 export function IconoDelMenu({ trazo, className = 'wg-menu__icono' }: { trazo: string; className?: string }) {
   return (

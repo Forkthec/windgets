@@ -30,7 +30,12 @@ async function abrirConfiguracion(pendientes: number): Promise<NucleoDelPlanific
 }
 
 async function seleccionarCerrarSesion() {
-  fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
+  // RD-65: el menú también tiene «Cerrar sesión»; aquí se usa el de la pantalla.
+  fireEvent.click(
+    within(screen.getByRole('main', { name: 'Configuración' })).getByRole('button', {
+      name: 'Cerrar sesión',
+    }),
+  );
   return screen.findByRole('dialog');
 }
 

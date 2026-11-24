@@ -56,6 +56,8 @@ pub fn run() {
             puente_ipc::windi_reject_proposal,
             puente_ipc::app_get_last_screen,
             puente_ipc::app_set_last_screen,
+            puente_ipc::app_get_menu_collapsed,
+            puente_ipc::app_set_menu_collapsed,
             puente_ipc::app_request_exit,
             puente_ipc::app_exit,
             puente_ipc::card_create,

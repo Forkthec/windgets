@@ -1,193 +1,102 @@
 /* ============================================================================================================
- * Rediseño de la ventana principal con sesión (docs/rediseno.md RD-28 a RD-36; Figma «Windgets (Copy)»
- * KP2qmNWNT55KMceQI8hFGu). El tema sigue escribiendo sus tokens en :root (HE-03-HU06); con la sesión iniciada,
- * `body[data-modo]` los redefine con los colores fijos del Figma para el modo del tema (RD-28). Va en `body` para
- * que alcance también las ventanas emergentes, que se dibujan fuera de la ventana principal. Las ventanas de los
- * widgets y la de edición no ponen `data-modo` y siguen con el tema. Las medidas son px del Figma.
+ * Ventana principal con sesión (docs/rediseno.md RD-30 a RD-36, RD-62 a RD-66; rediseno_final_prototipos.md §3 y
+ * §4). El tema escribe sus tokens en :root (HE-03-HU06); `body[data-sesion]` deriva de ellos los tonos de cada área
+ * (RD-62). Va en `body` para que alcance también las ventanas emergentes. Las medidas son px.
  * ============================================================================================================ */
 
-/* Figma 81:2 «Planificador diario · Claro», 76:2 «Agente de IA · Claro», 85:2 «M-01 · Claro». */
-body[data-modo='claro'] {
-  --wg-marco: #f7f4fb;
-  --wg-sobre-marco: #211a2d;
-  --wg-superficie: #ffffff;
-  --wg-superficie-alta: #ffffff;
-  --wg-superficie-baja: #f7f4fb;
-  --wg-linea: #d6ccdf;
-  --wg-tinta: #211a2d;
-  --wg-texto: #5f556b;
-  --wg-accion: #00d9e2;
-  --wg-sobre-accion: #211a2d;
-  --wg-borde: #766b81;
-  /* Estados y avisos: los de RD-04, y completada con la fórmula de «Tema a tokens» sobre la tarjeta. */
-  --wg-estado-vencida: #b3261e;
-  --wg-estado-pendiente: #8f6a00;
-  --wg-estado-completada: #1ea94c;
-  --wg-relleno-vencida: #e47067;
-  --wg-relleno-pendiente: #ffeeb8;
-  --wg-relleno-completada: #62c382;
-  --wg-fuente: 'Rubik', 'Segoe UI', sans-serif;
-  --wgm-seleccion-fondo: #ede2ff;
-  --wgm-seleccion-texto: #6604e6;
-  --wgm-secundario: #f7f4fb;
-  --wgm-interruptor: #6604e6;
-  --wgm-principal-borde: #211a2d;
-  --wgm-deshabilitado: #e3dee8;
-  --wgm-deshabilitado-texto: #60576a;
-  --wgm-emergente: #f7f4fb;
-  --wgm-opcion: #e8ddf6;
-  --wgm-sobre-opcion: #211a2d;
-  --wgm-globo-propio: #ede2ff;
-  --wgm-propuesta: #fffbea;
-  --wgm-linea-windi: #d6ccdf;
-  --wgm-campo-windi: #f7f4fb;
-  --wgm-nombre-windi: #6604e6;
-  --wgm-divisor: #e5dfe9; /* 81:203 */
-  --wgm-monitor: #251e30; /* 91:1648 */
-  --wgm-pie-monitor: #9b8ba8; /* 91:1670 */
-  --wgm-seccion-abierta: #f0eaf8; /* 91:1672 */
-  --wgm-columna: #f2ecf8; /* 93:6 */
-  --wgm-linea-agenda: #e8deed; /* 93:46 */
-  /* El selector «Apariencia» de las pantallas de cuenta (RD-29). */
-  --wgc-selector: #ffffff;
-  --wgc-selector-borde: #766b81;
-  --wgc-selector-texto: #211a2d;
-  --wgc-seleccion: #6604e6;
-  --wgc-sobre-seleccion: #ffffff;
-  --wgc-enlace: #6604e6;
+/* docs/rediseno.md RD-62 (rediseno_final_backend.md §4.1, D-01, D-02; reemplaza RD-28 y RD-29): con la sesión
+   iniciada, todos los colores salen de los tres colores del tema aplicado. Los tokens `--wg-*` los escribe el tema en
+   :root (HE-03-HU06, `ui/tema/derivar.ts`); aquí solo se derivan de ellos los tonos de las áreas (selección,
+   deshabilitado, columnas…) con mezclas sólidas, sin transparencias apiladas (R-05, R-08). Los colores de marca no
+   se usan como acción ni selección (R-04). */
+body[data-sesion] {
+  --wgm-seleccion-fondo: color-mix(in srgb, var(--wg-accion) 22%, var(--wg-superficie-alta));
+  --wgm-seleccion-texto: var(--wg-tinta);
+  --wgm-secundario: var(--wg-superficie-baja);
+  --wgm-interruptor: var(--wg-accion);
+  --wgm-principal-borde: var(--wg-accion);
+  --wgm-deshabilitado: color-mix(in srgb, var(--wg-linea) 45%, var(--wg-superficie-baja));
+  --wgm-deshabilitado-texto: var(--wg-texto);
+  --wgm-emergente: var(--wg-superficie);
+  --wgm-opcion: color-mix(in srgb, var(--wg-accion) 16%, var(--wg-superficie-alta));
+  --wgm-sobre-opcion: var(--wg-tinta);
+  --wgm-globo-propio: color-mix(in srgb, var(--wg-accion) 22%, var(--wg-superficie-alta));
+  --wgm-propuesta: color-mix(in srgb, var(--wg-estado-pendiente) 12%, var(--wg-superficie-alta));
+  --wgm-linea-windi: var(--wg-linea);
+  --wgm-campo-windi: var(--wg-superficie-baja);
+  --wgm-nombre-windi: var(--wg-tinta);
+  --wgm-divisor: var(--wg-linea);
+  --wgm-monitor: color-mix(in srgb, var(--wg-tinta) 85%, var(--wg-marco));
+  --wgm-pie-monitor: var(--wg-borde);
+  --wgm-seccion-abierta: color-mix(in srgb, var(--wg-accion) 10%, var(--wg-superficie-alta));
+  --wgm-columna: var(--wg-superficie-baja);
+  --wgm-linea-agenda: var(--wg-linea);
+  --wgc-selector: var(--wg-superficie-alta);
+  --wgc-selector-borde: var(--wg-borde);
+  --wgc-selector-texto: var(--wg-tinta);
+  --wgc-seleccion: var(--wg-accion);
+  --wgc-sobre-seleccion: var(--wg-sobre-accion);
+  --wgc-enlace: var(--wg-tinta);
 }
 
-/* Figma 81:45 «Planificador diario · Oscuro», 76:57 «Agente de IA · Oscuro», 85:8 «M-01 · Oscuro». */
-body[data-modo='oscuro'] {
-  --wg-marco: #1c1922;
-  --wg-sobre-marco: #f8f5ff;
-  --wg-superficie: #2b2534;
-  --wg-superficie-alta: #2b2534;
-  --wg-superficie-baja: #1c1922;
-  --wg-linea: #70647c;
-  --wg-tinta: #f8f5ff;
-  --wg-texto: #cbc3d3;
-  --wg-accion: #00d9e2;
-  --wg-sobre-accion: #211a2d;
-  --wg-borde: #948b9e;
-  --wg-estado-vencida: #ff8a80;
-  --wg-estado-pendiente: #e0b640;
-  --wg-estado-completada: #26d962;
-  --wg-relleno-vencida: #a52e2a;
-  --wg-relleno-pendiente: #4a3b12;
-  --wg-relleno-completada: #28a354;
-  --wg-fuente: 'Rubik', 'Segoe UI', sans-serif;
-  --wgm-seleccion-fondo: #463453;
-  --wgm-seleccion-texto: #d3b2ff;
-  --wgm-secundario: #1c1922;
-  --wgm-interruptor: #6604e6;
-  --wgm-principal-borde: #211a2d;
-  --wgm-deshabilitado: #494151;
-  --wgm-deshabilitado-texto: #cec4d8;
-  --wgm-emergente: #2b2534;
-  --wgm-opcion: #e8ddf6;
-  --wgm-sobre-opcion: #211a2d;
-  --wgm-globo-propio: #453453;
-  --wgm-propuesta: #38323a;
-  --wgm-linea-windi: #70647c;
-  --wgm-campo-windi: #1c1922;
-  --wgm-nombre-windi: #d5b5ff;
-  --wgm-divisor: #53485d; /* 81:230 */
-  --wgm-monitor: #251e30;
-  --wgm-pie-monitor: #9b8ba8;
-  --wgm-seccion-abierta: #463453;
-  --wgm-columna: #1c1922;
-  --wgm-linea-agenda: #53485d;
-  --wgc-selector: #2b2534;
-  --wgc-selector-borde: #948b9e;
-  --wgc-selector-texto: #f8f5ff;
-  --wgc-seleccion: #d3b2ff;
-  --wgc-sobre-seleccion: #201b2b;
-  --wgc-enlace: #d3b2ff;
-}
-
-body[data-modo] {
+body[data-sesion] {
   --wgm-borde-control: 1.5px;
-  /* RD-32: el encabezado y la tarjeta empiezan en x = 300 con el menú (248 + 52) y en x = 180 sin él (85:332);
-     dejan 70 px a la derecha (81:21: 300 + 990 = 1290 en un marco de 1360). */
-  --wgm-izquierda: 52px;
-  --wgm-izquierda-sin-menu: 180px;
-  --wgm-derecha: 70px;
+  /* rediseno_final_prototipos.md §3.1 (RD-68): 24 px desde el menú y 24 px a la derecha. */
+  --wgm-izquierda: 24px;
+  --wgm-derecha: 24px;
+  --wgm-menu: 212px;
+  --wgm-menu-contraido: 56px;
   font-family: var(--wg-fuente);
   background: var(--wg-marco);
   color: var(--wg-tinta);
 }
-@media (width < 1000px) {
-  body[data-modo] {
-    --wgm-izquierda: 24px;
-    --wgm-derecha: 24px;
-  }
-}
 
-/* ---------- Disposición (RD-31, RD-32; Figma 81:2) ---------- */
-body[data-modo] .wg-ventana-principal {
+/* ---------- Disposición (RD-65, RD-68): sin scroll de página; solo la tarjeta de la pantalla crece ---------- */
+body[data-sesion] .wg-ventana-principal {
   display: grid;
-  grid-template-columns: 248px minmax(0, 1fr);
+  grid-template-columns: var(--wgm-menu) minmax(0, 1fr);
   gap: 0;
   height: 100vh;
   padding: 0;
+  overflow: hidden;
   background: var(--wg-marco);
   color: var(--wg-tinta);
 }
-body[data-modo] .wg-ventana-principal--sin-menu {
-  grid-template-columns: minmax(0, 1fr);
+body[data-sesion] .wg-ventana-principal--menu-contraido {
+  grid-template-columns: var(--wgm-menu-contraido) minmax(0, 1fr);
 }
-body[data-modo] .wg-ventana-principal__principal {
+body[data-sesion] .wg-ventana-principal__principal {
   position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  padding: 44px var(--wgm-derecha) 0 var(--wgm-izquierda);
-}
-body[data-modo] .wg-ventana-principal--sin-menu .wg-ventana-principal__principal {
-  padding-left: var(--wgm-izquierda-sin-menu);
-}
-/* Figma 85:400 «Ampliar menú»: 44 × 44 en (20, 32). */
-.wg-marco__ampliar {
-  position: absolute;
-  top: 32px;
-  left: 20px;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border: var(--wgm-borde-control) solid var(--wg-borde);
-  border-radius: 8px;
-  background: var(--wg-superficie);
-  color: var(--wg-tinta);
-  cursor: pointer;
+  padding: 16px var(--wgm-derecha) 0 var(--wgm-izquierda);
 }
 
-/* Encabezado: la sección (81:17, 16 px en y = 44) y el título (81:18, 43 px negrita en y = 82). */
+/* Encabezado (RD-66): la miga de pan en 13 px y debajo el título en 26 px negrita; el indicador a la derecha. */
 .wg-encabezado-pantalla {
   position: relative;
-  min-height: 130px;
   flex: none;
+  min-height: 56px;
+  padding-bottom: 12px;
 }
 .wg-encabezado-pantalla__seccion {
   margin: 0;
   color: var(--wg-texto);
-  font-size: 16px;
-  line-height: 19px;
+  font-size: 13px;
+  line-height: 16px;
 }
 .wg-encabezado-pantalla__titulo {
-  margin: 19px 0 0;
+  margin: 4px 0 0;
   color: var(--wg-tinta);
-  font-size: 43px;
+  font-size: 26px;
   font-weight: 700;
-  line-height: 51px;
+  line-height: 32px;
 }
-/* El selector (81:19, y = 47) y el indicador de sincronización a su izquierda (91:1558). */
 .wg-encabezado-pantalla__derecha {
   position: absolute;
-  top: 3px;
+  top: 0;
   right: 0;
   display: flex;
   align-items: center;
@@ -196,105 +105,147 @@ body[data-modo] .wg-ventana-principal--sin-menu .wg-ventana-principal__principal
 .wg-encabezado-pantalla .wg-indicador-sincronizacion {
   align-items: flex-end;
   text-align: right;
-  font-size: 15px;
-}
-/* Con el título largo y la ventana angosta, el título baja y no se monta sobre el selector. */
-@media (width < 1000px) {
-  .wg-encabezado-pantalla__titulo {
-    font-size: 34px;
-    line-height: 41px;
-  }
+  font-size: 12px;
 }
 
-/* La tarjeta de la pantalla (81:21): radio 16, desde y = 174; abajo deja 96 px como el marco de 890. */
-body[data-modo] .wg-ventana-principal__pantalla {
+/* La tarjeta de la pantalla: ocupa el alto que queda; si su contenido crece, el scroll va dentro (§3.1). */
+body[data-sesion] .wg-ventana-principal__pantalla {
   position: relative;
   flex: 1;
   min-height: 0;
-  margin-bottom: 96px;
+  margin-bottom: 24px;
   overflow: auto;
-  padding: 32px;
+  padding: 24px;
   border: 0;
-  border-radius: 16px;
+  border-radius: 12px;
   background: var(--wg-superficie);
   color: var(--wg-tinta);
-  font-size: var(--wg-tamano-fuente);
-}
-@media (height < 800px) {
-  body[data-modo] .wg-ventana-principal__pantalla {
-    margin-bottom: 32px;
-  }
+  font-size: 14px;
 }
 
-/* ---------- Menú principal (RD-30; Figma 81:3, 76:4) ---------- */
-body[data-modo] .wg-menu {
-  position: relative;
-  display: block;
-  padding: 32px 0 24px;
+/* ---------- Menú lateral (RD-65; rediseno_final_prototipos.md §4.1) ---------- */
+body[data-sesion] .wg-menu {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 16px 0 16px;
+  overflow: hidden;
   background: var(--wg-superficie);
-  overflow-y: auto;
+}
+.wg-menu__cabeza {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  height: 36px;
+  padding: 0 10px 0 16px;
+}
+.wg-ventana-principal--menu-contraido .wg-menu__cabeza {
+  justify-content: center;
+  padding: 0;
 }
 .wg-menu__marca {
   display: flex;
   align-items: center;
-  gap: 9px;
-  height: 38px;
-  margin-left: 22px;
+  gap: 8px;
+  min-width: 0;
   color: var(--wg-tinta);
-  font-size: 28px;
+  font-size: 20px;
   font-weight: 700;
 }
 .wg-menu__simbolo {
-  width: 42px;
-  height: 38px;
+  width: 28px;
+  height: 26px;
 }
-/* 85:329 «Ocultar menú»: 40 × 36 en (194, 82). */
+/* El botón de contraer y ampliar, al lado del logo: ícono de 24 px en un área de 36 px. */
 .wg-menu__ocultar {
-  position: absolute;
-  top: 82px;
-  left: 194px;
   display: grid;
+  flex: none;
   place-items: center;
-  width: 40px;
+  width: 36px;
   height: 36px;
   padding: 0;
   border: 0;
   border-radius: 8px;
-  background: var(--wg-superficie);
+  background: transparent;
   color: var(--wg-tinta);
   cursor: pointer;
+}
+.wg-menu__ocultar:hover {
+  background: var(--wg-superficie-baja);
+}
+.wg-menu__ocultar .wg-menu__icono {
+  width: 24px;
+  height: 24px;
+}
+.wg-menu__navegacion {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  margin-top: 16px;
+}
+.wg-menu__bloque + .wg-menu__bloque {
+  margin-top: 16px;
+}
+.wg-menu__titulo-bloque {
+  margin: 0 0 4px;
+  padding: 0 20px;
+  color: var(--wg-texto);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .wg-menu__lista {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  margin: 53px 0 0;
+  gap: 2px;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
-/* 81:5 «Actual»: 220 × 40 en x = 12, radio 9; ícono en x = 19 y texto en x = 52, 16 px. */
-body[data-modo] .wg-boton.wg-menu__opcion {
+.wg-menu__pie {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--wg-linea);
+}
+/* Opción de 32 px; la actual con el color de acción del tema. */
+body[data-sesion] .wg-boton.wg-menu__opcion {
   display: flex;
   align-items: center;
-  gap: 15px;
-  width: 220px;
-  height: 40px;
-  min-height: 40px;
-  margin-left: 12px;
-  padding: 0 0 0 7px;
+  gap: 10px;
+  box-sizing: border-box;
+  width: calc(100% - 16px);
+  height: 32px;
+  min-height: 32px;
+  margin: 0 8px;
+  padding: 0 0 0 12px;
+  overflow: hidden;
   border: 0;
-  border-radius: 9px;
+  border-radius: 8px;
   background: transparent;
   color: var(--wg-tinta);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 400;
   text-align: left;
+  white-space: nowrap;
 }
-body[data-modo] .wg-boton.wg-menu__opcion[aria-current='page'] {
+body[data-sesion] .wg-boton.wg-menu__opcion:hover {
+  background: var(--wg-superficie-baja);
+}
+.wg-ventana-principal--menu-contraido .wg-boton.wg-menu__opcion {
+  justify-content: center;
+  padding: 0;
+}
+body[data-sesion] .wg-boton.wg-menu__opcion[aria-current='page'] {
   border: 0;
-  background: var(--wgm-seleccion-fondo);
-  color: var(--wgm-seleccion-texto);
-  font-weight: 700;
+  background: var(--wg-accion);
+  color: var(--wg-sobre-accion);
+  font-weight: 500;
+}
+body[data-sesion] .wg-boton.wg-menu__opcion[aria-current='page'] .wg-menu__icono {
+  color: var(--wg-sobre-accion);
 }
 .wg-menu__icono {
   flex: none;
@@ -303,30 +254,30 @@ body[data-modo] .wg-boton.wg-menu__opcion[aria-current='page'] {
   color: var(--wg-tinta);
 }
 
-/* ---------- Controles (RD-33; Figma 81:23, 81:112, 81:117) ---------- */
-body[data-modo] .wg-boton {
-  min-height: 44px;
-  padding: 0 14px;
+/* ---------- Controles (RD-33; RD-68: botones y campos de 32 a 36 px, texto de 14 px) ---------- */
+body[data-sesion] .wg-boton {
+  min-height: 34px;
+  padding: 0 12px;
   border: var(--wgm-borde-control) solid var(--wg-borde);
   border-radius: 8px;
   background: var(--wgm-secundario);
   color: var(--wg-tinta);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
 }
-body[data-modo] .wg-boton--principal {
+body[data-sesion] .wg-boton--principal {
   border-color: var(--wgm-principal-borde);
   background: var(--wg-accion);
   color: var(--wg-sobre-accion);
 }
-body[data-modo] .wg-boton:disabled {
+body[data-sesion] .wg-boton:disabled {
   border-color: transparent;
   background: var(--wgm-deshabilitado);
   color: var(--wgm-deshabilitado-texto);
 }
-body[data-modo] .wg-boton:focus-visible,
-body[data-modo] .wg-interruptor:focus-visible,
-body[data-modo] .wg-campo__entrada:focus-visible,
+body[data-sesion] .wg-boton:focus-visible,
+body[data-sesion] .wg-interruptor:focus-visible,
+body[data-sesion] .wg-campo__entrada:focus-visible,
 .wg-menu__opcion:focus-visible,
 .wg-menu__ocultar:focus-visible,
 .wg-marco__ampliar:focus-visible,
@@ -334,14 +285,14 @@ body[data-modo] .wg-campo__entrada:focus-visible,
   outline: 2px solid var(--wgm-seleccion-texto);
   outline-offset: 2px;
 }
-body[data-modo] .wg-interruptor {
+body[data-sesion] .wg-interruptor {
   width: 48px;
   height: 25px;
   border: var(--wgm-borde-control) solid var(--wg-borde);
   border-radius: 12px;
   background: var(--wg-superficie-baja);
 }
-body[data-modo] .wg-interruptor::after {
+body[data-sesion] .wg-interruptor::after {
   top: 1.5px;
   left: 1.5px;
   width: 19px;
@@ -349,23 +300,23 @@ body[data-modo] .wg-interruptor::after {
   border-radius: 9px;
   background: var(--wg-borde);
 }
-body[data-modo] .wg-interruptor[aria-checked='true'] {
+body[data-sesion] .wg-interruptor[aria-checked='true'] {
   border-color: var(--wg-borde);
   background: var(--wgm-interruptor);
 }
-body[data-modo] .wg-interruptor[aria-checked='true']::after {
+body[data-sesion] .wg-interruptor[aria-checked='true']::after {
   left: 23.5px;
   background: #ffffff;
 }
 /* Una acción que el Figma escribe como texto («Eliminar», 81:119). */
 .wg-enlace-texto {
-  min-height: 44px;
+  min-height: 34px;
   padding: 0;
   border: 0;
   background: none;
   color: var(--wg-tinta);
   font: inherit;
-  font-size: 16px;
+  font-size: 14px;
   text-decoration: underline;
   cursor: pointer;
 }
@@ -376,14 +327,14 @@ body[data-modo] .wg-interruptor[aria-checked='true']::after {
 }
 
 /* ---------- Ventanas emergentes y confirmaciones (RD-34; Figma 85:2, 85:8) ---------- */
-body[data-modo] .wg-emergente {
+body[data-sesion] .wg-emergente {
   border: var(--wgm-borde-control) solid var(--wg-borde);
   border-radius: 15px;
   background: var(--wgm-emergente);
   box-shadow: none;
   color: var(--wg-tinta);
 }
-body[data-modo] .wg-confirmacion {
+body[data-sesion] .wg-confirmacion {
   display: flex;
   flex-direction: column;
   width: min(800px, calc(100vw - 64px));
@@ -397,37 +348,37 @@ body[data-modo] .wg-confirmacion {
   line-height: 24px;
   white-space: pre-line;
 }
-body[data-modo] .wg-confirmacion .wg-emergente__acciones {
+body[data-sesion] .wg-confirmacion .wg-emergente__acciones {
   justify-content: flex-start;
   gap: 12px;
   margin-top: auto;
   padding-top: 24px;
 }
-body[data-modo] .wg-confirmacion .wg-boton {
+body[data-sesion] .wg-confirmacion .wg-boton {
   min-height: 45px;
   font-weight: 400;
 }
-body[data-modo] .wg-confirmacion .wg-boton:not(.wg-boton--principal) {
+body[data-sesion] .wg-confirmacion .wg-boton:not(.wg-boton--principal) {
   background: var(--wgm-opcion);
   color: var(--wgm-sobre-opcion);
 }
 
 @media (forced-colors: active) {
-  body[data-modo] .wg-menu__opcion[aria-current='page'] {
+  body[data-sesion] .wg-menu__opcion[aria-current='page'] {
     outline: 2px solid Highlight;
   }
 }
 
 /* RD-32: la tarjeta se desplaza por dentro; en Agenda diaria, «Tarjetas sin horario» queda a la vista mientras se
    desplazan los bloques, para poder arrastrar una tarjeta a cualquier hora (HE-11-HU02). Se pega a la misma altura
-   con la que empieza (32 px de la tarjeta + 40 de la cabecera + 24, RD-52), así no salta al desplazarse. */
-body[data-modo] .wg-agenda__sin-horario {
+   con la que empieza (24 px de la tarjeta + 40 de la cabecera + 24, RD-52, RD-68), así no salta al desplazarse. */
+body[data-sesion] .wg-agenda__sin-horario {
   position: sticky;
-  top: 96px;
+  top: 88px;
 }
 
 /* ---------- Pantalla completa: Personalización del wallpaper (RD-42; Figma 91:1638, 1360 × 850) ---------- */
-body[data-modo] .wg-ventana-principal--completa {
+body[data-sesion] .wg-ventana-principal--completa {
   display: flex;
   flex-direction: column;
   grid-template-columns: none;
@@ -489,23 +440,23 @@ body[data-modo] .wg-ventana-principal--completa {
 
 /* ---------- Ventanas emergentes (RD-50, RD-51; Figma 84:514, 84:550, 84:594) ---------- */
 /* Como las confirmaciones (RD-34): las acciones abajo a la izquierda, con la principal primero. */
-body[data-modo] .wg-emergente__acciones {
+body[data-sesion] .wg-emergente__acciones {
   justify-content: flex-start;
   gap: 12px;
 }
-body[data-modo] .wg-emergente__acciones .wg-boton--principal {
+body[data-sesion] .wg-emergente__acciones .wg-boton--principal {
   order: -1;
 }
-body[data-modo] .wg-emergente:not(.wg-confirmacion) {
+body[data-sesion] .wg-emergente:not(.wg-confirmacion) {
   padding: 28px;
 }
-body[data-modo] .wg-emergente > h2 {
+body[data-sesion] .wg-emergente > h2 {
   margin: 0 0 20px;
   font-size: 24px;
   font-weight: 700;
 }
 /* 84:514 «Detalle de tarjeta»: cada dato en una fila con fondo, radio 6, «Tipo · Tarea». */
-body[data-modo] .wg-detalle {
+body[data-sesion] .wg-detalle {
   gap: 10px;
 }
 .wg-detalle__fila {
@@ -522,11 +473,11 @@ body[data-modo] .wg-detalle {
 .wg-detalle__fila > dt::after {
   content: ' ·';
 }
-body[data-modo] .wg-detalle__fila > dd {
+body[data-sesion] .wg-detalle__fila > dd {
   margin: 0;
 }
 /* 84:550 «Formulario de tarjeta»: los campos en dos columnas de igual ancho. */
-body[data-modo] .wg-formulario--tarjeta {
+body[data-sesion] .wg-formulario--tarjeta {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
@@ -539,7 +490,7 @@ body[data-modo] .wg-formulario--tarjeta {
   gap: 8px;
 }
 @media (width < 1000px) {
-  body[data-modo] .wg-formulario--tarjeta {
+  body[data-sesion] .wg-formulario--tarjeta {
     grid-template-columns: minmax(0, 1fr);
     min-width: 0;
   }

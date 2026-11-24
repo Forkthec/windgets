@@ -36,8 +36,49 @@ pub async fn leer(base: &BaseLocal) -> Result<Option<ScreenId>, sqlx::Error> {
     Ok(valor.and_then(|v| serde_json::from_str(&v).ok()))
 }
 
+/// rediseno_final_backend.md §4.2 (D-25): el menú lateral contraído se recuerda en este computador, sin sincronizar.
+const MENU_CONTRAIDO: &str = "menu_collapsed";
+
+/// IPC-DESK-18 `app_set_menu_collapsed`.
+pub async fn guardar_menu_contraido(
+    base: &BaseLocal,
+    contraido: bool,
+    ahora_ms: i64,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO device_setting (key, value, updated_at) VALUES (?, ?, ?) \n         ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
+    )
+    .bind(MENU_CONTRAIDO)
+    .bind(if contraido { "true" } else { "false" })
+    .bind(instante(ahora_ms).0)
+    .execute(base.pool().await?)
+    .await?;
+    Ok(())
+}
+
+/// IPC-DESK-17 `app_get_menu_collapsed`: sin valor guardado, ampliado.
+pub async fn leer_menu_contraido(base: &BaseLocal) -> Result<bool, sqlx::Error> {
+    let valor: Option<String> =
+        sqlx::query_scalar("SELECT value FROM device_setting WHERE key = ?")
+            .bind(MENU_CONTRAIDO)
+            .fetch_optional(base.pool().await?)
+            .await?;
+    Ok(valor.as_deref() == Some("true"))
+}
+
 #[cfg(test)]
 mod pruebas {
+    #[test]
+    fn el_menu_contraido_se_recuerda_en_este_computador() {
+        // D-25: sin valor, ampliado; se guarda y se vuelve a leer.
+        let base = BaseLocal::en_memoria();
+        assert!(!bloquear(leer_menu_contraido(&base)).unwrap());
+        bloquear(guardar_menu_contraido(&base, true, AHORA)).unwrap();
+        assert!(bloquear(leer_menu_contraido(&base)).unwrap());
+        bloquear(guardar_menu_contraido(&base, false, AHORA + 1)).unwrap();
+        assert!(!bloquear(leer_menu_contraido(&base)).unwrap());
+    }
+
     use super::*;
     use crate::servicio_del_planificador::pruebas::bloquear;
 

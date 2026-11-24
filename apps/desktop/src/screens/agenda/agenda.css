@@ -13,7 +13,7 @@
   font-size: 25px;
   font-weight: 500;
 }
-body[data-modo] .wg-agenda__cabecera .wg-boton {
+body[data-sesion] .wg-agenda__cabecera .wg-boton {
   min-height: 40px;
   padding: 0 12px;
   font-size: 15px;
@@ -78,7 +78,7 @@ body[data-modo] .wg-agenda__cabecera .wg-boton {
   border-radius: 6px;
   background: var(--wgm-columna);
 }
-body[data-modo] .wg-agenda-diaria .wg-agenda__bloque .wg-tarjeta .wg-boton {
+body[data-sesion] .wg-agenda-diaria .wg-agenda__bloque .wg-tarjeta .wg-boton {
   min-height: 30px;
   padding: 0 8px;
   font-size: 13px;

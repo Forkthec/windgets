@@ -6,7 +6,7 @@
 .wg-kanban > .wg-fila {
   gap: 12px;
 }
-body[data-modo] .wg-kanban > .wg-fila .wg-boton {
+body[data-sesion] .wg-kanban > .wg-fila .wg-boton {
   min-height: 40px;
   padding: 0 12px;
   font-size: 15px;
@@ -103,7 +103,7 @@ body[data-modo] .wg-kanban > .wg-fila .wg-boton {
   top: 6px;
   right: 6px;
 }
-body[data-modo] .wg-kanban__tarjeta > .wg-menu-acciones .wg-boton {
+body[data-sesion] .wg-kanban__tarjeta > .wg-menu-acciones .wg-boton {
   min-width: 32px;
   min-height: 32px;
   padding: 0;

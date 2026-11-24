@@ -3,10 +3,10 @@ import { useEnvioUnico } from '@/reglas/envio';
 import textos from '@/types/messages.es.json';
 import { Aviso } from '@/ui/Aviso/Aviso';
 import { Boton } from '@/ui/Boton/Boton';
-import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { Interruptor } from '@/ui/Interruptor/Interruptor';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
-import { useNavegacion, useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { CerrarSesion } from './CerrarSesion';
 import './configuracion.css';
 
 // P-CFG-01 Configuración (Menú principal > Configuración).
@@ -16,14 +16,9 @@ import './configuracion.css';
 //   ET05).
 // - HE-16-HU01 (indicador de sincronización): es el de la ventana principal, junto al menú (D-203).
 
-/** La confirmación abierta: M-11 sin cambios pendientes, M-12 con cambios pendientes. */
-type Confirmar = 'M-11' | 'M-12' | null;
-
 export function Settings() {
   const { invocar } = useNucleo();
-  const { sesionCerrada } = useNavegacion();
   const mostrar = useMensajeDeResultado();
-  const [confirmar, setConfirmar] = useState<Confirmar>(null);
   const [inicio, setInicio] = useState<boolean | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
 
@@ -58,28 +53,6 @@ export function Settings() {
   );
   const cambiarInicio = useEnvioUnico(alternarInicio);
 
-  // IPC-AUTH-13: si hay cambios pendientes, la vista muestra el aviso de CA03 (M-12).
-  const pedirCierre = useCallback(async () => {
-    const r = await invocar('auth_get_sign_out_info', {});
-    setConfirmar(r.ok && r.value.pending_count > 0 ? 'M-12' : 'M-11');
-  }, [invocar]);
-  const abrir = useEnvioUnico(pedirCierre);
-
-  // IPC-AUTH-14: el Núcleo cierra la sesión y oculta el wallpaper; la ventana abre Inicio de sesión y muestra
-  // «Sesión cerrada.» (CA01, CA04, ET06). Si no pudo borrar el token, la sesión sigue iniciada y se ve el aviso
-  // (CA07, ET09), sin «Sesión cerrada.».
-  const cerrar = useCallback(async () => {
-    const r = await invocar('auth_sign_out', {});
-    setConfirmar(null);
-    if (!r.ok) {
-      setAviso(r.error.message || textos.NO_PUDIMOS_CERRAR_LA_SESION);
-      return;
-    }
-    sesionCerrada();
-    mostrar(r.result_message?.message ?? textos.SESION_CERRADA);
-  }, [invocar, mostrar, sesionCerrada]);
-  const { ejecutar } = useEnvioUnico(cerrar);
-
   return (
     <main aria-label="Configuración" aria-busy={inicio === null} className="wg-configuracion">
       {aviso && <Aviso texto={aviso} />}
@@ -101,25 +74,15 @@ export function Settings() {
         <h2 id="wg-configuracion-sesion" className="wg-configuracion__nombre">
           Sesión
         </h2>
-        <Boton disabled={abrir.enCurso} onClick={() => void abrir.ejecutar()}>
-          Cerrar sesión
-        </Boton>
-      </section>
-      {confirmar && (
-        // DUDA: HE-16-HU03 el título de M-11 y M-12 no está definido; se usa «Cerrar sesión».
-        <Confirmacion
-          titulo="Cerrar sesión"
-          texto={
-            confirmar === 'M-12'
-              ? textos.CAMBIOS_SIN_SINCRONIZAR_AL_CERRAR_SESION
-              : textos.DESEAS_CERRAR_SESION
-          }
-          opcionPrincipal={confirmar === 'M-12' ? 'Confirmar' : 'Cerrar sesión'}
-          alConfirmar={() => void ejecutar()}
-          // CA02: «Cancelar» cierra el mensaje y la sesión sigue iniciada.
-          alCancelar={() => setConfirmar(null)}
+        <CerrarSesion
+          alFallar={setAviso}
+          disparador={(abrir, enCurso) => (
+            <Boton disabled={enCurso} onClick={abrir}>
+              Cerrar sesión
+            </Boton>
+          )}
         />
-      )}
+      </section>
     </main>
   );
 }

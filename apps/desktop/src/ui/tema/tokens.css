@@ -244,15 +244,102 @@ body {
   margin-top: calc(var(--wg-unidad) * 6);
 }
 
-.wg-resultado {
+/* Mensajes emergentes (rediseno_final_prototipos.md §3.5, RD-63): cola en la esquina inferior derecha, encima de
+   todo, sin bloquear los clics de la pantalla. Colores fijos por tipo con fondo sólido y borde izquierdo de 4 px. */
+/* Colores fijos de los mensajes, iguales en todos los temas (§3.5). */
+:root {
+  --wg-mensaje-exito: #1e7d3c;
+  --wg-mensaje-advertencia: #b07d00;
+  --wg-mensaje-error: #c62828;
+}
+
+.wg-resultados {
   position: fixed;
-  right: calc(var(--wg-unidad) * 4);
-  bottom: calc(var(--wg-unidad) * 4);
-  padding: calc(var(--wg-unidad) * 2) calc(var(--wg-unidad) * 4);
-  border: var(--wg-borde-ancho) solid var(--wg-borde);
-  border-radius: var(--wg-radio);
+  right: 16px;
+  bottom: 72px; /* encima del botón flotante de Windi (40 px + margen) */
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.wg-resultado {
+  --wg-resultado-color: var(--wg-mensaje-exito);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  min-height: 40px;
+  max-width: 360px;
+  padding: 8px 8px 8px 12px;
+  border: 1px solid var(--wg-linea);
+  border-left: 4px solid var(--wg-resultado-color);
+  border-radius: 8px;
   background: var(--wg-superficie-alta);
+  color: var(--wg-tinta);
+  font-size: 13px;
   box-shadow: var(--wg-sombra);
+  pointer-events: auto;
+  animation: wg-resultado-entra 200ms ease-out;
+}
+
+.wg-resultado--info {
+  --wg-resultado-color: var(--wg-accion);
+}
+
+.wg-resultado--advertencia {
+  --wg-resultado-color: var(--wg-mensaje-advertencia);
+}
+
+.wg-resultado--error {
+  --wg-resultado-color: var(--wg-mensaje-error);
+}
+
+.wg-resultado__icono {
+  color: var(--wg-resultado-color);
+  font-weight: 700;
+}
+
+.wg-resultado__texto {
+  flex: 1;
+}
+
+.wg-resultado__cerrar {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--wg-texto);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.wg-resultado__cerrar:hover,
+.wg-resultado__cerrar:focus-visible {
+  background: var(--wg-superficie-baja);
+  color: var(--wg-tinta);
+}
+
+@keyframes wg-resultado-entra {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wg-resultado {
+    animation: none;
+  }
 }
 
 .wg-aviso {
