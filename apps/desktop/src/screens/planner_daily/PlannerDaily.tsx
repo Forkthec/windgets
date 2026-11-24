@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Label, PlannerItem, PlannerSummary, PlannerToday, ScreenParams } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
@@ -13,6 +13,12 @@ import { useVentanasDeTarjeta } from '../tarjeta/useVentanasDeTarjeta';
 // HE-12-HU01). Las tarjetas vienen del Núcleo (IPC-CARD-08), que lee solo la base local: sin conexión muestra
 // lo guardado (ET09). La casilla de completada actúa con HE-12-HU02 y el resumen de avance es de HE-12-HU03.
 // El indicador «Sin conexión» de CA05 es de HE-15-HU02.
+
+/**
+ * rediseno_final_backend.md §3.1 (P32): una casilla que se cambia varias veces seguidas envía solo el último valor,
+ * 300 ms después del último clic. Mientras tanto la fila muestra el valor elegido.
+ */
+export const ESPERA_DE_CASILLAS_MS = 300;
 
 /** «08:00»: la hora de inicio del bloque horario (ET05). */
 function horaVisible(hora: number): string {
@@ -119,6 +125,11 @@ export function PlannerDaily() {
   const [dia, setDia] = useState<PlannerToday | null>(null);
   // RD-39: los nombres de las etiquetas para el detalle de cada fila.
   const [etiquetas, setEtiquetas] = useState<ReadonlyMap<string, string>>(new Map());
+  // §3.1: el valor elegido de cada casilla mientras espera su envío, y sus temporizadores.
+  const [elegidas, setElegidas] = useState<ReadonlyMap<string, boolean>>(new Map());
+  const temporizadores = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const diaActual = useRef<PlannerToday | null>(null);
+  diaActual.current = dia;
 
   const leer = useCallback(async () => {
     const [r, e] = await Promise.all([invocar('planner_get_today', {}), invocar('label_list', {})]);
@@ -128,7 +139,10 @@ export function PlannerDaily() {
 
   useEffect(() => {
     void leer();
-    const dejarTarjetas = escuchar('cards_changed', () => void leer());
+    // §3.1: con una casilla esperando su envío no se vuelve a leer por el evento: la lectura llega tras enviarla.
+    const dejarTarjetas = escuchar('cards_changed', () => {
+      if (temporizadores.current.size === 0) void leer();
+    });
     const dejarEtiquetas = escuchar('labels_changed', () => void leer());
     return () => {
       dejarTarjetas();
@@ -152,15 +166,41 @@ export function PlannerDaily() {
   // HE-12-HU02: marcar mueve a Hecho y muestra «¡Bien hecho! Tarjeta completada.» (ET07); desmarcar la
   // devuelve a su columna anterior o a Por hacer (IPC-CARD-07). El resumen se actualiza al volver a leer
   // (HE-12-HU03-ET04).
-  const completar = useCallback(
+  const enviar = useCallback(
     async (id: string, completada: boolean) => {
-      const r = await invocar('card_set_completed', { card_id: id, completed: completada });
-      if (r.ok && r.result_message) mostrarResultado(r.result_message.message);
-      if (!r.ok && r.error.code === 'card.not_found') mostrarResultado(r.error.message);
+      temporizadores.current.delete(id);
+      const actual = diaActual.current?.items.find((i) => i.card.id === id)?.card.is_completed;
+      // §3.1: si volvió al valor que ya tenía (A → B → A), no hay nada que enviar.
+      if (actual !== completada) {
+        const r = await invocar('card_set_completed', { card_id: id, completed: completada });
+        if (r.ok && r.result_message) mostrarResultado(r.result_message.message);
+        if (!r.ok && r.error.code === 'card.not_found') mostrarResultado(r.error.message);
+      }
       await leer();
+      if (!temporizadores.current.has(id))
+        setElegidas((antes) => {
+          const nuevas = new Map(antes);
+          nuevas.delete(id);
+          return nuevas;
+        });
     },
     [invocar, leer, mostrarResultado],
   );
+  const completar = useCallback(
+    (id: string, completada: boolean) => {
+      setElegidas((antes) => new Map(antes).set(id, completada));
+      clearTimeout(temporizadores.current.get(id));
+      temporizadores.current.set(
+        id,
+        setTimeout(() => void enviar(id, completada), ESPERA_DE_CASILLAS_MS),
+      );
+    },
+    [enviar],
+  );
+  useEffect(() => {
+    const pendientes = temporizadores.current;
+    return () => pendientes.forEach((t) => clearTimeout(t));
+  }, []);
 
   return (
     <main aria-label="Planificador diario" aria-busy={dia === null}>
@@ -188,10 +228,17 @@ export function PlannerDaily() {
                 {dia.items.map((item) => (
                   <Elemento
                     key={item.card.id}
-                    item={item}
+                    item={
+                      elegidas.has(item.card.id)
+                        ? {
+                            ...item,
+                            card: { ...item.card, is_completed: elegidas.get(item.card.id) === true },
+                          }
+                        : item
+                    }
                     etiquetas={etiquetas}
                     alAbrir={tarjetas.abrirDetalle}
-                    alCompletar={(id, completada) => void completar(id, completada)}
+                    alCompletar={completar}
                   />
                 ))}
               </ul>

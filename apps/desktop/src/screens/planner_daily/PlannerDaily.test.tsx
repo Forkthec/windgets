@@ -15,7 +15,7 @@ import {
   screen,
   tarjeta,
 } from '../kanban/pruebas';
-import { PlannerDaily } from './PlannerDaily';
+import { ESPERA_DE_CASILLAS_MS, PlannerDaily } from './PlannerDaily';
 
 beforeEach(fijarHoy);
 afterEach(() => {
@@ -113,6 +113,7 @@ describe('HE-12-HU01 · Planificador diario', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Ver detalle de Pagar la luz' }));
     });
+    await esperarEnvio();
     // ET10: el Detalle de tarjeta sobre la pantalla, sin cambiar la casilla.
     expect(screen.getByRole('dialog', { name: 'Detalle de tarjeta' })).toBeTruthy();
     expect(screen.getByRole('main', { name: 'Planificador diario' })).toBeTruthy();
@@ -143,10 +144,18 @@ describe('HE-12-HU01 · Planificador diario', () => {
 });
 
 /** Alterna la casilla de completada de una tarjeta. */
+/** Espera a que la casilla envíe su valor (§3.1: 300 ms después del último clic). */
+async function esperarEnvio() {
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, ESPERA_DE_CASILLAS_MS + 50));
+  });
+}
+
 async function alternar(titulo: string) {
   await act(async () => {
     fireEvent.click(screen.getByRole('checkbox', { name: titulo }));
   });
+  await esperarEnvio();
 }
 
 function tachada(titulo: string) {
@@ -212,6 +221,7 @@ describe('HE-12-HU02 · Casilla de completada en el planificador diario', () => 
     await act(async () => {
       fireEvent.click(screen.getByText('Pagar la luz'));
     });
+    await esperarEnvio();
     expect(llamadasA(nucleo, 'card_set_completed')).toEqual([{ card_id: pagar.id, completed: true }]);
     expect(screen.queryByRole('dialog')).toBeNull();
   });
@@ -224,8 +234,33 @@ describe('HE-12-HU02 · Casilla de completada en el planificador diario', () => 
     await act(async () => {
       fireEvent.click(elemento as HTMLElement);
     });
+    await esperarEnvio();
     expect(llamadasA(nucleo, 'card_set_completed')).toEqual([{ card_id: pagar.id, completed: true }]);
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('§3.1 · Dos clics rápidos (A → B → A) no envían nada y la casilla queda como estaba', async () => {
+    const pagar = tarjeta({ title: 'Pagar la luz', due_date: HOY, column_id: EN_PROGRESO.id });
+    const nucleo = await abrir([pagar]);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Pagar la luz' }));
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Pagar la luz' }));
+    });
+    await esperarEnvio();
+    expect(llamadasA(nucleo, 'card_set_completed')).toEqual([]);
+    expect(tachada('Pagar la luz')).toBe(false);
+  });
+
+  it('§3.1 · Tres clics rápidos envían solo el último valor y la fila no cambia de lugar', async () => {
+    const pagar = tarjeta({ title: 'Pagar la luz', due_date: HOY, column_id: EN_PROGRESO.id });
+    const nucleo = await abrir([pagar]);
+    await act(async () => {
+      for (let i = 0; i < 3; i++) fireEvent.click(screen.getByRole('checkbox', { name: 'Pagar la luz' }));
+    });
+    // Mientras espera, la fila ya se ve marcada.
+    expect(tachada('Pagar la luz')).toBe(true);
+    await esperarEnvio();
+    expect(llamadasA(nucleo, 'card_set_completed')).toEqual([{ card_id: pagar.id, completed: true }]);
   });
 
   it('HE-12-HU02-CA04 · El botón de información no alterna la casilla', async () => {

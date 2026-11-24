@@ -287,11 +287,24 @@ pub fn sincronizar(app: AppHandle) {
                             EventMapCatalogUpdated { kinds: catalogos },
                         );
                     }
-                    let descarga = if consultar {
+                    let mut descarga = if consultar {
                         motor_de_sincronizacion::descargar(base, cliente, &credenciales).await?
                     } else {
                         motor_de_sincronizacion::Ciclo::default()
                     };
+                    // rediseno_final_backend.md §3.2 (D-27): con la base ya igual a la nube, se crean los widgets
+                    // por defecto que falten. Solo tras una descarga completa, para no duplicar los de la nube.
+                    if descarga.llamo && !descarga.fallo {
+                        let reparadas = crate::servicio_de_personalizacion_y_configuracion::reparacion::reparar_widgets_por_defecto(
+                            base,
+                            &user_id,
+                            &motor_de_sincronizacion::instante(ahora),
+                        )
+                        .await?;
+                        descarga
+                            .cambiadas
+                            .extend(reparadas.into_iter().map(|(t, id)| (t, id, false)));
+                    }
                     // INT-09, «Descargar»: las imágenes propias que llegaron sin su archivo.
                     let bajadas = if consultar && cliente.en_linea() {
                         archivos::descargar_imagenes(

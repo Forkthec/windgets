@@ -275,7 +275,7 @@ pub async fn enviar<N: NubeDeSincronizacion>(
                 .filter(|r| r.conflict)
                 .filter(|r| filas.iter().any(|f| f.0 == r.change_id && f.1 == "card"))
                 .count() as i64;
-            ciclo.cambiadas = aplicar_filas(&mut tx, &ganadoras, sesion.user_id).await?;
+            ciclo.cambiadas = aplicar_filas(&mut tx, &ganadoras, sesion.user_id, true).await?;
             sqlx::query(
                 "UPDATE sync_state SET status = 'synced', last_sync_at = ?, last_error_code = NULL \
                  WHERE id = 1",
@@ -380,7 +380,7 @@ pub async fn descargar<N: NubeDeSincronizacion>(
             }
         };
         let mut tx = pool.begin().await?;
-        let cambiadas = aplicar_filas(&mut tx, &pagina.rows, sesion.user_id).await?;
+        let cambiadas = aplicar_filas(&mut tx, &pagina.rows, sesion.user_id, false).await?;
         sqlx::query("UPDATE sync_state SET last_pulled_seq = ?, last_sync_at = ? WHERE id = 1")
             .bind(pagina.next_seq.max(cursor))
             .bind(&pagina.server_now.0)
@@ -425,12 +425,24 @@ fn valor_sql(valor: &serde_json::Value) -> Option<String> {
 
 /// Aplica filas recibidas de la nube sin encolarlas (el reajuste por resolución no se encola). Las eliminaciones
 /// van primero, de hijo a padre, y las altas de padre a hijo. Un campo con un cambio pendiente más reciente que el
-/// recibido no se sobrescribe. Devuelve las filas tocadas.
+/// recibido no se sobrescribe.
+///
+/// Bug P0 de `rediseno_final_backend.md` §3.1 (P32): las horas locales (`pending_change`, `field_mods` de la fila)
+/// están en el reloj del computador y las de la nube ya vienen corregidas con el desfase (`_sync_corrected`). Se
+/// comparan en el mismo reloj (local + `clock_offset_ms`). Además, un campo cuyo cambio ya se envió y se quitó de la
+/// cola sigue protegido por la hora de la fila local: no se aplica un valor remoto igual o más viejo (glosario,
+/// «Conflicto de sincronización»). `field_mods` se guarda en el reloj local. Con `adoptar` (la fila ganadora que
+/// devuelve `sync_push`) solo protege lo que sigue en la cola: la nube ya decidió. Devuelve las filas tocadas.
 async fn aplicar_filas(
     tx: &mut sqlx::SqliteConnection,
     filas: &[SyncRow],
     user_id: &str,
+    adoptar: bool,
 ) -> Result<Vec<(String, String, bool)>, sqlx::Error> {
+    let desfase: i64 = sqlx::query_scalar("SELECT clock_offset_ms FROM sync_state WHERE id = 1")
+        .fetch_optional(&mut *tx)
+        .await?
+        .unwrap_or(0);
     let tipo_de = |fila: &SyncRow| {
         serde_json::to_value(&fila.entity_kind)
             .ok()
@@ -487,17 +499,61 @@ async fn aplicar_filas(
         let campos_pendientes: serde_json::Value = pendiente
             .and_then(|(_, f)| serde_json::from_str(&f).ok())
             .unwrap_or_default();
+        let tiene_field_mods = columnas.iter().any(|c| c == "field_mods");
+        let mods_locales: serde_json::Map<String, serde_json::Value> = if tiene_field_mods {
+            sqlx::query_scalar::<_, Option<String>>(&format!(
+                "SELECT field_mods FROM {tabla} WHERE {clave} = ?"
+            ))
+            .bind(&id)
+            .fetch_optional(&mut *tx)
+            .await?
+            .flatten()
+            .and_then(|f| serde_json::from_str(&f).ok())
+            .unwrap_or_default()
+        } else {
+            serde_json::Map::new()
+        };
+        let remoto = |campo: &str| fila.field_mods.get(campo).and_then(|r| milisegundos(&r.0));
         let mas_reciente_local = |campo: &str| {
-            let local = campos_pendientes
+            let pendiente = campos_pendientes
                 .get(campo)
                 .and_then(|c| c.get("modified_at"))
-                .and_then(|m| m.as_str());
-            match (local, fila.field_mods.get(campo)) {
-                (Some(local), Some(remoto)) => local > remoto.0.as_str(),
-                (Some(_), None) => true,
-                _ => false,
+                .and_then(|m| m.as_str())
+                .and_then(milisegundos);
+            if let Some(local) = pendiente {
+                return remoto(campo).is_none_or(|r| local + desfase > r);
             }
+            if adoptar {
+                return false;
+            }
+            let confirmado = mods_locales
+                .get(campo)
+                .and_then(|m| m.as_str())
+                .and_then(milisegundos);
+            matches!((confirmado, remoto(campo)), (Some(local), Some(r)) if local + desfase >= r)
         };
+        let protegidos: Vec<String> = fila
+            .fields
+            .as_object()
+            .map(|o| {
+                o.keys()
+                    .filter(|c| mas_reciente_local(c))
+                    .cloned()
+                    .collect()
+            })
+            .unwrap_or_default();
+        // Las horas que quedan: las locales de los campos protegidos y las remotas (en reloj local) de los demás.
+        let mut mods = mods_locales.clone();
+        for (campo, hora) in &fila.field_mods {
+            if protegidos.contains(campo) {
+                continue;
+            }
+            let valor = milisegundos(&hora.0)
+                .map(|ms| instante(ms - desfase))
+                .unwrap_or_else(|| hora.0.clone());
+            mods.insert(campo.clone(), serde_json::Value::String(valor));
+        }
+        let mas_reciente_local = |campo: &str| protegidos.iter().any(|p| p == campo);
         let mut nombres: Vec<String> = vec![clave.to_string()];
         let mut valores: Vec<Option<String>> = vec![Some(id.clone())];
         if let Some(objeto) = fila.fields.as_object() {
@@ -517,9 +573,9 @@ async fn aplicar_filas(
             nombres.push("user_id".into());
             valores.push(Some(user_id.to_string()));
         }
-        if columnas.iter().any(|c| c == "field_mods") {
+        if tiene_field_mods {
             nombres.push("field_mods".into());
-            valores.push(serde_json::to_string(&fila.field_mods).ok());
+            valores.push(serde_json::to_string(&mods).ok());
         }
         if columnas.iter().any(|c| c == "updated_seq") {
             nombres.push("updated_seq".into());
@@ -945,7 +1001,9 @@ mod pruebas {
         let guardado: Option<i64> = bloquear(async {
             let pool = base.pool().await.unwrap();
             let mut tx = pool.begin().await.unwrap();
-            let tocadas = aplicar_filas(&mut tx, &filas, USUARIO).await.unwrap();
+            let tocadas = aplicar_filas(&mut tx, &filas, USUARIO, false)
+                .await
+                .unwrap();
             tx.commit().await.unwrap();
             assert_eq!(tocadas.len(), 2);
             sqlx::query_scalar("SELECT is_default FROM widget WHERE id = ?")
@@ -1245,6 +1303,128 @@ mod pruebas {
             )
         });
         assert_eq!((descripcion.as_deref(), cursor), (Some("Nueva"), 9));
+    }
+
+    /// Pone el título local de la tarjeta como lo haría `card_update`: valor, `field_mods` y cola.
+    fn editar_titulo(base: &BaseLocal, valor: &str, ms: i64) {
+        bloquear(async {
+            let mut c = base.pool().await.unwrap().acquire().await.unwrap();
+            sqlx::query(
+                "UPDATE card SET title = ?, field_mods = json_patch(field_mods, ?) WHERE id = ?",
+            )
+            .bind(valor)
+            .bind(serde_json::json!({ "title": instante(ms) }).to_string())
+            .bind(TARJETA)
+            .execute(&mut *c)
+            .await
+            .unwrap();
+            encolar_cambio(
+                &mut c,
+                "card",
+                TARJETA,
+                "upsert",
+                &serde_json::json!({ "title": { "value": valor, "modified_at": instante(ms) } }),
+                &instante(ms),
+            )
+            .await
+            .unwrap();
+        });
+    }
+
+    /// La fila que la nube devuelve con el título y su hora (ya en el reloj del servidor).
+    fn pagina_con_titulo(valor: &str, hora_servidor: i64, seq: i64) -> SyncPullResult {
+        let mut fila = fila_de_tarjeta(serde_json::json!({ "title": valor }), false);
+        fila.field_mods =
+            serde_json::from_value(serde_json::json!({ "title": instante(hora_servidor) }))
+                .unwrap();
+        fila.updated_seq = seq;
+        SyncPullResult {
+            server_now: Instant(instante(hora_servidor)),
+            rows: vec![fila],
+            next_seq: seq,
+            has_more: false,
+        }
+    }
+
+    fn poner_desfase(base: &BaseLocal, ms: i64) {
+        bloquear(async {
+            preparar(base, USUARIO).await.unwrap();
+            sqlx::query("UPDATE sync_state SET clock_offset_ms = ? WHERE id = 1")
+                .bind(ms)
+                .execute(base.pool().await.unwrap())
+                .await
+                .unwrap();
+        });
+    }
+
+    #[test]
+    fn una_descarga_tardia_no_pisa_un_campo_mas_nuevo_ya_enviado() {
+        // rediseno_final_backend.md §3.1 (P32): el cambio local ya se envió y salió de la cola; una página con un
+        // valor más viejo no lo pisa. Un valor más nuevo de otro computador sí se aplica.
+        let servicio = con_tarjeta();
+        let base = servicio.base();
+        editar_titulo(base, "A", AHORA);
+        let nube = NubeDePrueba::default();
+        assert!(ciclo(base, &nube, AHORA + 3_000));
+        nube.paginas
+            .lock()
+            .unwrap()
+            .push(pagina_con_titulo("B", AHORA - 1_000, 10));
+        bloquear(descargar(base, &nube, &SESION)).unwrap();
+        assert_eq!(titulo(base).as_deref(), Some("A"));
+        nube.paginas
+            .lock()
+            .unwrap()
+            .push(pagina_con_titulo("C", AHORA + 5_000, 11));
+        bloquear(descargar(base, &nube, &SESION)).unwrap();
+        assert_eq!(titulo(base).as_deref(), Some("C"));
+    }
+
+    #[test]
+    fn a_b_a_rapido_termina_en_a_local_y_en_la_nube() {
+        // §3.1: con el reloj del servidor 3 s adelante, el usuario pasa de A a B (se envía) y vuelve a A antes de
+        // la descarga. La fila descargada con B no pisa la A local, la A se envía y el indicador termina
+        // «Sincronizado».
+        let servicio = con_tarjeta();
+        let base = servicio.base();
+        poner_desfase(base, 3_000);
+        let nube = NubeDePrueba::default();
+        editar_titulo(base, "B", AHORA);
+        assert!(ciclo(base, &nube, AHORA + 2_500));
+        editar_titulo(base, "A", AHORA + 2_600);
+        nube.paginas
+            .lock()
+            .unwrap()
+            .push(pagina_con_titulo("B", AHORA + 3_000, 10));
+        bloquear(descargar(base, &nube, &SESION)).unwrap();
+        assert_eq!(titulo(base).as_deref(), Some("A"));
+        assert!(ciclo(base, &nube, AHORA + 5_000));
+        let enviado = nube.recibidos.lock().unwrap().last().unwrap().p_changes[0]
+            .fields
+            .clone();
+        assert_eq!(
+            serde_json::to_value(&enviado).unwrap()["title"]["value"],
+            "A"
+        );
+        let e = bloquear(estado(base)).unwrap();
+        assert_eq!((e.status, e.pending_count), (SyncState::Synced, 0));
+    }
+
+    #[test]
+    fn el_indicador_vuelve_a_sincronizado_despues_de_cambios_rapidos() {
+        // §3.1: diez cambios seguidos del mismo campo quedan en un solo cambio pendiente; tras un ciclo, la cola
+        // queda vacía y el indicador dice «Sincronizado».
+        let servicio = con_tarjeta();
+        let base = servicio.base();
+        for i in 0..10 {
+            editar_titulo(base, &format!("T{i}"), AHORA + i * 100);
+        }
+        assert_eq!(bloquear(estado(base)).unwrap().pending_count, 1);
+        let nube = NubeDePrueba::default();
+        assert!(ciclo(base, &nube, AHORA + 4_000));
+        let e = bloquear(estado(base)).unwrap();
+        assert_eq!((e.status, e.pending_count), (SyncState::Synced, 0));
+        assert_eq!(titulo(base).as_deref(), Some("T9"));
     }
 
     #[test]

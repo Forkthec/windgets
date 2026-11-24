@@ -1390,12 +1390,14 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
     /// IPC-CARD-08 `planner_get_today` (HE-12-HU01): las tarjetas con fecha límite hoy y las asignadas a un
     /// bloque de hoy, sin duplicados (ET02, ET08); primero las de bloque por hora y después las sin hora (ET03).
     /// La hora es la de inicio del bloque de hoy (ET05). El resumen cuenta las completadas (HE-12-HU03).
+    /// rediseno_final_backend.md §3.5: el desempate es la creación y el id, no `position`, que cambia al mover la
+    /// tarjeta a Hecho: completar una tarjeta ya no la cambia de lugar.
     pub async fn planificador_de_hoy(&self, user_id: &str) -> Result<PlannerToday, AppError> {
         let hoy = self.calendario.hoy().format("%Y-%m-%d").to_string();
         let pool = self.base.pool().await.map_err(de_sqlx)?;
         let filas = sqlx::query(&format!(
             "{SELECT_TARJETA} WHERE c.user_id = ? AND (c.due_date = ? OR c.scheduled_date = ?) \
-             ORDER BY c.scheduled_date = ? DESC, c.scheduled_hour, c.position, c.created_at"
+             ORDER BY c.scheduled_date = ? DESC, c.scheduled_hour, c.created_at, c.id"
         ))
         .bind(user_id)
         .bind(&hoy)

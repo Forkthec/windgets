@@ -3,6 +3,7 @@ import { escucharResultadoDeLaEdicion } from '@/ipc/resultadoDeLaEdicion';
 import { useRuta } from '@/reglas/ruta';
 import type { WidgetItem } from '@/types';
 import textos from '@/types/messages.es.json';
+import { Aviso } from '@/ui/Aviso/Aviso';
 import { Boton } from '@/ui/Boton/Boton';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { Interruptor } from '@/ui/Interruptor/Interruptor';
@@ -36,6 +37,9 @@ export function Widgets() {
   const { invocar, escuchar } = useNucleo();
   const mostrarResultado = useMensajeDeResultado();
   const [widgets, setWidgets] = useState<WidgetItem[] | null>(null);
+  // rediseno_final_backend.md §3.2 y §3.6-7: si la lista no se puede leer, la pantalla lo dice (RT-04, RD-24); antes
+  // quedaba vacía y en silencio.
+  const [errorAlLeer, setErrorAlLeer] = useState<string | null>(null);
   // HE-04-HU13: el widget del mensaje de confirmación M-07.
   const [porEliminar, setPorEliminar] = useState<WidgetItem | null>(null);
   // HE-04-HU12: el widget que se está configurando (Formulario de widget).
@@ -45,7 +49,12 @@ export function Widgets() {
 
   const leer = useCallback(async () => {
     const r = await invocar('widget_list', {});
-    if (r.ok) setWidgets(r.value);
+    if (r.ok) {
+      setWidgets(r.value);
+      setErrorAlLeer(null);
+    } else {
+      setErrorAlLeer(r.error.message || textos.SERVICIO_NO_DISPONIBLE);
+    }
   }, [invocar]);
 
   // HE-04-HU02: alterna el widget entre activo e inactivo; el Núcleo lo refleja en el escritorio (EV-12) y la
@@ -101,6 +110,7 @@ export function Widgets() {
         {/* HE-05-HU01-ET05: oculta esta ventana y abre la pantalla de edición (IPC-LAY-01). */}
         <Boton onClick={() => void invocar('layout_edit_open', {})}>Editar escritorio</Boton>
       </div>
+      {errorAlLeer && <Aviso texto={errorAlLeer} />}
       {widgets && (
         // docs/rediseno.md RD-35 (Figma 81:109 «Contenido»): nombre y descripción a la izquierda; estado,
         // «Configurar» y «Eliminar» a la derecha.
