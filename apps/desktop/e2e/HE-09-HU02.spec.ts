@@ -91,11 +91,12 @@ test('HE-09-HU02-CA04 · Reordenar tarjetas dentro de una columna', async ({ pag
 });
 
 test('HE-09-HU02-CA05 · Soltar una tarjeta fuera de una columna', async ({ page }) => {
-  const boton = await centroDe(page.getByRole('button', { name: 'Nueva tarjeta' }));
+  // RD-74: fuera de las columnas, sobre la fila del interruptor de vista (encima del tablero).
+  const boton = await centroDe(page.getByRole('group', { name: 'Vista de las tarjetas' }));
   await arrastrar(
     page,
     page.getByRole('listitem').filter({ hasText: 'Entregar informe' }),
-    boton.x + 400,
+    boton.x - 400,
     boton.y,
   );
   await expect(titulos(page, 'Por hacer')).toHaveText([
