@@ -49,7 +49,7 @@ pub enum BajoElCursor {
 }
 
 /// Son widgets interactivos Tareas del día, Kanban, Calendario, Reproductor de música y Noticias (ET01); los
-/// demás no lo son (ET02).
+/// demás no lo son (ET02). rediseno_final_backend.md §5.5: también Windi, que abre su panel en la ventana principal.
 pub fn es_interactivo(tipo: &WidgetType) -> bool {
     matches!(
         tipo,
@@ -58,6 +58,7 @@ pub fn es_interactivo(tipo: &WidgetType) -> bool {
             | WidgetType::Calendar
             | WidgetType::MusicPlayer
             | WidgetType::News
+            | WidgetType::Windi
     )
 }
 
@@ -448,6 +449,7 @@ mod pruebas {
             WidgetType::Calendar,
             WidgetType::MusicPlayer,
             WidgetType::News,
+            WidgetType::Windi,
         ] {
             assert!(es_interactivo(&tipo), "{tipo:?}");
         }

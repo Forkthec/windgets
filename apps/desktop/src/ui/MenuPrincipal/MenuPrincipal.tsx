@@ -12,9 +12,9 @@ export const TITULO_DEL_BLOQUE: Record<Exclude<BloqueDelMenu, 'pie'>, string> = 
   personalizacion: 'Personalización',
 };
 
-// DUDA: rediseno_final D-07 y D-21 · «Agente de IA» sale del menú cuando Windi viva en su panel flotante (§5.5), y
-// Wallpaper, Temas y Widgets se vuelven una sola entrada «Personalización» con la pantalla por pasos (§5.12). Hasta
-// esos pasos siguen aquí para no dejar pantallas sin entrada.
+// RD-70 (D-07): «Agente de IA» ya no está en el menú; Windi es el botón flotante. DUDA: rediseno_final D-21 ·
+// Wallpaper, Temas y Widgets se vuelven una sola entrada «Personalización» con la pantalla por pasos (§5.12); hasta
+// ese paso siguen aquí para no dejar pantallas sin entrada.
 export const OPCIONES_MENU: ReadonlyArray<{ pantalla: ScreenId; texto: string; bloque: BloqueDelMenu }> = [
   { pantalla: 'planner_daily', texto: 'Planificador diario', bloque: 'planificador' },
   { pantalla: 'kanban', texto: 'Tablero Kanban', bloque: 'planificador' },
@@ -22,7 +22,6 @@ export const OPCIONES_MENU: ReadonlyArray<{ pantalla: ScreenId; texto: string; b
   { pantalla: 'agenda', texto: 'Agenda diaria', bloque: 'planificador' },
   { pantalla: 'reports', texto: 'Reportes', bloque: 'planificador' },
   { pantalla: 'labels', texto: 'Etiquetas', bloque: 'planificador' },
-  { pantalla: 'windi', texto: 'Agente de IA', bloque: 'planificador' },
   { pantalla: 'personalization', texto: 'Wallpaper', bloque: 'personalizacion' },
   { pantalla: 'themes', texto: 'Temas', bloque: 'personalizacion' },
   { pantalla: 'widgets', texto: 'Widgets', bloque: 'personalizacion' },

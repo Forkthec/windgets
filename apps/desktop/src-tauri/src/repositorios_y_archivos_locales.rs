@@ -17,6 +17,78 @@ use tokio::sync::OnceCell;
 /// Esquema de la base local (copia de `docs/local/sqlite_esquema.sql`).
 const ESQUEMA: &str = include_str!("../sqlite_esquema.sql");
 
+/// Versión del esquema local (`PRAGMA user_version`, al final de `sqlite_esquema.sql`). Una base nueva nace con ella;
+/// una que ya existía se lleva a ella con [`migrar`].
+pub const VERSION_DEL_ESQUEMA: i64 = 9;
+
+/// Una sentencia del esquema: el `CREATE TABLE` o los `CREATE … INDEX … ON` de una tabla, sacados de `ESQUEMA` para
+/// no repetir su definición.
+fn sentencias_de(tabla: &str) -> (Option<String>, Vec<String>) {
+    let crear = format!("CREATE TABLE {tabla} (");
+    let indice = format!(" ON {tabla} (");
+    let mut tabla_sql = None;
+    let mut indices = Vec::new();
+    for sentencia in ESQUEMA.split(";\n") {
+        // Sin las líneas de comentario que preceden a la sentencia.
+        let limpia: String = sentencia
+            .lines()
+            .filter(|l| !l.trim_start().starts_with("--"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let limpia = limpia.trim();
+        if limpia.starts_with(&crear) {
+            tabla_sql = Some(format!("{limpia};"));
+        } else if limpia.starts_with("CREATE")
+            && limpia.contains("INDEX")
+            && limpia.contains(&indice)
+        {
+            indices.push(format!("{limpia};"));
+        }
+    }
+    (tabla_sql, indices)
+}
+
+/// Migraciones locales de una base que ya existía (las de la nube van en `supabase/migrations/`; SQLite no cambia un
+/// `CHECK` con `ALTER TABLE`, así que la tabla se reconstruye con su definición actual y se copian sus filas).
+/// - 9 (0009, `rediseno_final_backend.md` §5.5): `widget.type` admite 'windi' y entra en `uq_widget_singleton`.
+async fn migrar(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    let version: i64 = sqlx::query_scalar("PRAGMA user_version")
+        .fetch_one(pool)
+        .await?;
+    if version >= VERSION_DEL_ESQUEMA {
+        return Ok(());
+    }
+    let (Some(tabla), indices) = sentencias_de("widget") else {
+        return Ok(());
+    };
+    let nueva = tabla.replacen("CREATE TABLE widget (", "CREATE TABLE widget_nueva (", 1);
+    // `foreign_keys` vale por conexión y debe apagarse fuera de la transacción.
+    // `legacy_alter_table`: al renombrar no se revisan los disparadores de otras tablas que nombran `widget`
+    // (`trg_carousel_parent`), que mientras tanto no existe.
+    let mut guion =
+        String::from("PRAGMA foreign_keys = OFF;\nPRAGMA legacy_alter_table = ON;\nBEGIN;\n");
+    guion.push_str(&nueva);
+    guion.push_str(
+        "\nINSERT INTO widget_nueva SELECT * FROM widget;\nDROP TABLE widget;\n\
+         ALTER TABLE widget_nueva RENAME TO widget;\n",
+    );
+    for indice in indices {
+        guion.push_str(&indice);
+        guion.push('\n');
+    }
+    guion.push_str(
+        "CREATE TRIGGER trg_protect_default_widget BEFORE DELETE ON widget\n\
+         WHEN OLD.is_default = 1 AND EXISTS (SELECT 1 FROM profile WHERE user_id = OLD.user_id)\n\
+         BEGIN SELECT RAISE(ABORT, 'invalid_field'); END;\n",
+    );
+    guion.push_str(&format!(
+        "PRAGMA user_version = {VERSION_DEL_ESQUEMA};\nCOMMIT;\nPRAGMA legacy_alter_table = OFF;\nPRAGMA foreign_keys = ON;\n"
+    ));
+    // `raw_sql` corre todo el guion en una sola conexión del pool.
+    sqlx::raw_sql(&guion).execute(pool).await?;
+    Ok(())
+}
+
 /// La base local del Núcleo. Se abre sin conectarse y aplica el esquema en el primer uso, para no bloquear el
 /// arranque de la aplicación.
 pub struct BaseLocal {
@@ -84,6 +156,8 @@ impl BaseLocal {
                 .await?;
                 if tablas == 0 {
                     sqlx::raw_sql(ESQUEMA).execute(&self.pool).await?;
+                } else {
+                    migrar(&self.pool).await?;
                 }
                 Ok::<(), sqlx::Error>(())
             })
@@ -267,6 +341,87 @@ pub fn almacen_de_la_aplicacion() -> Box<dyn AlmacenDeSesion> {
 #[cfg(test)]
 mod pruebas {
     use super::*;
+
+    /// Una base creada con el esquema anterior a la versión 9 (sin 'windi'), con un Reloj y su fila de tema.
+    fn base_version_8() -> BaseLocal {
+        let anterior = ESQUEMA
+            .replace(",'windi')", ")")
+            .replace("PRAGMA user_version = 9;", "PRAGMA user_version = 0;");
+        assert_ne!(anterior, ESQUEMA);
+        let base = BaseLocal::en_memoria();
+        tauri::async_runtime::block_on(async {
+            sqlx::raw_sql(&anterior).execute(&base.pool).await.unwrap();
+            sqlx::raw_sql(
+                "INSERT INTO profile (user_id, alias, created_at) VALUES \
+                   ('00000000-0000-4000-8000-000000000001', 'Ana', '2026-11-01T00:00:00.000Z');\
+                 INSERT INTO widget (id, user_id, created_at, type, is_default) VALUES \
+                   ('00000000-0000-4000-8000-0000000000b1', '00000000-0000-4000-8000-000000000001', \
+                    '2026-11-01T00:00:00.000Z', 'clock', 1);",
+            )
+            .execute(&base.pool)
+            .await
+            .unwrap();
+        });
+        base
+    }
+
+    #[test]
+    fn la_migracion_local_9_admite_el_widget_windi_y_conserva_los_widgets() {
+        // rediseno_final_backend.md §5.5: una base que ya existía se actualiza al abrir; el Reloj sigue, Windi entra
+        // una sola vez y la protección de los widgets por defecto se mantiene.
+        let base = base_version_8();
+        tauri::async_runtime::block_on(async {
+            let pool = base.pool().await.unwrap();
+            let version: i64 = sqlx::query_scalar("PRAGMA user_version")
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            assert_eq!(version, VERSION_DEL_ESQUEMA);
+            let relojes: i64 =
+                sqlx::query_scalar("SELECT count(*) FROM widget WHERE type = 'clock'")
+                    .fetch_one(pool)
+                    .await
+                    .unwrap();
+            assert_eq!(relojes, 1);
+            let insertar = "INSERT INTO widget (id, user_id, created_at, type, is_default) VALUES \
+                (?, '00000000-0000-4000-8000-000000000001', '2026-11-01T00:00:00.000Z', 'windi', 0)";
+            sqlx::query(insertar)
+                .bind("00000000-0000-4000-8000-0000000000c1")
+                .execute(pool)
+                .await
+                .unwrap();
+            assert!(
+                sqlx::query(insertar)
+                    .bind("00000000-0000-4000-8000-0000000000c2")
+                    .execute(pool)
+                    .await
+                    .is_err()
+            );
+            assert!(
+                sqlx::query("DELETE FROM widget WHERE type = 'clock'")
+                    .execute(pool)
+                    .await
+                    .is_err()
+            );
+            let claves: i64 = sqlx::query_scalar("PRAGMA foreign_keys")
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            assert_eq!(claves, 1);
+        });
+    }
+
+    #[test]
+    fn una_base_nueva_nace_en_la_version_actual() {
+        let base = BaseLocal::en_memoria();
+        let version: i64 = tauri::async_runtime::block_on(async {
+            sqlx::query_scalar("PRAGMA user_version")
+                .fetch_one(base.pool().await.unwrap())
+                .await
+                .unwrap()
+        });
+        assert_eq!(version, VERSION_DEL_ESQUEMA);
+    }
 
     #[test]
     fn la_sesion_en_memoria_se_lee_como_se_guardo() {

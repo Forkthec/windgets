@@ -26,7 +26,6 @@ describe('Menú principal', () => {
       'Agenda diaria',
       'Reportes',
       'Etiquetas',
-      'Agente de IA',
     ]);
     expect(textos('Personalización')).toEqual(['Wallpaper', 'Temas', 'Widgets']);
     const opciones = screen.getAllByRole('button');

@@ -37,6 +37,8 @@ pub fn tamano_inicial(tipo: &str) -> (i64, i64) {
         "news" => (480, 360),
         "static_image" | "animation" => (320, 180),
         "image_carousel" => (480, 270),
+        // rediseno_final_backend.md §5.5: los ojos de Windi.
+        "windi" => (120, 120),
         // Clima (HE-04-HU05-ET17), Texto y Reproductor de música.
         _ => (320, 160),
     }
@@ -194,6 +196,32 @@ impl ServicioDePersonalizacion {
             ));
         }
         self.insertar_widget(base, user_id, "news", &[], ahora_ms)
+            .await
+    }
+
+    /// rediseno_final_backend.md §5.5 (D-07, A-07): agrega el widget Windi, uno solo por cuenta; si ya está,
+    /// `widget.already_added` como Noticias (HE-04-HU04-ET04).
+    pub async fn agregar_windi(
+        &self,
+        base: &BaseLocal,
+        user_id: &str,
+        ahora_ms: i64,
+    ) -> Result<WidgetItem, AppError> {
+        let pool = base.pool().await.map_err(de_sqlx)?;
+        let ya: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM widget WHERE user_id = ? AND type = 'windi'")
+                .bind(user_id)
+                .fetch_one(pool)
+                .await
+                .map_err(de_sqlx)?;
+        if ya > 0 {
+            return Err(error(
+                ErrorCode::WidgetAlreadyAdded,
+                messages::WIDGET_YA_AGREGADO,
+                None,
+            ));
+        }
+        self.insertar_widget(base, user_id, "windi", &[], ahora_ms)
             .await
     }
 

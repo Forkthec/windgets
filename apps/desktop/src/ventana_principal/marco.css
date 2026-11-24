@@ -495,3 +495,92 @@ body[data-sesion] .wg-formulario--tarjeta {
     min-width: 0;
   }
 }
+
+/* ---------- Windi (RD-70; rediseno_final_prototipos.md §4.3) ---------- */
+/* Botón flotante de 40 px con los ojos del color de acción del tema, abajo a la derecha. */
+.wg-windi-flotante {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 900;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--wg-linea);
+  border-radius: 50%;
+  background: var(--wg-superficie-alta);
+  color: var(--wg-accion);
+  box-shadow: var(--wg-sombra);
+  cursor: pointer;
+}
+.wg-windi-flotante:hover {
+  background: var(--wg-superficie-baja);
+}
+.wg-windi-flotante:focus-visible,
+.wg-panel-windi__cerrar:focus-visible {
+  outline: 2px solid var(--wgm-seleccion-texto);
+  outline-offset: 2px;
+}
+/* Panel lateral derecho de 360 px, todo el alto, encima de la pantalla sin cambiarla. */
+.wg-panel-windi {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 360px;
+  max-width: 100vw;
+  height: 100vh;
+  border-left: 1px solid var(--wg-linea);
+  background: var(--wg-superficie);
+  color: var(--wg-tinta);
+  font-family: var(--wg-fuente);
+  box-shadow: var(--wg-sombra);
+}
+.wg-panel-windi[hidden] {
+  display: none;
+}
+.wg-panel-windi__cabecera {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 8px 0 16px;
+  border-bottom: 1px solid var(--wg-linea);
+}
+.wg-panel-windi__ojos {
+  color: var(--wg-accion);
+}
+.wg-panel-windi__titulo {
+  flex: 1;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+.wg-panel-windi__cerrar {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--wg-texto);
+  font: inherit;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.wg-panel-windi__cerrar:hover {
+  background: var(--wg-superficie-baja);
+  color: var(--wg-tinta);
+}
+.wg-panel-windi__cuerpo {
+  flex: 1;
+  min-height: 0;
+  padding: 12px 16px 16px;
+}

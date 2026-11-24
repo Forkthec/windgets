@@ -1277,6 +1277,12 @@ pub async fn widget_add(
                 .agregar_noticias(base, &user_id, RelojDelSistema.ahora_ms())
                 .await
         }
+        (crate::tipos::AddableWidgetType::Windi, _) => {
+            nucleo
+                .personalizacion
+                .agregar_windi(base, &user_id, RelojDelSistema.ahora_ms())
+                .await
+        }
         _ => Err(crate::servicio_del_planificador::inesperado()),
     };
     if let Ok(widget) = &r {

@@ -84,7 +84,7 @@ export function AgregarWidget({ alRegresar }: AgregarWidgetProps) {
     return <AgregarImagenEstatica alRegresar={() => setElegido(null)} alIrAWidgets={alRegresar} />;
   }
   const entrada = [...(catalogo?.external ?? []), ...(catalogo?.local ?? [])].find((e) => e.type === elegido);
-  if (entrada && (elegido === 'news' || elegido === 'music_player')) {
+  if (entrada && (elegido === 'news' || elegido === 'music_player' || elegido === 'windi')) {
     return (
       <AgregarSinDatos
         tipo={entrada.type}

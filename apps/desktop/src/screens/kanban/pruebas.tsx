@@ -547,6 +547,13 @@ export async function abrirPantalla(
   preparar?.(nucleo);
   render(<VentanaPrincipal invocar={invocar} escuchar={escuchar} pantallas={{ [pantalla]: componente }} />);
   const menu = await screen.findByRole('navigation', { name: 'Menú principal' });
+  // docs/rediseno.md RD-70: Windi no está en el menú; se abre con su botón flotante, en el panel lateral.
+  if (pantalla === 'windi') {
+    fireEvent.click(screen.getByRole('button', { name: 'Windi' }));
+    await screen.findByRole('region', { name: 'Conversación con Windi' });
+    await act(async () => {});
+    return nucleo;
+  }
   // docs/rediseno.md RD-30: la opción del menú puede decir otra cosa que la pantalla («Wallpaper»).
   const opcion = OPCIONES_MENU.find((o) => o.pantalla === pantalla)?.texto ?? nombre;
   fireEvent.click(within(menu).getByRole('button', { name: opcion }));

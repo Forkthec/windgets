@@ -14,6 +14,7 @@ import { WidgetImagen } from './WidgetImagen';
 import { WidgetCarrusel } from './WidgetCarrusel';
 import { WidgetAnimacion } from './WidgetAnimacion';
 import { WidgetTexto } from './WidgetTexto';
+import { WidgetWindi } from './WidgetWindi';
 import { WidgetReproductor } from './WidgetReproductor';
 import { fondosPorMonitor } from './fondo';
 import { tokensDelTema } from '@/ui/tema/temaAplicado';
@@ -48,6 +49,7 @@ export const NOMBRE_DEL_WIDGET: Record<WidgetType, string> = {
   image_carousel: 'Carrusel de imágenes',
   static_image: 'Imagen estática',
   text: 'Texto',
+  windi: 'Windi',
 };
 
 /** Widgets interactivos: Tareas del día, Kanban, Calendario, Reproductor de música y Noticias (HE-06-HU01-ET01). */
@@ -57,6 +59,8 @@ export const INTERACTIVOS: readonly WidgetType[] = [
   'calendar',
   'music_player',
   'news',
+  // RD-71: Windi abre su panel en la ventana principal.
+  'windi',
 ];
 
 /**
@@ -251,6 +255,7 @@ export function Capa({
           )}
           {w.type === 'text' && <WidgetTexto widgetId={w.widget_id} invocar={invocar} escuchar={escuchar} />}
           {w.type === 'music_player' && <WidgetReproductor invocar={invocar} escuchar={escuchar} />}
+          {w.type === 'windi' && <WidgetWindi invocar={invocar} />}
         </section>
       ))}
     </main>

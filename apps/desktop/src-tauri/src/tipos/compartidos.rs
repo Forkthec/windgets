@@ -219,6 +219,9 @@ pub enum WidgetType {
     StaticImage,
     #[serde(rename = "text")]
     Text,
+    /// rediseno_final_backend.md §5.5 (D-07, A-07): el widget de escritorio de Windi, uno solo por cuenta.
+    #[serde(rename = "windi")]
+    Windi,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
@@ -238,6 +241,8 @@ pub enum AddableWidgetType {
     StaticImage,
     #[serde(rename = "text")]
     Text,
+    #[serde(rename = "windi")]
+    Windi,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]

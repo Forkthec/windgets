@@ -1196,3 +1196,40 @@ button.wg-tarjeta__titulo:focus-visible {
   border-radius: var(--wg-radio);
   background: var(--wg-superficie-alta);
 }
+
+/* Los ojos de Windi (RD-70): parpadean mientras Windi responde. */
+.wg-ojos-de-windi__ojo {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.wg-ojos-de-windi--parpadeando .wg-ojos-de-windi__ojo {
+  animation: wg-parpadeo 1.2s ease-in-out infinite;
+}
+@keyframes wg-parpadeo {
+  0%,
+  80%,
+  100% {
+    transform: scaleY(1);
+  }
+  90% {
+    transform: scaleY(0.1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wg-ojos-de-windi--parpadeando .wg-ojos-de-windi__ojo {
+    animation: none;
+  }
+}
+
+/* Widget de escritorio «Windi» (RD-71): los ojos centrados, del color de acción del tema, sin otro contenido. */
+.wg-widget-windi {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--wg-accion);
+  cursor: pointer;
+}

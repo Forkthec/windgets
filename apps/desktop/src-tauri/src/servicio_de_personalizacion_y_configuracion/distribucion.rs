@@ -34,6 +34,8 @@ pub fn tamano_minimo(tipo: &WidgetType) -> (i64, i64) {
         WidgetType::ImageCarousel => (200, 120),
         WidgetType::StaticImage => (160, 100),
         WidgetType::Text => (160, 80),
+        // §5.5: los dos ojos de Windi se leen desde 80 × 80.
+        WidgetType::Windi => (80, 80),
     }
 }
 
