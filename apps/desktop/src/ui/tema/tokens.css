@@ -1503,3 +1503,33 @@ body[data-sesion] .wg-boton.wg-boton--texto-peligro:not(:disabled) {
   margin-right: 4px;
   font-weight: 700;
 }
+
+/* El ojo de la contraseña (RD-81): dentro del campo, a la derecha. */
+.wg-campo__con-ojo {
+  position: relative;
+  display: flex;
+}
+.wg-campo__con-ojo > .wg-campo__entrada {
+  flex: 1;
+  padding-right: 40px;
+}
+.wg-campo__ojo {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--wg-texto);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+.wg-campo__ojo:hover,
+.wg-campo__ojo:focus-visible {
+  color: var(--wg-tinta);
+}

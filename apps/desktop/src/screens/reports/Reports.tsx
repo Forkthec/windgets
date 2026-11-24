@@ -149,14 +149,15 @@ export function Reports() {
         <EstadoVacio texto={SIN_TARJETAS} />
       ) : (
         meta && (
-          <>
-            <GraficaCompletadas reporte={completadas} />
-            {/* RD-56: la tasa de cumplimiento y los estados lado a lado, en tarjetas con fondo. */}
-            <div className="wg-reportes__tarjetas">
-              <TasaCumplimiento reporte={cumplimiento} />
-              <EstadosTarjetas reporte={estados} rango={rango} alAbrir={tarjetas.abrirDetalle} />
+          // RD-80 (rediseno_final_prototipos.md §6.5): todo de un vistazo, sin scroll de página: la gráfica de
+          // completadas a la izquierda (2 columnas) y la tasa de cumplimiento y el anillo a la derecha.
+          <div className="wg-reportes__tarjetas">
+            <div className="wg-reportes__grafica">
+              <GraficaCompletadas reporte={completadas} />
             </div>
-          </>
+            <TasaCumplimiento reporte={cumplimiento} />
+            <EstadosTarjetas reporte={estados} rango={rango} alAbrir={tarjetas.abrirDetalle} />
+          </div>
         )
       )}
       {tarjetas.ventanas}

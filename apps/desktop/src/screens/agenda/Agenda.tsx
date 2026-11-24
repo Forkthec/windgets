@@ -31,12 +31,6 @@ export function textoDelBloque(hora: number): string {
   return `${dos(hora)}:00 – ${dos((hora + 1) % 24)}:00`;
 }
 
-/** El día anterior o siguiente a `iso` (AAAA-MM-DD). */
-function otroDia(iso: string, dias: number): string {
-  const [anio, mes, dia] = iso.split('-').map(Number);
-  return fechaIso(new Date(anio ?? 0, (mes ?? 1) - 1, (dia ?? 1) + dias));
-}
-
 /**
  * Una tarjeta de la agenda: su título abre el Detalle de tarjeta (HE-07-HU03, T-090) y se arrastra a un bloque
  * horario (HE-11-HU02-ET01).

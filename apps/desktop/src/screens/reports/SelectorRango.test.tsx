@@ -128,3 +128,21 @@ describe('HE-13-HU01 · Rango de fechas', () => {
     expect(pedidos(nucleo)).toEqual([]);
   });
 });
+
+describe('RD-80 · Rango personalizado válido antes de aplicar', () => {
+  it('fin anterior al inicio o más de 366 días: mensaje en el campo y no se recalcula (§3.6-2, §3.6-3)', async () => {
+    const nucleo = await abrir();
+    await personalizado('20/11/2026', '10/11/2026');
+    expect(mensajeDe('Fecha de fin')).toBe('La fecha de inicio no puede ser posterior a la fecha de fin.');
+    await personalizado('01/01/2025', '10/11/2026');
+    expect(mensajeDe('Fecha de fin')).toBe('El rango máximo es de un año.');
+    expect(pedidos(nucleo)).toEqual([]);
+  });
+
+  it('cada fecha tiene su calendario flotante', async () => {
+    await abrir();
+    elegir('Personalizado');
+    expect(screen.getByRole('button', { name: 'Abrir selector de la fecha de inicio' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Abrir selector de la fecha de fin' })).toBeTruthy();
+  });
+});

@@ -62,7 +62,11 @@ describe('HE-13-HU04 · Vencidas, pendientes y completadas', () => {
     expect(within(s).getByRole('button', { name: 'Completadas: 5 (50,0 %)' })).toBeTruthy();
     // ET01, ET02: anillo con un segmento por estado en sus colores y el total en el centro.
     const sectores = [...s.querySelectorAll('.recharts-pie-sector path')].map((p) => p.getAttribute('fill'));
-    expect(sectores).toEqual(['var(--wg-estado-vencida)', 'var(--wg-estado-pendiente)', 'var(--wg-accion)']);
+    expect(sectores).toEqual([
+      'var(--wg-estado-vencida)',
+      'var(--wg-estado-pendiente)',
+      'var(--wg-estado-completada)',
+    ]);
     expect(within(s).getByText('10')).toBeTruthy();
   });
 
@@ -103,6 +107,6 @@ describe('HE-13-HU04 · Vencidas, pendientes y completadas', () => {
     const vencidas = within(s).getByRole('button', { name: 'Vencidas: 0 (0,0 %)' }) as HTMLButtonElement;
     expect(vencidas.disabled).toBe(true);
     const sectores = [...s.querySelectorAll('.recharts-pie-sector path')].map((p) => p.getAttribute('fill'));
-    expect(sectores).toEqual(['var(--wg-estado-pendiente)', 'var(--wg-accion)']);
+    expect(sectores).toEqual(['var(--wg-estado-pendiente)', 'var(--wg-estado-completada)']);
   });
 });

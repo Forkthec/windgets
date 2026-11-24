@@ -6,7 +6,11 @@ import { Boton } from '@/ui/Boton/Boton';
 import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
 import { Selector } from '@/ui/Selector/Selector';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
-import { fechaIso, leerFecha } from '../tarjeta/fechas';
+import { SelectorFecha } from '@/ui/SelectorFecha/SelectorFecha';
+import { escribirFecha, fechaIso, leerFecha } from '../tarjeta/fechas';
+
+/** HE-13-HU01: el rango personalizado tiene como máximo 366 días, contando el inicio y el fin. */
+const DIAS_MAXIMOS = 366;
 
 // Selector Rango de fechas de la pantalla Reportes (HE-13-HU01). El Núcleo resuelve el rango (IPC-REP-01) y
 // vuelve a validar el personalizado (D-188).
@@ -65,12 +69,24 @@ export function SelectorRango({ alAplicar, deshabilitado = false }: SelectorRang
     if (nueva !== 'custom') void resolver({ kind: nueva });
   };
 
-  // ET03: «Aplicar» aplica el rango personalizado diligenciado.
+  // ET03: «Aplicar» aplica el rango personalizado diligenciado. RD-80 (rediseno_final_backend.md §3.6-2, §4.8): la
+  // vista comprueba antes de llamar al Núcleo que el fin no sea anterior al inicio y el máximo de 366 días; el Núcleo
+  // vuelve a validar (`range.start_after_end`, `range.too_long`).
   const aplicar = () => {
     if (!campos.validarTodo(fechas)) return;
     const inicio = leerFecha(fechas.start);
     const fin = leerFecha(fechas.end);
     if (!inicio || !fin) return;
+    if (inicio > fin) {
+      // HE-13-HU01-ET07, ET11: el mensaje va en Fecha de fin.
+      campos.mostrarDelNucleo([{ field: 'end', message: textos.INICIO_POSTERIOR_AL_FIN }]);
+      return;
+    }
+    const dias = Math.round((fin.getTime() - inicio.getTime()) / 86_400_000) + 1;
+    if (dias > DIAS_MAXIMOS) {
+      campos.mostrarDelNucleo([{ field: 'end', message: textos.RANGO_MUY_LARGO }]);
+      return;
+    }
     void resolver({ kind: 'custom', start: fechaIso(inicio), end: fechaIso(fin) });
   };
 
@@ -79,6 +95,7 @@ export function SelectorRango({ alAplicar, deshabilitado = false }: SelectorRang
     campos.alCorregir(campo, valor);
   };
 
+  const inicioElegido = leerFecha(fechas.start);
   return (
     <div className="wg-fila" role="group" aria-label="Rango de fechas">
       <Selector
@@ -90,20 +107,40 @@ export function SelectorRango({ alAplicar, deshabilitado = false }: SelectorRang
       />
       {opcion === 'custom' && (
         <>
-          <CampoTexto
-            id={campos.ids.start}
-            etiqueta="Fecha de inicio"
-            valor={fechas.start}
-            alCambiar={cambiar('start')}
-            mensaje={campos.mensajes.start}
-          />
-          <CampoTexto
-            id={campos.ids.end}
-            etiqueta="Fecha de fin"
-            valor={fechas.end}
-            alCambiar={cambiar('end')}
-            mensaje={campos.mensajes.end}
-          />
+          {/* RD-80 (§3.8): cada fecha con su calendario flotante, que solo deja elegir fechas válidas. */}
+          <div className="wg-formulario__fecha">
+            <CampoTexto
+              id={campos.ids.start}
+              etiqueta="Fecha de inicio"
+              placeholder="DD/MM/AAAA"
+              valor={fechas.start}
+              alCambiar={cambiar('start')}
+              mensaje={campos.mensajes.start}
+            />
+            <SelectorFecha
+              etiqueta="Selector de la fecha de inicio"
+              flotante
+              valor={leerFecha(fechas.start)}
+              alCambiar={(f) => cambiar('start')(f ? escribirFecha(f) : '')}
+            />
+          </div>
+          <div className="wg-formulario__fecha">
+            <CampoTexto
+              id={campos.ids.end}
+              etiqueta="Fecha de fin"
+              placeholder="DD/MM/AAAA"
+              valor={fechas.end}
+              alCambiar={cambiar('end')}
+              mensaje={campos.mensajes.end}
+            />
+            <SelectorFecha
+              etiqueta="Selector de la fecha de fin"
+              flotante
+              valor={leerFecha(fechas.end)}
+              deshabilitados={inicioElegido ? { before: inicioElegido } : undefined}
+              alCambiar={(f) => cambiar('end')(f ? escribirFecha(f) : '')}
+            />
+          </div>
           <Boton principal onClick={aplicar}>
             Aplicar
           </Boton>

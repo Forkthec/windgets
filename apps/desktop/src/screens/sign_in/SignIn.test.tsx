@@ -226,9 +226,10 @@ describe('Rediseño · Inicio de sesión', () => {
     for (const etiqueta of Object.keys(CORRECTOS)) {
       expect(screen.getByLabelText(etiqueta).getAttribute('aria-required')).toBe('true');
     }
-    const orden = Array.from(document.querySelectorAll('.wg-nota button, .wg-nota .wg-divisor')).map(
-      (e) => e.textContent,
-    );
+    // RD-81: sin el ojo de la contraseña.
+    const orden = Array.from(
+      document.querySelectorAll('.wg-nota button:not(.wg-campo__ojo), .wg-nota .wg-divisor'),
+    ).map((e) => e.textContent);
     expect(orden).toEqual(['Iniciar sesión', 'o', 'Continuar con Google']);
   });
 });
