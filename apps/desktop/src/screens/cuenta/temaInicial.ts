@@ -81,7 +81,7 @@ export function useTemaInicial(
       vigente = false;
       dejar.forEach((d) => d());
       clearTimeout(limite);
-      if (!exito) mostrarResultado(TEMA_INICIAL_NO_APLICADO(NOMBRE_DEL_MODO[paleta]));
+      if (!exito) mostrarResultado(TEMA_INICIAL_NO_APLICADO(NOMBRE_DEL_MODO[paleta]), 'advertencia');
       alTerminar();
     };
     // Un aviso del catálogo que llega durante un intento se atiende al terminar ese intento.

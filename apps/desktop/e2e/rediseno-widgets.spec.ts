@@ -11,8 +11,8 @@ async function entrar(page: Page) {
   await page.getByLabel('Correo electrónico').fill('usuario.prueba@example.com');
   await page.getByLabel('Contraseña').fill('Clave123');
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
-  await page.getByRole('radio', { name: 'Claro' }).click();
-  await expect(page.locator('body')).toHaveAttribute('data-modo', 'claro');
+  // RD-62: con sesión no hay Claro/Oscuro; los colores salen del tema aplicado.
+  await expect(page.locator('body')).toHaveAttribute('data-sesion', '');
 }
 
 async function caja(l: Locator) {
@@ -26,6 +26,17 @@ const cerca = (medido: number, esperado: number) =>
 
 const estilo = (l: Locator, propiedad: string) =>
   l.evaluate((e, p) => getComputedStyle(e).getPropertyValue(p), propiedad);
+
+/** El color en `rgb()` de una variable del tema (RD-62: ya no hay colores fijos por modo). */
+const colorDe = (page: Page, variable: string) =>
+  page.evaluate((v) => {
+    const muestra = document.createElement('div');
+    muestra.style.backgroundColor = `var(${v})`;
+    document.body.append(muestra);
+    const color = getComputedStyle(muestra).backgroundColor;
+    muestra.remove();
+    return color;
+  }, variable);
 
 async function agregarWidget(page: Page) {
   await page
@@ -47,7 +58,7 @@ test('RD-58 · Agregar widget: filas de 57 px con fondo de columna y «Regresar�
   cerca(primera.height, 57);
   // 84:730 y 84:732: una fila cada 72 px.
   cerca(segunda.y - primera.y, 72);
-  expect(await estilo(filas.nth(0), 'background-color')).toBe('rgb(242, 236, 248)');
+  expect(await estilo(filas.nth(0), 'background-color')).toBe(await colorDe(page, '--wgm-columna'));
   expect(await estilo(filas.nth(0), 'border-radius')).toBe('8px');
   // «Regresar» ya no va en el encabezado: va después de la última fila, a la izquierda.
   const regresar = sub.getByRole('button', { name: 'Regresar', exact: true });
@@ -93,7 +104,7 @@ test('RD-60 · Noticias e Imagen estática: el dato en una fila de fondo de colu
   const noticias = page.getByRole('main', { name: 'Noticias' });
   const dato = noticias.locator('.wg-subpantalla-widget__dato');
   expect((await caja(dato)).height).toBeGreaterThanOrEqual(57 - TOLERANCIA);
-  expect(await estilo(dato, 'background-color')).toBe('rgb(242, 236, 248)');
+  expect(await estilo(dato, 'background-color')).toBe(await colorDe(page, '--wgm-columna'));
   const agregar = await caja(noticias.getByRole('button', { name: 'Agregar', exact: true }));
   expect(agregar.y).toBeGreaterThan((await caja(dato)).y);
   await noticias.getByRole('button', { name: 'Regresar', exact: true }).click();
@@ -112,10 +123,12 @@ test('RD-60 · Noticias e Imagen estática: el dato en una fila de fondo de colu
   cerca(regresar.y, subir.y);
 });
 
-test('RD-61 · El indicador de sincronización en 15 px y el color del texto secundario', async ({ page }) => {
+test('RD-61, RD-66 · El indicador de sincronización en 12 px y el color del texto secundario', async ({
+  page,
+}) => {
   await entrar(page);
   const indicador = page.getByRole('status', { name: 'Indicador de sincronización' });
   await expect(indicador).toHaveText('Sincronizado');
-  expect(await estilo(indicador, 'font-size')).toBe('15px');
-  expect(await estilo(indicador, 'color')).toBe('rgb(95, 85, 107)');
+  expect(await estilo(indicador, 'font-size')).toBe('12px');
+  expect(await estilo(indicador, 'color')).toBe(await colorDe(page, '--wg-texto'));
 });

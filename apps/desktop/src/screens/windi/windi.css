@@ -104,16 +104,16 @@
   gap: 14px;
   margin-top: 37px;
 }
-body[data-modo] .wg-windi__propuesta-acciones .wg-boton {
+body[data-sesion] .wg-windi__propuesta-acciones .wg-boton {
   min-height: 47px;
   padding: 0 29px;
   border-radius: 9px;
   font-size: 17px;
 }
-body[data-modo] .wg-windi__propuesta-acciones .wg-boton--principal {
+body[data-sesion] .wg-windi__propuesta-acciones .wg-boton--principal {
   font-weight: 700;
 }
-body[data-modo] .wg-windi__propuesta-acciones .wg-boton:not(.wg-boton--principal):not(:disabled) {
+body[data-sesion] .wg-windi__propuesta-acciones .wg-boton:not(.wg-boton--principal):not(:disabled) {
   background: var(--wg-superficie);
 }
 
@@ -157,7 +157,7 @@ body[data-modo] .wg-windi__propuesta-acciones .wg-boton:not(.wg-boton--principal
   font-size: 14px;
 }
 /* 76:55 «Enviar»: 106 × 40, radio 9. */
-body[data-modo] .wg-windi__pie .wg-boton {
+body[data-sesion] .wg-windi__pie .wg-boton {
   min-width: 106px;
   min-height: 40px;
   border-radius: 9px;

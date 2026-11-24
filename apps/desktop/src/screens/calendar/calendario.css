@@ -11,7 +11,7 @@
   font-size: 25px;
   font-weight: 500;
 }
-body[data-modo] .wg-calendario__cabecera .wg-boton {
+body[data-sesion] .wg-calendario__cabecera .wg-boton {
   min-height: 40px;
   padding: 0 12px;
   font-size: 15px;
@@ -21,7 +21,7 @@ body[data-modo] .wg-calendario__cabecera .wg-boton {
   gap: 14px;
   margin-top: 24px;
 }
-body[data-modo] .wg-calendario__vistas .wg-boton[aria-pressed='true'] {
+body[data-sesion] .wg-calendario__vistas .wg-boton[aria-pressed='true'] {
   outline: 2px solid var(--wgm-seleccion-texto);
   outline-offset: -2px;
 }
@@ -74,7 +74,7 @@ body[data-modo] .wg-calendario__vistas .wg-boton[aria-pressed='true'] {
   background: var(--wgm-columna);
 }
 /* 84:337 «Panel del día»: cada tarjeta en una fila de fondo de columna con radio 6 («09:00  Revisar bocetos»). */
-body[data-modo] .wg-panel-del-dia .wg-tarjeta {
+body[data-sesion] .wg-panel-del-dia .wg-tarjeta {
   flex-direction: row;
   align-items: center;
   gap: 10px;

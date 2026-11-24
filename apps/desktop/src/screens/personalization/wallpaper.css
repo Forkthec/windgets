@@ -220,7 +220,7 @@
   flex-direction: column;
   gap: 5px;
 }
-body[data-modo] .wg-wallpaper__filas .wg-boton:not(.wg-boton--principal) {
+body[data-sesion] .wg-wallpaper__filas .wg-boton:not(.wg-boton--principal) {
   justify-content: flex-start;
   width: 100%;
   min-height: 34px;
@@ -230,7 +230,7 @@ body[data-modo] .wg-wallpaper__filas .wg-boton:not(.wg-boton--principal) {
   font-size: 14px;
   font-weight: 400;
 }
-body[data-modo] .wg-wallpaper__filas .wg-boton:disabled {
+body[data-sesion] .wg-wallpaper__filas .wg-boton:disabled {
   border-color: transparent;
   color: var(--wgm-deshabilitado-texto);
 }
@@ -303,11 +303,11 @@ body[data-modo] .wg-wallpaper__filas .wg-boton:disabled {
   color: var(--wg-texto);
   font-size: 15px;
 }
-body[data-modo] .wg-wallpaper__acciones .wg-boton {
+body[data-sesion] .wg-wallpaper__acciones .wg-boton {
   min-height: 43px;
   font-weight: 400;
 }
-body[data-modo] .wg-wallpaper__acciones .wg-boton:not(.wg-boton--principal):not(:disabled) {
+body[data-sesion] .wg-wallpaper__acciones .wg-boton:not(.wg-boton--principal):not(:disabled) {
   background: var(--wgm-seccion-abierta);
 }
 /* INT-09: el espacio de una miniatura del catálogo que todavía se está descargando. */

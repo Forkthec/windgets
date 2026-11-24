@@ -3,7 +3,7 @@ import { OPCIONES_MENU } from '@/ui/MenuPrincipal/MenuPrincipal';
 
 // Textos del marco de la ventana principal con sesión (docs/rediseno.md RD-31, RD-32): literales del Figma.
 
-/** RD-32: la sección que va encima del título (81:17 «Planificador», 81:105 «Personalización», 81:195 «Preferencias»). */
+/** RD-32 y RD-66: el bloque del menú de cada pantalla («Configuración» reemplaza «Preferencias», A-04). */
 export const SECCION_DE_PANTALLA: Record<ScreenId, string> = {
   planner_daily: 'Planificador',
   kanban: 'Planificador',
@@ -15,7 +15,7 @@ export const SECCION_DE_PANTALLA: Record<ScreenId, string> = {
   personalization: 'Personalización',
   themes: 'Personalización',
   widgets: 'Personalización',
-  settings: 'Preferencias',
+  settings: 'Configuración',
 };
 
 const TEXTO_DEL_MENU = Object.fromEntries(OPCIONES_MENU.map((o) => [o.pantalla, o.texto])) as Record<
@@ -29,6 +29,17 @@ export const TITULO_DE_PANTALLA: Record<ScreenId, string> = {
   windi: 'Windi',
   personalization: 'Personalización del wallpaper',
 };
+
+/**
+ * RD-66 (rediseno_final_prototipos.md §2.2): la miga de pan del encabezado, «<bloque> › <opción del menú>»;
+ * Configuración es su propio nivel (A-04).
+ */
+export const MIGA_DE_PANTALLA = Object.fromEntries(
+  OPCIONES_MENU.map((o) => [
+    o.pantalla,
+    o.pantalla === 'settings' ? 'Configuración' : `${SECCION_DE_PANTALLA[o.pantalla]} › ${o.texto}`,
+  ]),
+) as Record<ScreenId, string>;
 
 /** RD-31: nombres de las capas 85:329 y 85:400. */
 export const OCULTAR_MENU = 'Ocultar menú';

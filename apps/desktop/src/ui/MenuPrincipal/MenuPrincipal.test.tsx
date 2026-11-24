@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { MenuPrincipal } from './MenuPrincipal';
 
@@ -9,11 +9,17 @@ describe('Menú principal', () => {
     expect(marcadas.map((b) => b.textContent)).toEqual(['Tablero Kanban']);
   });
 
-  it('RD-30 · Once opciones en el orden del Figma, cada una con su ícono y sin títulos de sección', () => {
+  it('RD-65 · Dos bloques con título, Etiquetas al final de Planificador y Configuración al pie', () => {
     render(<MenuPrincipal actual="planner_daily" alElegir={() => {}} />);
     expect(screen.queryAllByRole('heading')).toEqual([]);
-    const opciones = screen.getAllByRole('button');
-    expect(opciones.map((b) => b.textContent)).toEqual([
+    expect(
+      Array.from(document.querySelectorAll('.wg-menu__titulo-bloque')).map((t) => t.textContent),
+    ).toEqual(['Planificador', 'Personalización']);
+    const textos = (nombre: string) =>
+      within(screen.getByRole('region', { name: nombre }))
+        .getAllByRole('button')
+        .map((b) => b.textContent);
+    expect(textos('Planificador')).toEqual([
       'Planificador diario',
       'Tablero Kanban',
       'Calendario',
@@ -21,15 +27,23 @@ describe('Menú principal', () => {
       'Reportes',
       'Etiquetas',
       'Agente de IA',
-      'Wallpaper',
-      'Temas',
-      'Widgets',
-      'Configuración',
     ]);
+    expect(textos('Personalización')).toEqual(['Wallpaper', 'Temas', 'Widgets']);
+    const opciones = screen.getAllByRole('button');
+    expect(opciones.at(-1)?.textContent).toBe('Configuración');
     for (const opcion of opciones) {
       const icono = opcion.querySelector('svg');
       expect(icono?.getAttribute('aria-hidden')).toBe('true');
       expect(icono?.getAttribute('width')).toBe('18');
     }
+  });
+
+  it('D-25 · Contraído muestra solo los íconos, con su nombre accesible y su texto al pasar el mouse', () => {
+    render(<MenuPrincipal actual="kanban" alElegir={() => {}} contraido />);
+    expect(document.querySelectorAll('.wg-menu__titulo-bloque')).toHaveLength(0);
+    const kanban = screen.getByRole('button', { name: 'Tablero Kanban' });
+    expect(kanban.textContent).toBe('');
+    expect(kanban.getAttribute('title')).toBe('Tablero Kanban');
+    expect(kanban.getAttribute('aria-current')).toBe('page');
   });
 });

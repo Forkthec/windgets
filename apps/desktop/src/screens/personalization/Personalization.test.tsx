@@ -363,7 +363,7 @@ describe('HE-02-HU03 · Imagen de fondo', () => {
     expect(screen.queryByRole('list', { name: 'Catálogo de imágenes' })).toBeNull();
     falla = true;
     fireEvent.click(within(seccion()).getByRole('button', { name: 'Catálogo de imágenes' }));
-    expect((await screen.findByRole('status')).textContent).toContain('Ocurrió un error inesperado.');
+    expect((await screen.findByRole('alert')).textContent).toContain('Ocurrió un error inesperado.');
   });
 
   it('HE-02-HU03-CA03 · Seleccionar una imagen del catálogo de imágenes', async () => {

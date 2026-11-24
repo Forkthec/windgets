@@ -1,7 +1,7 @@
 /* Rediseño de Configuración (docs/rediseno.md RD-41; Figma 81:199 «Contenido» de 81:180 «Configuración · Claro» y
  * 81:226 del oscuro). Medidas en px del Figma, relativas a la tarjeta. */
 /* Las filas terminan a 53 px del borde derecho de la tarjeta (81:201 y 81:205 llegan a x = 936 de 990). */
-body[data-modo] .wg-configuracion {
+body[data-sesion] .wg-configuracion {
   align-items: stretch;
   gap: 0;
   padding-right: 21px;
@@ -37,19 +37,19 @@ body[data-modo] .wg-configuracion {
   background: var(--wgm-divisor, var(--wg-linea));
 }
 /* 81:201 «Interruptor activo»: 58 × 30, control de 22 px. */
-body[data-modo] .wg-configuracion__inicio .wg-interruptor {
+body[data-sesion] .wg-configuracion__inicio .wg-interruptor {
   width: 58px;
   height: 30px;
   border-radius: 15px;
 }
-body[data-modo] .wg-configuracion__inicio .wg-interruptor::after {
+body[data-sesion] .wg-configuracion__inicio .wg-interruptor::after {
   top: 2.5px;
   left: 2.5px;
   width: 22px;
   height: 22px;
   border-radius: 11px;
 }
-body[data-modo] .wg-configuracion__inicio .wg-interruptor[aria-checked='true']::after {
+body[data-sesion] .wg-configuracion__inicio .wg-interruptor[aria-checked='true']::after {
   left: 30.5px;
 }
 /* 81:205 «Cerrar sesión» empieza en y = 176 y 81:204 «Sesión» en 189 (sin centrar entre sí). El ancho de 164 px no

@@ -2811,6 +2811,40 @@ pub async fn app_set_last_screen(
     ))
 }
 
+/// IPC-DESK-17 `app_get_menu_collapsed` (rediseno_final_backend.md §4.2, D-25).
+#[tauri::command]
+pub async fn app_get_menu_collapsed(
+    nucleo: State<'_, Nucleo>,
+    params: NoParams,
+) -> Result<IpcResult<crate::tipos::MenuCollapsed>, ()> {
+    let _ = params;
+    use crate::servicio_de_personalizacion_y_configuracion::ultima_pantalla;
+    Ok(leido(
+        ultima_pantalla::leer_menu_contraido(nucleo.planificador.base())
+            .await
+            .map(|collapsed| crate::tipos::MenuCollapsed { collapsed })
+            .map_err(crate::servicio_del_planificador::de_sqlx),
+    ))
+}
+
+/// IPC-DESK-18 `app_set_menu_collapsed` (D-25): la vista lo guarda al contraer o ampliar el menú.
+#[tauri::command]
+pub async fn app_set_menu_collapsed(
+    nucleo: State<'_, Nucleo>,
+    params: crate::tipos::MenuCollapsed,
+) -> Result<IpcResult<()>, ()> {
+    use crate::servicio_de_personalizacion_y_configuracion::ultima_pantalla;
+    Ok(leido(
+        ultima_pantalla::guardar_menu_contraido(
+            nucleo.planificador.base(),
+            params.collapsed,
+            chrono::Utc::now().timestamp_millis(),
+        )
+        .await
+        .map_err(crate::servicio_del_planificador::de_sqlx),
+    ))
+}
+
 /// IPC-DESK-07 `app_request_exit` (HE-17-HU03-CA02, CA04): si salir pide confirmar los cambios sin guardar.
 #[tauri::command]
 pub fn app_request_exit(

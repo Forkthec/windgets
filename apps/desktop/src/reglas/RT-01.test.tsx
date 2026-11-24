@@ -22,6 +22,8 @@ const OPCIONES = [
   'Temas',
   'Widgets',
   'Configuración',
+  // RD-65: «Cerrar sesión» al pie del menú.
+  'Cerrar sesión',
 ];
 
 /** Núcleo de prueba: responde auth_get_session y deja emitir session_changed. */

@@ -27,9 +27,9 @@ test('RT-04-ET01 · Mensaje de resultado en la esquina inferior derecha', async 
   const caja = await mensaje.boundingBox();
   const ventana = page.viewportSize();
   if (!caja || !ventana) throw new Error('Sin medidas');
-  // Pegado a la esquina inferior derecha, con el margen de la biblioteca (4 unidades de 4 px).
+  // RD-63: en la esquina inferior derecha, 16 px del borde y encima del botón flotante de Windi (72 px).
   expect(ventana.width - (caja.x + caja.width)).toBeLessThanOrEqual(24);
-  expect(ventana.height - (caja.y + caja.height)).toBeLessThanOrEqual(24);
+  expect(ventana.height - (caja.y + caja.height)).toBeLessThanOrEqual(80);
   // No bloquea: el botón de la pantalla sigue respondiendo con el mensaje visible.
   await page.getByRole('button', { name: 'Guardar' }).click();
   await expect(mensaje).toBeVisible();
