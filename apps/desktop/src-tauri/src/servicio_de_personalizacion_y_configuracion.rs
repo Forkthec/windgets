@@ -907,6 +907,7 @@ pub mod guardar_como;
 mod imagenes;
 pub(crate) mod legibilidad;
 mod renombrar;
+pub mod reparacion;
 pub mod ultima_pantalla;
 mod widgets;
 
@@ -942,6 +943,8 @@ mod pruebas_de_personalizacion_sincronizada;
 mod pruebas_de_plantillas;
 #[cfg(test)]
 mod pruebas_de_renombrar;
+#[cfg(test)]
+mod pruebas_de_reparacion;
 #[cfg(test)]
 mod pruebas_de_restablecer;
 #[cfg(test)]

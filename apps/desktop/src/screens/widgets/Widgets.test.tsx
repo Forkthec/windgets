@@ -839,3 +839,14 @@ describe('HE-04-HU12 · Configurar un widget agregado', () => {
     expect(await within(ventana).findByText(t)).toBeTruthy();
   });
 });
+
+describe('rediseno_final_backend.md §3.2 · Lista de widgets', () => {
+  it('Si la lista no se puede leer, muestra el aviso en vez de quedarse en silencio', async () => {
+    await abrirPantalla('widgets', 'Widgets', Widgets, [], (n) => {
+      n.responder('widget_list', () => ({ ok: false, error: { code: 'internal.unexpected', message: '' } }));
+    });
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'No pudimos completar la operación. Intenta de nuevo más tarde.',
+    );
+  });
+});
