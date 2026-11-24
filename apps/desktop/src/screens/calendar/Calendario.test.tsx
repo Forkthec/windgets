@@ -90,7 +90,7 @@ describe('HE-10-HU01 · Calendario en vista mensual', () => {
     expect(contenido(20).titulos).toEqual(['Entregar informe']);
     expect(contenido(14).titulos).toEqual(['Pagar la luz']);
     // ET04: las opciones de la vista.
-    for (const opcion of ['Mes anterior', 'Mes siguiente', 'Hoy', 'Mes', 'Semana']) {
+    for (const opcion of ['Mes anterior', 'Mes siguiente', 'Ir a hoy', 'Mes', 'Semana']) {
       expect(screen.getByRole('button', { name: opcion })).toBeTruthy();
     }
   });
@@ -129,7 +129,7 @@ describe('HE-10-HU01 · Calendario en vista mensual', () => {
     await elegir('Mes anterior');
     expect(screen.getByRole('heading', { name: 'Septiembre 2026' })).toBeTruthy();
     // ET07: «Hoy» vuelve al mes actual con el día actual resaltado.
-    await elegir('Hoy');
+    await elegir('Ir a hoy');
     expect(screen.getByRole('heading', { name: 'Noviembre 2026' })).toBeTruthy();
     expect(screen.getByRole('cell', { current: 'date' })).toBe(dia(14));
   });
@@ -187,7 +187,7 @@ describe('HE-10-HU02 · Calendario en vista semanal', () => {
       'Sábado 14/11/2026',
     );
     // ET04: las opciones de la vista semanal.
-    for (const opcion of ['Semana anterior', 'Semana siguiente', 'Hoy', 'Mes']) {
+    for (const opcion of ['Semana anterior', 'Semana siguiente', 'Ir a hoy', 'Mes', 'Semana']) {
       expect(screen.getByRole('button', { name: opcion })).toBeTruthy();
     }
     expect(screen.queryByRole('button', { name: 'Mes anterior' })).toBeNull();
@@ -264,7 +264,7 @@ describe('HE-10-HU02 · Calendario en vista semanal', () => {
     await elegir('Semana anterior');
     expect(screen.getByRole('heading', { name: 'Semana del 26/10/2026 al 01/11/2026' })).toBeTruthy();
     // ET08: «Hoy» muestra la semana actual.
-    await elegir('Hoy');
+    await elegir('Ir a hoy');
     expect(llamadasA(nucleo, 'calendar_get_week').at(-1)).toEqual({ week_start: '2026-11-09' });
     expect(screen.getByRole('heading', { name: 'Semana del 09/11/2026 al 15/11/2026' })).toBeTruthy();
     expect(semana()).toHaveLength(7);
@@ -580,7 +580,7 @@ describe('HE-10-HU05 · Días con tarjetas vencidas o pendientes', () => {
         value: mesDelCalendario(nucleo.tarjetas, year, month, fecha),
       }));
     hoyEs('2026-11-13');
-    await elegir('Hoy');
+    await elegir('Ir a hoy');
     expect(resaltado(13)).toBe('amarillo');
     // ET09, ET18: a las 00:00 del computador (EV-22) la tarjeta de ayer pasa a vencida.
     vi.setSystemTime(new Date(2026, 10, 14, 0, 0, 0));
@@ -620,7 +620,7 @@ function tonoDe(hex: string): number {
 const TEMA = { primary: '#96B2B2', secondary: '#829890', text: '#14201C' };
 
 describe('Rediseño · Calendario (P34)', () => {
-  it('RD-53 · Los días abreviados y «Hoy», «Mes» y «Semana» abajo, con «Hoy» como acción principal', async () => {
+  it('RD-53, RD-76 · Los días abreviados y la navegación arriba con «Ir a hoy» y Mes | Semana', async () => {
     await abrirPantalla('calendar', 'Calendario', Calendario, []);
     expect(screen.getAllByRole('columnheader').map((d) => d.textContent)).toEqual([
       'Lun',
@@ -631,18 +631,47 @@ describe('Rediseño · Calendario (P34)', () => {
       'Sáb',
       'Dom',
     ]);
-    const hoy = screen.getByRole('button', { name: 'Hoy' });
-    expect(hoy.classList.contains('wg-boton--principal')).toBe(true);
-    const vistas = hoy.parentElement as HTMLElement;
-    expect(Array.from(vistas.querySelectorAll('button')).map((b) => b.textContent)).toEqual([
-      'Hoy',
-      'Mes',
-      'Semana',
-    ]);
-    // El mes y su navegación arriba.
+    // RD-76: «Ir a hoy» es un ícono con el número del día; Mes | Semana arriba, con la vista actual resaltada.
+    expect(screen.getByRole('button', { name: 'Ir a hoy' }).textContent).toBe('14');
+    const vistas = screen.getByRole('group', { name: 'Vista del calendario' });
+    expect(within(vistas).getByRole('button', { name: 'Mes' }).getAttribute('aria-pressed')).toBe('true');
+    expect(within(vistas).getByRole('button', { name: 'Semana' }).getAttribute('aria-pressed')).toBe('false');
+    // El mes y su navegación arriba, en la misma fila.
     const titulo = screen.getByRole('heading', { level: 2, name: 'Noviembre 2026' });
-    expect(
-      within(titulo.parentElement as HTMLElement).getByRole('button', { name: 'Mes anterior' }),
-    ).toBeTruthy();
+    const fila = titulo.closest('.wg-navegacion-fecha') as HTMLElement;
+    expect(within(fila).getByRole('button', { name: 'Mes anterior' })).toBeTruthy();
+    expect(within(fila).getByRole('group', { name: 'Vista del calendario' })).toBeTruthy();
+  });
+});
+
+describe('RD-77 · Selector de mes y año', () => {
+  it('el mes es un botón que abre «Mes y año»: se escribe el año (1970–2100) y se elige el mes', async () => {
+    await abrir([]);
+    fireEvent.click(screen.getByRole('button', { name: 'Noviembre 2026' }));
+    const selector = screen.getByRole('dialog', { name: 'Mes y año' });
+    const anio = within(selector).getByLabelText('Año');
+    fireEvent.change(anio, { target: { value: '1969' } });
+    // A-09: fuera del rango los meses quedan deshabilitados.
+    expect((within(selector).getByRole('button', { name: 'Marzo' }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    fireEvent.change(anio, { target: { value: '2030' } });
+    await act(async () => {
+      fireEvent.click(within(selector).getByRole('button', { name: 'Marzo' }));
+    });
+    expect(screen.getByRole('table', { name: 'Marzo 2030' })).toBeTruthy();
+    expect(screen.queryByRole('dialog', { name: 'Mes y año' })).toBeNull();
+  });
+
+  it('RD-78 · El Panel del día va al lado del calendario y se cierra con «×»', async () => {
+    await abrir([]);
+    await act(async () => {
+      fireEvent.click(dia(20));
+    });
+    const panel = screen.getByRole('region', { name: 'Panel del día' });
+    expect(panel.closest('.wg-calendario__cuerpo--con-panel')).not.toBeNull();
+    expect(screen.getByRole('table')).toBeTruthy();
+    fireEvent.click(within(panel).getByRole('button', { name: 'Cerrar' }));
+    expect(screen.queryByRole('region', { name: 'Panel del día' })).toBeNull();
   });
 });

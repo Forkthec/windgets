@@ -1444,3 +1444,92 @@ body[data-sesion] .wg-boton.wg-boton--texto-peligro:not(:disabled) {
   grid-column: 1 / -1;
   padding: 0;
 }
+
+/* Navegación de fechas (RD-76): título, flechas, «Ir a hoy» y, a la derecha, las vistas. */
+.wg-navegacion-fecha {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+.wg-navegacion-fecha__titulo {
+  position: relative;
+  margin-right: 8px;
+}
+.wg-navegacion-fecha__derecha {
+  margin-left: auto;
+}
+.wg-navegacion-fecha .wg-icono-boton {
+  width: 32px;
+  height: 32px;
+}
+.wg-boton-titulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--wg-tinta);
+  font: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.wg-boton-titulo:hover,
+.wg-boton-titulo:focus-visible {
+  background: var(--wg-superficie-baja);
+}
+.wg-boton-titulo::after {
+  content: '▾';
+  color: var(--wg-texto);
+  font-size: 12px;
+}
+.wg-flotante {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  padding: 12px;
+  border: 1px solid var(--wg-linea);
+  border-radius: 10px;
+  background: var(--wg-superficie-alta);
+  box-shadow: var(--wg-sombra);
+}
+/* «+ Nueva tarjeta» compacto (§3.6): el ícono va antes del texto, que sigue siendo el nombre accesible. */
+.wg-boton.wg-boton--mas::before {
+  content: '+';
+  margin-right: 4px;
+  font-weight: 700;
+}
+
+/* El ojo de la contraseña (RD-81): dentro del campo, a la derecha. */
+.wg-campo__con-ojo {
+  position: relative;
+  display: flex;
+}
+.wg-campo__con-ojo > .wg-campo__entrada {
+  flex: 1;
+  padding-right: 40px;
+}
+.wg-campo__ojo {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--wg-texto);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+.wg-campo__ojo:hover,
+.wg-campo__ojo:focus-visible {
+  color: var(--wg-tinta);
+}

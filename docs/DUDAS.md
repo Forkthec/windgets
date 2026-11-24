@@ -349,3 +349,11 @@ Datos «NO DEFINIDO» y contradicciones encontradas al construir (AGENTS.md, «C
 - **P41 · §3.8, desplegables nativos** · El rediseño pide reemplazar todos los `<select>` nativos por un componente propio. Valor usado: Tipo y Prioridad pasan a controles segmentados; la hora del bloque horario y los demás `<select>` siguen nativos hasta que exista el componente desplegable del sistema de diseño.
 - **P41 · D-20, error del bloque** · `card_assign_time_block` puede fallar después de guardar la tarjeta. Valor usado: el formulario se cierra con el mensaje de la tarjeta y el error del bloque sale como mensaje de error.
 - **P41 · Límite de etiquetas** · El formulario mantiene 5 (HE-07-HU02-ET04) hasta la HU v13 de D-14 (límite de 3), que va en su propio paso con la migración de recorte.
+
+## P42 · Calendario, Agenda diaria, Reportes y contraseñas
+
+- **P42 · D-26, letras de la tira semanal** · El ejemplo del rediseño es «L 23 · M 24 · …». Valor usado: L, M, X, J, V, S, D (la X para el miércoles, como en los calendarios en español, para no repetir la M); el nombre accesible es el día completo («miércoles 11»).
+- **P42 · A-09, año fuera de rango** · El rediseño no define un mensaje. Valor usado: sin mensaje; el campo queda marcado como inválido y los meses deshabilitados hasta escribir un año de 1970 a 2100.
+- **P42 · §3.6-3, la gráfica antes de «Aplicar»** · Con el código actual, elegir «Personalizado» ya no recalculaba (solo «Aplicar» lo hace); se deja así y se cubre con la prueba RD-80.
+- **P42 · «Ver más reportes»** · Es de D-12 (HU v13, P47): no se agrega todavía.
+- **P42 · Filtro de etiquetas de Reportes** · El desplegable con máximo 3 es de D-14 (P44).

@@ -498,7 +498,10 @@ describe('Rediseño · Registro', () => {
   it('RD-12 · «Crear cuenta», divisor, «Continuar con Google» y «Inicia sesión» en ese orden', async () => {
     await registro();
     const formulario = screen.getByRole('form', { name: 'Formulario' });
-    const orden = Array.from(formulario.querySelectorAll('button, .wg-divisor, a')).map((e) => e.textContent);
+    // RD-81: sin el ojo de las contraseñas.
+    const orden = Array.from(formulario.querySelectorAll('button:not(.wg-campo__ojo), .wg-divisor, a')).map(
+      (e) => e.textContent,
+    );
     expect(orden).toEqual(['Crear cuenta', 'o', 'Continuar con Google', 'Inicia sesión']);
   });
 });

@@ -17,7 +17,8 @@ type Estado = 'overdue' | 'pending' | 'completed';
 const ESTADOS: Array<{ estado: Estado; nombre: string; color: string }> = [
   { estado: 'overdue', nombre: 'Vencidas', color: 'var(--wg-estado-vencida)' },
   { estado: 'pending', nombre: 'Pendientes', color: 'var(--wg-estado-pendiente)' },
-  { estado: 'completed', nombre: 'Completadas', color: 'var(--wg-accion)' },
+  // RD-80 (§3.4, §6.5): las completadas en verde, el color de estado (antes el de acción del tema).
+  { estado: 'completed', nombre: 'Completadas', color: 'var(--wg-estado-completada)' },
 ];
 
 const PORCENTAJE: Record<Estado, keyof StatusBreakdown> = {

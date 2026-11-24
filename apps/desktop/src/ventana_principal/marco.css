@@ -366,14 +366,6 @@ body[data-sesion] .wg-confirmacion .wg-boton:not(.wg-boton--principal) {
   }
 }
 
-/* RD-32: la tarjeta se desplaza por dentro; en Agenda diaria, «Tarjetas sin horario» queda a la vista mientras se
-   desplazan los bloques, para poder arrastrar una tarjeta a cualquier hora (HE-11-HU02). Se pega a la misma altura
-   con la que empieza (24 px de la tarjeta + 40 de la cabecera + 24, RD-52, RD-68), así no salta al desplazarse. */
-body[data-sesion] .wg-agenda__sin-horario {
-  position: sticky;
-  top: 88px;
-}
-
 /* ---------- Pantalla completa: Personalización del wallpaper (RD-42; Figma 91:1638, 1360 × 850) ---------- */
 body[data-sesion] .wg-ventana-principal--completa {
   display: flex;

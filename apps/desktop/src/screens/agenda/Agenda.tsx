@@ -1,5 +1,6 @@
 import {
   DndContext,
+  MeasuringStrategy,
   pointerWithin,
   PointerSensor,
   useDraggable,
@@ -10,11 +11,12 @@ import {
 } from '@dnd-kit/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AgendaBlock, AgendaDay, Card } from '@/types';
-import { Boton } from '@/ui/Boton/Boton';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
-import { fechaIso, fechaLarga, hoy } from '../tarjeta/fechas';
+import { IndicadorDeEstado } from '../tarjeta/EstadoDeTarjeta';
+import { fechaIso, hoy } from '../tarjeta/fechas';
+import { NavegacionDeLaAgenda } from './NavegacionDeLaAgenda';
 import './agenda.css';
 import { useVentanasDeTarjeta } from '../tarjeta/useVentanasDeTarjeta';
 import { asignacionDelArrastre, type BloqueDeSoltar } from './arrastre';
@@ -28,12 +30,6 @@ import { asignacionDelArrastre, type BloqueDeSoltar } from './arrastre';
 export function textoDelBloque(hora: number): string {
   const dos = (n: number) => String(n).padStart(2, '0');
   return `${dos(hora)}:00 – ${dos((hora + 1) % 24)}:00`;
-}
-
-/** El día anterior o siguiente a `iso` (AAAA-MM-DD). */
-function otroDia(iso: string, dias: number): string {
-  const [anio, mes, dia] = iso.split('-').map(Number);
-  return fechaIso(new Date(anio ?? 0, (mes ?? 1) - 1, (dia ?? 1) + dias));
 }
 
 /**
@@ -62,6 +58,8 @@ function TarjetaDeLaAgenda({
       <button type="button" className="wg-tarjeta__titulo" onClick={() => alAbrir(tarjeta.id)}>
         {tarjeta.title}
       </button>
+      {/* RD-79 (§6.4, D-03): vencida en rojo y próxima a vencer en amarillo. */}
+      <IndicadorDeEstado tarjeta={tarjeta} />
       {alQuitar && (
         <button type="button" className="wg-boton" onClick={() => alQuitar(tarjeta.id)}>
           Quitar del horario
@@ -147,7 +145,8 @@ export function Agenda() {
   useEffect(() => {
     if (!ubicar || !agenda || agenda.date !== dia) return;
     if (agenda.current_hour !== null)
-      bloques.current[agenda.current_hour]?.scrollIntoView?.({ block: 'start' });
+      // RD-79: solo se desplaza la cuadrícula de horas; la cabecera queda a la vista.
+      bloques.current[agenda.current_hour]?.scrollIntoView?.({ block: 'nearest' });
     setUbicar(false);
   }, [agenda, dia, ubicar]);
 
@@ -189,21 +188,16 @@ export function Agenda() {
 
   return (
     <main className="wg-agenda-diaria" aria-label="Agenda diaria" aria-busy={agenda === null}>
-      {/* ET02: la fecha del día consultado y la navegación entre días (ET06, ET07). */}
-      {/* docs/rediseno.md RD-52 (Figma 93:38 a 93:44): la fecha larga a la izquierda y la navegación a la derecha. */}
-      <div className="wg-fila wg-agenda__cabecera">
-        <h2 className="wg-agenda__fecha">{fechaLarga(dia)}</h2>
-        <Boton onClick={() => setDia((d) => otroDia(d, -1))}>Día anterior</Boton>
-        <Boton
-          onClick={() => {
-            setDia(fechaIso(hoy()));
-            setUbicar(true);
-          }}
-        >
-          Hoy
-        </Boton>
-        <Boton onClick={() => setDia((d) => otroDia(d, 1))}>Día siguiente</Boton>
-      </div>
+      {/* ET02: la fecha del día consultado y la navegación entre días (ET06, ET07). RD-79 (D-26): fija arriba, con el
+          mini calendario, las flechas, «Ir a hoy» y la tira semanal. */}
+      <NavegacionDeLaAgenda
+        dia={dia}
+        alCambiar={setDia}
+        alIrAHoy={() => {
+          setDia(fechaIso(hoy()));
+          setUbicar(true);
+        }}
+      />
       {agenda && (
         <DndContext
           sensors={sensores}
@@ -211,6 +205,11 @@ export function Agenda() {
           onDragStart={() => setArrastrando(true)}
           onDragCancel={() => setArrastrando(false)}
           onDragEnd={(e) => void soltada(e)}
+          // RD-79: la cuadrícula de horas tiene su propio desplazamiento: los bloques se vuelven a medir durante el
+          // arrastre para que soltar caiga en el bloque que está bajo el puntero.
+          measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+          // Sin compensar el desplazamiento del diseño al empezar a arrastrar: movía la cuadrícula bajo el puntero.
+          autoScroll={{ layoutShiftCompensation: false, threshold: { x: 0, y: 0.05 } }}
         >
           <div className="wg-agenda">
             {/* ET01, ET03: 24 bloques de una hora con sus tarjetas. */}

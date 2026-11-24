@@ -1,43 +1,57 @@
-/* Rediseño de Reportes (docs/rediseno.md RD-56; Figma 84:397 «Contenido» de 84:394 «Reportes · Claro», boceto). Los
- * colores son los tokens del marco. */
+/* Reportes del rediseño final (docs/rediseno.md RD-80, que reemplaza la disposición de RD-56;
+ * rediseno_final_prototipos.md §6.5): los filtros en una fila compacta arriba y todo de un vistazo, sin scroll de
+ * página. Los colores son los tokens del tema y los de estado. */
+.wg-reportes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+}
 .wg-reportes__filtros {
   display: flex;
+  flex: none;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 12px 24px;
+  gap: 8px 16px;
 }
-.wg-reportes .wg-seccion {
-  margin-top: 28px;
-}
-.wg-reportes .wg-seccion > h2 {
-  margin: 0 0 12px;
-  font-size: 20px;
-  font-weight: 500;
-}
-/* 84:397: la tasa de cumplimiento y los estados lado a lado, en tarjetas de fondo de columna con radio 12. */
 .wg-reportes__tarjetas {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  flex: 1;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
+}
+.wg-reportes__grafica {
+  grid-row: 1 / span 2;
+  min-height: 0;
+}
+.wg-reportes .wg-seccion {
+  box-sizing: border-box;
+  height: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  overflow: auto;
+  border-radius: 10px;
+  background: var(--wgm-columna);
+}
+.wg-reportes .wg-seccion > h2 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.wg-reportes .wg-cifra {
+  margin: 0;
+  color: var(--wg-tinta);
+  font-size: 28px;
+  font-weight: 700;
 }
 @media (width < 1000px) {
   .wg-reportes__tarjetas {
     grid-template-columns: minmax(0, 1fr);
   }
-}
-.wg-reportes__tarjetas > .wg-seccion {
-  margin-top: 28px;
-  padding: 18px 18px 20px;
-  border-radius: 12px;
-  background: var(--wgm-columna);
-}
-.wg-reportes__tarjetas > .wg-seccion > h2 {
-  font-size: 17px;
-}
-/* «83,3 %» en 30 px negrita del color de selección. */
-.wg-reportes .wg-cifra {
-  margin: 0;
-  color: var(--wgm-seleccion-texto);
-  font-size: 30px;
-  font-weight: 700;
+  .wg-reportes__grafica {
+    grid-row: auto;
+  }
 }

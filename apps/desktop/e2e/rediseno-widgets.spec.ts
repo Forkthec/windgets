@@ -9,7 +9,7 @@ async function entrar(page: Page) {
   await page.setViewportSize({ width: 1360, height: 1100 });
   await page.goto('/');
   await page.getByLabel('Correo electrónico').fill('usuario.prueba@example.com');
-  await page.getByLabel('Contraseña').fill('Clave123');
+  await page.getByLabel('Contraseña', { exact: true }).fill('Clave123');
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
   // RD-62: con sesión no hay Claro/Oscuro; los colores salen del tema aplicado.
   await expect(page.locator('body')).toHaveAttribute('data-sesion', '');

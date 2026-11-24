@@ -57,3 +57,4 @@ de quien dirige, 24-nov).
   base local anterior; registro con correo y Google (widgets por defecto); arrastre en el Kanban sin abrir el
   detalle.
 - `TRASPASO.md` de la raíz (18-nov) está desactualizado y no está en git: se puede borrar.
+
