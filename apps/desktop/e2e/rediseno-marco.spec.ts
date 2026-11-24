@@ -173,7 +173,7 @@ test('RD-57 · La conversación con Windi baja sola hasta el último mensaje', a
   await page.getByRole('button', { name: 'Windi', exact: true }).click();
   const campo = page.getByPlaceholder('Escribe un mensaje');
   const lista = page.getByRole('list', { name: 'Conversación' });
-  for (let i = 1; i <= 8; i += 1) {
+  for (let i = 1; i <= 20; i += 1) {
     await campo.fill(`Mensaje número ${i} para llenar la conversación`);
     await campo.press('Enter');
     await expect(lista.getByText(`Mensaje número ${i} para llenar la conversación`)).toBeVisible();
