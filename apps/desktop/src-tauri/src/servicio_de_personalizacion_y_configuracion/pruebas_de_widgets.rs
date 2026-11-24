@@ -317,7 +317,9 @@ fn ca_he_04_hu04_ca01() {
             "Carrusel de imágenes",
             "Imagen estática",
             "Reproductor de música",
-            "Texto"
+            "Texto",
+            // rediseno_final_backend.md §5.5 (D-07).
+            "Windi"
         ]
     );
     let todos: Vec<_> = c.external.iter().chain(&c.local).collect();
@@ -357,4 +359,34 @@ fn ca_he_04_hu04_ca02() {
             e.name
         );
     }
+}
+
+#[test]
+fn el_widget_windi_se_agrega_una_sola_vez_y_esta_en_el_catalogo_local() {
+    // rediseno_final_backend.md §5.5 (D-07, A-07): «Windi» está en el catálogo de widgets locales; se agrega activo en
+    // una posición libre, con su nombre, y una sola vez por cuenta (`widget.already_added`, como Noticias). Después
+    // queda deshabilitado en el catálogo.
+    let (base, servicio) = con_widgets_por_defecto();
+    let windi = |c: &crate::tipos::WidgetCatalog| {
+        c.local
+            .iter()
+            .find(|e| e.r#type == crate::tipos::AddableWidgetType::Windi)
+            .cloned()
+    };
+    let entrada = windi(&catalogo(&base, &servicio)).expect("Windi en el catálogo local");
+    assert_eq!(entrada.name, "Windi");
+    assert!(entrada.enabled);
+    let w = bloquear(servicio.agregar_windi(&base, USUARIO, 1_794_657_600_000)).unwrap();
+    assert_eq!(
+        (w.display_name.as_str(), w.r#type, w.is_active),
+        ("Windi", WidgetType::Windi, true)
+    );
+    assert!(w.can_delete);
+    let otra = bloquear(servicio.agregar_windi(&base, USUARIO, 1_794_657_600_000)).unwrap_err();
+    assert_eq!(otra.code, crate::tipos::ErrorCode::WidgetAlreadyAdded);
+    assert!(!windi(&catalogo(&base, &servicio)).unwrap().enabled);
+    // En la capa es interactivo: al seleccionarlo abre el panel de Windi (HE-06-HU08).
+    assert!(crate::host_del_wallpaper::seleccion::es_interactivo(
+        &WidgetType::Windi
+    ));
 }

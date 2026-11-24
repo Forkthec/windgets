@@ -17,7 +17,6 @@ const OPCIONES = [
   'Agenda diaria',
   'Reportes',
   'Etiquetas',
-  'Agente de IA',
   'Wallpaper',
   'Temas',
   'Widgets',

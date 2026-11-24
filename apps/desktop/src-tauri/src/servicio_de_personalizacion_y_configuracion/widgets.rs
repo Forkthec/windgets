@@ -30,6 +30,7 @@ pub(super) fn tipo_de_texto(valor: &str) -> Option<WidgetType> {
         "image_carousel" => WidgetType::ImageCarousel,
         "static_image" => WidgetType::StaticImage,
         "text" => WidgetType::Text,
+        "windi" => WidgetType::Windi,
         _ => return None,
     })
 }
@@ -48,6 +49,7 @@ pub(super) fn nombre_del_tipo(tipo: &WidgetType) -> &'static str {
         WidgetType::ImageCarousel => "Carrusel de imágenes",
         WidgetType::StaticImage => "Imagen estática",
         WidgetType::Text => "Texto",
+        WidgetType::Windi => "Windi",
     }
 }
 
@@ -82,7 +84,7 @@ const CATALOGO_EXTERNO: [(AddableWidgetType, &str, &str, bool); 2] = [
     ),
 ];
 
-const CATALOGO_LOCAL: [(AddableWidgetType, &str, &str, bool); 5] = [
+const CATALOGO_LOCAL: [(AddableWidgetType, &str, &str, bool); 6] = [
     (
         AddableWidgetType::Animation,
         "Animación",
@@ -113,6 +115,13 @@ const CATALOGO_LOCAL: [(AddableWidgetType, &str, &str, bool); 5] = [
         "Tener a la vista una frase o nota breve.",
         false,
     ),
+    // rediseno_final_backend.md §5.5 (D-07, A-07): uno solo por cuenta. DUDA: HE-04 v13 la descripción de una línea.
+    (
+        AddableWidgetType::Windi,
+        "Windi",
+        "Abrir el chat con Windi desde el escritorio.",
+        true,
+    ),
 ];
 
 fn texto_del_agregable(tipo: &AddableWidgetType) -> &'static str {
@@ -124,6 +133,7 @@ fn texto_del_agregable(tipo: &AddableWidgetType) -> &'static str {
         AddableWidgetType::ImageCarousel => "image_carousel",
         AddableWidgetType::StaticImage => "static_image",
         AddableWidgetType::Text => "text",
+        AddableWidgetType::Windi => "windi",
     }
 }
 

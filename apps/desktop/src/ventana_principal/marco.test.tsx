@@ -116,6 +116,29 @@ describe('Rediseño final · marco de la ventana principal con sesión', () => {
     expect(await screen.findByRole('dialog')).toBeTruthy();
   });
 
+  it('RD-70 · Windi no está en el menú: el botón flotante abre su panel sobre la pantalla actual', async () => {
+    await abrir('claro');
+    const menu = screen.getByRole('navigation', { name: 'Menú principal' });
+    expect(within(menu).queryByRole('button', { name: 'Agente de IA' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Windi' }));
+    const panel = screen.getByRole('complementary', { name: 'Windi' });
+    expect(panel.hidden).toBe(false);
+    // La pantalla de debajo sigue abierta.
+    expect(screen.getByRole('main', { name: 'Widgets' })).toBeTruthy();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(panel.hidden).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Windi' }));
+    fireEvent.click(within(panel).getByRole('button', { name: 'Cerrar' }));
+    expect(panel.hidden).toBe(true);
+  });
+
+  it('RD-70 · Abrir «windi» desde un widget (EV-23) abre el panel', async () => {
+    const nucleo = await abrir('claro');
+    await nucleo.emitir('navigate_requested', { screen: 'windi' });
+    expect(screen.getByRole('complementary', { name: 'Windi' }).hidden).toBe(false);
+    expect(screen.getByRole('main', { name: 'Widgets' })).toBeTruthy();
+  });
+
   it('RD-66 · La miga de pan y el título de la pantalla', async () => {
     await abrir('claro');
     const encabezado = screen.getByRole('banner');

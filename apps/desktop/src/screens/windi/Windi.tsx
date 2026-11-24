@@ -7,6 +7,7 @@ import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import windiSaludo from '../cuenta/activos/windi-saludo.svg';
 import { Propuesta } from './Propuesta';
 import './windi.css';
+import { useAvisarEscribiendo } from '@/ventana_principal/PanelDeWindi';
 
 // P-IA-01 Agente de IA (Menú principal > Planificador > Agente de IA; HE-14-HU01). La conversación vive en el
 // Núcleo mientras la aplicación está abierta (IPC-WIN-01; ET14). Cada mensaje va a Windi por IPC-WIN-02, que
@@ -49,6 +50,8 @@ export function Windi() {
   const [enLinea, setEnLinea] = useState(true);
   const [texto, setTexto] = useState('');
   const [escribiendo, setEscribiendo] = useState(false);
+  // RD-70: los ojos del botón y del panel parpadean mientras Windi responde.
+  useAvisarEscribiendo(escribiendo);
   // CA08: el mensaje que falló, para «Reintentar».
   const [fallido, setFallido] = useState<string | null>(null);
   // HE-14-HU03-CA02: se perdió la conexión al confirmar.
@@ -173,7 +176,8 @@ export function Windi() {
   };
 
   return (
-    <main className="wg-windi" aria-label="Agente de IA" aria-busy={mensajes === null}>
+    // RD-70: la conversación va dentro del panel lateral de Windi (`ventana_principal/PanelDeWindi`), no como pantalla.
+    <section className="wg-windi" aria-label="Conversación con Windi" aria-busy={mensajes === null}>
       {/* ET13: sin conexión, el aviso (RT-04); el historial sigue visible. */}
       {!enLinea && <Aviso texto={textos.WINDI_SIN_CONEXION} />}
       {sinConexionAlConfirmar && <Aviso texto={textos.WINDI_SIN_CONEXION_AL_CONFIRMAR} />}
@@ -240,6 +244,6 @@ export function Windi() {
           </Boton>
         </div>
       </div>
-    </main>
+    </section>
   );
 }

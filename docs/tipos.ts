@@ -223,11 +223,13 @@ export interface ThemeDraftView {
 
 export type WidgetType =
   | 'clock' | 'calendar' | 'daily_tasks' | 'kanban'
-  | 'weather' | 'news' | 'music_player' | 'animation' | 'image_carousel' | 'static_image' | 'text';
+  | 'weather' | 'news' | 'music_player' | 'animation' | 'image_carousel' | 'static_image' | 'text'
+  // docs/rediseno.md RD-71 (rediseno_final_backend.md §5.5): el widget Windi.
+  | 'windi';
 
 /** Widgets que se agregan desde el catálogo de widgets (los otros cuatro son los widgets por defecto). */
 export type AddableWidgetType =
-  | 'weather' | 'news' | 'music_player' | 'animation' | 'image_carousel' | 'static_image' | 'text';
+  | 'weather' | 'news' | 'music_player' | 'animation' | 'image_carousel' | 'static_image' | 'text' | 'windi';
 
 export type ImageSource = 'catalog' | 'own';
 export interface ImageRef {

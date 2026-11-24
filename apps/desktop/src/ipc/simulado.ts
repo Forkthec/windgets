@@ -194,6 +194,7 @@ const respuestas: Respuestas = {
           ['static_image', 'Imagen estática', 'Mostrar una imagen preferida sobre el wallpaper.'],
           ['music_player', 'Reproductor de música', 'Seguir la música que suena desde el escritorio.'],
           ['text', 'Texto', 'Tener a la vista una frase o nota breve.'],
+          ['windi', 'Windi', 'Abrir el chat con Windi desde el escritorio.'],
         ] as const
       ).map(([type, name, description]) => ({
         type,

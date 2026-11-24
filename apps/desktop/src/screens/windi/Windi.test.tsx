@@ -36,7 +36,7 @@ async function abrir(
     mensajes.push(m);
     return m;
   };
-  const nucleo = await abrirPantalla('windi', 'Agente de IA', Windi, [], (nucleo) => {
+  const nucleo = await abrirPantalla('windi', 'Windi', Windi, [], (nucleo) => {
     nucleo.responder('windi_get_conversation', () => {
       if (mensajes.length === 0) agregar('assistant', SALUDO);
       return { ok: true, value: { messages: [...mensajes], proposal: null, online } };

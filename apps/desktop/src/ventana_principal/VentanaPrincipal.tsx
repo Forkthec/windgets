@@ -26,6 +26,7 @@ import { AvisoDelWallpaper } from './AvisoDelWallpaper';
 import { bloquearZoom } from './bloquearZoom';
 import { EncabezadoDePantalla } from './EncabezadoDePantalla';
 import { IndicadorSincronizacion } from './IndicadorSincronizacion';
+import { PanelDeWindi } from './PanelDeWindi';
 import { AMPLIAR_MENU, OCULTAR_MENU, TITULO_DE_PANTALLA } from './textosDelMarco';
 import simbolo from '@/screens/cuenta/activos/simbolo.svg';
 import './marco.css';
@@ -206,10 +207,24 @@ export function VentanaPrincipal({
     [],
   );
 
+  // RD-70 (D-07): Windi vive en un panel lateral, no en una pantalla; `'windi'` (menú antiguo, EV-23 desde el widget
+  // Windi o la última pantalla guardada) abre el panel sobre la pantalla actual.
+  const [windiAbierto, setWindiAbierto] = useState(false);
+  const abrirWindi = useCallback(() => setWindiAbierto(true), []);
+  const cerrarWindi = useCallback(() => setWindiAbierto(false), []);
+  useEffect(() => {
+    if (sesion !== 'con_sesion') setWindiAbierto(false);
+  }, [sesion]);
+
   const navegacion = useMemo<Navegacion>(
     () => ({
       abrir: async (destino) => {
-        if (sesion !== 'con_sesion' || destino === pantalla) return;
+        if (sesion !== 'con_sesion') return;
+        if (destino === 'windi') {
+          setWindiAbierto(true);
+          return;
+        }
+        if (destino === pantalla) return;
         const puedeSalir = guardia.current ? await guardia.current() : true;
         if (!puedeSalir) return;
         guardia.current = null;
@@ -405,6 +420,14 @@ export function VentanaPrincipal({
                   />
                 )}
                 {sesion === 'con_sesion' && <AvisoDelWallpaper />}
+                {sesion === 'con_sesion' && (
+                  <PanelDeWindi
+                    abierto={windiAbierto}
+                    alAbrir={abrirWindi}
+                    alCerrar={cerrarWindi}
+                    Conversacion={pantallas.windi}
+                  />
+                )}
                 {contenido}
                 {confirmarSalida && (
                   // DUDA: HE-17-HU03 el título de la confirmación no está definido; se usa «Salir».

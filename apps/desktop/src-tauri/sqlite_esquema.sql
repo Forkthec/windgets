@@ -253,7 +253,7 @@ CREATE TABLE widget (
   field_mods                TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(field_mods)),
   updated_seq               INTEGER NOT NULL DEFAULT 0,
   type                      TEXT NOT NULL CHECK (type IN ('clock','calendar','daily_tasks','kanban','weather','news',
-                              'music_player','animation','image_carousel','static_image','text')),
+                              'music_player','animation','image_carousel','static_image','text','windi')),
   is_default                INTEGER NOT NULL DEFAULT 0 CHECK (is_default IN (0,1)),
   weather_city              TEXT,
   weather_geo_id            TEXT,
@@ -281,7 +281,7 @@ CREATE TABLE widget (
       OR (type <> 'image_carousel' AND carousel_interval_seconds IS NULL))
 );
 CREATE UNIQUE INDEX uq_widget_singleton ON widget (user_id, type)
-  WHERE type IN ('news','music_player','clock','calendar','daily_tasks','kanban');
+  WHERE type IN ('news','music_player','clock','calendar','daily_tasks','kanban','windi');
 CREATE UNIQUE INDEX uq_widget_weather_city ON widget (user_id, weather_geo_id) WHERE type = 'weather';
 CREATE INDEX ix_widget_type ON widget (user_id, type);
 
@@ -451,3 +451,6 @@ CREATE TABLE external_widget_cache (
   status     TEXT NOT NULL CHECK (status IN ('ok','error','offline')),
   error_code TEXT
 );
+
+-- Versión del esquema local (migraciones locales en repositorios_y_archivos_locales.rs). 9: widget Windi (0009).
+PRAGMA user_version = 9;

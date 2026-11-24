@@ -12,8 +12,9 @@ test.beforeEach(async ({ page }) => {
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
 });
 
-// docs/rediseno.md RD-30: la opción de Personalización del wallpaper dice «Wallpaper».
-for (const pantalla of ['Wallpaper', 'Agente de IA']) {
+// docs/rediseno.md RD-30: la opción de Personalización del wallpaper dice «Wallpaper». RD-70: Windi ya no es una pantalla
+// (su panel tiene su propia prueba en rediseno-marco.spec.ts).
+for (const pantalla of ['Wallpaper']) {
   test(`RT-01 · En ${pantalla} solo se desplaza la pantalla, no el menú principal`, async ({ page }) => {
     const menu = page.getByRole('navigation', { name: 'Menú principal' });
     await menu.getByRole('button', { name: pantalla }).click();

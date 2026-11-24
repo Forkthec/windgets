@@ -117,7 +117,6 @@ test('RD-68 · Ninguna pantalla del menú hace scroll de página a 1093 × 560',
     'Agenda diaria',
     'Reportes',
     'Etiquetas',
-    'Agente de IA',
     'Temas',
     'Widgets',
     'Configuración',
@@ -170,10 +169,11 @@ test('RD-53 · Calendario: días abreviados', async ({ page }) => {
 
 test('RD-57 · La conversación con Windi baja sola hasta el último mensaje', async ({ page }) => {
   await entrar(page, { width: 1200, height: 800 });
-  await abrir(page, 'Agente de IA');
+  // RD-70: Windi se abre con su botón flotante, en el panel lateral.
+  await page.getByRole('button', { name: 'Windi', exact: true }).click();
   const campo = page.getByPlaceholder('Escribe un mensaje');
   const lista = page.getByRole('list', { name: 'Conversación' });
-  for (let i = 1; i <= 8; i += 1) {
+  for (let i = 1; i <= 20; i += 1) {
     await campo.fill(`Mensaje número ${i} para llenar la conversación`);
     await campo.press('Enter');
     await expect(lista.getByText(`Mensaje número ${i} para llenar la conversación`)).toBeVisible();
@@ -183,4 +183,28 @@ test('RD-57 · La conversación con Windi baja sola hasta el último mensaje', a
     .poll(() => lista.evaluate((e) => e.scrollHeight - e.scrollTop - e.clientHeight))
     .toBeLessThanOrEqual(2);
   expect(await lista.evaluate((e) => e.scrollHeight > e.clientHeight)).toBe(true);
+});
+
+test('RD-70 · El botón flotante abre el panel de Windi de 360 px sin cambiar la pantalla; × y Esc lo cierran', async ({
+  page,
+}) => {
+  await entrar(page);
+  await abrir(page, 'Tablero Kanban');
+  const flotante = page.getByRole('button', { name: 'Windi', exact: true });
+  const b = await caja(flotante);
+  cerca(b.width, 40);
+  cerca(b.x + b.width, REFERENCIA.width - 16);
+  await flotante.click();
+  const panel = page.getByRole('complementary', { name: 'Windi' });
+  await expect(panel).toBeVisible();
+  const p = await caja(panel);
+  cerca(p.width, 360);
+  cerca(p.height, REFERENCIA.height);
+  // La pantalla y la miga no cambian.
+  await expect(page.locator('.wg-encabezado-pantalla__seccion')).toHaveText('Planificador › Tablero Kanban');
+  await panel.getByRole('button', { name: 'Cerrar' }).click();
+  await expect(panel).toBeHidden();
+  await flotante.click();
+  await page.keyboard.press('Escape');
+  await expect(panel).toBeHidden();
 });
