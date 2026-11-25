@@ -12,9 +12,7 @@
 body[data-sesion] {
   --wgm-seleccion-fondo: color-mix(in srgb, var(--wg-accion) 22%, var(--wg-superficie-alta));
   --wgm-seleccion-texto: var(--wg-tinta);
-  --wgm-secundario: var(--wg-superficie-baja);
   --wgm-interruptor: var(--wg-accion);
-  --wgm-principal-borde: var(--wg-accion);
   --wgm-deshabilitado: color-mix(in srgb, var(--wg-linea) 45%, var(--wg-superficie-baja));
   --wgm-deshabilitado-texto: var(--wg-texto);
   --wgm-emergente: var(--wg-superficie);
@@ -254,26 +252,18 @@ body[data-sesion] .wg-boton.wg-menu__opcion[aria-current='page'] .wg-menu__icono
   color: var(--wg-tinta);
 }
 
-/* ---------- Controles (RD-33; RD-68: botones y campos de 32 a 36 px, texto de 14 px) ---------- */
-body[data-sesion] .wg-boton {
-  min-height: 34px;
-  padding: 0 12px;
-  border: var(--wgm-borde-control) solid var(--wg-borde);
-  border-radius: 8px;
-  background: var(--wgm-secundario);
-  color: var(--wg-tinta);
+/* ---------- Controles (RD-33; RD-68: texto de 14 px. La forma de los botones está en `tokens.css`, RD-99) ---------- */
+body[data-sesion] .wg-boton:where(:not(.wg-boton--icono)) {
   font-size: 14px;
   font-weight: 500;
-}
-body[data-sesion] .wg-boton--principal {
-  border-color: var(--wgm-principal-borde);
-  background: var(--wg-accion);
-  color: var(--wg-sobre-accion);
 }
 body[data-sesion] .wg-boton:disabled {
   border-color: transparent;
   background: var(--wgm-deshabilitado);
   color: var(--wgm-deshabilitado-texto);
+}
+body[data-sesion] .wg-boton.wg-boton--icono:disabled {
+  background: transparent;
 }
 body[data-sesion] .wg-boton:focus-visible,
 body[data-sesion] .wg-interruptor:focus-visible,

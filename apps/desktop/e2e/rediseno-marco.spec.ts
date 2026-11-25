@@ -127,11 +127,12 @@ test('RD-68 · Ninguna pantalla del menú hace scroll de página a 1093 × 560',
   }
 });
 
-test('RD-68 · Botones de 34 px con texto de 14 px', async ({ page }) => {
+// RD-99 reemplaza la altura de RD-68: 36 px.
+test('RD-68, RD-99 · Botones de 36 px con texto de 14 px', async ({ page }) => {
   await entrar(page);
   await abrir(page, 'Widgets');
   const agregar = page.getByRole('button', { name: 'Agregar widget' });
-  cerca((await caja(agregar)).height, 34);
+  cerca((await caja(agregar)).height, 36);
   expect(await estilo(agregar, 'font-size')).toBe('14px');
 });
 

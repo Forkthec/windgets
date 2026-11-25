@@ -1,8 +1,16 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
+/** La jerarquía de botones (docs/rediseno.md RD-99). */
+export type VarianteDeBoton = 'principal' | 'secundario' | 'icono' | 'destructivo';
+
 export interface BotonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
   children: ReactNode;
+  /** Sin decirla, «secundario». Un botón «icono» no tiene texto visible: lleva `aria-label`. */
+  variante?: VarianteDeBoton;
+  /** Atajo de `variante="principal"`; si se dan los dos, gana `variante`. */
   principal?: boolean;
+  /** «normal» mide 36 px; «fila», el de las acciones de una fila de lista, 32 px. */
+  tam?: 'normal' | 'fila';
   /** Texto del motivo de una opción deshabilitada (RT-04). Si no hay espacio, va como sugerencia al pasar el mouse. */
   motivo?: string;
   motivoAlPasar?: boolean;
@@ -10,14 +18,17 @@ export interface BotonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>
 
 export function Boton({
   children,
+  variante,
   principal = false,
+  tam = 'normal',
   motivo,
   motivoAlPasar = false,
   disabled,
   className,
   ...resto
 }: BotonProps) {
-  const clases = ['wg-boton', principal ? 'wg-boton--principal' : '', className ?? '']
+  const nivel = variante ?? (principal ? 'principal' : 'secundario');
+  const clases = ['wg-boton', `wg-boton--${nivel}`, tam === 'fila' ? 'wg-boton--fila' : '', className ?? '']
     .filter(Boolean)
     .join(' ');
   const boton = (

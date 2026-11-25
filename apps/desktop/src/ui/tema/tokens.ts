@@ -43,4 +43,8 @@ export function aplicarTokens(tokens: Tokens, raiz: HTMLElement = document.docum
     if (valor) raiz.style.setProperty(variableCss(nombre), valor);
     else raiz.style.removeProperty(variableCss(nombre));
   }
+  // RD-99: sobre `secundario` se escribe con la superficie del mismo tema. Sin `secundario`, la hoja de estilos usa la
+  // pareja de la acción.
+  if (tokens.secundario) raiz.style.setProperty('--wg-sobre-secundario', tokens.superficie);
+  else raiz.style.removeProperty('--wg-sobre-secundario');
 }

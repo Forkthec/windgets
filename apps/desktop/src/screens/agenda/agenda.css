@@ -29,6 +29,10 @@
   max-width: 72px;
   border: 1px solid var(--wg-linea);
 }
+.wg-segmentado__opcion.wg-agenda__dia-de-la-tira[aria-pressed='true'] {
+  background: var(--wg-accion);
+  color: var(--wg-sobre-accion);
+}
 .wg-agenda__dia-de-la-tira[aria-current='date']:not([aria-pressed='true']) {
   border-color: var(--wg-accion);
 }

@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { Segmentado } from '../Segmentado/Segmentado';
 
 export interface OpcionSelector {
   valor: string;
@@ -7,6 +8,8 @@ export interface OpcionSelector {
 }
 
 export interface SelectorProps {
+  /** «segmentado» deja todas las opciones a la vista, para cuando son pocas (docs/rediseno.md RD-99). */
+  variante?: 'lista' | 'segmentado';
   etiqueta: string;
   opciones: OpcionSelector[];
   valor: string;
@@ -18,6 +21,7 @@ export interface SelectorProps {
 }
 
 export function Selector({
+  variante = 'lista',
   etiqueta,
   opciones,
   valor,
@@ -28,6 +32,19 @@ export function Selector({
 }: SelectorProps) {
   const idGenerado = useId();
   const id = idPropio ?? idGenerado;
+  if (variante === 'segmentado') {
+    return (
+      <Segmentado
+        etiqueta={etiqueta}
+        opciones={opciones}
+        valor={valor}
+        alCambiar={alCambiar}
+        mensaje={mensaje}
+        deshabilitado={deshabilitado}
+        id={id}
+      />
+    );
+  }
   return (
     <div className="wg-campo">
       <label className="wg-campo__etiqueta" htmlFor={id}>
