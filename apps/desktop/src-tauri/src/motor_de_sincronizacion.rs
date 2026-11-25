@@ -1853,6 +1853,48 @@ mod pruebas {
         respuesta
     }
 
+    /// Un tema guardado con la plantilla «default», aplicado, como el de quien ya usaba la aplicación.
+    fn guardar_y_aplicar_un_tema(base: &BaseLocal) {
+        const TEMA: &str = "00000000-0000-4000-8000-0000000000cc";
+        bloquear(async {
+            let pool = base.pool().await.unwrap();
+            for consulta in [
+                "INSERT INTO profile (user_id, alias, created_at) VALUES (?1, 'Prueba', ?2)",
+                "INSERT INTO theme (id, user_id, created_at, name, template_id, color_primary,                  color_secondary, color_text, font_id, last_modified_at)                  VALUES (?3, ?1, ?2, 'Mi tema', 'default', '#96B2B2', '#829890', '#14201C', 'nunito', ?2)",
+                "INSERT INTO applied_theme (id, user_id, created_at, theme_id, template_id, color_primary,                  color_secondary, color_text, font_id, applied_at)                  VALUES (?1, ?1, ?2, ?3, 'default', '#96B2B2', '#829890', '#14201C', 'nunito', ?2)",
+            ] {
+                sqlx::query(consulta)
+                    .bind(USUARIO)
+                    .bind(instante(AHORA))
+                    .bind(TEMA)
+                    .execute(pool)
+                    .await
+                    .unwrap();
+            }
+        });
+    }
+
+    /// Todas las columnas de todas las filas de la tabla, como texto, para compararlas.
+    fn filas_completas(base: &BaseLocal, tabla: &str) -> Vec<String> {
+        bloquear(async {
+            let pool = base.pool().await.unwrap();
+            let columnas: Vec<String> = sqlx::query_scalar("SELECT name FROM pragma_table_info(?)")
+                .bind(tabla)
+                .fetch_all(pool)
+                .await
+                .unwrap();
+            let expresion = columnas
+                .iter()
+                .map(|columna| format!("quote({columna})"))
+                .collect::<Vec<_>>()
+                .join(" || '|' || ");
+            sqlx::query_scalar(&format!("SELECT {expresion} FROM {tabla} ORDER BY id"))
+                .fetch_all(pool)
+                .await
+                .unwrap()
+        })
+    }
+
     #[test]
     fn catalog_pull_trae_los_temas_de_windgets_y_su_plantilla_por_defecto() {
         // IM-01 (docs/rediseno.md RD-94): quien tiene el catálogo anterior a la migración 0010 descarga los nombres
@@ -1861,6 +1903,15 @@ mod pruebas {
         let nube = NubeDePrueba::default();
         *nube.catalogo.lock().unwrap() = Some(catalogo_de_temas(3, "Claro", "Oscuro", "default"));
         bajar_catalogo(&base, &nube);
+        guardar_y_aplicar_un_tema(&base);
+        let temas = || {
+            (
+                filas_completas(&base, "theme"),
+                filas_completas(&base, "applied_theme"),
+            )
+        };
+        let antes = temas();
+        assert_eq!((antes.0.len(), antes.1.len()), (1, 1));
         *nube.catalogo.lock().unwrap() = Some(catalogo_de_temas(
             4,
             "Windgets claro",
@@ -1868,6 +1919,8 @@ mod pruebas {
             "claro",
         ));
         bajar_catalogo(&base, &nube);
+        // IM-01: los temas guardados y el aplicado no cambian en ninguna columna.
+        assert_eq!(temas(), antes);
         let filas = |consulta: &'static str| -> Vec<(String, String, i64)> {
             bloquear(async {
                 sqlx::query_as(consulta)
