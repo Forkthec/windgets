@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import textos from '@/types/messages.es.json';
+import { MenuDeAcciones } from '@/ui/MenuDeAcciones/MenuDeAcciones';
 import { VentanaEmergente } from './VentanaEmergente';
 
 afterEach(cleanup);
@@ -174,5 +175,51 @@ describe('RD-103 · Ventana emergente: foco, fondo y descarte', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(alSalir).not.toHaveBeenCalled();
     expect(screen.queryByText(textos.SALIR_SIN_GUARDAR)).toBeNull();
+  });
+});
+
+// RD-103: un menú en un portal abierto desde dentro de la ventana sigue siendo «de la ventana».
+describe('RD-103 · Ventana emergente con un menú de acciones dentro', () => {
+  const conMenu = (alSalir = vi.fn(), alElegir = vi.fn()) =>
+    render(
+      <VentanaEmergente titulo="Ventana" alSalir={alSalir}>
+        <input aria-label="Nombre" />
+        <MenuDeAcciones
+          nombre="tarjeta"
+          opciones={[
+            { etiqueta: 'Uno', alElegir },
+            { etiqueta: 'Dos', alElegir },
+          ]}
+        />
+      </VentanaEmergente>,
+    );
+
+  it('el menú abierto no queda inerte, las flechas lo recorren y Tab lo cierra sin sacar el foco de la ventana', () => {
+    conMenu();
+    fireEvent.click(screen.getByRole('button', { name: 'Acciones de tarjeta' }));
+    const uno = screen.getByRole('menuitem', { name: 'Uno' });
+    expect(uno.closest('[inert]')).toBeNull();
+    expect(document.activeElement).toBe(uno);
+    fireEvent.keyDown(uno, { key: 'ArrowDown' });
+    expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: 'Dos' }));
+    fireEvent.keyDown(document.activeElement as Element, { key: 'Tab' });
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Ventana' }).contains(document.activeElement)).toBe(true);
+  });
+
+  it('elegir una opción no cuenta como clic en el velo; Esc cierra solo el menú', () => {
+    const alSalir = vi.fn();
+    const alElegir = vi.fn();
+    conMenu(alSalir, alElegir);
+    fireEvent.click(screen.getByRole('button', { name: 'Acciones de tarjeta' }));
+    fireEvent.keyDown(screen.getByRole('menuitem', { name: 'Uno' }), { key: 'Escape' });
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(alSalir).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Acciones de tarjeta' }));
+    fireEvent.mouseDown(screen.getByRole('menuitem', { name: 'Dos' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Dos' }));
+    expect(alElegir).toHaveBeenCalledTimes(1);
+    expect(alSalir).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog', { name: 'Ventana' })).toBeTruthy();
   });
 });
