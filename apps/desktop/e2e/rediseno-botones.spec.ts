@@ -57,7 +57,10 @@ async function muestra(page: Page) {
   await page.evaluate(() => {
     const boton = (id: string, clases: string, contenido: string) =>
       `<button type="button" id="${id}" class="wg-boton ${clases}">${contenido}</button>`;
-    const icono = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11h16v2H4z"/></svg>';
+    // Con la clase y las medidas que escriben los íconos de `ui/Iconos` (RD-101).
+    const icono =
+      '<svg class="wg-icono" viewBox="0 0 18 18" width="1em" height="1em" aria-hidden="true">' +
+      '<path d="M3.6 9H14.4" stroke="currentColor"/></svg>';
     const caja = document.createElement('div');
     caja.id = 'muestra';
     caja.style.cssText =
