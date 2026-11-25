@@ -735,6 +735,44 @@ button.wg-tarjeta__titulo:focus-visible {
   outline: calc(var(--wg-borde-ancho) * 2) solid var(--wg-accion);
 }
 
+/* Nombre emergente de los botones (docs/rediseno.md RD-100; `ui/NombreEmergente`): relleno `tinta`, texto `marco`,
+   flecha de 6 px y a 8 px del botón. Va encima de la ventana emergente (950), de los mensajes (1000) y del menú «⋮»
+   (50), y no recibe el puntero: no tapa ninguna selección. El contorno transparente solo se ve con un tema de
+   contraste de Windows. */
+.wg-nombre-emergente {
+  position: fixed;
+  z-index: 1100;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: calc(100vw - 8px);
+  padding: 6px 10px;
+  border-radius: 6px;
+  outline: 1px solid transparent;
+  background: var(--wg-tinta);
+  color: var(--wg-marco);
+  font-family: var(--wg-fuente);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+  pointer-events: none;
+}
+.wg-nombre-emergente::before {
+  content: '';
+  position: absolute;
+  left: var(--wg-flecha, 50%);
+  margin-left: -6px;
+  border: 6px solid transparent;
+}
+.wg-nombre-emergente[data-lado='abajo']::before {
+  bottom: 100%;
+  border-bottom-color: var(--wg-tinta);
+}
+.wg-nombre-emergente[data-lado='arriba']::before {
+  top: 100%;
+  border-top-color: var(--wg-tinta);
+}
+
 /* Menú de acciones «⋮» (RT-02-ET10 a ET12) y «Mover a» (HE-09-HU02-ET10, ET11), que usa el mismo menú: se dibuja
    fijo sobre el contenido, así que ningún contenedor lo recorta. La opción actual va marcada y deshabilitada, y
    una opción deshabilitada se ve en gris (RT-04). */

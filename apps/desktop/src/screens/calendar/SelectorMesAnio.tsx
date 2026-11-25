@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { MESES, nombreDelMes } from './mes';
+import { NombreEmergente } from '@/ui/NombreEmergente/NombreEmergente';
 
 // Selector «Mes y año» del Calendario (docs/rediseno_final_prototipos.md §6.3; rediseno_final_backend.md §4.6;
 // docs/rediseno.md RD-77): el título del mes es un botón que abre una cuadrícula de 12 meses con el año, que se
@@ -49,30 +50,32 @@ export function SelectorMesAnio({ anio, mes, alElegir }: SelectorMesAnioProps) {
   return (
     <div ref={caja} className="wg-selector-mes">
       <h2 className="wg-calendario__titulo">
-        <button
-          type="button"
-          className="wg-boton-titulo"
-          aria-expanded={abierto}
-          aria-haspopup="dialog"
-          title="Elegir mes y año"
-          onClick={() => setAbierto((a) => !a)}
-        >
-          {nombreDelMes(anio, mes)}
-        </button>
+        <NombreEmergente texto="Elegir mes y año">
+          <button
+            type="button"
+            className="wg-boton-titulo"
+            aria-expanded={abierto}
+            aria-haspopup="dialog"
+            onClick={() => setAbierto((a) => !a)}
+          >
+            {nombreDelMes(anio, mes)}
+          </button>
+        </NombreEmergente>
       </h2>
       {abierto && (
         <div className="wg-flotante wg-selector-mes__flotante" role="dialog" aria-label="Mes y año">
           <div className="wg-fila wg-selector-mes__anio">
-            <button
-              type="button"
-              className="wg-icono-boton"
-              aria-label="Año anterior"
-              title="Año anterior"
-              disabled={valido && numero <= ANIO_MINIMO}
-              onClick={() => mover(-1)}
-            >
-              ‹
-            </button>
+            <NombreEmergente texto="Año anterior">
+              <button
+                type="button"
+                className="wg-icono-boton"
+                aria-label="Año anterior"
+                disabled={valido && numero <= ANIO_MINIMO}
+                onClick={() => mover(-1)}
+              >
+                ‹
+              </button>
+            </NombreEmergente>
             <input
               className="wg-campo__entrada"
               aria-label="Año"
@@ -82,16 +85,17 @@ export function SelectorMesAnio({ anio, mes, alElegir }: SelectorMesAnioProps) {
               aria-invalid={!valido || undefined}
               onChange={(e) => setTexto(e.target.value.replace(/\D/g, '').slice(0, 4))}
             />
-            <button
-              type="button"
-              className="wg-icono-boton"
-              aria-label="Año siguiente"
-              title="Año siguiente"
-              disabled={valido && numero >= ANIO_MAXIMO}
-              onClick={() => mover(1)}
-            >
-              ›
-            </button>
+            <NombreEmergente texto="Año siguiente">
+              <button
+                type="button"
+                className="wg-icono-boton"
+                aria-label="Año siguiente"
+                disabled={valido && numero >= ANIO_MAXIMO}
+                onClick={() => mover(1)}
+              >
+                ›
+              </button>
+            </NombreEmergente>
           </div>
           <div className="wg-selector-mes__meses">
             {MESES_CORTOS.map((corto, i) => (

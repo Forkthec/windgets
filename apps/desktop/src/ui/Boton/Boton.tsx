@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { NombreEmergente } from '../NombreEmergente/NombreEmergente';
 
 /** La jerarquía de botones (docs/rediseno.md RD-99). */
 export type VarianteDeBoton = 'principal' | 'secundario' | 'icono' | 'destructivo';
@@ -11,7 +12,7 @@ export interface BotonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>
   principal?: boolean;
   /** «normal» mide 36 px; «fila», el de las acciones de una fila de lista, 32 px. */
   tam?: 'normal' | 'fila';
-  /** Texto del motivo de una opción deshabilitada (RT-04). Si no hay espacio, va como sugerencia al pasar el mouse. */
+  /** Texto del motivo de una opción deshabilitada (RT-04). Si no hay espacio, va en el nombre emergente (RD-100). */
   motivo?: string;
   motivoAlPasar?: boolean;
 }
@@ -32,17 +33,13 @@ export function Boton({
     .filter(Boolean)
     .join(' ');
   const boton = (
-    <button
-      type="button"
-      className={clases}
-      disabled={disabled}
-      title={disabled && motivoAlPasar ? motivo : undefined}
-      {...resto}
-    >
+    <button type="button" className={clases} disabled={disabled} {...resto}>
       {children}
     </button>
   );
-  if (!disabled || !motivo || motivoAlPasar) return boton;
+  // Siempre envuelto con `motivoAlPasar`, para que habilitarlo no vuelva a montar el botón ni le quite el foco.
+  if (motivoAlPasar) return <NombreEmergente texto={disabled ? motivo : undefined}>{boton}</NombreEmergente>;
+  if (!disabled || !motivo) return boton;
   return (
     <span className="wg-fila">
       {boton}

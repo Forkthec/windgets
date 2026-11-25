@@ -12,6 +12,7 @@ import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { AgregarWidget } from './AgregarWidget';
 import { FormularioDeWidget } from './FormularioDeWidget';
 import './widgets.css';
+import { NombreEmergente } from '@/ui/NombreEmergente/NombreEmergente';
 
 // P-WID-01 Widgets (Menú principal > Personalización > Widgets; HE-04-HU01). La lista sale del Núcleo ya en
 // orden: primero los widgets por defecto y luego los agregados (IPC-WID-01 widget_list). «Editar escritorio»
@@ -151,16 +152,17 @@ export function Widgets() {
               )}
               {/* HE-04-HU13-ET04: en los widgets por defecto, deshabilitada con su motivo (RT-04); RD-35: el motivo
                   va al pasar el mouse y como descripción accesible. */}
-              <button
-                type="button"
-                className="wg-enlace-texto wg-lista-widgets__eliminar"
-                disabled={!w.can_delete}
-                title={w.can_delete ? undefined : textos.WIDGET_POR_DEFECTO_NO_ELIMINABLE}
-                aria-describedby={w.can_delete ? undefined : `${w.widget_id}-motivo`}
-                onClick={() => setPorEliminar(w)}
-              >
-                Eliminar
-              </button>
+              <NombreEmergente texto={w.can_delete ? undefined : textos.WIDGET_POR_DEFECTO_NO_ELIMINABLE}>
+                <button
+                  type="button"
+                  className="wg-enlace-texto wg-lista-widgets__eliminar"
+                  disabled={!w.can_delete}
+                  aria-describedby={w.can_delete ? undefined : `${w.widget_id}-motivo`}
+                  onClick={() => setPorEliminar(w)}
+                >
+                  Eliminar
+                </button>
+              </NombreEmergente>
               {!w.can_delete && (
                 <span id={`${w.widget_id}-motivo`} className="wg-oculto">
                   {textos.WIDGET_POR_DEFECTO_NO_ELIMINABLE}

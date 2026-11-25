@@ -80,7 +80,7 @@ describe('RT-02 · Menú de acciones', () => {
     expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: 'Otra' }));
   });
 
-  it('RT-02-ET11 · Una opción deshabilitada muestra su motivo al pasar el mouse', () => {
+  it('RT-02-ET11 · Una opción deshabilitada muestra su motivo al pasar el mouse', async () => {
     const alEliminar = vi.fn();
     render(
       <MenuDeAcciones
@@ -99,7 +99,11 @@ describe('RT-02 · Menú de acciones', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Acciones de Mi tema' }));
     const eliminar = screen.getByRole('menuitem', { name: 'Eliminar' });
     expect((eliminar as HTMLButtonElement).disabled).toBe(true);
-    expect(eliminar.getAttribute('title')).toBe('No puedes eliminar el tema aplicado.');
+    expect(document.getElementById(eliminar.getAttribute('aria-describedby') ?? '')?.textContent).toBe(
+      'No puedes eliminar el tema aplicado.',
+    );
+    fireEvent.pointerEnter(eliminar);
+    expect((await screen.findByRole('tooltip')).textContent).toBe('No puedes eliminar el tema aplicado.');
     fireEvent.click(eliminar);
     expect(alEliminar).not.toHaveBeenCalled();
   });

@@ -362,7 +362,10 @@ describe('HE-03-HU05 · Eliminar un tema', () => {
     fireEvent.click(within(fila(1)).getByRole('button', { name: /^Acciones de / }));
     const boton = screen.getByRole('menuitem', { name: 'Eliminar' }) as HTMLButtonElement;
     expect(boton.disabled).toBe(true);
-    expect(boton.title).toBe('No puedes eliminar el tema aplicado. Aplica otro tema primero.');
+    const motivo = 'No puedes eliminar el tema aplicado. Aplica otro tema primero.';
+    expect(document.getElementById(boton.getAttribute('aria-describedby') ?? '')?.textContent).toBe(motivo);
+    fireEvent.pointerEnter(boton);
+    expect((await screen.findByRole('tooltip')).textContent).toBe(motivo);
   });
 
   it('HE-03-HU05-CA03 · Cancelar la eliminación', async () => {

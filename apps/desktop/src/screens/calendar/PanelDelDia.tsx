@@ -6,6 +6,7 @@ import textos from '@/types/messages.es.json';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { fechaVisible } from '../tarjeta/fechas';
 import { NOMBRE_DE_PRIORIDAD, NOMBRE_DE_TIPO } from '../tarjeta/nombres';
+import { NombreEmergente } from '@/ui/NombreEmergente/NombreEmergente';
 
 // P-CAL-02 Panel del día (Menú principal > Planificador > Calendario > Panel del día; HE-10-HU03). Subpantalla de
 // la pantalla Calendario: la fecha del día, sus tarjetas (IPC-CARD-14) y las opciones «Nueva tarjeta» y
@@ -43,15 +44,16 @@ export function PanelDelDia({ fecha, alAbrirTarjeta, alNuevaTarjeta, alCerrar }:
       <div className="wg-fila wg-panel-del-dia__cabecera">
         {/* ET02: la fecha del día. */}
         <h3>{fechaVisible(fecha)}</h3>
-        <button
-          type="button"
-          className="wg-icono-boton wg-panel-del-dia__cerrar"
-          aria-label="Cerrar"
-          title="Cerrar"
-          onClick={alCerrar}
-        >
-          ×
-        </button>
+        <NombreEmergente texto="Cerrar">
+          <button
+            type="button"
+            className="wg-icono-boton wg-panel-del-dia__cerrar"
+            aria-label="Cerrar"
+            onClick={alCerrar}
+          >
+            ×
+          </button>
+        </NombreEmergente>
       </div>
       <div className="wg-fila">
         {/* HE-10-HU04-ET01, ET07: abre el Formulario de tarjeta; en un día pasado va deshabilitada con su texto. */}

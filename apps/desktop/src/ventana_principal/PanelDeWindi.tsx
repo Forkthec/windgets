@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ComponentType } from 'react';
 import { OjosDeWindi } from '@/ui/OjosDeWindi/OjosDeWindi';
+import { NombreEmergente } from '@/ui/NombreEmergente/NombreEmergente';
 
 // Windi en la ventana principal (docs/rediseno_final_prototipos.md §4.3; rediseno_final_backend.md §4.10 y §5.5, D-07;
 // docs/rediseno.md RD-70). Ya no es una opción del menú: un botón flotante de 40 px con los ojos, abajo a la derecha,
@@ -49,31 +50,28 @@ export function PanelDeWindi({ abierto, alAbrir, alCerrar, Conversacion }: Panel
   return (
     <ContextoDeWindiEscribiendo.Provider value={setEscribiendo}>
       {!abierto && (
-        <button
-          type="button"
-          className="wg-windi-flotante"
-          aria-label="Windi"
-          title="Windi"
-          aria-expanded="false"
-          onClick={alAbrir}
-        >
-          <OjosDeWindi tamano={28} parpadeando={escribiendo} />
-        </button>
+        <NombreEmergente texto="Windi">
+          <button
+            type="button"
+            className="wg-windi-flotante"
+            aria-label="Windi"
+            aria-expanded="false"
+            onClick={alAbrir}
+          >
+            <OjosDeWindi tamano={28} parpadeando={escribiendo} />
+          </button>
+        </NombreEmergente>
       )}
       {montado && (
         <aside className="wg-panel-windi" aria-label="Windi" hidden={!abierto}>
           <header className="wg-panel-windi__cabecera">
             <OjosDeWindi tamano={28} parpadeando={escribiendo} className="wg-panel-windi__ojos" />
             <h2 className="wg-panel-windi__titulo">Windi</h2>
-            <button
-              type="button"
-              className="wg-panel-windi__cerrar"
-              aria-label="Cerrar"
-              title="Cerrar"
-              onClick={alCerrar}
-            >
-              ×
-            </button>
+            <NombreEmergente texto="Cerrar">
+              <button type="button" className="wg-panel-windi__cerrar" aria-label="Cerrar" onClick={alCerrar}>
+                ×
+              </button>
+            </NombreEmergente>
           </header>
           <div className="wg-panel-windi__cuerpo">{Conversacion ? <Conversacion /> : null}</div>
         </aside>

@@ -32,6 +32,7 @@ import { NOMBRE_DE_PRIORIDAD, NOMBRE_DE_TIPO } from '../tarjeta/nombres';
 import './kanban.css';
 import { useVentanasDeTarjeta } from '../tarjeta/useVentanasDeTarjeta';
 import { ENCABEZADO, type LugarDeSoltar, movimientoDelArrastre, ordenDelArrastre } from './arrastre';
+import { NombreEmergente } from '@/ui/NombreEmergente/NombreEmergente';
 
 // P-KAN-01 Tablero Kanban (Menú principal > Planificador > Tablero Kanban; HE-09-HU01). Las columnas y las
 // tarjetas vienen del Núcleo (IPC-CARD-05); la pantalla se vuelve a leer con cards_changed y columns_changed.
@@ -243,16 +244,17 @@ function Columna({
         <span className="wg-columna__cantidad">{column.card_count}</span>
         {/* D-08 (RD-74): «+» solo en el encabezado de Por hacer; la tarjeta nace allí (HE-07-HU01). */}
         {column.role === 'todo' && (
-          <button
-            type="button"
-            className="wg-icono-boton wg-columna__nueva"
-            aria-label="Nueva tarjeta"
-            title="Nueva tarjeta"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={alNuevaTarjeta}
-          >
-            +
-          </button>
+          <NombreEmergente texto="Nueva tarjeta">
+            <button
+              type="button"
+              className="wg-icono-boton wg-columna__nueva"
+              aria-label="Nueva tarjeta"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={alNuevaTarjeta}
+            >
+              +
+            </button>
+          </NombreEmergente>
         )}
         {/* HE-09-HU04-ET01, HE-09-HU06-ET01 (RT-02-ET10): «Editar» y «Eliminar» en el botón de acciones «⋮» de
             cada columna. En las por defecto, «Eliminar» está deshabilitada y su motivo aparece al pasar el mouse
@@ -458,26 +460,28 @@ export function Kanban() {
           resaltada (`aria-pressed`). «Nueva tarjeta» va en Por hacer y «Nueva columna» es la columna fantasma. */}
       <div className="wg-fila wg-kanban__barra-superior">
         <div className="wg-segmentado" role="group" aria-label="Vista de las tarjetas">
-          <button
-            type="button"
-            className="wg-segmentado__opcion"
-            aria-label="Vista compacta"
-            title="Vista compacta"
-            aria-pressed={vista === 'compact'}
-            onClick={() => void cambiarVista('compact')}
-          >
-            <IconoDeVista expandida={false} />
-          </button>
-          <button
-            type="button"
-            className="wg-segmentado__opcion"
-            aria-label="Vista expandida"
-            title="Vista expandida"
-            aria-pressed={vista === 'expanded'}
-            onClick={() => void cambiarVista('expanded')}
-          >
-            <IconoDeVista expandida />
-          </button>
+          <NombreEmergente texto="Vista compacta">
+            <button
+              type="button"
+              className="wg-segmentado__opcion"
+              aria-label="Vista compacta"
+              aria-pressed={vista === 'compact'}
+              onClick={() => void cambiarVista('compact')}
+            >
+              <IconoDeVista expandida={false} />
+            </button>
+          </NombreEmergente>
+          <NombreEmergente texto="Vista expandida">
+            <button
+              type="button"
+              className="wg-segmentado__opcion"
+              aria-label="Vista expandida"
+              aria-pressed={vista === 'expanded'}
+              onClick={() => void cambiarVista('expanded')}
+            >
+              <IconoDeVista expandida />
+            </button>
+          </NombreEmergente>
         </div>
       </div>
       {columnas && (
@@ -511,17 +515,18 @@ export function Kanban() {
               ))}
               {/* D-09 (RD-74): «+» gris tras la última columna. HE-09-HU03-ET01, ET08: con 10 columnas,
                   deshabilitada con su motivo (RT-04). */}
-              <button
-                type="button"
-                className="wg-columna-fantasma"
-                aria-label="Nueva columna"
-                title={enElMaximo ? textos.MAXIMO_DE_COLUMNAS : 'Nueva columna'}
-                disabled={enElMaximo}
-                aria-describedby={enElMaximo ? 'wg-motivo-nueva-columna' : undefined}
-                onClick={() => setFormularioColumna({ columna: null })}
-              >
-                +
-              </button>
+              <NombreEmergente texto={enElMaximo ? textos.MAXIMO_DE_COLUMNAS : 'Nueva columna'}>
+                <button
+                  type="button"
+                  className="wg-columna-fantasma"
+                  aria-label="Nueva columna"
+                  disabled={enElMaximo}
+                  aria-describedby={enElMaximo ? 'wg-motivo-nueva-columna' : undefined}
+                  onClick={() => setFormularioColumna({ columna: null })}
+                >
+                  +
+                </button>
+              </NombreEmergente>
               {enElMaximo && (
                 <span id="wg-motivo-nueva-columna" className="wg-oculto">
                   {textos.MAXIMO_DE_COLUMNAS}

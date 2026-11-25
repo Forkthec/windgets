@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { NombreEmergente } from '../NombreEmergente/NombreEmergente';
 
 export interface VentanaEmergenteProps {
   titulo: string;
@@ -67,15 +68,16 @@ export function VentanaEmergente({
       >
         <div className="wg-emergente__cabecera">
           <h2 className={tituloOculto ? 'wg-oculto' : undefined}>{titulo}</h2>
-          <button
-            type="button"
-            className="wg-emergente__cerrar"
-            aria-label="Cerrar"
-            title="Cerrar"
-            onClick={() => salir.current()}
-          >
-            ×
-          </button>
+          <NombreEmergente texto="Cerrar">
+            <button
+              type="button"
+              className="wg-emergente__cerrar"
+              aria-label="Cerrar"
+              onClick={() => salir.current()}
+            >
+              ×
+            </button>
+          </NombreEmergente>
         </div>
         <div className="wg-emergente__cuerpo">{children}</div>
         {acciones && <div className="wg-fila wg-emergente__acciones">{acciones}</div>}

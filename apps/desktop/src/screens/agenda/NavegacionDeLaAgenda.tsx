@@ -4,6 +4,7 @@ import { es } from 'react-day-picker/locale';
 import 'react-day-picker/style.css';
 import { NavegacionDeFecha } from '@/ui/NavegacionDeFecha/NavegacionDeFecha';
 import { fechaIso, fechaLarga, hoy } from '../tarjeta/fechas';
+import { NombreEmergente } from '@/ui/NombreEmergente/NombreEmergente';
 
 // Navegación de la Agenda diaria (docs/rediseno_final_prototipos.md §6.4; rediseno_final_backend.md §4.6, D-26;
 // docs/rediseno.md RD-79): la fecha larga es un botón que abre un mini calendario para saltar a cualquier día;
@@ -64,15 +65,16 @@ export function NavegacionDeLaAgenda({ dia, alCambiar, alIrAHoy }: NavegacionDeL
         titulo={
           <div ref={caja} className="wg-selector-mes">
             <h2 className="wg-agenda__fecha">
-              <button
-                type="button"
-                className="wg-boton-titulo"
-                aria-expanded={abierto}
-                title="Elegir un día"
-                onClick={() => setAbierto((a) => !a)}
-              >
-                {fechaLarga(dia)}
-              </button>
+              <NombreEmergente texto="Elegir un día">
+                <button
+                  type="button"
+                  className="wg-boton-titulo"
+                  aria-expanded={abierto}
+                  onClick={() => setAbierto((a) => !a)}
+                >
+                  {fechaLarga(dia)}
+                </button>
+              </NombreEmergente>
             </h2>
             {abierto && (
               <div

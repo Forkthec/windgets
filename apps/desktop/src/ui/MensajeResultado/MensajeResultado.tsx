@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { textoDelError } from '@/ipc/textoDelError';
 import type { AppError } from '@/types';
+import { NombreEmergente } from '../NombreEmergente/NombreEmergente';
 
 // Mensajes emergentes (rediseno_final_prototipos.md §3.5; rediseno_final_backend.md §4.3; docs/rediseno.md RD-63).
 // Una cola global montada en la raíz, encima de las ventanas emergentes y del panel de Windi, en la esquina inferior
@@ -79,15 +80,16 @@ export function MensajeResultado({ texto, tipo = 'exito', alOcultar }: MensajeRe
         {ICONO_DEL_TIPO[tipo]}
       </span>
       <span className="wg-resultado__texto">{texto}</span>
-      <button
-        type="button"
-        className="wg-resultado__cerrar"
-        aria-label="Cerrar mensaje"
-        title="Cerrar"
-        onClick={alOcultar}
-      >
-        ×
-      </button>
+      <NombreEmergente texto="Cerrar">
+        <button
+          type="button"
+          className="wg-resultado__cerrar"
+          aria-label="Cerrar mensaje"
+          onClick={alOcultar}
+        >
+          ×
+        </button>
+      </NombreEmergente>
     </div>
   );
 }

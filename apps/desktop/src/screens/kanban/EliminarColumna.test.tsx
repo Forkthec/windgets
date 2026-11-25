@@ -95,7 +95,13 @@ describe('HE-09-HU06 · Eliminar las columnas creadas', () => {
       const boton = screen.getByRole('menuitem', { name: 'Eliminar' }) as HTMLButtonElement;
       expect(boton.disabled).toBe(true);
       // RT-04-ET11 (RT-02-ET11): el motivo aparece al pasar el mouse.
-      expect(boton.title).toBe('Las columnas por defecto no se pueden eliminar.');
+      expect(document.getElementById(boton.getAttribute('aria-describedby') ?? '')?.textContent).toBe(
+        'Las columnas por defecto no se pueden eliminar.',
+      );
+      fireEvent.pointerEnter(boton);
+      expect((await screen.findByRole('tooltip')).textContent).toBe(
+        'Las columnas por defecto no se pueden eliminar.',
+      );
       fireEvent.keyDown(boton, { key: 'Escape' });
     }
   });

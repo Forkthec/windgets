@@ -223,10 +223,13 @@ describe('HE-04-HU01 · Widgets', () => {
     const eliminar = within(fila(0)).getByRole('button', { name: 'Eliminar' });
     expect(eliminar.classList.contains('wg-enlace-texto')).toBe(true);
     const motivo = 'Los widgets por defecto no se pueden eliminar. Puedes desactivarlos.';
-    expect(eliminar.getAttribute('title')).toBe(motivo);
     expect(document.getElementById(eliminar.getAttribute('aria-describedby') ?? '')?.textContent).toBe(
       motivo,
     );
+    // RD-100: al pasar el puntero, el nombre emergente muestra el mismo motivo.
+    fireEvent.pointerEnter(eliminar);
+    expect((await screen.findByRole('tooltip')).textContent).toBe(motivo);
+    fireEvent.pointerLeave(eliminar);
     // En un widget agregado no hay motivo.
     expect(
       within(fila(4)).getByRole('button', { name: 'Eliminar' }).getAttribute('aria-describedby'),

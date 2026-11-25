@@ -1,4 +1,5 @@
 import { useId, useState, type InputHTMLAttributes } from 'react';
+import { NombreEmergente } from '../NombreEmergente/NombreEmergente';
 
 export interface CampoTextoProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
   etiqueta: string;
@@ -80,24 +81,25 @@ export function CampoTexto({
             {...comunes}
             onChange={(e) => alCambiar(e.target.value)}
           />
-          <button
-            type="button"
-            className="wg-campo__ojo"
-            aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-            title={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-            aria-pressed={visible}
-            onClick={() => setVisible((v) => !v)}
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-              <path
-                d="M1.5 9C3 5.4 5.7 3.6 9 3.6C12.3 3.6 15 5.4 16.5 9C15 12.6 12.3 14.4 9 14.4C5.7 14.4 3 12.6 1.5 9Z"
-                stroke="currentColor"
-                strokeWidth="1.4"
-              />
-              <circle cx="9" cy="9" r="2.4" stroke="currentColor" strokeWidth="1.4" />
-              {visible && <path d="M2.7 15.3L15.3 2.7" stroke="currentColor" strokeWidth="1.4" />}
-            </svg>
-          </button>
+          <NombreEmergente texto={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+            <button
+              type="button"
+              className="wg-campo__ojo"
+              aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              aria-pressed={visible}
+              onClick={() => setVisible((v) => !v)}
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                <path
+                  d="M1.5 9C3 5.4 5.7 3.6 9 3.6C12.3 3.6 15 5.4 16.5 9C15 12.6 12.3 14.4 9 14.4C5.7 14.4 3 12.6 1.5 9Z"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                />
+                <circle cx="9" cy="9" r="2.4" stroke="currentColor" strokeWidth="1.4" />
+                {visible && <path d="M2.7 15.3L15.3 2.7" stroke="currentColor" strokeWidth="1.4" />}
+              </svg>
+            </button>
+          </NombreEmergente>
         </div>
       )}
       {ayuda && (
