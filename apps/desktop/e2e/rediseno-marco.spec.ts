@@ -146,7 +146,9 @@ test('RD-105 · A 1200 × 800 el título y los controles van en la misma fila y 
   cerca(a.x + a.width, tarjeta.x + tarjeta.width);
   // El indicador de sincronización, en la esquina de arriba, no tapa los controles.
   const indicador = await caja(page.locator('.wg-encabezado-pantalla__derecha'));
-  expect(indicador.y + indicador.height, 'el indicador tapa los controles').toBeLessThanOrEqual(a.y + TOLERANCIA);
+  expect(indicador.y + indicador.height, 'el indicador tapa los controles').toBeLessThanOrEqual(
+    a.y + TOLERANCIA,
+  );
 
   // Con más controles de los que caben junto al título: segunda línea, a la derecha y sin scroll horizontal.
   await page.setViewportSize({ width: 960, height: 600 });
@@ -162,7 +164,9 @@ test('RD-105 · A 1200 × 800 el título y los controles van en la misma fila y 
   });
   const t2 = await caja(titulo);
   const a2 = await caja(acciones);
-  expect(a2.y, 'los controles bajan a una segunda línea').toBeGreaterThanOrEqual(t2.y + t2.height - TOLERANCIA);
+  expect(a2.y, 'los controles bajan a una segunda línea').toBeGreaterThanOrEqual(
+    t2.y + t2.height - TOLERANCIA,
+  );
   const tarjeta2 = await caja(page.locator('.wg-ventana-principal__pantalla'));
   cerca(a2.x + a2.width, tarjeta2.x + tarjeta2.width);
   const sinScroll = await page.evaluate(() => {
