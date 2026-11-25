@@ -92,6 +92,30 @@ body[data-sesion] .wg-ventana-principal__principal {
   font-weight: 700;
   line-height: 32px;
 }
+/* RD-105 (IM-08): con la ranura `acciones`, el título y los controles comparten fila, centrados en vertical; si los
+ * controles no caben, bajan a una segunda línea alineada a la derecha. El margen superior del título pasa a la fila
+ * para que no cambie su posición. El espacio entre ellos (16 px en horizontal y 4 px en vertical) es provisional
+ * (IM-08, docs/DUDAS.md): el valor exacto lo dará el Figma. */
+.wg-encabezado-pantalla__fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--wg-unidad) calc(var(--wg-unidad) * 4); /* IM-08 */
+  margin-top: 4px;
+}
+.wg-encabezado-pantalla__fila > .wg-encabezado-pantalla__titulo {
+  margin: 0;
+}
+.wg-encabezado-pantalla__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--wg-unidad);
+  margin-left: auto;
+  max-width: 100%;
+}
 .wg-encabezado-pantalla__derecha {
   position: absolute;
   top: 0;
