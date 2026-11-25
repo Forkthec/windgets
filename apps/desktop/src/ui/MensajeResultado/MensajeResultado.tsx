@@ -1,12 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { textoDelError } from '@/ipc/textoDelError';
 import type { AppError } from '@/types';
 import { NombreEmergente } from '../NombreEmergente/NombreEmergente';
 
 // Mensajes emergentes (rediseno_final_prototipos.md §3.5; rediseno_final_backend.md §4.3; docs/rediseno.md RD-63).
 // Una cola global montada en la raíz, encima de las ventanas emergentes y del panel de Windi, en la esquina inferior
-// derecha: máximo 3 visibles, el más nuevo arriba. Éxito e información duran 4 s (RNF-27); advertencia y error, 6 s.
-// Al pasar el mouse se pausan; «×» los cierra antes. No bloquean clics ni teclado (RT-04-ET01 a ET03).
+// derecha: máximo 3 visibles, el más nuevo arriba (el cuarto reemplaza al más antiguo). Éxito e información duran 4 s
+// (RNF-27); advertencia, 6 s; el error no se cierra solo: se queda hasta «×» (RD-104, IM-07). Se pausan al pasar el
+// mouse y mientras tienen el foco; «×» los cierra antes. No bloquean clics ni teclado (RT-04-ET01 a ET03).
+// RD-104: el contenedor se dibuja en `body` con `ATRIBUTO_SIN_INERTE`, que `VentanaEmergente` respeta, para que con una
+// ventana emergente abierta (fondo `inert`, RD-103) el mensaje siga pudiéndose pausar y cerrar. Nunca toma el foco.
 
 export type TipoDeMensaje = 'exito' | 'info' | 'advertencia' | 'error';
 
@@ -14,11 +18,15 @@ export const DURACION_RESULTADO_MS = 4000; // RNF-27: se oculta a los 4 s
 export const DURACION_AVISO_MS = 6000;
 export const MAXIMO_VISIBLES = 3;
 
-export const DURACION_DEL_TIPO: Record<TipoDeMensaje, number> = {
+/** Atributo de un hijo de `body` que las ventanas emergentes no vuelven `inert` (RD-104). */
+export const ATRIBUTO_SIN_INERTE = 'data-wg-sin-inerte';
+
+/** Milisegundos hasta el cierre automático; `null`: no se cierra solo (error, RD-104). */
+export const DURACION_DEL_TIPO: Record<TipoDeMensaje, number | null> = {
   exito: DURACION_RESULTADO_MS,
   info: DURACION_RESULTADO_MS,
   advertencia: DURACION_AVISO_MS,
-  error: DURACION_AVISO_MS,
+  error: null,
 };
 
 const ICONO_DEL_TIPO: Record<TipoDeMensaje, string> = {
@@ -58,23 +66,31 @@ export function MensajeResultado({ texto, tipo = 'exito', alOcultar }: MensajeRe
   useEffect(() => {
     ocultar.current = alOcultar;
   }, [alOcultar]);
-  const [pausado, setPausado] = useState(false);
+  // Pausa por el puntero o por el foco dentro del mensaje (RD-104).
+  const [conPuntero, setConPuntero] = useState(false);
+  const [conFoco, setConFoco] = useState(false);
+  const pausado = conPuntero || conFoco;
   const restante = useRef(DURACION_DEL_TIPO[tipo]);
   useEffect(() => {
-    if (pausado) return;
+    if (pausado || restante.current === null) return;
     const inicio = Date.now();
     const t = setTimeout(() => ocultar.current(), restante.current);
     return () => {
       clearTimeout(t);
-      restante.current = Math.max(0, restante.current - (Date.now() - inicio));
+      restante.current = Math.max(0, (restante.current ?? 0) - (Date.now() - inicio));
     };
   }, [pausado]);
   return (
     <div
       className={`wg-resultado wg-resultado--${tipo} wg-fila`}
       role={tipo === 'error' ? 'alert' : 'status'}
-      onMouseEnter={() => setPausado(true)}
-      onMouseLeave={() => setPausado(false)}
+      onMouseEnter={() => setConPuntero(true)}
+      onMouseLeave={() => setConPuntero(false)}
+      onFocus={() => setConFoco(true)}
+      onBlur={(e) => {
+        // El foco que pasa de un control del mensaje a otro del mismo mensaje no lo reanuda.
+        if (!e.currentTarget.contains(e.relatedTarget)) setConFoco(false);
+      }}
     >
       <span className="wg-resultado__icono" aria-hidden="true">
         {ICONO_DEL_TIPO[tipo]}
@@ -122,13 +138,15 @@ export function ProveedorDeResultado({ children }: { children: ReactNode }) {
   return (
     <ContextoDeResultado.Provider value={mostrar}>
       {children}
-      {mensajes.length > 0 && (
-        <div className="wg-resultados">
-          {mensajes.map((m) => (
-            <MensajeResultado key={m.id} texto={m.texto} tipo={m.tipo} alOcultar={() => ocultar(m.id)} />
-          ))}
-        </div>
-      )}
+      {mensajes.length > 0 &&
+        createPortal(
+          <div className="wg-resultados" {...{ [ATRIBUTO_SIN_INERTE]: '' }}>
+            {mensajes.map((m) => (
+              <MensajeResultado key={m.id} texto={m.texto} tipo={m.tipo} alOcultar={() => ocultar(m.id)} />
+            ))}
+          </div>,
+          document.body,
+        )}
     </ContextoDeResultado.Provider>
   );
 }

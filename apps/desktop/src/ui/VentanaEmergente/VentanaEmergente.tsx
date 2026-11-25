@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { createPortal } from 'react-dom';
 import textos from '@/types/messages.es.json';
 import { Confirmacion } from '../Confirmacion/Confirmacion';
+import { ATRIBUTO_SIN_INERTE } from '../MensajeResultado/MensajeResultado';
 import { NombreEmergente } from '../NombreEmergente/NombreEmergente';
 
 export interface VentanaEmergenteProps {
@@ -33,7 +34,8 @@ const inertes = new Map<Element, { cuenta: number; previo: boolean }>();
 function volverInerte(excepto: Element): Element[] {
   const tocados: Element[] = [];
   for (const el of Array.from(document.body.children)) {
-    if (el === excepto) continue;
+    // RD-104: los mensajes emergentes quedan operables encima del velo.
+    if (el === excepto || el.hasAttribute(ATRIBUTO_SIN_INERTE)) continue;
     const registro = inertes.get(el);
     if (registro) registro.cuenta += 1;
     else {

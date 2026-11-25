@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import textos from '@/types/messages.es.json';
 import { MenuDeAcciones } from '@/ui/MenuDeAcciones/MenuDeAcciones';
+import { ATRIBUTO_SIN_INERTE } from '../MensajeResultado/MensajeResultado';
 import { VentanaEmergente } from './VentanaEmergente';
 
 afterEach(cleanup);
@@ -114,6 +115,19 @@ describe('RD-103 · Ventana emergente: foco, fondo y descarte', () => {
     expect(fondo.hasAttribute('inert')).toBe(true);
     primera.unmount();
     expect(fondo.hasAttribute('inert')).toBe(false);
+    fondo.remove();
+  });
+
+  it('un hijo de body con el atributo de los mensajes emergentes no queda inert (RD-104)', () => {
+    const mensajes = document.createElement('div');
+    mensajes.setAttribute(ATRIBUTO_SIN_INERTE, '');
+    const fondo = document.createElement('main');
+    document.body.append(mensajes, fondo);
+    const abierta = render(formulario());
+    expect(mensajes.hasAttribute('inert')).toBe(false);
+    expect(fondo.hasAttribute('inert')).toBe(true);
+    abierta.unmount();
+    mensajes.remove();
     fondo.remove();
   });
 
