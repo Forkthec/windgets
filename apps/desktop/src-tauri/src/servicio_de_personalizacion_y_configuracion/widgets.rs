@@ -376,10 +376,9 @@ impl ServicioDePersonalizacion {
         activo: bool,
         ahora_ms: i64,
     ) -> Result<WidgetItem, AppError> {
-        let no_existe = || error(ErrorCode::WidgetNotFound, "", None);
         let tema = Self::id_del_tema_aplicado(base, user_id)
             .await?
-            .ok_or_else(no_existe)?;
+            .ok_or_else(widget_no_existe)?;
         let pool = base.pool().await.map_err(de_sqlx)?;
         let id_del_widget_del_tema: String = sqlx::query_scalar(
             "SELECT id FROM theme_widget WHERE user_id = ? AND theme_id = ? AND widget_id = ?",
@@ -390,7 +389,7 @@ impl ServicioDePersonalizacion {
         .fetch_optional(pool)
         .await
         .map_err(de_sqlx)?
-        .ok_or_else(no_existe)?;
+        .ok_or_else(widget_no_existe)?;
 
         let ahora = instante(ahora_ms).0;
         let (fields, mods) = campos(&[("is_active", Value::from(activo))], &ahora);
@@ -422,7 +421,7 @@ impl ServicioDePersonalizacion {
             .await?
             .into_iter()
             .find(|w| w.widget_id.0 == widget_id)
-            .ok_or_else(no_existe)
+            .ok_or_else(widget_no_existe)
     }
 
     /// IPC-WID-06 `widget_delete` (HE-04-HU13): elimina un widget externo o local de la cuenta y de todos los
@@ -445,7 +444,7 @@ impl ServicioDePersonalizacion {
                 .fetch_optional(pool)
                 .await
                 .map_err(de_sqlx)?
-                .ok_or_else(|| error(ErrorCode::WidgetNotFound, "", None))?;
+                .ok_or_else(widget_no_existe)?;
         if por_defecto == 1 {
             return Err(error(
                 ErrorCode::WidgetDefaultNotDeletable,

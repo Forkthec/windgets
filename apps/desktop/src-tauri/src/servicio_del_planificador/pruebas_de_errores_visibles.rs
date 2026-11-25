@@ -107,3 +107,138 @@ fn rd_85_crear_y_editar_una_etiqueta_con_un_color_desactivado_lo_dice_en_el_camp
     assert_eq!(contar(&servicio, "SELECT count(*) FROM label"), 1);
     assert_eq!(contar(&servicio, "SELECT count(*) FROM pending_change"), 0);
 }
+
+const ELIMINADA: &str = "00000000-0000-4000-8000-00000000ffff";
+
+fn dice(e: AppError, codigo: ErrorCode, texto: &str, campo: Option<&str>) {
+    assert_eq!(
+        (e.code, e.message.as_str(), e.field.as_deref()),
+        (codigo, texto, campo)
+    );
+}
+
+#[test]
+fn rd_92_editar_eliminar_y_mover_a_una_columna_eliminada_dice_que_ya_no_existe() {
+    let servicio = con_semilla();
+    let tarjeta = bloquear(servicio.crear_tarjeta(USUARIO, params("Informe", "2026-11-14")))
+        .unwrap()
+        .valor
+        .id;
+    let antes = contar(&servicio, "SELECT count(*) FROM pending_change");
+    let ya_no_existe = |e: AppError| {
+        dice(
+            e,
+            ErrorCode::ColumnNotFound,
+            "Esta columna ya no existe.",
+            None,
+        )
+    };
+    ya_no_existe(
+        bloquear(servicio.actualizar_columna(
+            USUARIO,
+            ColumnUpdateParams {
+                id: Uuid(ELIMINADA.into()),
+                name: Some("Revisión".into()),
+                color_id: None,
+            },
+        ))
+        .unwrap_err(),
+    );
+    ya_no_existe(bloquear(servicio.info_para_eliminar_columna(USUARIO, ELIMINADA)).unwrap_err());
+    ya_no_existe(bloquear(servicio.eliminar_columna(USUARIO, ELIMINADA)).unwrap_err());
+    ya_no_existe(
+        bloquear(servicio.mover_tarjeta(
+            USUARIO,
+            crate::tipos::CardMoveParams {
+                card_id: tarjeta,
+                column_id: Uuid(ELIMINADA.into()),
+                placement: crate::tipos::Placement::Variant1(crate::tipos::PlacementVariant1 {
+                    kind: crate::tipos::PlacementVariant1Kind::End,
+                }),
+            },
+        ))
+        .unwrap_err(),
+    );
+    assert_eq!(
+        contar(&servicio, "SELECT count(*) FROM pending_change"),
+        antes
+    );
+}
+
+#[test]
+fn rd_92_editar_y_eliminar_una_etiqueta_eliminada_dice_que_ya_no_existe() {
+    let servicio = con_semilla();
+    let id = etiqueta(&servicio, "Estudio");
+    bloquear(servicio.eliminar_etiqueta(USUARIO, &id)).unwrap();
+    let antes = contar(&servicio, "SELECT count(*) FROM pending_change");
+    let ya_no_existe = |e: AppError| {
+        dice(
+            e,
+            ErrorCode::LabelNotFound,
+            "Esta etiqueta ya no existe.",
+            None,
+        )
+    };
+    ya_no_existe(
+        bloquear(servicio.actualizar_etiqueta(
+            USUARIO,
+            crate::tipos::LabelUpdateParams {
+                id: Uuid(id.clone()),
+                name: "Estudio".into(),
+                color_id: "blue".into(),
+            },
+        ))
+        .unwrap_err(),
+    );
+    ya_no_existe(bloquear(servicio.info_para_eliminar_etiqueta(USUARIO, &id)).unwrap_err());
+    ya_no_existe(bloquear(servicio.eliminar_etiqueta(USUARIO, &id)).unwrap_err());
+    assert_eq!(
+        contar(&servicio, "SELECT count(*) FROM pending_change"),
+        antes
+    );
+}
+
+#[test]
+fn rd_92_guardar_una_tarjeta_con_una_etiqueta_eliminada_lo_dice_en_el_campo_etiquetas() {
+    let servicio = con_semilla();
+    let id = etiqueta(&servicio, "Estudio");
+    bloquear(servicio.eliminar_etiqueta(USUARIO, &id)).unwrap();
+    let tarjeta = bloquear(servicio.crear_tarjeta(USUARIO, params("Informe", "2026-11-14")))
+        .unwrap()
+        .valor
+        .id;
+    let antes = contar(&servicio, "SELECT count(*) FROM pending_change");
+    let ya_no_existe = |e: AppError| {
+        dice(
+            e,
+            ErrorCode::LabelsNotFound,
+            "Esta etiqueta ya no existe.",
+            Some("label_ids"),
+        )
+    };
+    ya_no_existe(
+        bloquear(servicio.crear_tarjeta(
+            USUARIO,
+            crate::tipos::CardCreateParams {
+                label_ids: Some(vec![Uuid(id.clone())]),
+                ..params("Repasar", "2026-11-14")
+            },
+        ))
+        .unwrap_err(),
+    );
+    ya_no_existe(
+        bloquear(servicio.actualizar_tarjeta(
+            USUARIO,
+            crate::tipos::CardUpdateParams {
+                id: tarjeta,
+                patch: serde_json::from_value(serde_json::json!({ "label_ids": [id] })).unwrap(),
+            },
+        ))
+        .unwrap_err(),
+    );
+    assert_eq!(contar(&servicio, "SELECT count(*) FROM card"), 1);
+    assert_eq!(
+        contar(&servicio, "SELECT count(*) FROM pending_change"),
+        antes
+    );
+}

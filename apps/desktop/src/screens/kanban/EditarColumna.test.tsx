@@ -155,3 +155,21 @@ describe('HE-09-HU04 · Editar una columna', () => {
     expect(within(ventana).getByRole('button', { name: 'Cancelar' })).toBeTruthy();
   });
 });
+
+describe('RD-92 · La columna que se edita ya no existe', () => {
+  it('RD-92 · guardar una columna eliminada cierra «Editar columna», lo dice y vuelve a leer el tablero', async () => {
+    const nucleo = await abrirTablero();
+    nucleo.responder('column_update', () => {
+      nucleo.columnas.pop(); // se eliminó en otro computador
+      return { ok: false, error: { code: 'column.not_found', message: 'Esta columna ya no existe.' } };
+    });
+    const ventana = await editar('Revisión');
+    const lecturas = llamadasA(nucleo, 'card_list_board').length;
+    escribirNombre(ventana, 'Revisión final');
+    guardar(ventana);
+    await cerrada();
+    expect((await screen.findByRole('alert')).textContent).toContain('Esta columna ya no existe.');
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Revisión' })).toBeNull());
+    expect(llamadasA(nucleo, 'card_list_board').length).toBeGreaterThan(lecturas);
+  });
+});

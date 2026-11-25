@@ -222,3 +222,21 @@ describe('HE-09-HU02 · Mover una tarjeta', () => {
     expect(reglaDelWidget).toContain('overflow-y: visible;');
   });
 });
+
+describe('RD-92 · La columna de destino ya no existe', () => {
+  it('RD-92 · mover una tarjeta a una columna eliminada lo dice y vuelve a leer el tablero', async () => {
+    const nucleo = await abrirPantalla('kanban', 'Tablero Kanban', Kanban, [
+      tarjeta({ id: 't1', title: ENTREGAR }),
+    ]);
+    nucleo.responder('card_move', () => {
+      nucleo.columnas.splice(1, 1); // En progreso se eliminó en otro computador
+      return { ok: false, error: { code: 'column.not_found', message: 'Esta columna ya no existe.' } };
+    });
+    const lecturas = llamadasA(nucleo, 'card_list_board').length;
+    await moverA(ENTREGAR, 'En progreso');
+    expect(screen.getByRole('alert').textContent).toContain('Esta columna ya no existe.');
+    expect(screen.queryByRole('region', { name: 'En progreso' })).toBeNull();
+    expect(titulosDe('Por hacer')).toEqual([ENTREGAR]);
+    expect(llamadasA(nucleo, 'card_list_board').length).toBeGreaterThan(lecturas);
+  });
+});

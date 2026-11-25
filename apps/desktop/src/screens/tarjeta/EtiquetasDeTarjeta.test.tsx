@@ -4,7 +4,7 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Label } from '@/types';
 import { Kanban } from '../kanban/Kanban';
-import { abrirPantalla, fijarHoy, llamadasA } from '../kanban/pruebas';
+import { abrirPantalla, fijarHoy, llamadasA, type NucleoDelPlanificador, tarjeta } from '../kanban/pruebas';
 
 beforeEach(fijarHoy);
 afterEach(() => {
@@ -114,5 +114,126 @@ describe('HE-07-HU02 · Asignar etiquetas a una tarjeta', () => {
         .getAllByRole('listitem')
         .map((li) => li.textContent),
     ).toEqual(['casa', 'Estudio', 'Trabajo']);
+  });
+});
+
+describe('RD-92 · Una etiqueta elegida ya no existe', () => {
+  const YA_NO_EXISTE = 'Esta etiqueta ya no existe.';
+  const CASA = etiqueta('Casa', 1);
+  const ESTUDIO = etiqueta('Estudio', 2);
+
+  /** El Núcleo rechaza el guardado porque «Casa» se eliminó en otro computador. */
+  function eliminarCasaAlGuardar(nucleo: NucleoDelPlanificador, comando: 'card_create' | 'card_update') {
+    nucleo.responder(comando, () => {
+      nucleo.etiquetas.splice(0, nucleo.etiquetas.length, ESTUDIO);
+      return { ok: false, error: { code: 'labels.not_found', message: YA_NO_EXISTE, field: 'label_ids' } };
+    });
+  }
+
+  const campo = (f: HTMLElement) => within(f).getByRole('button', { name: 'Etiquetas asignadas' });
+
+  async function guardar(f: HTMLElement) {
+    await act(async () => {
+      fireEvent.click(within(f).getByRole('button', { name: 'Guardar' }));
+    });
+  }
+
+  /** Formulario en creación con «Casa» y «Estudio» elegidas, listo para guardar. */
+  async function abrirConDosElegidas() {
+    const { nucleo, formulario } = await abrirFormulario([CASA, ESTUDIO]);
+    escribir(formulario, 'Título', 'Repasar');
+    escribir(formulario, 'Fecha límite', '20/11/2026');
+    abrirCampo(formulario);
+    fireEvent.click(within(formulario).getByLabelText('Casa'));
+    fireEvent.click(within(formulario).getByLabelText('Estudio'));
+    return { nucleo, formulario };
+  }
+
+  /** El mensaje queda en el campo Etiquetas, con el foco, y «Casa» sale de la lista y de la selección. */
+  function loDiceEnElCampoYQuitaCasa(formulario: HTMLElement) {
+    expect(screen.getByRole('dialog', { name: 'Formulario de tarjeta' })).toBe(formulario);
+    const aviso = within(formulario).getByText(YA_NO_EXISTE);
+    expect(campo(formulario).getAttribute('aria-describedby')).toBe(aviso.id);
+    expect(campo(formulario).getAttribute('aria-invalid')).toBe('true');
+    const grupo = within(formulario).getByRole('group', { name: 'Etiquetas' });
+    expect(grupo.getAttribute('aria-describedby')).toBe(aviso.id);
+    expect(document.activeElement).toBe(campo(formulario));
+    expect(campo(formulario).textContent).toBe('Estudio');
+    expect(within(formulario).queryByLabelText('Casa')).toBeNull();
+    // Solo en el campo: sin mensaje emergente.
+    expect(screen.queryByRole('alert')).toBeNull();
+  }
+
+  it('RD-92 · al crear, lo dice en el campo Etiquetas, vuelve a leer y quita la elegida', async () => {
+    const { nucleo, formulario } = await abrirConDosElegidas();
+    eliminarCasaAlGuardar(nucleo, 'card_create');
+    const lecturas = llamadasA(nucleo, 'label_list').length;
+    await guardar(formulario);
+    loDiceEnElCampoYQuitaCasa(formulario);
+    expect(llamadasA(nucleo, 'label_list').length).toBeGreaterThan(lecturas);
+    // Al volver a guardar ya no se envía la eliminada.
+    await guardar(formulario);
+    expect(llamadasA(nucleo, 'card_create')).toEqual([
+      expect.objectContaining({ label_ids: ['x1', 'x2'] }),
+      expect.objectContaining({ label_ids: ['x2'] }),
+    ]);
+  });
+
+  it('RD-92 · al editar, lo dice en el campo Etiquetas, vuelve a leer y quita la elegida', async () => {
+    const nucleo = await abrirPantalla('kanban', 'Tablero Kanban', Kanban, [
+      tarjeta({ id: 't-rd92', title: 'Informe', label_ids: ['x1', 'x2'] }),
+    ]);
+    nucleo.etiquetas.splice(0, nucleo.etiquetas.length, CASA, ESTUDIO);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Informe' }));
+    });
+    await act(async () => {
+      const detalle = screen.getByRole('dialog', { name: 'Detalle de tarjeta' });
+      fireEvent.click(within(detalle).getByRole('button', { name: 'Editar' }));
+    });
+    const formulario = screen.getByRole('dialog', { name: 'Formulario de tarjeta' });
+    abrirCampo(formulario);
+    eliminarCasaAlGuardar(nucleo, 'card_update');
+    const lecturas = llamadasA(nucleo, 'label_list').length;
+    await guardar(formulario);
+    loDiceEnElCampoYQuitaCasa(formulario);
+    expect(llamadasA(nucleo, 'label_list').length).toBeGreaterThan(lecturas);
+    await guardar(formulario);
+    expect(llamadasA(nucleo, 'card_update')).toEqual([
+      { id: 't-rd92', patch: expect.objectContaining({ label_ids: ['x1', 'x2'] }) },
+      { id: 't-rd92', patch: expect.objectContaining({ label_ids: ['x2'] }) },
+    ]);
+  });
+
+  it('RD-92 · el mensaje se quita al cambiar las etiquetas elegidas', async () => {
+    const { nucleo, formulario } = await abrirConDosElegidas();
+    eliminarCasaAlGuardar(nucleo, 'card_create');
+    await guardar(formulario);
+    fireEvent.click(within(formulario).getByLabelText('Estudio'));
+    expect(within(formulario).queryByText(YA_NO_EXISTE)).toBeNull();
+    expect(campo(formulario).getAttribute('aria-invalid')).toBeNull();
+    expect(campo(formulario).getAttribute('aria-describedby')).toBeNull();
+  });
+
+  it('RD-92 · el mensaje se quita al volver a guardar, aunque falte otro dato', async () => {
+    const { nucleo, formulario } = await abrirConDosElegidas();
+    eliminarCasaAlGuardar(nucleo, 'card_create');
+    await guardar(formulario);
+    escribir(formulario, 'Título', '');
+    await guardar(formulario);
+    expect(within(formulario).queryByText(YA_NO_EXISTE)).toBeNull();
+    expect(llamadasA(nucleo, 'card_create')).toHaveLength(1);
+  });
+
+  it('RD-92 · si la lista no se puede volver a leer, conserva lo elegido y el mensaje', async () => {
+    const { nucleo, formulario } = await abrirConDosElegidas();
+    eliminarCasaAlGuardar(nucleo, 'card_create');
+    nucleo.responder('label_list', () => ({
+      ok: false,
+      error: { code: 'internal.unexpected', message: '' },
+    }));
+    await guardar(formulario);
+    expect(within(formulario).getByText(YA_NO_EXISTE)).toBeTruthy();
+    expect(campo(formulario).textContent).toBe('CasaEstudio');
   });
 });

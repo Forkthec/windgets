@@ -2,7 +2,7 @@ import { ETIQUETA_NOMBRE_MAX } from '@/reglas/limites';
 import { useCallback, useId, useState, type FormEvent } from 'react';
 import { useEnvioUnico } from '@/reglas/envio';
 import { estaVacio, useMensajesDeCampo, type Validador } from '@/reglas/formulario';
-import type { Label } from '@/types';
+import type { AppError, Label } from '@/types';
 import textos from '@/types/messages.es.json';
 import { Boton } from '@/ui/Boton/Boton';
 import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
@@ -35,9 +35,16 @@ export interface FormularioEtiquetaProps {
   alGuardar: (etiqueta: Label, mensaje: string) => void;
   /** «Cancelar» (o Esc): cierra sin crear (CA07, RT-02). */
   alCancelar: () => void;
+  /** RD-92: la etiqueta que se edita se eliminó en otro computador. */
+  alDesaparecer?: (error: AppError) => void;
 }
 
-export function FormularioEtiqueta({ etiqueta, alGuardar, alCancelar }: FormularioEtiquetaProps) {
+export function FormularioEtiqueta({
+  etiqueta,
+  alGuardar,
+  alCancelar,
+  alDesaparecer,
+}: FormularioEtiquetaProps) {
   const { invocar } = useNucleo();
   const idFormulario = useId();
   // CA09: el campo Nombre vacío y ningún color elegido (sin valor por defecto, D-162).
@@ -62,6 +69,7 @@ export function FormularioEtiqueta({ etiqueta, alGuardar, alCancelar }: Formular
       ? await invocar('label_update', { id: etiqueta.id, ...datos })
       : await invocar('label_create', datos);
     if (!r.ok) {
+      if (r.error.code === 'label.not_found' && alDesaparecer) return alDesaparecer(r.error);
       // RD-85: el color se desactivó con la ventana abierta: se vuelven a pedir los colores.
       if (r.error.code === 'color.invalid') recargar();
       if (!campos.mostrarDelNucleo([r.error])) mostrarError(r.error);
@@ -69,7 +77,7 @@ export function FormularioEtiqueta({ etiqueta, alGuardar, alCancelar }: Formular
     }
     const porDefecto = etiqueta ? textos.ETIQUETA_ACTUALIZADA : textos.ETIQUETA_CREADA;
     alGuardar(r.value, r.result_message?.message ?? porDefecto);
-  }, [alGuardar, campos, etiqueta, invocar, mostrarError, recargar, valores]);
+  }, [alDesaparecer, alGuardar, campos, etiqueta, invocar, mostrarError, recargar, valores]);
   const { ejecutar, enCurso } = useEnvioUnico(guardar);
 
   return (

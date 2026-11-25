@@ -183,3 +183,57 @@ describe('HE-08-HU04 · Eliminar una etiqueta', () => {
     expect(llamadasA(nucleo, 'label_delete')).toEqual([]);
   });
 });
+
+describe('RD-92 · La etiqueta ya no existe', () => {
+  const VACIA = 'Aún no tienes etiquetas. Crea una para clasificar tus tarjetas.';
+
+  /** El Núcleo responde que la etiqueta se eliminó en otro computador. */
+  function eliminadaEnOtroComputador(
+    nucleo: NucleoDelPlanificador,
+    comando: 'label_update' | 'label_get_delete_info' | 'label_delete',
+  ) {
+    nucleo.responder(comando, () => {
+      nucleo.etiquetas.splice(0);
+      return { ok: false, error: { code: 'label.not_found', message: 'Esta etiqueta ya no existe.' } };
+    });
+  }
+
+  async function loDiceYVuelveALeer(nucleo: NucleoDelPlanificador, lecturas: number) {
+    expect((await screen.findByRole('alert')).textContent).toContain('Esta etiqueta ya no existe.');
+    expect(await screen.findByText(VACIA)).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(llamadasA(nucleo, 'label_list').length).toBeGreaterThan(lecturas);
+  }
+
+  it('RD-92 · guardar una etiqueta eliminada cierra «Editar etiqueta», lo dice y vuelve a leer', async () => {
+    const { nucleo, ventana } = await editar();
+    eliminadaEnOtroComputador(nucleo, 'label_update');
+    const lecturas = llamadasA(nucleo, 'label_list').length;
+    fireEvent.change(nombre(ventana), { target: { value: 'Trabajo' } });
+    guardar(ventana);
+    await loDiceYVuelveALeer(nucleo, lecturas);
+  });
+
+  it('RD-92 · «Eliminar» en una etiqueta eliminada lo dice, no pide confirmar y vuelve a leer', async () => {
+    const { nucleo, fila } = await abrir();
+    eliminadaEnOtroComputador(nucleo, 'label_get_delete_info');
+    const lecturas = llamadasA(nucleo, 'label_list').length;
+    fireEvent.click(within(fila).getByRole('button', { name: /^Acciones de / }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Eliminar' }));
+    await loDiceYVuelveALeer(nucleo, lecturas);
+    expect(llamadasA(nucleo, 'label_delete')).toEqual([]);
+  });
+
+  it('RD-92 · confirmar la eliminación de una etiqueta eliminada lo dice y vuelve a leer', async () => {
+    const { nucleo, fila } = await abrir((n) =>
+      n.responder('label_get_delete_info', () => ({ ok: true, value: { name: 'Estudio', card_count: 0 } })),
+    );
+    eliminadaEnOtroComputador(nucleo, 'label_delete');
+    fireEvent.click(within(fila).getByRole('button', { name: /^Acciones de / }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Eliminar' }));
+    const ventana = await screen.findByRole('dialog');
+    const lecturas = llamadasA(nucleo, 'label_list').length;
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Confirmar' }));
+    await loDiceYVuelveALeer(nucleo, lecturas);
+  });
+});

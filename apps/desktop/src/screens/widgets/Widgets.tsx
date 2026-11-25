@@ -178,6 +178,12 @@ export function Widgets() {
             void leer();
           }}
           alCancelar={() => setPorConfigurar(null)}
+          alDesaparecer={(error) => {
+            // RD-92: cierra el formulario, dice por qué y vuelve a leer la lista.
+            setPorConfigurar(null);
+            mostrarError(error);
+            void leer();
+          }}
         />
       )}
       {porEliminar && (

@@ -547,6 +547,12 @@ export function Kanban() {
         <FormularioColumna
           columna={formularioColumna.columna ?? undefined}
           alCancelar={() => setFormularioColumna(null)}
+          alDesaparecer={(error) => {
+            // RD-92: cierra el formulario, dice por qué y vuelve a leer el tablero.
+            setFormularioColumna(null);
+            mostrarError(error);
+            void leer();
+          }}
           alGuardar={(_, mensaje) => {
             // HE-09-HU03-CA01, HE-09-HU04-CA01: el tablero muestra la columna nueva o editada y el mensaje.
             setFormularioColumna(null);

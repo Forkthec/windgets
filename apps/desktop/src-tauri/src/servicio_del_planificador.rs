@@ -258,6 +258,25 @@ pub fn validar_descripcion(descripcion: Option<&str>) -> Option<AppError> {
         })
 }
 
+/// RD-92: la columna se eliminó en otro computador.
+fn columna_no_existe() -> AppError {
+    error(ErrorCode::ColumnNotFound, messages::COLUMNA_NO_EXISTE, None)
+}
+
+/// RD-92: la etiqueta se eliminó en otro computador.
+fn etiqueta_no_existe() -> AppError {
+    error(ErrorCode::LabelNotFound, messages::ETIQUETA_NO_EXISTE, None)
+}
+
+/// RD-92: una etiqueta elegida en el Formulario de tarjeta se eliminó en otro computador (campo Etiquetas).
+fn etiqueta_de_la_tarjeta_no_existe() -> AppError {
+    error(
+        ErrorCode::LabelsNotFound,
+        messages::ETIQUETA_NO_EXISTE,
+        Some("label_ids"),
+    )
+}
+
 /// Etiquetas (HE-07-HU02-ET04): máximo 5 por tarjeta. Que existan se comprueba contra la base.
 pub fn validar_cantidad_de_etiquetas(etiquetas: &[Uuid]) -> Option<AppError> {
     (etiquetas.len() > ETIQUETAS_MAX).then(|| {
@@ -437,7 +456,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                     .map_err(de_sqlx)?;
             if existe == 0 {
                 // Sin texto: la vista solo ofrece etiquetas existentes (HE-07-HU02-ET03).
-                return Err(error(ErrorCode::LabelsNotFound, "", Some("label_ids")));
+                return Err(etiqueta_de_la_tarjeta_no_existe());
             }
         }
 
@@ -672,7 +691,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                         .await
                         .map_err(de_sqlx)?;
                 if existe == 0 {
-                    return Err(error(ErrorCode::LabelsNotFound, "", Some("label_ids")));
+                    return Err(etiqueta_de_la_tarjeta_no_existe());
                 }
             }
             let actuales: Vec<String> = actual.label_ids.iter().map(|u| u.0.clone()).collect();
@@ -835,8 +854,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(de_sqlx)?
-                // Sin texto: la vista solo ofrece columnas que existen.
-                .ok_or_else(|| error(ErrorCode::ColumnNotFound, "", None))?;
+                .ok_or_else(columna_no_existe)?;
 
         // Posiciones de las demás tarjetas de la columna de destino.
         let otras: Vec<(String, f64)> = sqlx::query_as(
@@ -1846,7 +1864,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 .await
                 .map_err(de_sqlx)?;
         if existe == 0 {
-            return Err(error(ErrorCode::ColumnNotFound, "", None));
+            return Err(columna_no_existe());
         }
         if let Some(nombre) = &nombre {
             let otras: Vec<String> =
@@ -2610,7 +2628,7 @@ pub(crate) mod pruebas {
 
     #[test]
     fn etiquetas_de_mas_o_inexistentes_no_crean_la_tarjeta() {
-        // IPC-CARD-01: `labels.too_many` (HE-07-HU02-CA02) y `labels.not_found` sin texto (HE-07-HU02-ET03).
+        // IPC-CARD-01: `labels.too_many` (HE-07-HU02-CA02) y `labels.not_found` (HE-07-HU02-ET03; RD-92).
         let servicio = con_semilla();
         let seis: Vec<Uuid> = (0..6)
             .map(|i| Uuid(etiqueta(&servicio, &format!("E{i}"))))
@@ -2640,7 +2658,7 @@ pub(crate) mod pruebas {
         .unwrap_err();
         assert_eq!(
             (e.code, e.message.as_str()),
-            (ErrorCode::LabelsNotFound, "")
+            (ErrorCode::LabelsNotFound, "Esta etiqueta ya no existe.")
         );
         assert_eq!(contar(&servicio, "SELECT count(*) FROM card"), 0);
     }

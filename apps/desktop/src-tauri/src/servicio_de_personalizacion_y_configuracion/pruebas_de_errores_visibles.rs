@@ -1,7 +1,9 @@
 //! Pruebas del Núcleo de los errores visibles de la personalización (docs/rediseno.md RD-86 y RD-87): lo que se puede
 //! prever llega con su código y su texto, nunca como `internal.unexpected`.
 
+use super::agregar::Configuracion;
 use super::pruebas_de_colores::primario;
+use super::pruebas_de_widgets::{CLIMA, con_widgets_agregados};
 use super::pruebas_del_tema_en_edicion::{OTRO_TEMA, con_temas};
 use super::*;
 use crate::servicio_del_planificador::pruebas::{USUARIO, bloquear};
@@ -131,4 +133,32 @@ fn rd_87_elegir_una_paleta_desactivada_lo_dice_y_no_cambia_la_vista_previa() {
         (despues.dirty, despues.content.colors),
         (false, antes.content.colors)
     );
+}
+
+#[test]
+fn rd_92_activar_configurar_y_eliminar_un_widget_eliminado_dice_que_ya_no_existe() {
+    let (base, servicio) = con_widgets_agregados();
+    bloquear(servicio.eliminar_widget(&base, USUARIO, CLIMA, AHORA_MS)).unwrap();
+    let antes = cuantos(&base, "SELECT count(*) FROM pending_change");
+    let ya_no_existe = |e: AppError| {
+        assert_eq!(
+            (e.code, e.message.as_str(), e.field),
+            (ErrorCode::WidgetNotFound, "Este widget ya no existe.", None)
+        )
+    };
+    ya_no_existe(
+        bloquear(servicio.activar_widget(&base, USUARIO, CLIMA, false, AHORA_MS)).unwrap_err(),
+    );
+    ya_no_existe(
+        bloquear(servicio.configurar_widget(
+            &base,
+            USUARIO,
+            CLIMA,
+            Configuracion::Texto("Hola"),
+            AHORA_MS,
+        ))
+        .unwrap_err(),
+    );
+    ya_no_existe(bloquear(servicio.eliminar_widget(&base, USUARIO, CLIMA, AHORA_MS)).unwrap_err());
+    assert_eq!(cuantos(&base, "SELECT count(*) FROM pending_change"), antes);
 }

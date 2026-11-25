@@ -159,6 +159,9 @@ export function FormularioTarjeta({
     [tarjeta?.due_date, valores.block_date, valores.block_hour],
   );
   const campos = useMensajesDeCampo(CAMPOS, reglas);
+  // RD-92: el único mensaje del campo Etiquetas que da el Núcleo.
+  const [avisoDeEtiquetas, setAvisoDeEtiquetas] = useState('');
+  const idDelAviso = `${idFormulario}-aviso-de-etiquetas`;
 
   // HE-07-HU01-ET12; HE-07-HU02-ET03, ET10: solo las etiquetas creadas, en el orden del Núcleo (A a la Z).
   const leerEtiquetas = useCallback(async () => {
@@ -175,27 +178,46 @@ export function FormularioTarjeta({
     };
   }, [invocar]);
 
+  // RD-92: una etiqueta elegida se eliminó en otro computador: se vuelve a leer la lista y se quita de la
+  // selección, porque ya no aparece para desmarcarla.
+  const soltarEtiquetasEliminadas = useCallback(async () => {
+    const r = await invocar('label_list', {});
+    if (!r.ok) return;
+    setEtiquetas(r.value);
+    const quedan = new Set(r.value.map((e) => e.id));
+    setValores((v) => ({ ...v, label_ids: v.label_ids.filter((id) => quedan.has(id)) }));
+  }, [invocar]);
+
   const cambiar = (campo: Campo) => (valor: string) => {
     setValores((v) => ({ ...v, [campo]: valor }));
     campos.alCorregir(campo, valor);
   };
 
-  const marcarEtiqueta = (id: string, marcada: boolean) =>
+  const marcarEtiqueta = (id: string, marcada: boolean) => {
+    setAvisoDeEtiquetas('');
     setValores((v) => ({
       ...v,
       label_ids: marcada ? [...v.label_ids, id] : v.label_ids.filter((e) => e !== id),
     }));
+  };
 
   const fallo = useCallback(
     (error: AppError) => {
+      if (error.code === 'labels.not_found') {
+        setAvisoDeEtiquetas(textoDelError(error));
+        document.getElementById(`${idDelAviso}-campo`)?.focus();
+        void soltarEtiquetasEliminadas();
+        return;
+      }
       if (error.field && campos.mostrarDelNucleo([error])) return;
       if (error.code === 'card.not_found' && alNoExistir) alNoExistir(textoDelError(error));
       else mostrarError(error);
     },
-    [alNoExistir, campos, mostrarError],
+    [alNoExistir, campos, idDelAviso, mostrarError, soltarEtiquetasEliminadas],
   );
 
   const guardar = useCallback(async () => {
+    setAvisoDeEtiquetas('');
     if (!campos.validarTodo(valores)) return;
     const fecha = leerFecha(valores.due_date);
     if (!fecha) return;
@@ -331,11 +353,19 @@ export function FormularioTarjeta({
           alCambiar={(p) => setValores((v) => ({ ...v, priority: p }))}
         />
         {/* HE-07-HU02-ET01 y RD-75 (§3.8): desplegable con casillas; las elegidas se ven como chips de su color. */}
-        <div className="wg-campo wg-etiquetas-desplegable" role="group" aria-label="Etiquetas">
+        <div
+          className="wg-campo wg-etiquetas-desplegable"
+          role="group"
+          aria-label="Etiquetas"
+          aria-describedby={avisoDeEtiquetas ? idDelAviso : undefined}
+        >
           <span className="wg-campo__etiqueta">Etiquetas</span>
           <button
+            id={`${idDelAviso}-campo`}
             type="button"
             className="wg-campo__entrada wg-etiquetas-desplegable__campo"
+            aria-invalid={avisoDeEtiquetas ? true : undefined}
+            aria-describedby={avisoDeEtiquetas ? idDelAviso : undefined}
             aria-expanded={listaAbierta}
             aria-label="Etiquetas asignadas"
             onClick={() => setListaAbierta((a) => !a)}
@@ -386,6 +416,11 @@ export function FormularioTarjeta({
                 </div>
               )}
             </div>
+          )}
+          {avisoDeEtiquetas && (
+            <span id={idDelAviso} className="wg-campo__mensaje">
+              {avisoDeEtiquetas}
+            </span>
           )}
         </div>
         <CampoTexto

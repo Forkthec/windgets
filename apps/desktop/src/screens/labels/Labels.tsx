@@ -110,6 +110,12 @@ export function Labels() {
         <FormularioEtiqueta
           etiqueta={editando}
           alCancelar={() => setEditando(null)}
+          alDesaparecer={(error) => {
+            // RD-92: cierra el formulario, dice por qué y vuelve a leer la lista.
+            setEditando(null);
+            mostrarError(error);
+            void leer();
+          }}
           alGuardar={(_, mensaje) => {
             // HE-08-HU03-CA01: cierra el formulario y muestra «Etiqueta actualizada.» (RT-04).
             setEditando(null);

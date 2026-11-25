@@ -511,7 +511,7 @@ impl ServicioDePersonalizacion {
                 .fetch_optional(pool)
                 .await
                 .map_err(de_sqlx)?
-                .ok_or_else(|| error(ErrorCode::WidgetNotFound, "", None))?;
+                .ok_or_else(widget_no_existe)?;
         let valores: Vec<(&str, Value)> = match (tipo.as_str(), cambio) {
             ("weather", Configuracion::Ciudad(ciudad)) => {
                 let otros: Vec<(String, String)> = sqlx::query_as(

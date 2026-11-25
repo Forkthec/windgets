@@ -938,6 +938,11 @@ fn tema_no_existe() -> AppError {
     error(ErrorCode::ThemeNotFound, messages::TEMA_NO_EXISTE, None)
 }
 
+/// `widget.not_found` (RD-92): el widget se eliminó en otro computador.
+fn widget_no_existe() -> AppError {
+    error(ErrorCode::WidgetNotFound, messages::WIDGET_NO_EXISTE, None)
+}
+
 #[cfg(test)]
 mod pruebas_de_agregar_clima;
 #[cfg(test)]

@@ -1,7 +1,7 @@
 import { CIUDAD_MAX, TEXTO_WIDGET_MAX } from '@/reglas/limites';
 import { useCallback, useId, useState, type FormEvent } from 'react';
 import { useEnvioUnico } from '@/reglas/envio';
-import type { GeocodeResult, WidgetItem } from '@/types';
+import type { AppError, GeocodeResult, WidgetItem } from '@/types';
 import textos from '@/types/messages.es.json';
 import { Boton } from '@/ui/Boton/Boton';
 import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
@@ -19,9 +19,16 @@ export interface FormularioDeWidgetProps {
   widget: WidgetItem;
   alGuardar: () => void;
   alCancelar: () => void;
+  /** RD-92: el widget que se configura se eliminó en otro computador. */
+  alDesaparecer: (error: AppError) => void;
 }
 
-export function FormularioDeWidget({ widget, alGuardar, alCancelar }: FormularioDeWidgetProps) {
+export function FormularioDeWidget({
+  widget,
+  alGuardar,
+  alCancelar,
+  alDesaparecer,
+}: FormularioDeWidgetProps) {
   const { invocar } = useNucleo();
   const idFormulario = useId();
   const esClima = widget.type === 'weather';
@@ -49,12 +56,24 @@ export function FormularioDeWidget({ widget, alGuardar, alCancelar }: Formulario
       config: esClima && lugar ? { city: lugar.name, place: lugar } : { text: valor.trim() },
     });
     if (!r.ok) {
+      if (r.error.code === 'widget.not_found') return alDesaparecer(r.error);
       // CA04, CA05: el mensaje va en el campo.
       setMensaje(textoDelError(r.error));
       return;
     }
     alGuardar();
-  }, [alGuardar, demasiado, esClima, invocar, largo, lugar, textoLargo, valor, widget.widget_id]);
+  }, [
+    alDesaparecer,
+    alGuardar,
+    demasiado,
+    esClima,
+    invocar,
+    largo,
+    lugar,
+    textoLargo,
+    valor,
+    widget.widget_id,
+  ]);
   const { ejecutar, enCurso } = useEnvioUnico(guardar);
 
   return (

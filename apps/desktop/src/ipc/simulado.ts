@@ -282,7 +282,7 @@ const respuestas: Respuestas = {
   }),
   widget_set_active: ({ widget_id, active }) => {
     const w = WIDGETS_SIMULADOS.find((x) => x.widget_id === widget_id);
-    if (!w) return error({ code: 'widget.not_found', message: '' });
+    if (!w) return error({ code: 'widget.not_found', message: textos.WIDGET_NO_EXISTE });
     w.is_active = active;
     return { ok: true, value: { ...w } };
   },
@@ -583,7 +583,7 @@ const respuestas: Respuestas = {
     const t = tarjetasSimuladas.find((c) => c.id === card_id);
     const destino = COLUMNAS_SIMULADAS.find((c) => c.id === column_id);
     if (!t) return error({ code: 'card.not_found', message: textos.TARJETA_NO_EXISTE });
-    if (!destino) return error({ code: 'column.not_found', message: '' });
+    if (!destino) return error({ code: 'column.not_found', message: textos.COLUMNA_NO_EXISTE });
     const otras = tarjetasSimuladas
       .filter((c) => c.column_id === column_id && c.id !== card_id)
       .sort((a, b) => a.position - b.position);

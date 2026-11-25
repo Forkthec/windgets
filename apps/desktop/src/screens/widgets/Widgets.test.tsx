@@ -882,3 +882,57 @@ describe('RD-83 · Widgets: ninguna acción falla en silencio', () => {
     expect(screen.getByRole('alert').textContent).toContain(GENERICO);
   });
 });
+
+describe('RD-92 · El widget ya no existe', () => {
+  const texto = widget({
+    widget_id: 'w-texto',
+    type: 'text',
+    display_name: 'Texto',
+    distinguishing_value: 'Estudiar',
+    can_configure: true,
+    config: { text: 'Estudiar' },
+  });
+
+  /** Abre Widgets con un widget Texto que el Núcleo ya no encuentra al usar `comando`. */
+  async function eliminadoEnOtroComputador(
+    comando: 'widget_configure' | 'widget_set_active' | 'widget_delete',
+  ) {
+    const nucleo = await abrir([...POR_DEFECTO, texto]);
+    nucleo.responder(comando, () => {
+      nucleo.widgets.splice(POR_DEFECTO.length, 1);
+      return { ok: false, error: { code: 'widget.not_found', message: 'Este widget ya no existe.' } };
+    });
+    const lecturas = llamadasA(nucleo, 'widget_list').length;
+    return { nucleo, filaDelTexto: fila(POR_DEFECTO.length), lecturas };
+  }
+
+  async function loDiceYVuelveALeer(nucleo: NucleoDelPlanificador, lecturas: number) {
+    expect((await screen.findByRole('alert')).textContent).toContain('Este widget ya no existe.');
+    await waitFor(() => expect(filas()).toHaveLength(POR_DEFECTO.length));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(llamadasA(nucleo, 'widget_list').length).toBeGreaterThan(lecturas);
+  }
+
+  it('RD-92 · guardar un widget eliminado cierra «Configurar», lo dice y vuelve a leer la lista', async () => {
+    const { nucleo, filaDelTexto, lecturas } = await eliminadoEnOtroComputador('widget_configure');
+    fireEvent.click(within(filaDelTexto).getByRole('button', { name: 'Configurar' }));
+    const ventana = await screen.findByRole('dialog', { name: 'Configurar' });
+    fireEvent.change(within(ventana).getByLabelText('Texto'), { target: { value: 'Repasar' } });
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Guardar' }));
+    await loDiceYVuelveALeer(nucleo, lecturas);
+  });
+
+  it('RD-92 · el interruptor de un widget eliminado lo dice y vuelve a leer la lista', async () => {
+    const { nucleo, filaDelTexto, lecturas } = await eliminadoEnOtroComputador('widget_set_active');
+    fireEvent.click(within(filaDelTexto).getByRole('switch'));
+    await loDiceYVuelveALeer(nucleo, lecturas);
+  });
+
+  it('RD-92 · confirmar la eliminación de un widget eliminado lo dice y vuelve a leer la lista', async () => {
+    const { nucleo, filaDelTexto, lecturas } = await eliminadoEnOtroComputador('widget_delete');
+    fireEvent.click(within(filaDelTexto).getByRole('button', { name: 'Eliminar' }));
+    const ventana = await screen.findByRole('dialog');
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Confirmar' }));
+    await loDiceYVuelveALeer(nucleo, lecturas);
+  });
+});

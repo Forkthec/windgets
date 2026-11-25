@@ -2,7 +2,7 @@ import { COLUMNA_NOMBRE_MAX } from '@/reglas/limites';
 import { useCallback, useId, useState, type FormEvent } from 'react';
 import { useEnvioUnico } from '@/reglas/envio';
 import { estaVacio, useMensajesDeCampo, type Validador } from '@/reglas/formulario';
-import type { Column } from '@/types';
+import type { AppError, Column } from '@/types';
 import textos from '@/types/messages.es.json';
 import { Boton } from '@/ui/Boton/Boton';
 import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
@@ -38,9 +38,11 @@ export interface FormularioColumnaProps {
   alGuardar: (columna: Column, mensaje: string) => void;
   /** «Cancelar» (o Esc): cierra sin guardar (HE-09-HU03-CA07, HE-09-HU04-CA07; RT-02). */
   alCancelar: () => void;
+  /** RD-92: la columna que se edita se eliminó en otro computador. */
+  alDesaparecer: (error: AppError) => void;
 }
 
-export function FormularioColumna({ columna, alGuardar, alCancelar }: FormularioColumnaProps) {
+export function FormularioColumna({ columna, alGuardar, alCancelar, alDesaparecer }: FormularioColumnaProps) {
   const { invocar } = useNucleo();
   const idFormulario = useId();
   // Creación: Nombre vacío y gris marcado (HE-09-HU03-CA08, ET06). Edición: el nombre y el color actuales
@@ -59,6 +61,7 @@ export function FormularioColumna({ columna, alGuardar, alCancelar }: Formulario
       ? await invocar('column_update', { id: columna.id, ...datos })
       : await invocar('column_create', datos);
     if (!r.ok) {
+      if (r.error.code === 'column.not_found') return alDesaparecer(r.error);
       // RD-85: el color se desactivó con la ventana abierta: se vuelven a pedir los colores.
       if (r.error.code === 'color.invalid') recargar();
       if (!campos.mostrarDelNucleo([r.error])) mostrarError(r.error);
@@ -66,7 +69,7 @@ export function FormularioColumna({ columna, alGuardar, alCancelar }: Formulario
     }
     const porDefecto = columna ? textos.COLUMNA_ACTUALIZADA : textos.COLUMNA_CREADA;
     alGuardar(r.value, r.result_message?.message ?? porDefecto);
-  }, [alGuardar, campos, color, columna, invocar, mostrarError, nombre, recargar]);
+  }, [alDesaparecer, alGuardar, campos, color, columna, invocar, mostrarError, nombre, recargar]);
   const { ejecutar, enCurso } = useEnvioUnico(guardar);
 
   return (

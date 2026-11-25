@@ -117,3 +117,45 @@ describe('HE-09-HU06 · Eliminar las columnas creadas', () => {
     ).toBeTruthy();
   });
 });
+
+describe('RD-92 · La columna que se va a eliminar ya no existe', () => {
+  /** El Núcleo responde que la columna Revisión se eliminó en otro computador. */
+  function eliminadaEnOtroComputador(
+    nucleo: NucleoDelPlanificador,
+    comando: 'column_get_delete_info' | 'column_delete',
+  ) {
+    nucleo.responder(comando, () => {
+      nucleo.columnas.pop();
+      return { ok: false, error: { code: 'column.not_found', message: 'Esta columna ya no existe.' } };
+    });
+  }
+
+  async function loDiceYVuelveALeer(nucleo: NucleoDelPlanificador, lecturas: number) {
+    expect((await screen.findByRole('alert')).textContent).toContain('Esta columna ya no existe.');
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Revisión' })).toBeNull());
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(llamadasA(nucleo, 'card_list_board').length).toBeGreaterThan(lecturas);
+  }
+
+  it('RD-92 · «Eliminar» en una columna eliminada lo dice, no pide confirmar y vuelve a leer', async () => {
+    const nucleo = await abrirTablero(0);
+    eliminadaEnOtroComputador(nucleo, 'column_get_delete_info');
+    const lecturas = llamadasA(nucleo, 'card_list_board').length;
+    fireEvent.click(
+      within(screen.getByRole('region', { name: 'Revisión' })).getByRole('button', {
+        name: 'Acciones de Revisión',
+      }),
+    );
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Eliminar' }));
+    await loDiceYVuelveALeer(nucleo, lecturas);
+    expect(llamadasA(nucleo, 'column_delete')).toEqual([]);
+  });
+
+  it('RD-92 · confirmar la eliminación de una columna eliminada lo dice y vuelve a leer', async () => {
+    const { nucleo, ventana } = await pedirEliminar(await abrirTablero(0));
+    eliminadaEnOtroComputador(nucleo, 'column_delete');
+    const lecturas = llamadasA(nucleo, 'card_list_board').length;
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Confirmar' }));
+    await loDiceYVuelveALeer(nucleo, lecturas);
+  });
+});

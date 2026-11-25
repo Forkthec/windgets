@@ -269,6 +269,12 @@ pub const CAMBIOS_SIN_GUARDAR_AL_APLICAR: &str =
 pub const TEMA_YA_APLICADO: &str = "Este tema ya está aplicado.";
 /// `theme.not_found` (RD-86): el tema se eliminó en otro computador.
 pub const TEMA_NO_EXISTE: &str = "Este tema ya no existe.";
+/// `column.not_found` (RD-92): la columna se eliminó en otro computador.
+pub const COLUMNA_NO_EXISTE: &str = "Esta columna ya no existe.";
+/// `label.not_found` y `labels.not_found` (RD-92): la etiqueta se eliminó en otro computador.
+pub const ETIQUETA_NO_EXISTE: &str = "Esta etiqueta ya no existe.";
+/// `widget.not_found` (RD-92): el widget se eliminó en otro computador.
+pub const WIDGET_NO_EXISTE: &str = "Este widget ya no existe.";
 /// `palette.not_found` (RD-87): el catálogo desactivó la paleta elegida.
 pub const PALETA_NO_DISPONIBLE: &str = "Esta paleta ya no está disponible. Elige otra.";
 /// `color.invalid` (HE-02-HU05-CA03): mensaje de campo.
@@ -636,6 +642,9 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ),
     ("TEMA_YA_APLICADO", TEMA_YA_APLICADO),
     ("TEMA_NO_EXISTE", TEMA_NO_EXISTE),
+    ("COLUMNA_NO_EXISTE", COLUMNA_NO_EXISTE),
+    ("ETIQUETA_NO_EXISTE", ETIQUETA_NO_EXISTE),
+    ("WIDGET_NO_EXISTE", WIDGET_NO_EXISTE),
     ("PALETA_NO_DISPONIBLE", PALETA_NO_DISPONIBLE),
     ("WIDGET_ELIMINADO", WIDGET_ELIMINADO),
     ("INSTRUCCION_DE_EDICION", INSTRUCCION_DE_EDICION),

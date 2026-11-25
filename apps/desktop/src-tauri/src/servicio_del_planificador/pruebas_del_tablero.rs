@@ -228,7 +228,7 @@ fn mover_a_una_columna_o_tarjeta_que_no_existe() {
     .unwrap_err();
     assert_eq!(
         (e.code, e.message.as_str()),
-        (ErrorCode::ColumnNotFound, "")
+        (ErrorCode::ColumnNotFound, "Esta columna ya no existe.")
     );
     let e = mover(
         &servicio,
