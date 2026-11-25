@@ -327,8 +327,9 @@ export function Personalization() {
     const r = await invocar('theme_draft_save', {});
     if (!r.ok) {
       if (r.error.code === 'theme.not_found') return fallar(r.error);
-      // El tipo sale del texto (RD-63): «Ya tienes el tema…» sigue como mensaje de resultado (HE-02-HU11-ET06).
-      return mostrarResultado(textoDelError(r.error));
+      // RD-93: «Ya tienes el tema…» (HE-02-HU11-ET06) es una advertencia; en lo demás el tipo sale del texto (RD-63).
+      const tipo = r.error.code === 'theme.content_duplicate' ? 'advertencia' : undefined;
+      return mostrarResultado(textoDelError(r.error), tipo);
     }
     mostrarResultado(r.result_message?.message ?? '');
     const abierto = await invocar('theme_draft_open', {});

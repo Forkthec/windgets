@@ -1156,6 +1156,23 @@ describe('HE-02-HU11 · Guardar los cambios de la vista previa', () => {
     expect(llamadasA(nucleo, 'theme_draft_open')).toHaveLength(1);
   });
 
+  it('RD-93 · El contenido repetido al guardar se muestra como advertencia', async () => {
+    const nucleo = await abrir(true);
+    await waitFor(() => expect(guardar().disabled).toBe(false));
+    nucleo.responder('theme_draft_save', () => ({
+      ok: false,
+      error: {
+        code: 'theme.content_duplicate',
+        message: 'Ya tienes el tema “Verano” con estas mismas propiedades.',
+      },
+    }));
+    fireEvent.click(guardar());
+    const texto = await screen.findByText('Ya tienes el tema “Verano” con estas mismas propiedades.');
+    const mensaje = texto.closest('.wg-resultado');
+    expect(mensaje?.classList.contains('wg-resultado--advertencia')).toBe(true);
+    expect(mensaje?.getAttribute('role')).toBe('status');
+  });
+
   it('HE-02-HU11-CA03 · Guardar sin cambios', async () => {
     const nucleo = await abrir();
     await waitFor(() => expect(lista().value).toBe('t1'));
