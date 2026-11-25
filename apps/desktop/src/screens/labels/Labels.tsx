@@ -5,7 +5,7 @@ import textos from '@/types/messages.es.json';
 import { Boton } from '@/ui/Boton/Boton';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
 import { MenuDeAcciones } from '@/ui/MenuDeAcciones/MenuDeAcciones';
-import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
+import { useMensajeDeResultado, useMostrarError } from '@/ui/MensajeResultado/MensajeResultado';
 import './etiquetas.css';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { FormularioEtiqueta } from './FormularioEtiqueta';
@@ -19,6 +19,7 @@ const ETIQUETAS_MAX = 20;
 export function Labels() {
   const { invocar, escuchar } = useNucleo();
   const mostrarResultado = useMensajeDeResultado();
+  const mostrarError = useMostrarError();
   const [etiquetas, setEtiquetas] = useState<Label[] | null>(null);
   const [creando, setCreando] = useState(false);
   // HE-08-HU03: la etiqueta que se edita; HE-08-HU04: la que se va a eliminar con su texto de confirmación.
@@ -51,7 +52,11 @@ export function Labels() {
   // HE-08-HU04-CA01, CA03, CA04: el texto de la confirmación según en cuántas tarjetas está (M-10 o M-14).
   const preguntarEliminar = async (e: Label) => {
     const r = await invocar('label_get_delete_info', { id: e.id });
-    if (!r.ok) return;
+    if (!r.ok) {
+      mostrarError(r.error);
+      void leer();
+      return;
+    }
     const { name, card_count } = r.value;
     const plantilla =
       card_count === 0
@@ -66,7 +71,8 @@ export function Labels() {
   const eliminar = async (e: Label) => {
     setPorEliminar(null);
     const r = await invocar('label_delete', { id: e.id });
-    mostrarResultado(r.ok ? (r.result_message?.message ?? textos.ETIQUETA_ELIMINADA) : r.error.message);
+    if (r.ok) mostrarResultado(r.result_message?.message ?? textos.ETIQUETA_ELIMINADA);
+    else mostrarError(r.error);
     void leer();
   };
 

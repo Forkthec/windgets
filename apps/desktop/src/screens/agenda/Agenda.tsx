@@ -12,7 +12,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AgendaBlock, AgendaDay, Card } from '@/types';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
-import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
+import { useMensajeDeResultado, useMostrarError } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { IndicadorDeEstado } from '../tarjeta/EstadoDeTarjeta';
 import { fechaIso, hoy } from '../tarjeta/fechas';
@@ -125,6 +125,7 @@ function Bloque({
 export function Agenda() {
   const { invocar, escuchar } = useNucleo();
   const mostrarResultado = useMensajeDeResultado();
+  const mostrarError = useMostrarError();
   const [dia, setDia] = useState(() => fechaIso(hoy()));
   const [agenda, setAgenda] = useState<AgendaDay | null>(null);
   const [arrastrando, setArrastrando] = useState(false);
@@ -168,10 +169,10 @@ export function Agenda() {
       if (!asignacion) return;
       const r = await invocar('card_assign_time_block', asignacion);
       if (r.ok) mostrarResultado(r.result_message?.message ?? '');
-      else if (r.error.message) mostrarResultado(r.error.message);
+      else mostrarError(r.error);
       await leer();
     },
-    [dia, invocar, leer, mostrarResultado],
+    [dia, invocar, leer, mostrarError, mostrarResultado],
   );
 
   // HE-11-HU03: quitar la tarjeta del bloque la devuelve a Tarjetas sin horario con «Tarjeta quitada del
@@ -180,10 +181,10 @@ export function Agenda() {
     async (id: string) => {
       const r = await invocar('card_unassign_time_block', { card_id: id });
       if (r.ok) mostrarResultado(r.result_message?.message ?? '');
-      else if (r.error.message) mostrarResultado(r.error.message);
+      else mostrarError(r.error);
       await leer();
     },
-    [invocar, leer, mostrarResultado],
+    [invocar, leer, mostrarError, mostrarResultado],
   );
 
   return (

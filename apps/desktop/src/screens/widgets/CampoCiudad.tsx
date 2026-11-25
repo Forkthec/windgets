@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import type { GeocodeResult, Invoke } from '@/types';
 import textos from '@/types/messages.es.json';
 import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
+import { textoDelError } from '@/ipc/textoDelError';
 
 // Campo Ciudad con sugerencias (HE-04-HU05-ET18, HE-04-HU12; P29). Desde 2 caracteres y tras una pausa de 400 ms
 // pide al Núcleo hasta 5 lugares (IPC-WID-08 `weather_city_search`) y los muestra debajo del campo como
@@ -62,7 +63,7 @@ export function CampoCiudad({ invocar, valor, alCambiar, elegido, alElegir, mens
           // Sin conexión o con el servicio caído: el mensaje claro va en el campo (RT-04).
           setLugares([]);
           setAbierta(false);
-          setAviso(r.error.message);
+          setAviso(textoDelError(r.error));
           return;
         }
         setLugares(r.value);

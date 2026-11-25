@@ -1,4 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { textoDelError } from '@/ipc/textoDelError';
+import type { AppError } from '@/types';
 
 // Mensajes emergentes (rediseno_final_prototipos.md §3.5; rediseno_final_backend.md §4.3; docs/rediseno.md RD-63).
 // Una cola global montada en la raíz, encima de las ventanas emergentes y del panel de Windi, en la esquina inferior
@@ -134,4 +136,10 @@ export function useMensajeDeResultado(): Mostrar {
   const mostrar = useContext(ContextoDeResultado);
   if (!mostrar) throw new Error('useMensajeDeResultado necesita ProveedorDeResultado');
   return mostrar;
+}
+
+/** Muestra el error de una acción como mensaje emergente de tipo «error»: su texto o el genérico (RD-83). */
+export function useMostrarError(): (error: Pick<AppError, 'message'>) => void {
+  const mostrar = useMensajeDeResultado();
+  return useCallback((error) => mostrar(textoDelError(error), 'error'), [mostrar]);
 }

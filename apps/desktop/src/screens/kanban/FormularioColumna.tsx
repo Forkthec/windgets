@@ -8,6 +8,7 @@ import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
 import { CatalogoColores, type ColorDelCatalogo } from '@/ui/CatalogoColores/CatalogoColores';
 import { VentanaEmergente } from '@/ui/VentanaEmergente/VentanaEmergente';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { useMostrarError } from '@/ui/MensajeResultado/MensajeResultado';
 
 // P-KAN-02 Formulario de columna. Modo creación, título «Nueva columna» (HE-09-HU03-ET02), y modo edición, título
 // «Editar columna» (HE-09-HU04-ET02), con las mismas reglas de nombre (ET09). Ventana emergente sobre el Tablero
@@ -46,6 +47,7 @@ export function FormularioColumna({ columna, alGuardar, alCancelar }: Formulario
   const [color, setColor] = useState(columna?.color_id ?? COLOR_POR_DEFECTO);
   const [colores, setColores] = useState<ColorDelCatalogo[]>([]);
   const campos = useMensajesDeCampo(CAMPOS, REGLAS);
+  const mostrarError = useMostrarError();
 
   // ET05: el color se elige del catálogo de colores (IPC-CAT-01).
   useEffect(() => {
@@ -65,12 +67,12 @@ export function FormularioColumna({ columna, alGuardar, alCancelar }: Formulario
       ? await invocar('column_update', { id: columna.id, ...datos })
       : await invocar('column_create', datos);
     if (!r.ok) {
-      if (r.error.field) campos.mostrarDelNucleo([r.error]);
+      if (!campos.mostrarDelNucleo([r.error])) mostrarError(r.error);
       return;
     }
     const porDefecto = columna ? textos.COLUMNA_ACTUALIZADA : textos.COLUMNA_CREADA;
     alGuardar(r.value, r.result_message?.message ?? porDefecto);
-  }, [alGuardar, campos, color, columna, invocar, nombre]);
+  }, [alGuardar, campos, color, columna, invocar, mostrarError, nombre]);
   const { ejecutar, enCurso } = useEnvioUnico(guardar);
 
   return (

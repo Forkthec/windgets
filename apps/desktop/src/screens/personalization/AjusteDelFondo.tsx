@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Escuchar } from '@/ipc/eventos';
 import type { Invoke, WallpaperFit, WallpaperFitSettings } from '@/types';
 import { Selector } from '@/ui/Selector/Selector';
+import { textoDelError } from '@/ipc/textoDelError';
 
 // HE-02-HU14 (P29) · Ajuste de la imagen de fondo en cada monitor, como en Windows. Es propio de este computador:
 // se guarda y se pinta al elegirlo, sin «Guardar» ni «Aplicar» (no es parte del tema). Hasta 6 monitores; los demás
@@ -40,7 +41,7 @@ export function AjusteDelFondo({ invocar, escuchar }: AjusteDelFondoProps) {
     const r = await invocar('wallpaper_fit_set', { monitor_id, fit });
     if (!r.ok) {
       // CA06, CA07: el motivo va junto al monitor y la lista se vuelve a leer.
-      setMensaje({ monitor: monitor_id, texto: r.error.message });
+      setMensaje({ monitor: monitor_id, texto: textoDelError(r.error) });
       void leer();
       return;
     }

@@ -839,3 +839,27 @@ describe('HE-14-HU10 · Crear etiquetas con el agente de IA (P29)', () => {
     expect(boton(p, 'Confirmar').disabled).toBe(false);
   });
 });
+
+describe('RD-83 · Windi: «Rechazar» que falla', () => {
+  it('RD-83 · sin texto muestra el genérico y la propuesta sigue pendiente', async () => {
+    const { nucleo } = await abrir(
+      proponer({
+        id: 'p1',
+        action: 'delete',
+        items: [{ card_id: 't1', current: { title: 'Informe' }, changes: null, title: 'Informe' }],
+        warnings: [],
+        state: 'active',
+      }),
+    );
+    nucleo.responder('windi_reject_proposal', () => ({
+      ok: false,
+      error: { code: 'internal.unexpected', message: '' },
+    }));
+    await escribir('Elimina el informe');
+    await seleccionar(enviar());
+    const p = screen.getByRole('region', { name: 'Propuesta' });
+    await seleccionar(within(p).getByRole('button', { name: 'Rechazar' }));
+    expect(screen.getByText('Ocurrió un error inesperado. Intenta de nuevo.')).toBeTruthy();
+    expect((within(p).getByRole('button', { name: 'Rechazar' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+});

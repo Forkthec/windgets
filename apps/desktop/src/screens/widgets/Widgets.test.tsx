@@ -850,3 +850,26 @@ describe('rediseno_final_backend.md §3.2 · Lista de widgets', () => {
     );
   });
 });
+
+describe('RD-83 · Widgets: ninguna acción falla en silencio', () => {
+  const falla = () => ({ ok: false as const, error: { code: 'internal.unexpected' as const, message: '' } });
+  const GENERICO = 'Ocurrió un error inesperado. Intenta de nuevo.';
+
+  it('RD-83 · «Editar escritorio» sin texto muestra el genérico', async () => {
+    const nucleo = await abrir(POR_DEFECTO);
+    nucleo.responder('layout_edit_open', falla);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Editar escritorio' }));
+    });
+    expect(screen.getByRole('alert').textContent).toContain(GENERICO);
+  });
+
+  it('RD-83 · el interruptor sin texto muestra el genérico', async () => {
+    const nucleo = await abrir(POR_DEFECTO);
+    nucleo.responder('widget_set_active', falla);
+    await act(async () => {
+      fireEvent.click(within(fila(0)).getByRole('switch'));
+    });
+    expect(screen.getByRole('alert').textContent).toContain(GENERICO);
+  });
+});

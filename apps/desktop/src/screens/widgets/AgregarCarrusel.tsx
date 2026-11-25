@@ -8,6 +8,7 @@ import { Boton } from '@/ui/Boton/Boton';
 import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { MiniaturaDelCatalogo } from './MiniaturaDelCatalogo';
+import { textoDelError } from '@/ipc/textoDelError';
 
 // Subpantalla Carrusel de imágenes (Widgets > Agregar widget > Carrusel de imágenes; HE-04-HU08-ET01): «Subir
 // imagen», «Catálogo de imágenes», la lista de imágenes elegidas con «<cantidad> de 10», el campo Intervalo en
@@ -62,7 +63,7 @@ export function AgregarCarrusel({ alRegresar, alIrAWidgets }: AgregarCarruselPro
       const r = await invocar('image_import', { path: ruta, purpose: 'carousel_item' });
       if (!r.ok) {
         // CA05, CA06 (ET03): ese archivo no entra al carrusel.
-        setRechazo(r.error.message);
+        setRechazo(textoDelError(r.error));
         continue;
       }
       nuevas.push({
@@ -77,6 +78,7 @@ export function AgregarCarrusel({ alRegresar, alIrAWidgets }: AgregarCarruselPro
   const abrirCatalogo = async () => {
     const r = await invocar('catalog_list', { kind: 'image' });
     if (r.ok) setCatalogo(r.value);
+    else setRechazo(textoDelError(r.error));
   };
 
   const cambiarIntervalo = (valor: string) => {
@@ -101,8 +103,8 @@ export function AgregarCarrusel({ alRegresar, alIrAWidgets }: AgregarCarruselPro
       config: { items: elegidas.map((e) => e.imagen), interval_seconds: segundos },
     });
     if (!r.ok) {
-      if (r.error.field === 'interval_seconds') setMensajeIntervalo(r.error.message);
-      else setRechazo(r.error.message);
+      if (r.error.field === 'interval_seconds') setMensajeIntervalo(textoDelError(r.error));
+      else setRechazo(textoDelError(r.error));
       return;
     }
     alIrAWidgets();

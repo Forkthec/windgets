@@ -17,13 +17,14 @@ import { Boton } from '@/ui/Boton/Boton';
 import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
 import { Casilla } from '@/ui/Casilla/Casilla';
 import { Segmentado } from '@/ui/Segmentado/Segmentado';
-import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
+import { useMensajeDeResultado, useMostrarError } from '@/ui/MensajeResultado/MensajeResultado';
 import { Selector } from '@/ui/Selector/Selector';
 import { SelectorFecha } from '@/ui/SelectorFecha/SelectorFecha';
 import { VentanaEmergente } from '@/ui/VentanaEmergente/VentanaEmergente';
 import { FormularioEtiqueta } from '../labels/FormularioEtiqueta';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { escribirFecha, fechaIso, fechaVisible, hoy, leerFecha } from './fechas';
+import { textoDelError } from '@/ipc/textoDelError';
 
 // docs/rediseno.md RD-75 (rediseno_final_prototipos.md §3.8 y §6.7; rediseno_final_backend.md §4.5): Tipo y Prioridad
 // como controles segmentados («Sin prioridad» elegido por defecto), la fecha con un calendario flotante sin días
@@ -148,6 +149,7 @@ export function FormularioTarjeta({
   const [listaAbierta, setListaAbierta] = useState(false);
   const [creandoEtiqueta, setCreandoEtiqueta] = useState(false);
   const mostrarResultado = useMensajeDeResultado();
+  const mostrarError = useMostrarError();
   const reglas = useMemo(() => validadores(tarjeta?.due_date), [tarjeta?.due_date]);
   const campos = useMensajesDeCampo(CAMPOS, reglas);
 
@@ -179,10 +181,11 @@ export function FormularioTarjeta({
 
   const fallo = useCallback(
     (error: AppError) => {
-      if (error.field) campos.mostrarDelNucleo([error]);
-      else if (error.code === 'card.not_found') alNoExistir?.(error.message);
+      if (error.field && campos.mostrarDelNucleo([error])) return;
+      if (error.code === 'card.not_found' && alNoExistir) alNoExistir(textoDelError(error));
+      else mostrarError(error);
     },
-    [alNoExistir, campos],
+    [alNoExistir, campos, mostrarError],
   );
 
   const guardar = useCallback(async () => {

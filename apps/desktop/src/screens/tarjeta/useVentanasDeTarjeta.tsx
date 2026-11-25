@@ -1,11 +1,12 @@
 import { useCallback, useMemo, type ReactNode } from 'react';
 import { useVentanasEmergentes } from '@/reglas/emergentes';
 import type { Card, CardDetail } from '@/types';
-import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
+import { useMensajeDeResultado, useMostrarError } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { ConfirmarEliminacion } from './ConfirmarEliminacion';
 import { DetalleTarjeta } from './DetalleTarjeta';
 import { FormularioTarjeta } from './FormularioTarjeta';
+import { textoDelError } from '@/ipc/textoDelError';
 
 // Las ventanas emergentes de una tarjeta, iguales en todas las pantallas desde las que se abre el detalle
 // (T-090: Tablero Kanban, Calendario, Agenda diaria, Planificador diario y Reportes): Formulario de tarjeta
@@ -45,6 +46,7 @@ export function useVentanasDeTarjeta(alCambiar: () => void): VentanasDeTarjeta {
   // Las funciones del hook son estables; el objeto que las agrupa cambia en cada dibujo.
   const { abrir, cerrarTodas, volver } = emergentes;
   const mostrarResultado = useMensajeDeResultado();
+  const mostrarError = useMostrarError();
 
   // Cerrar una o todas las ventanas, mostrar el mensaje de resultado y volver a leer la pantalla.
   const terminar = useCallback(
@@ -61,6 +63,15 @@ export function useVentanasDeTarjeta(alCambiar: () => void): VentanasDeTarjeta {
   const guardada = useCallback((_: Card, mensaje: string) => terminar(false)(mensaje), [terminar]);
   // HE-07-HU05-CA02 y DP-04 (HE-07-HU04-CA11): cierran todas las ventanas.
   const cerradas = useMemo(() => terminar(true), [terminar]);
+  // RD-83: DP-04 y los demás errores al abrir o cambiar una tarjeta cierran las ventanas y se ven como error.
+  const fallida = useCallback(
+    (mensaje: string) => {
+      cerrarTodas();
+      mostrarError({ message: mensaje });
+      alCambiar();
+    },
+    [alCambiar, cerrarTodas, mostrarError],
+  );
 
   const abrirNueva = useCallback(
     (fechaLimite?: string) => abrir({ tipo: 'formulario', fechaLimite }),
@@ -74,10 +85,10 @@ export function useVentanasDeTarjeta(alCambiar: () => void): VentanasDeTarjeta {
     (id: string, tipo: 'edicion' | 'eliminar') => {
       void invocar('card_get', { id }).then((r) => {
         if (r.ok) abrir({ tipo, tarjeta: r.value });
-        else cerradas(r.error.message);
+        else fallida(textoDelError(r.error));
       });
     },
-    [abrir, cerradas, invocar],
+    [abrir, fallida, invocar],
   );
   const abrirEdicion = useCallback(
     (id: string) => abrirSobreLaPantalla(id, 'edicion'),
@@ -103,7 +114,7 @@ export function useVentanasDeTarjeta(alCambiar: () => void): VentanasDeTarjeta {
       <DetalleTarjeta
         id={ventana.id}
         alCerrar={emergentes.volver}
-        alNoExistir={cerradas}
+        alNoExistir={fallida}
         // HE-07-HU04-ET01: «Editar» reemplaza el detalle por el formulario en modo edición.
         alEditar={(tarjeta) => emergentes.pasarA({ tipo: 'edicion', tarjeta })}
         // HE-07-HU05-ET01: «Eliminar» abre la confirmación sobre el detalle.
@@ -118,7 +129,7 @@ export function useVentanasDeTarjeta(alCambiar: () => void): VentanasDeTarjeta {
         // HE-07-HU04-CA09: «Cancelar» vuelve al detalle con la información anterior; abierto desde «⋮», a la
         // pantalla (ET23).
         alCancelar={emergentes.volver}
-        alNoExistir={cerradas}
+        alNoExistir={fallida}
       />
     );
   } else if (ventana?.tipo === 'eliminar') {
@@ -127,7 +138,7 @@ export function useVentanasDeTarjeta(alCambiar: () => void): VentanasDeTarjeta {
         tarjeta={ventana.tarjeta}
         alEliminar={cerradas}
         alCancelar={emergentes.volver}
-        alNoExistir={cerradas}
+        alNoExistir={fallida}
       />
     );
   }

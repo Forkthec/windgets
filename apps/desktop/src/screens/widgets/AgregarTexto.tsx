@@ -5,6 +5,7 @@ import textos from '@/types/messages.es.json';
 import { Boton } from '@/ui/Boton/Boton';
 import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { textoDelError } from '@/ipc/textoDelError';
 
 // Subpantalla Texto (Widgets > Agregar widget > Texto; HE-04-HU10-ET01): el campo Texto con el contador
 // «<caracteres> / 200» y las opciones «Agregar» y «Regresar» (RT-03). Sin opciones de fuente ni de tamaño: el widget
@@ -32,7 +33,7 @@ export function AgregarTexto({ alRegresar, alIrAWidgets }: AgregarTextoProps) {
     if (deshabilitada) return;
     const r = await invocar('widget_add', { type: 'text', config: { text: texto.trim() } });
     if (!r.ok) {
-      setMensajeDelNucleo(r.error.message);
+      setMensajeDelNucleo(textoDelError(r.error));
       return;
     }
     alIrAWidgets();

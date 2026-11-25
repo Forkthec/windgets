@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Label, PlannerItem, PlannerSummary, PlannerToday, ScreenParams } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
-import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
+import { useMensajeDeResultado, useMostrarError } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNucleo, useParametrosDeNavegacion } from '@/ventana_principal/VentanaPrincipal';
 import { fechaLarga } from '../tarjeta/fechas';
 import { NOMBRE_DE_PRIORIDAD, NOMBRE_DE_TIPO } from '../tarjeta/nombres';
@@ -122,6 +122,7 @@ function Resumen({ summary }: { summary: PlannerSummary }) {
 export function PlannerDaily() {
   const { invocar, escuchar } = useNucleo();
   const mostrarResultado = useMensajeDeResultado();
+  const mostrarError = useMostrarError();
   const [dia, setDia] = useState<PlannerToday | null>(null);
   // RD-39: los nombres de las etiquetas para el detalle de cada fila.
   const [etiquetas, setEtiquetas] = useState<ReadonlyMap<string, string>>(new Map());
@@ -174,7 +175,7 @@ export function PlannerDaily() {
       if (actual !== completada) {
         const r = await invocar('card_set_completed', { card_id: id, completed: completada });
         if (r.ok && r.result_message) mostrarResultado(r.result_message.message);
-        if (!r.ok && r.error.code === 'card.not_found') mostrarResultado(r.error.message);
+        if (!r.ok) mostrarError(r.error);
       }
       await leer();
       if (!temporizadores.current.has(id))
@@ -184,7 +185,7 @@ export function PlannerDaily() {
           return nuevas;
         });
     },
-    [invocar, leer, mostrarResultado],
+    [invocar, leer, mostrarError, mostrarResultado],
   );
   const completar = useCallback(
     (id: string, completada: boolean) => {

@@ -6,6 +6,7 @@ import { Boton } from '@/ui/Boton/Boton';
 import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
 import { VentanaEmergente } from '@/ui/VentanaEmergente/VentanaEmergente';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { textoDelError } from '@/ipc/textoDelError';
 
 // Renombrar tema (HE-03-HU04-ET01): ventana emergente sobre Temas (RT-02), con el campo Nombre con el nombre
 // actual y las opciones «Guardar» y «Cancelar». La vista repite el largo; el Núcleo vuelve a validar y responde
@@ -45,7 +46,7 @@ export function RenombrarTema({ tema, alGuardar, alCancelar }: RenombrarTemaProp
     const r = await invocar('theme_rename', { theme_id: tema.id, name: nombre.trim() });
     if (!r.ok) {
       // ET05: el largo y el duplicado van en el campo Nombre.
-      setMensaje(r.error.message);
+      setMensaje(textoDelError(r.error));
       return;
     }
     alGuardar(r.result_message?.message ?? '');

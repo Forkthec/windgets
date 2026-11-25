@@ -6,6 +6,7 @@ import { Boton } from '@/ui/Boton/Boton';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import windiSaludo from '../cuenta/activos/windi-saludo.svg';
 import { Propuesta } from './Propuesta';
+import { textoDelError } from '@/ipc/textoDelError';
 import './windi.css';
 import { useAvisarEscribiendo } from '@/ventana_principal/PanelDeWindi';
 
@@ -150,8 +151,14 @@ export function Windi() {
   };
 
   const rechazar = async (propuesta: WindiProposal) => {
+    setAvisoAlConfirmar(null);
     const r = await invocar('windi_reject_proposal', { proposal_id: propuesta.id });
-    setPropuestas((lista) => conEstado(lista, propuesta.id, r.ok ? 'rejected' : 'discarded'));
+    if (r.ok) setPropuestas((lista) => conEstado(lista, propuesta.id, 'rejected'));
+    else if (r.error.code === 'proposal.discarded')
+      setPropuestas((lista) => conEstado(lista, propuesta.id, 'discarded'));
+    else if (r.error.code === 'net.offline') setSinConexionAlConfirmar(true);
+    // RD-83: con cualquier otro error la propuesta sigue pendiente y se ve el motivo.
+    else setAvisoAlConfirmar(textoDelError(r.error));
     await leer();
   };
 

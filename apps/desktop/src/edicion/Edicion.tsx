@@ -7,6 +7,7 @@ import type { Invoke, LayerInitialState, Monitor, WidgetRect } from '@/types';
 import textos from '@/types/messages.es.json';
 import { Boton } from '@/ui/Boton/Boton';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
+import { textoDelError } from '@/ipc/textoDelError';
 
 // C-03 Pantalla de edición de la distribución (HE-05): a pantalla completa sobre el escritorio, sin menú principal
 // (HE-05-HU01-ET01). Pinta el wallpaper y los widgets activos en su posición y tamaño reales (ET02), cada uno con
@@ -76,12 +77,21 @@ export function Edicion({ invocar = invocarNucleo, escuchar = escucharNucleo }: 
     };
   }, [invocar]);
 
+  // RD-83: si el Núcleo no puede cerrar la edición, se ve el motivo y la pantalla sigue abierta.
+  const descartar = useCallback(async () => {
+    const r = await invocar('layout_edit_cancel', {});
+    if (!r.ok) {
+      setSalida(false);
+      setRechazo(textoDelError(r.error));
+    }
+  }, [invocar]);
+
   // HE-05-HU05: «Cancelar» o Esc. Con cambios, M-02; sin cambios, cierra sin mensaje (CA05, ET06; D-204).
   const cancelar = useCallback(async () => {
     const r = await invocar('layout_edit_get_status', {});
     if (r.ok && r.value.dirty) setSalida(true);
-    else await invocar('layout_edit_cancel', {});
-  }, [invocar]);
+    else await descartar();
+  }, [descartar, invocar]);
 
   useEffect(() => {
     const alTeclear = (e: KeyboardEvent) => {
@@ -121,7 +131,7 @@ export function Edicion({ invocar = invocarNucleo, escuchar = escucharNucleo }: 
                 height: pedido.height,
               });
         if (!r.ok) {
-          setRechazo(r.error.message);
+          setRechazo(textoDelError(r.error));
           continue;
         }
         // Con un movimiento más nuevo esperando, el widget sigue al puntero; si no, queda donde lo dejó el Núcleo.
@@ -169,7 +179,7 @@ export function Edicion({ invocar = invocarNucleo, escuchar = escucharNucleo }: 
     arrastre.current = null;
     await cola.current;
     const r = await invocar('layout_edit_save', {});
-    if (!r.ok) setRechazo(r.error.message);
+    if (!r.ok) setRechazo(textoDelError(r.error));
   };
 
   // Al soltar, el widget queda donde lo dejó el Núcleo: su última posición libre (HE-05-HU02-ET03).
@@ -245,7 +255,7 @@ export function Edicion({ invocar = invocarNucleo, escuchar = escucharNucleo }: 
           opcionPrincipal="Salir sin guardar"
           opcionSalir="Seguir editando"
           // CA03: cada widget vuelve a su posición y tamaño anteriores y se abre la pantalla Widgets.
-          alConfirmar={() => void invocar('layout_edit_cancel', {})}
+          alConfirmar={() => void descartar()}
           // CA04: se cierra el mensaje y se conservan los cambios.
           alCancelar={() => setSalida(false)}
         />

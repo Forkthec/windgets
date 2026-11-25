@@ -6,6 +6,7 @@ import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { IndicadorDeEstado } from './EstadoDeTarjeta';
 import { fechaVisible } from './fechas';
 import { NOMBRE_DE_PRIORIDAD, NOMBRE_DE_TIPO } from './nombres';
+import { textoDelError } from '@/ipc/textoDelError';
 
 // P-TAR-01 Detalle de tarjeta (HE-07-HU03): ventana emergente sobre la pantalla actual (ET01, RT-02).
 
@@ -43,7 +44,7 @@ export function DetalleTarjeta({ id, alCerrar, alNoExistir, alEditar, alEliminar
       if (r.ok) setDetalle(r.value);
       // DP-04: «Esta tarjeta ya no existe.»; cualquier otro error también cierra el detalle con su mensaje, para
       // que no quede una ventana vacía sin explicación.
-      else alNoExistir(r.error.message);
+      else alNoExistir(textoDelError(r.error));
     });
     return () => {
       vigente = false;

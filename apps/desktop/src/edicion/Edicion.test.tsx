@@ -479,3 +479,27 @@ describe('HE-15-HU04 · Distribución desde otro computador', () => {
     ).toBeTruthy();
   });
 });
+
+describe('RD-83 · Pantalla de edición', () => {
+  /** El Núcleo falla sin texto en un comando; los demás responden como siempre. */
+  function conFalla(comando: string) {
+    const n = nucleo([RELOJ]);
+    const invocar = ((c: string, p: never) =>
+      c === comando
+        ? Promise.resolve({ ok: false, error: { code: 'internal.unexpected', message: '' } })
+        : (n.invocar as unknown as (c: string, p: never) => unknown)(c, p)) as unknown as Invoke;
+    return { ...n, invocar };
+  }
+
+  it.each([
+    ['«Guardar»', 'layout_edit_save', 'Guardar'],
+    ['«Cancelar»', 'layout_edit_cancel', 'Cancelar'],
+  ])('RD-83 · %s sin texto muestra el genérico', async (_, comando, opcion) => {
+    await abrir(conFalla(comando));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: opcion }));
+    });
+    expect(screen.getByRole('alert').textContent).toBe('Ocurrió un error inesperado. Intenta de nuevo.');
+    expect(screen.getByRole('main', { name: 'Pantalla de edición' })).toBeTruthy();
+  });
+});

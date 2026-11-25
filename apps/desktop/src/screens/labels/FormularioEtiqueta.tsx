@@ -8,6 +8,7 @@ import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
 import { CatalogoColores, type ColorDelCatalogo } from '@/ui/CatalogoColores/CatalogoColores';
 import { VentanaEmergente } from '@/ui/VentanaEmergente/VentanaEmergente';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { useMostrarError } from '@/ui/MensajeResultado/MensajeResultado';
 
 // P-ETQ-02 Formulario de etiqueta, título «Nueva etiqueta» (HE-08-HU02-ET01, ET02) o «Editar etiqueta» con el
 // nombre y el color actuales (HE-08-HU03-ET01, ET02). Ventana emergente sobre la
@@ -46,6 +47,7 @@ export function FormularioEtiqueta({ etiqueta, alGuardar, alCancelar }: Formular
   });
   const [colores, setColores] = useState<ColorDelCatalogo[]>([]);
   const campos = useMensajesDeCampo(CAMPOS, REGLAS);
+  const mostrarError = useMostrarError();
 
   // ET05: el color se toma del catálogo de colores (IPC-CAT-01).
   useEffect(() => {
@@ -70,12 +72,12 @@ export function FormularioEtiqueta({ etiqueta, alGuardar, alCancelar }: Formular
       ? await invocar('label_update', { id: etiqueta.id, ...datos })
       : await invocar('label_create', datos);
     if (!r.ok) {
-      if (r.error.field) campos.mostrarDelNucleo([r.error]);
+      if (!campos.mostrarDelNucleo([r.error])) mostrarError(r.error);
       return;
     }
     const porDefecto = etiqueta ? textos.ETIQUETA_ACTUALIZADA : textos.ETIQUETA_CREADA;
     alGuardar(r.value, r.result_message?.message ?? porDefecto);
-  }, [alGuardar, campos, etiqueta, invocar, valores]);
+  }, [alGuardar, campos, etiqueta, invocar, mostrarError, valores]);
   const { ejecutar, enCurso } = useEnvioUnico(guardar);
 
   return (

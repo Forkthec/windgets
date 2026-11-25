@@ -6,6 +6,7 @@ import type { CatalogItem, ImageRef } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { MiniaturaDelCatalogo } from './MiniaturaDelCatalogo';
+import { textoDelError } from '@/ipc/textoDelError';
 
 // Subpantalla Imagen estática (Widgets > Agregar widget > Imagen estática; HE-04-HU07-ET01): «Subir imagen» con el
 // texto «JPG, JPEG o PNG. Máximo 20 MB.», «Catálogo de imágenes», «Agregar» y «Regresar» (RT-03). El Núcleo valida
@@ -41,7 +42,7 @@ export function AgregarImagenEstatica({ alRegresar, alIrAWidgets }: AgregarImage
     const r = await invocar('image_import', { path: ruta, purpose: 'static_image' });
     if (!r.ok) {
       // CA03, CA04: el archivo no se acepta.
-      setMensaje(r.error.message);
+      setMensaje(textoDelError(r.error));
       return;
     }
     setMensaje('');
@@ -52,13 +53,14 @@ export function AgregarImagenEstatica({ alRegresar, alIrAWidgets }: AgregarImage
   const abrirCatalogo = async () => {
     const r = await invocar('catalog_list', { kind: 'image' });
     if (r.ok) setCatalogo(r.value);
+    else setMensaje(textoDelError(r.error));
   };
 
   const agregar = useCallback(async () => {
     if (!imagen) return;
     const r = await invocar('widget_add', { type: 'static_image', config: imagen });
     if (!r.ok) {
-      setMensaje(r.error.message);
+      setMensaje(textoDelError(r.error));
       return;
     }
     alIrAWidgets();

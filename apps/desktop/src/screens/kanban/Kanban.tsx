@@ -21,7 +21,7 @@ import type {
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
 import { MenuDeAcciones } from '@/ui/MenuDeAcciones/MenuDeAcciones';
-import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
+import { useMensajeDeResultado, useMostrarError } from '@/ui/MensajeResultado/MensajeResultado';
 import textos from '@/types/messages.es.json';
 import { FormularioColumna } from './FormularioColumna';
 import { useNucleo, useParametrosDeNavegacion } from '@/ventana_principal/VentanaPrincipal';
@@ -287,6 +287,7 @@ function Columna({
 export function Kanban() {
   const { invocar, escuchar } = useNucleo();
   const mostrarResultado = useMensajeDeResultado();
+  const mostrarError = useMostrarError();
   const [columnas, setColumnas] = useState<BoardColumn[] | null>(null);
   // Formulario de columna abierto: `null` para crear (HE-09-HU03) o la columna que se edita (HE-09-HU04).
   const [formularioColumna, setFormularioColumna] = useState<{ columna: Column | null } | null>(null);
@@ -324,7 +325,8 @@ export function Kanban() {
   const cambiarVista = async (nueva: PreferenceBoardCardView) => {
     if (nueva === vista) return;
     setVista(nueva);
-    await invocar('preference_set', { board_card_view: nueva });
+    const r = await invocar('preference_set', { board_card_view: nueva });
+    if (!r.ok) mostrarError(r.error);
   };
 
   // Un arrastre que termina dispara un clic sobre la tarjeta: durante ese instante no se abre el detalle.
@@ -334,7 +336,11 @@ export function Kanban() {
   // HE-09-HU06-CA01, CA03, CA07: M-09 sin tarjetas o M-13 con la cantidad y el nombre actual de Por hacer.
   const preguntarEliminar = async (columna: Column) => {
     const r = await invocar('column_get_delete_info', { id: columna.id });
-    if (!r.ok) return;
+    if (!r.ok) {
+      mostrarError(r.error);
+      void leer();
+      return;
+    }
     const { name, card_count, destination_name } = r.value;
     const texto =
       card_count === 0
@@ -349,7 +355,8 @@ export function Kanban() {
   const eliminarColumna = async (columna: Column) => {
     setPorEliminar(null);
     const r = await invocar('column_delete', { id: columna.id });
-    mostrarResultado(r.ok ? (r.result_message?.message ?? textos.COLUMNA_ELIMINADA) : r.error.message);
+    if (r.ok) mostrarResultado(r.result_message?.message ?? textos.COLUMNA_ELIMINADA);
+    else mostrarError(r.error);
     void leer();
   };
 
@@ -371,20 +378,21 @@ export function Kanban() {
   const mover = useCallback(
     async (movimiento: CardMoveParams) => {
       const r = await invocar('card_move', movimiento);
-      if (!r.ok && r.error.code === 'card.not_found') mostrarResultado(r.error.message);
+      if (!r.ok) mostrarError(r.error);
       await leer();
     },
-    [invocar, leer, mostrarResultado],
+    [invocar, leer, mostrarError],
   );
   // Arrastrar empieza al desplazar el puntero unos píxeles: así seleccionar el título o «Mover a» no arrastra.
   const sensores = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   // HE-09-HU05: reordenar con el encabezado. Sin mensaje de resultado (DP-05); el tablero se vuelve a leer.
   const reordenar = useCallback(
     async (orden: string[]) => {
-      await invocar('column_reorder', { column_ids: orden });
+      const r = await invocar('column_reorder', { column_ids: orden });
+      if (!r.ok) mostrarError(r.error);
       await leer();
     },
-    [invocar, leer],
+    [invocar, leer, mostrarError],
   );
   const soltada = useCallback(
     ({ active, over }: DragEndEvent) => {

@@ -5,6 +5,7 @@ import type { GeocodeResult } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { CampoCiudad } from './CampoCiudad';
+import { textoDelError } from '@/ipc/textoDelError';
 
 // Subpantalla Clima (Widgets > Agregar widget > Clima; HE-04-HU05-ET01): el campo Ciudad y las opciones «Agregar»
 // y «Regresar» (RT-03). El campo sugiere lugares mientras se escribe y la persona elige uno (ET18, P29); el Núcleo
@@ -31,7 +32,7 @@ export function AgregarClima({ alRegresar, alIrAWidgets }: AgregarClimaProps) {
     const r = await invocar('widget_add', { type: 'weather', config: { city: lugar.name, place: lugar } });
     if (!r.ok) {
       // CA04, CA05, CA09: el mensaje va en el campo Ciudad.
-      setMensaje(r.error.message);
+      setMensaje(textoDelError(r.error));
       return;
     }
     alIrAWidgets();

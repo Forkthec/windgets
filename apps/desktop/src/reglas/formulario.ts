@@ -1,5 +1,6 @@
 import { useCallback, useId, useMemo, useState } from 'react';
 import type { AppError } from '@/types';
+import { textoDelError } from '@/ipc/textoDelError';
 
 // Reglas de formularios de RT-04 (mensajes, opciones deshabilitadas y alineación). Los textos y los límites de
 // cada campo los define la HU de su formulario (RT-04-ET08); aquí solo está el comportamiento común.
@@ -21,8 +22,11 @@ export interface MensajesDeCampo<C extends string> {
   validarTodo: (valores: Record<C, string>) => boolean;
   /** Al cambiar un campo con mensaje, lo vuelve a validar y lo quita si ya es válido (RT-04-ET07). */
   alCorregir: (campo: C, valor: string) => void;
-  /** Muestra los errores de campo que devolvió el Núcleo (`AppError.field`), todos a la vez. */
-  mostrarDelNucleo: (errores: ReadonlyArray<Pick<AppError, 'field' | 'message'>>) => void;
+  /**
+   * Muestra los errores de campo que devolvió el Núcleo (`AppError.field`), todos a la vez. Devuelve `false` si
+   * ninguno es de un campo del formulario: quien llama lo muestra aparte (RD-83).
+   */
+  mostrarDelNucleo: (errores: ReadonlyArray<Pick<AppError, 'field' | 'message'>>) => boolean;
 }
 
 /**
@@ -82,10 +86,11 @@ export function useMensajesDeCampo<C extends string>(
       const nuevos: Partial<Record<C, string>> = {};
       for (const error of errores) {
         const campo = orden.find((c) => c === error.field);
-        if (campo && !nuevos[campo]) nuevos[campo] = error.message;
+        if (campo && !nuevos[campo]) nuevos[campo] = textoDelError(error);
       }
       setMensajes(nuevos);
       enfocarPrimero(nuevos);
+      return Object.keys(nuevos).length > 0;
     },
     [enfocarPrimero, orden],
   );

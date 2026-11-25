@@ -1424,3 +1424,46 @@ describe('INT-09 · Miniaturas del catálogo que todavía no se descargaron', ()
     ).toBeTruthy();
   });
 });
+
+describe('RD-83 · Personalización: ninguna acción falla en silencio', () => {
+  const falla = () => ({ ok: false as const, error: { code: 'internal.unexpected' as const, message: '' } });
+  const avisos = () =>
+    screen
+      .queryAllByRole('alert')
+      .map((a) => a.textContent)
+      .join(' ');
+
+  it.each([
+    ['elegir una plantilla', 'theme_draft_update', /Minimal/],
+    ['«Cancelar»', 'theme_draft_discard', 'Cancelar'],
+    ['«Restablecer colores»', 'theme_draft_reset', 'Restablecer colores'],
+    ['«Aplicar»', 'theme_draft_apply', 'Aplicar'],
+    ['«Catálogo de imágenes»', 'catalog_list', 'Catálogo de imágenes'],
+  ] as const)('RD-83 · %s sin texto muestra el genérico', async (_, comando, opcion) => {
+    // «Aplicar» solo se habilita con cambios (HE-02-HU12-ET06).
+    const nucleo = await abrir(comando === 'theme_draft_apply');
+    await waitFor(() => expect(lista().value).toBe('t1'));
+    const accion = screen.getByRole('button', { name: opcion }) as HTMLButtonElement;
+    await waitFor(() => expect(accion.disabled).toBe(false));
+    nucleo.responder(comando, falla);
+    fireEvent.click(accion);
+    await waitFor(() => expect(avisos()).toContain(textos.ERROR_INESPERADO));
+  });
+
+  it('RD-83 · «Salir sin guardar» que no puede descartar se queda en la pantalla con el motivo', async () => {
+    const nucleo = await abrir(true);
+    nucleo.responder('theme_draft_get_status', () => ({
+      ok: true,
+      value: { dirty: true, applied_unsaved: false, theme_name: 'Mi tema' },
+    }));
+    nucleo.responder('theme_draft_discard', falla);
+    fireEvent.click(screen.getByRole('button', { name: 'Personalización' }));
+    const menu = screen.getByRole('navigation', { name: 'Menú principal' });
+    fireEvent.click(within(menu).getByRole('button', { name: 'Planificador diario' }));
+    const dialogo = await screen.findByRole('dialog');
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Salir sin guardar' }));
+    await waitFor(() => expect(avisos()).toContain(textos.ERROR_INESPERADO));
+    expect(screen.getByRole('main', { name: 'Personalización del wallpaper' })).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+});

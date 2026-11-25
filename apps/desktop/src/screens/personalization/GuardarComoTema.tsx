@@ -5,6 +5,7 @@ import { Boton } from '@/ui/Boton/Boton';
 import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
 import { VentanaEmergente } from '@/ui/VentanaEmergente/VentanaEmergente';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { textoDelError } from '@/ipc/textoDelError';
 
 // P-TEM-02 Guardar como tema (HE-03-HU02-ET01): ventana emergente sobre Personalización del wallpaper (RT-02),
 // con el campo Nombre y las opciones «Guardar» y «Cancelar». La vista repite el largo del nombre; el Núcleo
@@ -43,7 +44,7 @@ export function GuardarComoTema({ alGuardar, alCancelar }: GuardarComoTemaProps)
     const r = await invocar('theme_draft_save_as', { name: nombre.trim() });
     if (!r.ok) {
       // ET09: el largo y el duplicado van en el campo Nombre.
-      setMensaje(r.error.message);
+      setMensaje(textoDelError(r.error));
       return;
     }
     alGuardar(r.result_message?.message ?? '');

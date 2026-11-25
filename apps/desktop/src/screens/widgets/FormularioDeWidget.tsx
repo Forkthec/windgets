@@ -7,6 +7,7 @@ import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
 import { VentanaEmergente } from '@/ui/VentanaEmergente/VentanaEmergente';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { CampoCiudad } from './CampoCiudad';
+import { textoDelError } from '@/ipc/textoDelError';
 
 // Formulario de widget (HE-04-HU12-ET05, ET06; D-202): ventana emergente sobre Widgets (RT-02) con el mismo campo
 // que la subpantalla de agregar (Ciudad para Clima y Texto para Texto), precargado, y «Guardar» y «Cancelar».
@@ -48,7 +49,7 @@ export function FormularioDeWidget({ widget, alGuardar, alCancelar }: Formulario
     });
     if (!r.ok) {
       // CA04, CA05: el mensaje va en el campo.
-      setMensaje(r.error.message);
+      setMensaje(textoDelError(r.error));
       return;
     }
     alGuardar();
