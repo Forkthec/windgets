@@ -7,6 +7,10 @@
 /// `service.unavailable`: el servicio de cuentas no responde (RT-04-CA13, D-205; contratos.md, 1.3).
 pub const SERVICIO_NO_DISPONIBLE: &str =
     "No pudimos completar la operación. Intenta de nuevo más tarde.";
+/// RD-24 y RD-83: lo que muestran las vistas cuando un error llega sin texto (`internal.unexpected`, DP-02).
+pub const ERROR_INESPERADO: &str = "Ocurrió un error inesperado. Intenta de nuevo.";
+/// `session.expired` (RD-89): un comando necesita la sesión y no la hay o no se pudo renovar.
+pub const SESION_VENCIDA: &str = "Tu sesión venció. Inicia sesión de nuevo.";
 
 // HE-01-HU01 · Registrar una cuenta con alias y correo electrónico (IPC-AUTH-01 auth_register_start).
 
@@ -60,6 +64,8 @@ pub const REENVIO_EN_SEGUNDOS: &str = "Puedes pedir un nuevo código en <segundo
 pub const CREDENCIALES_INCORRECTAS: &str = "Correo electrónico o contraseña incorrectos.";
 /// `net.offline` en Inicio de sesión (HE-01-HU04-CA10).
 pub const SIN_CONEXION_INICIO: &str = "No hay conexión a internet. Conéctate para iniciar sesión.";
+/// `auth.user_banned` (RD-88): Supabase tiene la cuenta bloqueada.
+pub const CUENTA_BLOQUEADA: &str = "Tu cuenta está bloqueada. Escríbenos para revisarla.";
 
 // HE-01-HU06 a HU08 · Recuperar contraseña (IPC-AUTH-08 a IPC-AUTH-11).
 
@@ -202,6 +208,9 @@ pub const RANGO_MUY_LARGO: &str = "El rango máximo es de un año.";
 
 /// `card.not_found` (HE-07-HU04-CA11; DP-04: el mismo texto al consultar, eliminar o mover).
 pub const TARJETA_NO_EXISTE: &str = "Esta tarjeta ya no existe.";
+/// `column.not_found` al crear una tarjeta sin el tablero descargado (RD-84).
+pub const TABLERO_NO_DESCARGADO: &str =
+    "Aún no tenemos tu tablero. Conéctate para descargarlo e intenta de nuevo.";
 
 // HE-02-HU10 · Seleccionar el tema en edición (IPC-THEME-04 theme_draft_select).
 
@@ -258,9 +267,15 @@ pub const CAMBIOS_SIN_GUARDAR_AL_APLICAR: &str =
     "Tienes cambios sin guardar en el tema “<nombre del tema>”. ¿Qué deseas hacer?";
 /// `theme.already_applied` (HE-02-HU12-CA06): texto de la opción «Aplicar» deshabilitada.
 pub const TEMA_YA_APLICADO: &str = "Este tema ya está aplicado.";
+/// `theme.not_found` (RD-86): el tema se eliminó en otro computador.
+pub const TEMA_NO_EXISTE: &str = "Este tema ya no existe.";
+/// `palette.not_found` (RD-87): el catálogo desactivó la paleta elegida.
+pub const PALETA_NO_DISPONIBLE: &str = "Esta paleta ya no está disponible. Elige otra.";
 /// `color.invalid` (HE-02-HU05-CA03): mensaje de campo.
 pub const COLOR_INVALIDO: &str =
     "Diligencia un color válido en formato hexadecimal (ej.: #1A2B3C).";
+/// `color.invalid` al crear o editar una columna con un color que el catálogo desactivó (RD-85).
+pub const COLOR_NO_DISPONIBLE: &str = "Este color ya no está disponible. Elige otro.";
 /// Aviso de legibilidad (HE-02-HU05-CA05): lo arma la vista con el contraste y el color sugerido de
 /// `legibility`.
 pub const CONTRASTE_BAJO: &str =
@@ -504,6 +519,8 @@ pub const WINDI_FALTA_FECHA: &str =
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
     ("SERVICIO_NO_DISPONIBLE", SERVICIO_NO_DISPONIBLE),
+    ("ERROR_INESPERADO", ERROR_INESPERADO),
+    ("SESION_VENCIDA", SESION_VENCIDA),
     ("CAMPO_OBLIGATORIO", CAMPO_OBLIGATORIO),
     (
         "PERSONALIZACION_REMOTA_CON_CAMBIOS",
@@ -525,6 +542,7 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("REENVIO_EN_SEGUNDOS", REENVIO_EN_SEGUNDOS),
     ("CREDENCIALES_INCORRECTAS", CREDENCIALES_INCORRECTAS),
     ("SIN_CONEXION_INICIO", SIN_CONEXION_INICIO),
+    ("CUENTA_BLOQUEADA", CUENTA_BLOQUEADA),
     ("GOOGLE_CANCELADO", GOOGLE_CANCELADO),
     (
         "CODIGO_DE_RECUPERACION_ENVIADO",
@@ -542,6 +560,7 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("DESCRIPCION_MUY_LARGA", DESCRIPCION_MUY_LARGA),
     ("MAXIMO_ETIQUETAS", MAXIMO_ETIQUETAS),
     ("TARJETA_NO_EXISTE", TARJETA_NO_EXISTE),
+    ("TABLERO_NO_DESCARGADO", TABLERO_NO_DESCARGADO),
     ("COLUMNA_CREADA", COLUMNA_CREADA),
     ("NOMBRE_DE_COLUMNA_MUY_LARGO", NOMBRE_DE_COLUMNA_MUY_LARGO),
     ("COLUMNA_DUPLICADA", COLUMNA_DUPLICADA),
@@ -616,6 +635,8 @@ pub const TEXTOS: &[(&str, &str)] = &[
         CAMBIOS_SIN_GUARDAR_AL_APLICAR,
     ),
     ("TEMA_YA_APLICADO", TEMA_YA_APLICADO),
+    ("TEMA_NO_EXISTE", TEMA_NO_EXISTE),
+    ("PALETA_NO_DISPONIBLE", PALETA_NO_DISPONIBLE),
     ("WIDGET_ELIMINADO", WIDGET_ELIMINADO),
     ("INSTRUCCION_DE_EDICION", INSTRUCCION_DE_EDICION),
     ("CAMBIOS_GUARDADOS", CAMBIOS_GUARDADOS),
@@ -646,6 +667,7 @@ pub const TEXTOS: &[(&str, &str)] = &[
         CAMBIOS_APLICADOS_SIN_GUARDAR_AL_SALIR,
     ),
     ("COLOR_INVALIDO", COLOR_INVALIDO),
+    ("COLOR_NO_DISPONIBLE", COLOR_NO_DISPONIBLE),
     ("CONTRASTE_BAJO", CONTRASTE_BAJO),
     ("BLOQUE_YA_PASO", BLOQUE_YA_PASO),
     (

@@ -42,7 +42,7 @@ export type ErrorCode =
   | 'password.required' | 'password.invalid' | 'password.same_as_current'
   | 'password_confirmation.required' | 'password_confirmation.mismatch'
   | 'code.required' | 'code.incorrect' | 'code.expired' | 'code.resend_too_soon'
-  | 'auth.rate_limited' | 'auth.invalid_credentials' | 'auth.sign_out_failed'
+  | 'auth.rate_limited' | 'auth.invalid_credentials' | 'auth.sign_out_failed' | 'auth.user_banned'
   // tarjetas, agenda y planificador
   | 'title.required' | 'title.too_long'
   | 'due_date.required' | 'due_date.invalid' | 'due_date.in_past'
@@ -60,6 +60,7 @@ export type ErrorCode =
   // temas y personalización
   | 'draft.unsaved_changes' | 'draft.unsaved_changes_on_apply' | 'draft.no_changes'
   | 'theme.limit_reached' | 'theme.already_applied' | 'theme.applied_not_deletable' | 'theme.content_duplicate'
+  | 'theme.not_found' | 'palette.not_found'
   | 'background.already_default'
   | 'template.not_found' | 'font.not_found' | 'image.not_found'
   // imágenes y catálogos

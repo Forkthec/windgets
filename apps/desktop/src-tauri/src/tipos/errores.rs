@@ -51,6 +51,9 @@ pub enum ErrorCode {
     AuthInvalidCredentials,
     #[serde(rename = "auth.sign_out_failed")]
     AuthSignOutFailed,
+    /// RD-88 (P43): Supabase tiene la cuenta bloqueada.
+    #[serde(rename = "auth.user_banned")]
+    AuthUserBanned,
     #[serde(rename = "title.required")]
     TitleRequired,
     #[serde(rename = "title.too_long")]
@@ -119,6 +122,12 @@ pub enum ErrorCode {
     ThemeAppliedNotDeletable,
     #[serde(rename = "theme.content_duplicate")]
     ThemeContentDuplicate,
+    /// RD-86 (P43): el tema ya no existe (se eliminó en otro computador).
+    #[serde(rename = "theme.not_found")]
+    ThemeNotFound,
+    /// RD-87 (P43): el catálogo desactivó la paleta elegida.
+    #[serde(rename = "palette.not_found")]
+    PaletteNotFound,
     #[serde(rename = "background.already_default")]
     BackgroundAlreadyDefault,
     #[serde(rename = "template.not_found")]
