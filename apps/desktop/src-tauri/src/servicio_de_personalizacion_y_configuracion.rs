@@ -226,6 +226,21 @@ impl ServicioDePersonalizacion {
             .map_err(de_sqlx)
     }
 
+    /// RD-86: el tema pedido, o el que está en edición, se eliminó en otro computador (`theme.not_found`). El
+    /// tema inicial virtual todavía no se ha guardado y no cuenta.
+    async fn comprobar_que_existe(
+        base: &BaseLocal,
+        user_id: &str,
+        theme_id: &str,
+    ) -> Result<(), AppError> {
+        if theme_id != TEMA_INICIAL_VIRTUAL
+            && Self::guardado(base, user_id, theme_id).await?.is_none()
+        {
+            return Err(tema_no_existe());
+        }
+        Ok(())
+    }
+
     /// La plantilla por defecto como contenido de un tema nuevo (HE-02-HU10-ET05).
     async fn contenido_inicial(base: &BaseLocal) -> Result<ThemeContent, AppError> {
         let pool = base.pool().await.map_err(de_sqlx)?;
@@ -339,6 +354,8 @@ impl ServicioDePersonalizacion {
         theme_id: &str,
         descartar_cambios: bool,
     ) -> Result<ThemeDraftView, AppError> {
+        // RD-86: antes de preguntar por los cambios sin guardar, el tema pedido debe existir.
+        Self::comprobar_que_existe(base, user_id, theme_id).await?;
         if let Some(actual) = self.con_borrador(|b| b.clone())
             && actual.dirty()
             && actual.theme_id != theme_id
@@ -911,6 +928,11 @@ pub mod reparacion;
 pub mod ultima_pantalla;
 mod widgets;
 
+/// `theme.not_found` (RD-86): el tema se eliminó en otro computador.
+fn tema_no_existe() -> AppError {
+    error(ErrorCode::ThemeNotFound, messages::TEMA_NO_EXISTE, None)
+}
+
 #[cfg(test)]
 mod pruebas_de_agregar_clima;
 #[cfg(test)]
@@ -929,6 +951,8 @@ mod pruebas_de_distribucion;
 mod pruebas_de_eliminar_tema;
 #[cfg(test)]
 mod pruebas_de_eliminar_widget;
+#[cfg(test)]
+mod pruebas_de_errores_visibles;
 #[cfg(test)]
 mod pruebas_de_escritorio;
 #[cfg(test)]

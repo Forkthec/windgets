@@ -1,6 +1,6 @@
 import { useCallback, useId, useState, type FormEvent } from 'react';
 import { useEnvioUnico } from '@/reglas/envio';
-import type { ThemeSummary } from '@/types';
+import type { AppError, ThemeSummary } from '@/types';
 import textos from '@/types/messages.es.json';
 import { Boton } from '@/ui/Boton/Boton';
 import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
@@ -21,9 +21,11 @@ export interface RenombrarTemaProps {
   alGuardar: (mensaje: string) => void;
   /** «Cancelar» (o Esc): cierra y conserva el nombre original (CA05). */
   alCancelar: () => void;
+  /** El tema ya no existe (RD-86): la pantalla cierra la ventana, lo dice y vuelve a leer la lista. */
+  alDesaparecer: (error: AppError) => void;
 }
 
-export function RenombrarTema({ tema, alGuardar, alCancelar }: RenombrarTemaProps) {
+export function RenombrarTema({ tema, alGuardar, alCancelar, alDesaparecer }: RenombrarTemaProps) {
   const { invocar } = useNucleo();
   const idFormulario = useId();
   // CA07: el campo Nombre con el nombre actual.
@@ -45,12 +47,13 @@ export function RenombrarTema({ tema, alGuardar, alCancelar }: RenombrarTemaProp
     }
     const r = await invocar('theme_rename', { theme_id: tema.id, name: nombre.trim() });
     if (!r.ok) {
+      if (r.error.code === 'theme.not_found') return alDesaparecer(r.error);
       // ET05: el largo y el duplicado van en el campo Nombre.
       setMensaje(textoDelError(r.error));
       return;
     }
     alGuardar(r.result_message?.message ?? '');
-  }, [alGuardar, invocar, nombre, tema.id, vacio]);
+  }, [alDesaparecer, alGuardar, invocar, nombre, tema.id, vacio]);
   const { ejecutar, enCurso } = useEnvioUnico(guardar);
 
   return (

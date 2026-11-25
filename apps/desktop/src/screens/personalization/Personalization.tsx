@@ -4,6 +4,7 @@ import { recursoDelFondo } from '@/capa/Capa';
 import { urlDeArchivo } from '@/ipc/archivos';
 import textos from '@/types/messages.es.json';
 import type {
+  AppError,
   ApplyMode,
   CatalogItem,
   Legibility,
@@ -103,6 +104,15 @@ export function Personalization() {
     const r = await invocar('theme_list', {});
     if (r.ok) setTemas(r.value);
   }, [invocar]);
+
+  /** El error de una acción sobre un tema; si ya no existe (RD-86), la lista se vuelve a leer. */
+  const fallar = useCallback(
+    (error: AppError) => {
+      mostrarError(error);
+      if (error.code === 'theme.not_found') void leerTemas();
+    },
+    [leerTemas, mostrarError],
+  );
 
   useEffect(() => {
     let vigente = true;
@@ -296,8 +306,11 @@ export function Personalization() {
   // HE-02-HU11: «Guardar» actualiza el tema en edición (no crea otro) y no toca el escritorio (ET01, ET02).
   const guardar = async () => {
     const r = await invocar('theme_draft_save', {});
-    // El tipo sale del texto (RD-63): «Ya tienes el tema…» sigue como mensaje de resultado (HE-02-HU11-ET06).
-    if (!r.ok) return mostrarResultado(textoDelError(r.error));
+    if (!r.ok) {
+      if (r.error.code === 'theme.not_found') return fallar(r.error);
+      // El tipo sale del texto (RD-63): «Ya tienes el tema…» sigue como mensaje de resultado (HE-02-HU11-ET06).
+      return mostrarResultado(textoDelError(r.error));
+    }
     mostrarResultado(r.result_message?.message ?? '');
     const abierto = await invocar('theme_draft_open', {});
     if (abierto.ok) setBorrador(abierto.value);
@@ -311,7 +324,7 @@ export function Personalization() {
     const r = await invocar('theme_draft_apply', { mode });
     if (!r.ok) {
       if (r.error.code === 'draft.unsaved_changes_on_apply') setAlAplicar(textoDelError(r.error));
-      else mostrarError(r.error);
+      else fallar(r.error);
       return;
     }
     mostrarResultado(r.result_message?.message ?? '');
@@ -373,9 +386,11 @@ export function Personalization() {
               <Selector
                 etiqueta="Tema en edición"
                 valor={borrador.theme_id}
-                opciones={(temas.length > 0 ? temas : [{ id: borrador.theme_id, name: borrador.name }]).map(
-                  (t) => ({ valor: t.id, texto: t.name }),
-                )}
+                // El tema en edición va en la lista aunque aún no esté guardado o ya no exista (RD-86).
+                opciones={(temas.some((t) => t.id === borrador.theme_id)
+                  ? temas
+                  : [{ id: borrador.theme_id, name: borrador.name }, ...temas]
+                ).map((t) => ({ valor: t.id, texto: t.name }))}
                 alCambiar={(id) => void seleccionar(id)}
               />
             </div>
@@ -651,7 +666,7 @@ export function Personalization() {
           alConfirmar={() =>
             void invocar('theme_draft_save', {}).then((r) => {
               if (r.ok) mostrarResultado(r.result_message?.message ?? '');
-              else mostrarError(r.error);
+              else fallar(r.error);
               responderSalida(r.ok);
             })
           }

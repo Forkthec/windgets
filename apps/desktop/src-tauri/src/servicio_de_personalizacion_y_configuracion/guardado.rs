@@ -79,6 +79,8 @@ impl ServicioDePersonalizacion {
     ) -> Result<ConMensaje<ThemeDraftSaveResult>, AppError> {
         self.abrir_borrador(base, user_id, None).await?;
         let borrador = self.con_borrador(|b| b.clone()).ok_or_else(inesperado)?;
+        // RD-86: sin el tema, el `UPDATE` no cambiaría nada y «Guardar» diría que guardó.
+        Self::comprobar_que_existe(base, user_id, &borrador.theme_id).await?;
         if !borrador.dirty() {
             return Err(error(
                 ErrorCode::DraftNoChanges,

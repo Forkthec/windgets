@@ -135,7 +135,20 @@ const PALETAS_SIMULADAS = {
 let contenidoAplicado = TEMA_SIMULADO.content;
 let paletaEnBorrador: keyof typeof PALETAS_SIMULADAS | null = null;
 
+// docs/rediseno.md RD-86: «Verano» hace de tema que se eliminó en otro computador: cualquier acción sobre él
+// responde `theme.not_found` y deja de aparecer en la lista.
+const TEMA_ELIMINADO = 'verano';
+let eliminadoALaVista = true;
+function conTemaSimulado(themeId: string): Result<never> {
+  if (themeId !== TEMA_ELIMINADO) return error({ code: 'internal.unexpected', message: '' });
+  eliminadoALaVista = false;
+  return error({ code: 'theme.not_found', message: textos.TEMA_NO_EXISTE });
+}
+
 const respuestas: Respuestas = {
+  theme_apply: ({ theme_id }) => conTemaSimulado(theme_id),
+  theme_rename: ({ theme_id }) => conTemaSimulado(theme_id),
+  theme_delete: ({ theme_id }) => conTemaSimulado(theme_id),
   theme_get_applied: () => ({
     ok: true,
     value: {
@@ -192,6 +205,18 @@ const respuestas: Respuestas = {
         has_unapplied_changes: false,
         has_unsaved_changes: false,
       },
+      ...(eliminadoALaVista
+        ? [
+            {
+              id: TEMA_ELIMINADO,
+              name: 'Verano',
+              last_modified_at: '2026-10-20T00:00:00.000Z',
+              is_applied: false,
+              has_unapplied_changes: false,
+              has_unsaved_changes: false,
+            },
+          ]
+        : []),
     ],
   }),
   theme_draft_open: () => ({ ok: true, value: TEMA_SIMULADO }),
@@ -238,7 +263,8 @@ const respuestas: Respuestas = {
     w.is_active = active;
     return { ok: true, value: { ...w } };
   },
-  theme_draft_select: () => ({ ok: true, value: TEMA_SIMULADO }),
+  theme_draft_select: ({ theme_id }) =>
+    theme_id === TEMA_ELIMINADO ? conTemaSimulado(theme_id) : { ok: true, value: TEMA_SIMULADO },
   connectivity_get: () => ({ ok: true, value: { online: true } }),
   // HE-04-HU03: fuera de Windows no hay formato regional que leer; 24 horas (ET02).
   system_time_format_get: () => ({ ok: true, value: { hour_cycle: 'h23', two_digit_hour: true } }),

@@ -43,9 +43,9 @@ impl ServicioDePersonalizacion {
             .await
             .map_err(de_sqlx)?
             .rows_affected();
-        // Sin texto: la vista solo ofrece «Eliminar» en temas que existen.
+        // RD-86: ya se había eliminado en otro computador.
         if borrados == 0 {
-            return Err(inesperado());
+            return Err(tema_no_existe());
         }
         let ahora = instante(ahora_ms).0;
         // Los widgets del tema se borran en cascada (sqlite_esquema.sql).

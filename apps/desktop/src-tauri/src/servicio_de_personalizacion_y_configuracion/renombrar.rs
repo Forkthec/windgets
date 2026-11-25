@@ -46,9 +46,9 @@ impl ServicioDePersonalizacion {
                 .fetch_all(pool)
                 .await
                 .map_err(de_sqlx)?;
-        // Sin texto: la vista solo ofrece «Renombrar» en temas que existen.
+        // RD-86: se eliminó en otro computador.
         if !otros.iter().any(|(i, _)| i.to_lowercase() == id) {
-            return Err(inesperado());
+            return Err(tema_no_existe());
         }
         let buscado = nombre.to_lowercase();
         if otros

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { ThemeSummary } from '@/types';
+import type { AppError, ThemeSummary } from '@/types';
 import textos from '@/types/messages.es.json';
 import { Boton } from '@/ui/Boton/Boton';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
@@ -37,6 +37,12 @@ export function Themes() {
     if (r.ok) setTemas(r.value);
   }, [invocar]);
 
+  /** El error de una acción; si el tema ya no existe (RD-86), la lista se vuelve a leer. */
+  const fallar = (error: AppError) => {
+    mostrarError(error);
+    if (error.code === 'theme.not_found') void leer();
+  };
+
   useEffect(() => {
     void leer();
     // EV-10 al guardar, crear, renombrar o eliminar temas; EV-11 al aplicar uno.
@@ -63,7 +69,7 @@ export function Themes() {
     } else if (r.error.code === 'draft.unsaved_changes') {
       setSinGuardar({ tema, mensaje: textoDelError(r.error) });
     } else {
-      mostrarError(r.error);
+      fallar(r.error);
     }
   };
 
@@ -75,7 +81,7 @@ export function Themes() {
       mostrarResultado(r.result_message?.message ?? '');
       void leer();
     } else {
-      mostrarError(r.error);
+      fallar(r.error);
     }
   };
 
@@ -83,7 +89,7 @@ export function Themes() {
   const guardarYAplicar = async (tema: ThemeSummary) => {
     const r = await invocar('theme_draft_save', {});
     if (r.ok) await aplicar(tema);
-    else mostrarError(r.error);
+    else fallar(r.error);
   };
 
   return (
@@ -156,6 +162,10 @@ export function Themes() {
             void leer();
           }}
           alCancelar={() => setPorRenombrar(null)}
+          alDesaparecer={(error) => {
+            setPorRenombrar(null);
+            fallar(error);
+          }}
         />
       )}
       {porEliminar && (
