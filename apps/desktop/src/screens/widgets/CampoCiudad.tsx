@@ -1,3 +1,4 @@
+import { CIUDAD_MAX } from '@/reglas/limites';
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import type { GeocodeResult, Invoke } from '@/types';
 import textos from '@/types/messages.es.json';
@@ -13,7 +14,6 @@ import { textoDelError } from '@/ipc/textoDelError';
 /** ET18: las sugerencias empiezan con 2 caracteres, tras 400 ms sin escribir. */
 export const BUSQUEDA_MINIMA = 2;
 export const PAUSA_MS = 400;
-const CIUDAD_MAX = 100;
 
 /** «Popayán, Cauca, Colombia»: el nombre, la región si la hay y el país. */
 export function nombreDelLugar(lugar: GeocodeResult): string {

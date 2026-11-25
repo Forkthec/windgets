@@ -4,9 +4,6 @@ import type { SaludoDeWindi } from './MarcoDeCuenta';
 
 export const AYUDA_CONTRASENA = '8 a 64 caracteres con al menos una mayúscula, una minúscula y un número.';
 
-/** Máximos de los contadores (RD-10): los mismos límites que validan los campos (`validaciones.ts`). */
-export const MAXIMO = { alias: 30, correo: 64, contrasena: 64 } as const;
-
 export const PASOS_DE_REGISTRO = ['Formulario', 'Verificar correo'] as const;
 
 export const PANTALLAS = {

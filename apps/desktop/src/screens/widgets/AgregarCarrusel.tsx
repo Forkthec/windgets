@@ -1,3 +1,4 @@
+import { CARRUSEL_IMAGENES_MAX, CARRUSEL_IMAGENES_MIN } from '@/reglas/limites';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useState } from 'react';
 import { useEnvioUnico } from '@/reglas/envio';
@@ -13,10 +14,6 @@ import { textoDelError } from '@/ipc/textoDelError';
 // Subpantalla Carrusel de imágenes (Widgets > Agregar widget > Carrusel de imágenes; HE-04-HU08-ET01): «Subir
 // imagen», «Catálogo de imágenes», la lista de imágenes elegidas con «<cantidad> de 10», el campo Intervalo en
 // segundos (5 por defecto) y las opciones «Agregar» y «Regresar» (RT-03).
-
-/** ET02, ET05 (D-040): de 2 a 10 imágenes. */
-const MINIMO = 2;
-const MAXIMO = 10;
 
 interface Elegida {
   imagen: ImageRef;
@@ -35,12 +32,12 @@ export function AgregarCarrusel({ alRegresar, alIrAWidgets }: AgregarCarruselPro
   const [rechazo, setRechazo] = useState('');
   const [intervalo, setIntervalo] = useState('5');
   const [mensajeIntervalo, setMensajeIntervalo] = useState('');
-  const lleno = elegidas.length >= MAXIMO;
+  const lleno = elegidas.length >= CARRUSEL_IMAGENES_MAX;
 
   /** ET06: si se eligen varias a la vez que superan el límite, solo entran las que caben. */
   const sumar = (nuevas: Elegida[]) =>
     setElegidas((actuales) => {
-      const caben = nuevas.slice(0, MAXIMO - actuales.length);
+      const caben = nuevas.slice(0, CARRUSEL_IMAGENES_MAX - actuales.length);
       if (caben.length < nuevas.length) setRechazo(textos.CARRUSEL_DEMASIADAS_IMAGENES);
       return [...actuales, ...caben];
     });
@@ -59,7 +56,7 @@ export function AgregarCarrusel({ alRegresar, alIrAWidgets }: AgregarCarruselPro
     }
     setRechazo('');
     const nuevas: Elegida[] = [];
-    for (const ruta of rutas.slice(0, MAXIMO - elegidas.length)) {
+    for (const ruta of rutas.slice(0, CARRUSEL_IMAGENES_MAX - elegidas.length)) {
       const r = await invocar('image_import', { path: ruta, purpose: 'carousel_item' });
       if (!r.ok) {
         // CA05, CA06 (ET03): ese archivo no entra al carrusel.
@@ -72,7 +69,8 @@ export function AgregarCarrusel({ alRegresar, alIrAWidgets }: AgregarCarruselPro
       });
     }
     sumar(nuevas);
-    if (rutas.length > MAXIMO - elegidas.length) setRechazo(textos.CARRUSEL_DEMASIADAS_IMAGENES);
+    if (rutas.length > CARRUSEL_IMAGENES_MAX - elegidas.length)
+      setRechazo(textos.CARRUSEL_DEMASIADAS_IMAGENES);
   };
 
   const abrirCatalogo = async () => {
@@ -124,7 +122,7 @@ export function AgregarCarrusel({ alRegresar, alIrAWidgets }: AgregarCarruselPro
       />
       {/* docs/rediseno.md RD-60: las imágenes del carrusel en una fila de fondo de columna (84:818). */}
       <div className="wg-subpantalla-widget__dato">
-        <p>{`${elegidas.length} de ${MAXIMO}`}</p>
+        <p>{`${elegidas.length} de ${CARRUSEL_IMAGENES_MAX}`}</p>
         <ol aria-label="Imágenes elegidas">
           {elegidas.map((e, i) => (
             <li key={`${i}-${e.nombre}`}>{e.nombre}</li>
@@ -177,8 +175,8 @@ export function AgregarCarrusel({ alRegresar, alIrAWidgets }: AgregarCarruselPro
         {/* ET07: con menos de 2 imágenes, deshabilitada con su texto (RT-04). */}
         <Boton
           principal
-          disabled={elegidas.length < MINIMO || enCurso}
-          motivo={elegidas.length < MINIMO ? textos.CARRUSEL_POCAS_IMAGENES : undefined}
+          disabled={elegidas.length < CARRUSEL_IMAGENES_MIN || enCurso}
+          motivo={elegidas.length < CARRUSEL_IMAGENES_MIN ? textos.CARRUSEL_POCAS_IMAGENES : undefined}
           onClick={() => void ejecutar()}
         >
           Agregar

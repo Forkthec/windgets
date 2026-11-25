@@ -1,3 +1,4 @@
+import { COLUMNA_NOMBRE_MAX } from '@/reglas/limites';
 import { useCallback, useId, useState, type FormEvent } from 'react';
 import { useEnvioUnico } from '@/reglas/envio';
 import { estaVacio, useMensajesDeCampo, type Validador } from '@/reglas/formulario';
@@ -15,7 +16,6 @@ import { useMostrarError } from '@/ui/MensajeResultado/MensajeResultado';
 // «Editar columna» (HE-09-HU04-ET02), con las mismas reglas de nombre (ET09). Ventana emergente sobre el Tablero
 // Kanban (RT-02). La vista repite las validaciones de campo; el Núcleo vuelve a validar (D-188).
 
-const NOMBRE_MAX = 30;
 /** ET06: el gris viene preseleccionado (IPC-COL-02, `color_id` def. 'gray'). */
 const COLOR_POR_DEFECTO = 'gray';
 
@@ -27,7 +27,7 @@ type Campo = (typeof CAMPOS)[number];
 const REGLAS: Partial<Record<Campo, Validador>> = {
   name: (v) => {
     if (estaVacio(v)) return textos.CAMPO_OBLIGATORIO;
-    return [...v.trim()].length > NOMBRE_MAX ? textos.NOMBRE_DE_COLUMNA_MUY_LARGO : undefined;
+    return [...v.trim()].length > COLUMNA_NOMBRE_MAX ? textos.NOMBRE_DE_COLUMNA_MUY_LARGO : undefined;
   },
 };
 

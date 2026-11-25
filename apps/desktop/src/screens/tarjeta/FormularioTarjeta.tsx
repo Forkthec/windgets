@@ -1,3 +1,4 @@
+import { TARJETA_DESCRIPCION_MAX, TARJETA_ETIQUETAS_MAX, TARJETA_TITULO_MAX } from '@/reglas/limites';
 import { useCallback, useEffect, useId, useMemo, useState, type FormEvent } from 'react';
 import { useEnvioUnico } from '@/reglas/envio';
 import { estaVacio, useMensajesDeCampo, type Validador } from '@/reglas/formulario';
@@ -34,11 +35,6 @@ import { textoDelError } from '@/ipc/textoDelError';
 // de campos, ET04). Ventana emergente sobre la pantalla de origen (RT-02). La vista repite solo las validaciones
 // de campo para mostrar el mensaje al instante; el Núcleo vuelve a validar (D-188).
 
-const TITULO_MAX = 100;
-/** Etiquetas por tarjeta (HE-07-HU02-ET04). */
-const ETIQUETAS_MAX = 5;
-const DESCRIPCION_MAX = 1000;
-
 const CAMPOS = ['title', 'due_date', 'description', 'block_date', 'block_hour'] as const;
 type Campo = (typeof CAMPOS)[number];
 
@@ -65,7 +61,7 @@ function validadores(fechaOriginal?: string): Record<Campo, Validador> {
   return {
     title: (v) => {
       if (estaVacio(v)) return textos.CAMPO_OBLIGATORIO;
-      return [...v.trim()].length > TITULO_MAX ? textos.TITULO_MUY_LARGO : undefined;
+      return [...v.trim()].length > TARJETA_TITULO_MAX ? textos.TITULO_MUY_LARGO : undefined;
     },
     due_date: (v) => {
       if (estaVacio(v)) return textos.CAMPO_OBLIGATORIO;
@@ -74,7 +70,7 @@ function validadores(fechaOriginal?: string): Record<Campo, Validador> {
       if (fechaOriginal !== undefined && fechaIso(fecha) === fechaOriginal) return undefined;
       return fecha < hoy() ? textos.FECHA_LIMITE_ANTERIOR_A_HOY : undefined;
     },
-    description: (v) => ([...v].length > DESCRIPCION_MAX ? textos.DESCRIPCION_MUY_LARGA : undefined),
+    description: (v) => ([...v].length > TARJETA_DESCRIPCION_MAX ? textos.DESCRIPCION_MUY_LARGA : undefined),
     // D-20: el bloque horario es opcional; si tiene fecha, la fecha debe ser válida. Que no sea pasado ni posterior
     // a la fecha límite lo valida el Núcleo (`time_block.past`, `time_block.after_due_date`).
     block_date: (v) => (estaVacio(v) || leerFecha(v) ? undefined : textos.FECHA_INVALIDA),
@@ -374,13 +370,13 @@ export function FormularioTarjeta({
                           etiqueta={e.name}
                           marcada={marcada}
                           // ET04, ET06: en el máximo, las demás quedan deshabilitadas con su motivo.
-                          deshabilitada={!marcada && valores.label_ids.length >= ETIQUETAS_MAX}
+                          deshabilitada={!marcada && valores.label_ids.length >= TARJETA_ETIQUETAS_MAX}
                           alCambiar={(m) => marcarEtiqueta(e.id, m)}
                         />
                       </span>
                     );
                   })}
-                  {valores.label_ids.length >= ETIQUETAS_MAX && (
+                  {valores.label_ids.length >= TARJETA_ETIQUETAS_MAX && (
                     <span className="wg-motivo">{textos.MAXIMO_ETIQUETAS}</span>
                   )}
                 </div>

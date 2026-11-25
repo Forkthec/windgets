@@ -1,3 +1,4 @@
+import { ETIQUETAS_MAX } from '@/reglas/limites';
 import { useCallback, useEffect, useState } from 'react';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import type { Label } from '@/types';
@@ -12,9 +13,6 @@ import { FormularioEtiqueta } from './FormularioEtiqueta';
 
 // P-ETQ-01 Etiquetas (Menú principal > Planificador > Etiquetas; HE-08-HU01). «Nueva etiqueta» abre el
 // Formulario de etiqueta (HE-08-HU02); «Editar» y «Eliminar» de cada etiqueta actúan con HE-08-HU03 y HU04.
-
-/** Máximo de etiquetas por usuario (HE-08-HU02-ET06). */
-const ETIQUETAS_MAX = 20;
 
 export function Labels() {
   const { invocar, escuchar } = useNucleo();

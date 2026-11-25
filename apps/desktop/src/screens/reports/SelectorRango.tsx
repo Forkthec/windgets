@@ -1,3 +1,4 @@
+import { RANGO_DIAS_MAXIMOS } from '@/reglas/limites';
 import { useCallback, useState } from 'react';
 import { estaVacio, useMensajesDeCampo, type Validador } from '@/reglas/formulario';
 import type { RangeInput, ResolvedRange } from '@/types';
@@ -9,9 +10,6 @@ import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { SelectorFecha } from '@/ui/SelectorFecha/SelectorFecha';
 import { escribirFecha, fechaIso, leerFecha } from '../tarjeta/fechas';
 import { useMostrarError } from '@/ui/MensajeResultado/MensajeResultado';
-
-/** HE-13-HU01: el rango personalizado tiene como máximo 366 días, contando el inicio y el fin. */
-const DIAS_MAXIMOS = 366;
 
 // Selector Rango de fechas de la pantalla Reportes (HE-13-HU01). El Núcleo resuelve el rango (IPC-REP-01) y
 // vuelve a validar el personalizado (D-188).
@@ -85,7 +83,7 @@ export function SelectorRango({ alAplicar, deshabilitado = false }: SelectorRang
       return;
     }
     const dias = Math.round((fin.getTime() - inicio.getTime()) / 86_400_000) + 1;
-    if (dias > DIAS_MAXIMOS) {
+    if (dias > RANGO_DIAS_MAXIMOS) {
       campos.mostrarDelNucleo([{ field: 'end', message: textos.RANGO_MUY_LARGO }]);
       return;
     }

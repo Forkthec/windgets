@@ -1,3 +1,4 @@
+import { ETIQUETA_NOMBRE_MAX } from '@/reglas/limites';
 import { useCallback, useId, useState, type FormEvent } from 'react';
 import { useEnvioUnico } from '@/reglas/envio';
 import { estaVacio, useMensajesDeCampo, type Validador } from '@/reglas/formulario';
@@ -15,8 +16,6 @@ import { useMostrarError } from '@/ui/MensajeResultado/MensajeResultado';
 // nombre y el color actuales (HE-08-HU03-ET01, ET02). Ventana emergente sobre la
 // pantalla Etiquetas (RT-02). La vista repite las validaciones de campo; el Núcleo vuelve a validar (D-188).
 
-const NOMBRE_MAX = 30;
-
 const CAMPOS = ['name', 'color_id'] as const;
 type Campo = (typeof CAMPOS)[number];
 
@@ -24,7 +23,7 @@ type Campo = (typeof CAMPOS)[number];
 const REGLAS: Record<Campo, Validador> = {
   name: (v) => {
     if (estaVacio(v)) return textos.CAMPO_OBLIGATORIO;
-    return [...v.trim()].length > NOMBRE_MAX ? textos.NOMBRE_DE_ETIQUETA_MUY_LARGO : undefined;
+    return [...v.trim()].length > ETIQUETA_NOMBRE_MAX ? textos.NOMBRE_DE_ETIQUETA_MUY_LARGO : undefined;
   },
   color_id: (v) => (estaVacio(v) ? textos.CAMPO_OBLIGATORIO : undefined),
 };

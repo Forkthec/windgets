@@ -1,3 +1,4 @@
+import { CIUDAD_MAX, TEXTO_WIDGET_MAX } from '@/reglas/limites';
 import { useCallback, useId, useState, type FormEvent } from 'react';
 import { useEnvioUnico } from '@/reglas/envio';
 import type { GeocodeResult, WidgetItem } from '@/types';
@@ -12,7 +13,7 @@ import { textoDelError } from '@/ipc/textoDelError';
 // Formulario de widget (HE-04-HU12-ET05, ET06; D-202): ventana emergente sobre Widgets (RT-02) con el mismo campo
 // que la subpantalla de agregar (Ciudad para Clima y Texto para Texto), precargado, y «Guardar» y «Cancelar».
 
-const MAXIMO: Record<'weather' | 'text', number> = { weather: 100, text: 200 };
+const MAXIMO: Record<'weather' | 'text', number> = { weather: CIUDAD_MAX, text: TEXTO_WIDGET_MAX };
 
 export interface FormularioDeWidgetProps {
   widget: WidgetItem;
