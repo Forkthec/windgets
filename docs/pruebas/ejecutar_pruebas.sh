@@ -3,8 +3,9 @@
 # Windgets · ejecutar_pruebas.sh
 # Levanta un clúster temporal de PostgreSQL, crea el sustituto mínimo de los esquemas de Supabase
 # (00_stub_supabase.sql, que no forma parte de la entrega), aplica las migraciones reales
-# (0001 a 0004 y seed.sql) y ejecuta pruebas.sql y prueba_sqlite.py. Después prueba la migración
-# 0010_temas_windgets.sql de supabase/ (la carpeta del repositorio, junto a docs/) con pruebas_temas_windgets.sql.
+# (0001 a 0004 y seed.sql), les suma 0011_etiquetas_por_tarjeta.sql de supabase/ (la carpeta del repositorio, junto
+# a docs/) y ejecuta pruebas.sql y prueba_sqlite.py. Después prueba, de supabase/, las migraciones
+# 0010_temas_windgets.sql (pruebas_temas_windgets.sql) y 0011 (pruebas_etiquetas_por_tarjeta.sql).
 # Termina con «TODAS LAS PRUEBAS OK» (código 0) o con el error (código 1).
 #
 # Variables opcionales:
@@ -66,6 +67,11 @@ aplicar supabase/migrations/0003_funciones.sql
 aplicar supabase/migrations/0004_storage.sql
 aplicar supabase/seed.sql
 aplicar supabase/seed.sql        # el seed se puede repetir sin duplicar ni fallar
+REPO="$(dirname "$RAIZ")/supabase"
+[ -d "$REPO/migrations" ] || fallar "no se encontró $REPO/migrations"
+# pruebas.sql comprueba R7 con el máximo vigente de etiquetas por tarjeta (RD-96).
+echo "-- 0011_etiquetas_por_tarjeta.sql (del repositorio)"
+"${PSQL[@]}" -d windgets_test -f "$REPO/migrations/0011_etiquetas_por_tarjeta.sql" >"$SALIDA" 2>&1 || fallar "falló 0011_etiquetas_por_tarjeta.sql"
 N=$("${PSQL[@]}" -d windgets_test -Atc "SELECT (SELECT count(*) FROM catalog_color) || ' colores, ' || (SELECT count(*) FROM catalog_font) || ' tipografías, ' || (SELECT count(*) FROM catalog_template) || ' plantilla, ' || (SELECT count(*) FROM catalog_palette) || ' paletas'")
 echo "   catálogo sembrado una sola vez: $N"
 echo "   resumen del esquema: $("${PSQL[@]}" -d windgets_test -Atc "SELECT (SELECT count(*) FROM pg_tables WHERE schemaname='public') || ' tablas, ' || (SELECT count(*) FROM pg_policies WHERE schemaname='public') || ' políticas en public + ' || (SELECT count(*) FROM pg_policies WHERE schemaname='storage') || ' en storage, ' || (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public') || ' funciones, ' || (SELECT count(*) FROM pg_trigger WHERE NOT tgisinternal AND tgrelid IN (SELECT oid FROM pg_class WHERE relnamespace='public'::regnamespace OR relname='users')) || ' disparadores'")"
@@ -81,8 +87,6 @@ OK_PG=$(grep -cE 'NOTICE:  ok ' "$SALIDA")
 
 echo
 echo "== Migraciones del repositorio: temas de Windgets (pruebas_temas_windgets.sql)"
-REPO="$(dirname "$RAIZ")/supabase"
-[ -d "$REPO/migrations" ] || fallar "no se encontró $REPO/migrations"
 base_con_sustituto() {
   "${PSQL[@]}" -d postgres -c "CREATE DATABASE $1 TEMPLATE template0 ENCODING 'UTF8' LC_COLLATE 'C.utf8' LC_CTYPE 'C.utf8'" >"$SALIDA" 2>&1 || fallar "no se creó $1"
   "${PSQL[@]}" -d "$1" -f "$AQUI/00_stub_supabase.sql" >"$SALIDA" 2>&1 || fallar "$1: sustituto de Supabase"
@@ -109,6 +113,19 @@ echo "ok   - base nueva: migraciones y seed.sql dejan los nombres nuevos y una s
 OK_TEMAS=$((OK_TEMAS + 1))
 
 echo
+echo "== Migraciones del repositorio: 3 etiquetas por tarjeta (pruebas_etiquetas_por_tarjeta.sql)"
+# Como en la nube antes de 0011: 0001 a 0010 y seed.sql; la prueba crea los datos y aplica 0011.
+base_con_sustituto windgets_etiquetas
+for f in "$REPO"/migrations/000[1-9]_*.sql "$REPO"/migrations/0010_*.sql "$REPO/seed.sql"; do
+  "${PSQL[@]}" -d windgets_etiquetas -f "$f" >"$SALIDA" 2>&1 || fallar "windgets_etiquetas: falló $f"
+done
+if ! "${PSQL[@]}" -d windgets_etiquetas -v repo="$REPO" -f "$AQUI/pruebas_etiquetas_por_tarjeta.sql" >"$SALIDA" 2>&1; then
+  fallar "pruebas_etiquetas_por_tarjeta.sql"
+fi
+grep -E 'NOTICE:  ok ' "$SALIDA" | sed -E 's/^.*NOTICE:  //'
+OK_ETIQUETAS=$(grep -cE 'NOTICE:  ok ' "$SALIDA")
+
+echo
 echo "== Pruebas del esquema SQLite local (prueba_sqlite.py)"
 if ! python3 -I "$AQUI/prueba_sqlite.py" "$RAIZ/local/sqlite_esquema.sql" >"$SALIDA" 2>&1; then
   tail -15 "$SALIDA"; fallar "prueba_sqlite.py"
@@ -117,5 +134,5 @@ cat "$SALIDA"
 OK_SQ=$(grep -c '^ok ' "$SALIDA")
 
 echo
-echo "Comprobaciones correctas: $OK_PG en PostgreSQL + $OK_SQ en SQLite + $OK_TEMAS de los temas de Windgets = $((OK_PG + OK_SQ + OK_TEMAS))"
+echo "Comprobaciones correctas: $OK_PG en PostgreSQL + $OK_SQ en SQLite + $OK_TEMAS de los temas de Windgets + $OK_ETIQUETAS de las etiquetas por tarjeta = $((OK_PG + OK_SQ + OK_TEMAS + OK_ETIQUETAS))"
 echo "TODAS LAS PRUEBAS OK"

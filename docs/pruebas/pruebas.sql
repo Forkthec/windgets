@@ -684,7 +684,7 @@ BEGIN
   PERFORM t.eq(r->'row'->>'entity_id', t.id('A_label')::text, 'etiquetas: devuelve la etiqueta existente');
   PERFORM t.eq((SELECT name FROM label WHERE id = t.id('lab1')), 'Etq 1', 'etiquetas: el renombrado rechazado no se aplicó');
 
-  -- Etiquetas de una tarjeta: máximo 5 vivas; se conservan las más antiguas (HE-07-HU02-ET04)
+  -- Etiquetas de una tarjeta: máximo 3 vivas; se conservan las más antiguas (HE-07-HU02-ET04; RD-96)
   x := t.id('M');
   r := t.push1(d1, 0, t.chg(440, 'card', x, 'upsert', 440,
         t.f('title','"M"',440) || t.f('due_date','"2026-12-01"',440) || t.f('position','1',440) || t.f('column_id', to_jsonb(todo), 440)));
@@ -694,10 +694,12 @@ BEGIN
                       t.f('card_id', to_jsonb(x::text), 450 + i) || t.f('label_id', to_jsonb(t.id('lab' || i)::text), 450 + i));
   END LOOP;
   r := t.push(d1, 0, ch);
-  PERFORM t.eq((SELECT count(*) FROM card_label WHERE card_id = x AND deleted_at IS NULL), 5::bigint, 'card_label: 5 vivas como máximo por tarjeta');
-  PERFORM t.eq(t.res(r, 456)->>'status', 'deleted', 'card_label: la 6.ª (la más reciente) queda eliminada');
-  PERFORM t.eq((t.res(r, 456)->>'conflict')::boolean, true, 'card_label: se marca conflict = true');
-  PERFORM t.eq((SELECT count(*) FROM card_label WHERE card_id = x AND deleted_at IS NOT NULL AND id = t.id('CLm6')), 1::bigint, 'card_label: se conservan las 5 más antiguas');
+  PERFORM t.eq((SELECT count(*) FROM card_label WHERE card_id = x AND deleted_at IS NULL), 3::bigint, 'card_label: 3 vivas como máximo por tarjeta');
+  PERFORM t.eq(t.res(r, 454)->>'status', 'deleted', 'card_label: la 4.ª queda eliminada');
+  PERFORM t.eq((t.res(r, 454)->>'conflict')::boolean, true, 'card_label: se marca conflict = true');
+  PERFORM t.eq((SELECT array_agg(id = t.id('CLm1') OR id = t.id('CLm2') OR id = t.id('CLm3')) FROM card_label WHERE card_id = x AND deleted_at IS NULL),
+               ARRAY[true, true, true], 'card_label: se conservan las 3 más antiguas');
+  PERFORM t.eq(t.res(r, 456)->>'status', 'deleted', 'card_label: la 6.ª (la más reciente) también queda eliminada');
   -- La misma unión con otro id no duplica (1.3): se trata como modificación de la existente
   r := t.push1(d1, 0, t.chg(460, 'card_label', gen_random_uuid(), 'upsert', 460,
         t.f('card_id', to_jsonb(x::text), 460) || t.f('label_id', to_jsonb(t.id('lab1')::text), 460)));

@@ -48,8 +48,8 @@ pub fn clave_alfabetica(nombre: &str) -> String {
 pub const TITULO_MAX: usize = 100;
 /// Descripción: hasta 1000 caracteres (HE-07-HU01-ET10, D-026).
 pub const DESCRIPCION_MAX: usize = 1000;
-/// Etiquetas por tarjeta (HE-07-HU02-ET04).
-pub const ETIQUETAS_MAX: usize = 5;
+/// Etiquetas por tarjeta (HE-07-HU02-ET04; D-14, `docs/rediseno.md` RD-96) y por filtro de Reportes.
+pub const ETIQUETAS_MAX: usize = 3;
 /// Nombre de etiqueta: de 1 a 30 caracteres (HE-08-HU02-ET03).
 pub const NOMBRE_DE_ETIQUETA_MAX: usize = 30;
 /// Etiquetas por usuario (HE-08-HU02-ET06).
@@ -277,7 +277,7 @@ fn etiqueta_de_la_tarjeta_no_existe() -> AppError {
     )
 }
 
-/// Etiquetas (HE-07-HU02-ET04): máximo 5 por tarjeta. Que existan se comprueba contra la base.
+/// Etiquetas (HE-07-HU02-ET04; RD-96): máximo [`ETIQUETAS_MAX`] por tarjeta. Que existan se comprueba contra la base.
 pub fn validar_cantidad_de_etiquetas(etiquetas: &[Uuid]) -> Option<AppError> {
     (etiquetas.len() > ETIQUETAS_MAX).then(|| {
         error(
@@ -2630,22 +2630,23 @@ pub(crate) mod pruebas {
     fn etiquetas_de_mas_o_inexistentes_no_crean_la_tarjeta() {
         // IPC-CARD-01: `labels.too_many` (HE-07-HU02-CA02) y `labels.not_found` (HE-07-HU02-ET03; RD-92).
         let servicio = con_semilla();
-        let seis: Vec<Uuid> = (0..6)
+        let cuatro: Vec<Uuid> = (0..4)
             .map(|i| Uuid(etiqueta(&servicio, &format!("E{i}"))))
             .collect();
         let e = crear(
             &servicio,
             CardCreateParams {
-                label_ids: Some(seis),
+                label_ids: Some(cuatro),
                 ..params("Informe", "2026-11-14")
             },
         )
         .unwrap_err();
         assert_eq!(
-            (e.code, e.message.as_str()),
+            (e.code, e.message.as_str(), e.field.as_deref()),
             (
                 ErrorCode::LabelsTooMany,
-                "Puedes asignar máximo 5 etiquetas por tarjeta."
+                "Puedes asignar hasta 3 etiquetas.",
+                Some("label_ids")
             )
         );
         let e = crear(

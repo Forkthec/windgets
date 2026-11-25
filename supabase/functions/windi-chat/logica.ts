@@ -287,7 +287,7 @@ export function instruccionDelSistema(contexto: Contexto): string {
     'Para quitar la prioridad, la descripción o el bloque horario, envías null en ese dato.',
     'Para poner o quitar etiquetas llamas a propose_label_cards con el id de la tarjeta y los nombres de las',
     'etiquetas que se agregan o se quitan; las demás etiquetas de la tarjeta se conservan. Una tarjeta tiene máximo',
-    '5 etiquetas.',
+    '3 etiquetas.',
     // HE-14-HU04-CA10; HE-14-HU05-CA11, CA12.
     'El bloque horario dura una hora y se indica con su fecha y su hora de inicio, de 0 a 23: el bloque',
     '«10:00 – 11:00» es start_hour 10. Si piden un bloque de más de una hora, explicas que los bloques son de una',

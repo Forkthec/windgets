@@ -161,18 +161,18 @@ for i in range(2, 21):
     db.execute(*etq(f"Etiqueta {i}"))
 rechaza(*etq("Etiqueta 21"), "limit_labels", "etiqueta: la 21.ª se rechaza (máximo 20)")
 
-labels = [r[0] for r in db.execute("SELECT id FROM label ORDER BY name LIMIT 6")]
-for l in labels[:5]:
+labels = [r[0] for r in db.execute("SELECT id FROM label ORDER BY name LIMIT 4")]
+for l in labels[:3]:
     db.execute("INSERT INTO card_label (id,user_id,created_at,card_id,label_id) VALUES (?,?,?,?,?)", (uid(), U, TS, C1, l))
-rechaza("INSERT INTO card_label (id,user_id,created_at,card_id,label_id) VALUES (?,?,?,?,?)", (uid(), U, TS, C1, labels[5]),
-        "limit_card_labels", "tarjeta: la 6.ª etiqueta se rechaza (máximo 5)")
+rechaza("INSERT INTO card_label (id,user_id,created_at,card_id,label_id) VALUES (?,?,?,?,?)", (uid(), U, TS, C1, labels[3]),
+        "limit_card_labels", "tarjeta: la 4.ª etiqueta se rechaza (máximo 3)")
 C2 = uid()
 db.execute(*card("Otra", C2))
 db.execute("INSERT INTO card_label (id,user_id,created_at,card_id,label_id) VALUES (?,?,?,?,?)", (uid(), U, TS, C2, labels[0]))
 rechaza("INSERT INTO card_label (id,user_id,created_at,card_id,label_id) VALUES (?,?,?,?,?)", (uid(), U, TS, C2, labels[0]),
         "UNIQUE", "card_label: la misma unión no se repite")
 acepta("DELETE FROM label WHERE id = ?", (labels[0],), "eliminar una etiqueta")
-if escalar("SELECT count(*) FROM card_label WHERE card_id = ?", (C1,)) != 4 or escalar("SELECT count(*) FROM card_label WHERE card_id = ?", (C2,)) != 0:
+if escalar("SELECT count(*) FROM card_label WHERE card_id = ?", (C1,)) != 2 or escalar("SELECT count(*) FROM card_label WHERE card_id = ?", (C2,)) != 0:
     fallo("cascada: al eliminar la etiqueta debían quitarse sus card_label")
 ok("cascada: eliminar la etiqueta quita sus card_label y la tarjeta sigue (HE-08-HU04-ET06)")
 db.execute("DELETE FROM card WHERE id = ?", (C1,))

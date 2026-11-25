@@ -101,8 +101,10 @@ pub const FECHA_INVALIDA: &str = "Diligencia una fecha válida.";
 pub const FECHA_LIMITE_ANTERIOR_A_HOY: &str = "La fecha límite no puede ser anterior a hoy.";
 /// `description.too_long` (HE-07-HU01-CA10, ET21).
 pub const DESCRIPCION_MUY_LARGA: &str = "La descripción no puede superar los 1000 caracteres.";
-/// `labels.too_many` (HE-07-HU02-CA02, ET06; IPC-CARD-01).
-pub const MAXIMO_ETIQUETAS: &str = "Puedes asignar máximo 5 etiquetas por tarjeta.";
+/// `labels.too_many` (HE-07-HU02-CA02, ET06; IPC-CARD-01; `docs/rediseno.md` RD-96).
+pub const MAXIMO_ETIQUETAS: &str = "Puedes asignar hasta 3 etiquetas.";
+/// `labels.too_many` en el filtro de Reportes (IPC-REP-03 a 05; `docs/rediseno.md` RD-96).
+pub const MAXIMO_ETIQUETAS_DEL_FILTRO: &str = "Puedes elegir hasta 3 etiquetas.";
 
 // HE-07-HU04 · Editar una tarjeta (IPC-CARD-02 card_update).
 
@@ -565,6 +567,7 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("FECHA_LIMITE_ANTERIOR_A_HOY", FECHA_LIMITE_ANTERIOR_A_HOY),
     ("DESCRIPCION_MUY_LARGA", DESCRIPCION_MUY_LARGA),
     ("MAXIMO_ETIQUETAS", MAXIMO_ETIQUETAS),
+    ("MAXIMO_ETIQUETAS_DEL_FILTRO", MAXIMO_ETIQUETAS_DEL_FILTRO),
     ("TARJETA_NO_EXISTE", TARJETA_NO_EXISTE),
     ("TABLERO_NO_DESCARGADO", TABLERO_NO_DESCARGADO),
     ("COLUMNA_CREADA", COLUMNA_CREADA),

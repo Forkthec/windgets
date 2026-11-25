@@ -12,7 +12,9 @@ use std::future::Future;
 use chrono::DateTime;
 
 use crate::cliente_de_supabase::FallaDeAuth;
-use crate::repositorios_y_archivos_locales::BaseLocal;
+use crate::repositorios_y_archivos_locales::{
+    Asignacion, BaseLocal, asignaciones_de, etiquetas_sobrantes, quitar_asignacion_sobrante,
+};
 pub mod archivos;
 pub mod archivos_del_catalogo;
 pub mod cancelacion;
@@ -586,6 +588,13 @@ async fn aplicar_filas(
                 .bind(&id)
                 .fetch_optional(&mut *tx)
                 .await?;
+        // RD-96: una asignación nueva en una tarjeta que ya tiene el máximo de etiquetas.
+        if *tabla == "card_label" && existe.is_none() {
+            let Some(quitadas) = dar_sitio_a_la_asignacion(tx, fila, &id, desfase).await? else {
+                continue;
+            };
+            tocadas.extend(quitadas.into_iter().map(|q| (tipo.clone(), q, true)));
+        }
         // SQLite revisa los NOT NULL antes del conflicto: una fila existente se actualiza con UPDATE.
         let sql = if existe.is_some() {
             let cambios = nombres
@@ -612,6 +621,50 @@ async fn aplicar_filas(
         }
     }
     Ok(tocadas)
+}
+
+/// Antes de agregar una asignación recibida, aplica [`etiquetas_sobrantes`] a las locales de la tarjeta y a la
+/// recibida, para que queden las mismas que en la nube. Devuelve las locales que quitó, o `None` si la que sobra es
+/// la recibida.
+async fn dar_sitio_a_la_asignacion(
+    tx: &mut sqlx::SqliteConnection,
+    fila: &SyncRow,
+    id: &str,
+    desfase: i64,
+) -> Result<Option<Vec<String>>, sqlx::Error> {
+    let campo = |nombre: &str| fila.fields.get(nombre).and_then(|v| v.as_str());
+    let (Some(tarjeta), Some(etiqueta), Some(creada)) =
+        (campo("card_id"), campo("label_id"), campo("created_at"))
+    else {
+        // Sin un campo obligatorio la inserción no entra: no hay nada que quitar.
+        return Ok(Some(Vec::new()));
+    };
+    // Sin su tarjeta o su etiqueta, o con la unión ya hecha, tampoco entra.
+    let puede_entrar: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM card WHERE id = ?1) AND EXISTS (SELECT 1 FROM label WHERE id = ?2) \
+         AND NOT EXISTS (SELECT 1 FROM card_label WHERE card_id = ?1 AND label_id = ?2)",
+    )
+    .bind(tarjeta)
+    .bind(etiqueta)
+    .fetch_one(&mut *tx)
+    .await?;
+    if !puede_entrar {
+        return Ok(Some(Vec::new()));
+    }
+    let mut asignaciones = asignaciones_de(tx, tarjeta).await?;
+    asignaciones.push(Asignacion {
+        id: id.to_string(),
+        created_at: creada.to_string(),
+        updated_seq: fila.updated_seq,
+    });
+    let sobrantes = etiquetas_sobrantes(asignaciones, desfase);
+    if sobrantes.iter().any(|s| s == id) {
+        return Ok(None);
+    }
+    for sobrante in &sobrantes {
+        quitar_asignacion_sobrante(tx, sobrante).await?;
+    }
+    Ok(Some(sobrantes))
 }
 
 #[cfg(test)]
@@ -1254,6 +1307,181 @@ mod pruebas {
             nube.recibidos.lock().unwrap()[0].p_clock_offset_ms,
             tres_horas
         );
+    }
+
+    // RD-96 · Máximo 3 etiquetas por tarjeta frente a lo que llega de la nube.
+
+    fn id_de_etiqueta(n: u8) -> String {
+        format!("00000000-0000-4000-8000-0000000000e{n}")
+    }
+
+    fn id_de_asignacion(n: u8) -> String {
+        format!("00000000-0000-4000-8000-0000000000f{n}")
+    }
+
+    fn hora_de_asignacion(segundo: u8) -> String {
+        format!("2026-11-14T10:00:{segundo:02}.000Z")
+    }
+
+    /// La tarjeta, cinco etiquetas y las asignaciones locales `(etiqueta, segundo, updated_seq)`; las que la nube no
+    /// ha confirmado (`updated_seq = 0`), en la cola.
+    fn con_asignaciones(
+        asignaciones: &[(u8, u8, i64)],
+    ) -> crate::servicio_del_planificador::ServicioDelPlanificador<
+        crate::servicio_del_planificador::pruebas::CalendarioDePrueba,
+    > {
+        let servicio = con_tarjeta();
+        bloquear(async {
+            let pool = servicio.base().pool().await.unwrap();
+            for n in 1..=5u8 {
+                sqlx::query(
+                    "INSERT INTO label (id, user_id, created_at, name, color_id) VALUES (?, ?, ?, ?, 'blue')",
+                )
+                .bind(id_de_etiqueta(n))
+                .bind(USUARIO)
+                .bind(MARCA)
+                .bind(format!("E{n}"))
+                .execute(pool)
+                .await
+                .unwrap();
+            }
+            for &(n, segundo, seq) in asignaciones {
+                sqlx::query(
+                    "INSERT INTO card_label (id, user_id, created_at, updated_seq, card_id, label_id) \
+                     VALUES (?, ?, ?, ?, ?, ?)",
+                )
+                .bind(id_de_asignacion(n))
+                .bind(USUARIO)
+                .bind(hora_de_asignacion(segundo))
+                .bind(seq)
+                .bind(TARJETA)
+                .bind(id_de_etiqueta(n))
+                .execute(pool)
+                .await
+                .unwrap();
+                if seq == 0 {
+                    let mut c = pool.acquire().await.unwrap();
+                    encolar_cambio(
+                        &mut c,
+                        "card_label",
+                        &id_de_asignacion(n),
+                        "upsert",
+                        &serde_json::json!({}),
+                        &hora_de_asignacion(segundo),
+                    )
+                    .await
+                    .unwrap();
+                }
+            }
+        });
+        servicio
+    }
+
+    fn fila_de_asignacion(n: u8, segundo: u8, borrada: bool) -> SyncRow {
+        serde_json::from_value(serde_json::json!({
+            "entity_kind": "card_label",
+            "entity_id": id_de_asignacion(n),
+            "fields": {
+                "card_id": TARJETA,
+                "label_id": id_de_etiqueta(n),
+                "created_at": hora_de_asignacion(segundo),
+            },
+            "field_mods": {},
+            "deleted_at": if borrada { serde_json::json!(MARCA) } else { serde_json::Value::Null },
+            "updated_seq": 9,
+        }))
+        .unwrap()
+    }
+
+    fn textos(base: &BaseLocal, sql: &str) -> Vec<String> {
+        bloquear(async {
+            sqlx::query_scalar(sql)
+                .fetch_all(base.pool().await.unwrap())
+                .await
+                .unwrap()
+        })
+    }
+
+    const ASIGNADAS: &str = "SELECT id FROM card_label ORDER BY id";
+    const ASIGNACIONES_EN_COLA: &str =
+        "SELECT entity_id FROM pending_change WHERE entity_kind = 'card_label' ORDER BY entity_id";
+
+    #[test]
+    fn rd_96_una_asignacion_anterior_de_la_nube_saca_la_local_mas_reciente_y_su_alta() {
+        let servicio = con_asignaciones(&[(1, 10, 1), (2, 20, 2), (3, 40, 0)]);
+        let base = servicio.base();
+        let filas = [fila_de_asignacion(4, 30, false)];
+        let tocadas = bloquear(async {
+            let mut tx = base.pool().await.unwrap().begin().await.unwrap();
+            let tocadas = aplicar_filas(&mut tx, &filas, USUARIO, false)
+                .await
+                .unwrap();
+            tx.commit().await.unwrap();
+            tocadas
+        });
+        assert_eq!(
+            textos(base, ASIGNADAS),
+            [1, 2, 4].map(id_de_asignacion).to_vec()
+        );
+        assert!(textos(base, ASIGNACIONES_EN_COLA).is_empty());
+        assert_eq!(
+            tocadas,
+            [
+                ("card_label".to_string(), id_de_asignacion(3), true),
+                ("card_label".to_string(), id_de_asignacion(4), false),
+            ]
+        );
+    }
+
+    #[test]
+    fn rd_96_no_entra_una_asignacion_de_la_nube_posterior_a_las_3_locales() {
+        // La local sin enviar es anterior en el reloj de la nube (el computador va 30 s adelantado): se queda ella.
+        let servicio = con_asignaciones(&[(1, 10, 1), (2, 20, 2), (3, 55, 0)]);
+        let base = servicio.base();
+        poner_desfase(base, -30_000);
+        let nube = NubeDePrueba::default();
+        nube.paginas.lock().unwrap().push(SyncPullResult {
+            server_now: Instant(instante(AHORA)),
+            rows: vec![fila_de_asignacion(4, 30, false)],
+            next_seq: 9,
+            has_more: false,
+        });
+        bloquear(descargar(base, &nube, &SESION)).unwrap();
+        assert_eq!(
+            textos(base, ASIGNADAS),
+            [1, 2, 3].map(id_de_asignacion).to_vec()
+        );
+        assert_eq!(textos(base, ASIGNACIONES_EN_COLA), [id_de_asignacion(3)]);
+    }
+
+    #[test]
+    fn rd_96_el_alta_que_la_nube_recorta_sale_de_la_cola_sin_reintentos() {
+        // R7 no rechaza: responde `deleted` con la fila, que se quita de este computador y de la cola.
+        let servicio = con_asignaciones(&[(1, 10, 1), (2, 20, 2), (3, 40, 0)]);
+        let base = servicio.base();
+        let cambio: i64 = bloquear(async {
+            sqlx::query_scalar("SELECT id FROM pending_change WHERE entity_kind = 'card_label'")
+                .fetch_one(base.pool().await.unwrap())
+                .await
+                .unwrap()
+        });
+        let nube = NubeDePrueba::default();
+        nube.respuestas.lock().unwrap().push(SyncChangeResult {
+            change_id: cambio,
+            ..resultado(
+                SyncChangeStatus::Deleted,
+                true,
+                Some(fila_de_asignacion(3, 40, true)),
+            )
+        });
+        al_reconectar(base, &nube, AHORA);
+        al_reconectar(base, &nube, AHORA + 120_000);
+        assert_eq!(
+            textos(base, ASIGNADAS),
+            [1, 2].map(id_de_asignacion).to_vec()
+        );
+        assert_eq!(bloquear(estado(base)).unwrap().pending_count, 0);
+        assert_eq!(nube.recibidos.lock().unwrap().len(), 1);
     }
 
     #[test]

@@ -1867,24 +1867,43 @@ fn p27_c7_la_fecha_anterior_al_bloque_lo_quita_en_la_propuesta() {
 
 #[test]
 fn ca_he_14_hu05_et14() {
-    // HE-14-HU05-ET14 · Una tarjeta tiene máximo 5 etiquetas: con más no hay propuesta y Windi da el motivo.
+    // HE-14-HU05-ET14 y RD-96 · Una tarjeta tiene máximo 3 etiquetas: con más, al editar o al crear, no hay
+    // propuesta y Windi da el motivo.
     let planificador = con_semilla();
-    let nombres = ["Uno", "Dos", "Tres", "Cuatro", "Cinco", "Seis"];
-    for n in nombres {
-        etiqueta(&planificador, n, "blue");
-    }
+    let nombres = ["Uno", "Dos", "Tres", "Cuatro"];
+    let ids = nombres.map(|n| etiqueta(&planificador, n, "blue"));
     let id = tarjeta_en(&planificador, POR_HACER, "Informe", "2026-11-20", 1024.0);
     let windi = ServicioDeWindi::nuevo();
+    let motivo = (
+        ErrorCode::LabelsTooMany,
+        "Puedes asignar hasta 3 etiquetas.".to_string(),
+    );
     assert_eq!(
         rechazo(
             &planificador,
             &windi,
             propone_editar(&id, serde_json::json!({ "add_labels": nombres }))
         ),
-        (
-            ErrorCode::LabelsTooMany,
-            "Puedes asignar máximo 5 etiquetas por tarjeta.".into()
+        motivo
+    );
+    assert_eq!(
+        rechazo(
+            &planificador,
+            &windi,
+            propone_crear(serde_json::json!([
+                { "title": "Leer", "due_date": "2026-11-20", "label_ids": ids }
+            ]))
+        ),
+        motivo
+    );
+    assert!(
+        pedir_edicion(
+            &planificador,
+            &windi,
+            &id,
+            serde_json::json!({ "add_labels": ["Uno", "Dos", "Tres"] })
         )
+        .is_some()
     );
 }
 

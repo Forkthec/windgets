@@ -603,6 +603,34 @@ fn ca_he_13_hu05_ca04() {
 }
 
 #[test]
+fn rd_96_el_filtro_de_reportes_admite_hasta_3_etiquetas() {
+    // RD-96: con 3 filtra; con 4, las tres consultas del reporte responden `labels.too_many` en `label_ids`.
+    let (servicio, trabajo, casa, estudio) = con_tres_etiquetas();
+    assert_eq!(
+        estados_con(&servicio, &[&trabajo, &casa, &estudio]).total,
+        2
+    );
+    let otra = etiqueta(&servicio, "Otra");
+    let mut f = filtro(predefinido(RangeInputVariant1Kind::Last30));
+    f.filter.label_ids = [trabajo, casa, estudio, otra].map(Uuid).to_vec();
+    let errores = [
+        bloquear(servicio.completadas_del_reporte(USUARIO, &f)).unwrap_err(),
+        bloquear(servicio.cumplimiento_del_reporte(USUARIO, &f)).unwrap_err(),
+        bloquear(servicio.estados_del_reporte(USUARIO, &f)).unwrap_err(),
+    ];
+    for e in errores {
+        assert_eq!(
+            (e.code, e.message.as_str(), e.field.as_deref()),
+            (
+                ErrorCode::LabelsTooMany,
+                "Puedes elegir hasta 3 etiquetas.",
+                Some("label_ids")
+            )
+        );
+    }
+}
+
+#[test]
 fn ca_he_13_hu05_ca05() {
     // HE-13-HU05-CA05 · Sin etiquetas creadas, `has_labels` es falso (la vista deshabilita el filtro, ET06).
     let servicio = con_semilla();

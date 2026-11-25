@@ -348,7 +348,7 @@ Datos «NO DEFINIDO» y contradicciones encontradas al construir (AGENTS.md, «C
 - **P41 · §4.4, «Vista detallada» en el «⋮»** · `rediseno_final_prototipos.md` §6.2 deja en el «⋮» Editar, Mover a y Eliminar, pero HE-07-HU03-CA05 abre el detalle desde ese menú. Valor usado: se conserva «Vista detallada» (manda el CA).
 - **P41 · §3.8, desplegables nativos** · El rediseño pide reemplazar todos los `<select>` nativos por un componente propio. Valor usado: Tipo y Prioridad pasan a controles segmentados; la hora del bloque horario y los demás `<select>` siguen nativos hasta que exista el componente desplegable del sistema de diseño.
 - **P41 · D-20, error del bloque** · `card_assign_time_block` puede fallar después de guardar la tarjeta. Valor usado: el formulario se cierra con el mensaje de la tarjeta y el error del bloque sale como mensaje de error.
-- **P41 · Límite de etiquetas** · El formulario mantiene 5 (HE-07-HU02-ET04) hasta la HU v13 de D-14 (límite de 3), que va en su propio paso con la migración de recorte.
+- **P41 · Límite de etiquetas** · El formulario mantiene 5 (HE-07-HU02-ET04) hasta la HU v13 de D-14 (límite de 3), que va en su propio paso con la migración de recorte. **Resuelta** en P43b (RD-96): máximo 3, con la migración `0011_etiquetas_por_tarjeta.sql`.
 
 ## P42 · Calendario, Agenda diaria, Reportes y contraseñas
 
@@ -356,7 +356,7 @@ Datos «NO DEFINIDO» y contradicciones encontradas al construir (AGENTS.md, «C
 - **P42 · A-09, año fuera de rango** · El rediseño no define un mensaje. Valor usado: sin mensaje; el campo queda marcado como inválido y los meses deshabilitados hasta escribir un año de 1970 a 2100.
 - **P42 · §3.6-3, la gráfica antes de «Aplicar»** · Con el código actual, elegir «Personalizado» ya no recalculaba (solo «Aplicar» lo hace); se deja así y se cubre con la prueba RD-80.
 - **P42 · «Ver más reportes»** · Es de D-12 (HU v13, P47): no se agrega todavía.
-- **P42 · Filtro de etiquetas de Reportes** · El desplegable con máximo 3 es de D-14 (P44).
+- **P42 · Filtro de etiquetas de Reportes** · El desplegable con máximo 3 es de D-14 (P44). El máximo de 3 quedó en P43b (RD-96), sobre los botones actuales; el desplegable sigue pendiente.
 
 ## P43 · Errores visibles y validaciones
 
@@ -399,3 +399,6 @@ Datos «NO DEFINIDO» y contradicciones encontradas al construir (AGENTS.md, «C
 - **P43b · IM-01, «el aviso existente de catálogo»** · En Personalización los temas guardados se leen aparte (`theme_list`) y `catalog_list` no declara errores (lee la base local); si fallara al pedir plantillas, tipografías o paletas, la pantalla no dice nada (`Personalization.tsx`). Solo hay texto para el catálogo de imágenes vacío. Visto en el código. Opciones: (a) definir el texto y mostrarlo en esos pasos; (b) reutilizar el del catálogo de imágenes con otra redacción aprobada; (c) dejarlo así. Valor usado: (c). Destino: por definir.
 - **P43b · IM-01, orden de la descarga del catálogo** · `descargar_catalogo` guarda las plantillas en el orden en que llegan. Hoy la marca de por defecto pasa bien; si en el futuro pasara a una fila que llega antes que la anterior, el índice único de la base local rechazaría la descarga. Visto en el código. Valor usado: sin cambio. Destino: por definir.
 - **P43b · IM-01, aplicar 0010 en la nube** · Antes de aplicarla, los archivos de `templates/claro/` deben estar en el bucket `catalog`. No se comprobó ni se aplicó nada en Supabase. Destino: quien despliegue.
+- **P43b · D-14, orden de los cambios pendientes** · Si antes de sincronizar se quita y se vuelve a poner una etiqueta en una tarjeta que ya tiene 3, la fusión de cambios pendientes puede enviar un alta antes de la eliminación que le hace sitio, y R7 deja eliminada la etiqueta nueva (pasaba igual con 5). No queda rechazado ningún cambio. Opciones: (a) dejarlo así; (b) enviar primero las eliminaciones de `card_label` (cambia HE-15-HU03-ET06); (c) no fusionar los cambios de `card_label`. Valor usado: (a). Destino: por definir.
+- **P43b · D-14, descarga en varias páginas** · Con más de 500 filas por descargar, si el corte cae entre un alta y la eliminación de la asignación que le hace sitio (porque esa fila volvió a cambiar), el computador salta el alta y la nube no la vuelve a enviar. Visto en el código. Opciones: (a) dejarlo así; (b) volver a descargar todo cuando se salte una asignación; (c) recortar al terminar la última página. Valor usado: (a). Destino: por definir.
+- **P43b · D-14, aplicar en la nube** · No se aplicó `0011_etiquetas_por_tarjeta.sql` en Supabase ni se desplegó `windi-chat`. Mientras falten, la nube y Windi siguen admitiendo 5. Destino: quien despliegue, antes de publicar la versión.

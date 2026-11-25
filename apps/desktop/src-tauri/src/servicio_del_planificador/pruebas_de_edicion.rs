@@ -57,6 +57,52 @@ fn rechaza(patch: CardPatch, code: ErrorCode, message: &str, field: &str) {
 }
 
 #[test]
+fn rd_96_una_tarjeta_admite_3_etiquetas_y_la_4_no_se_guarda() {
+    // RD-96: con 3 se guarda; con 4 sale `labels.too_many` en `label_ids` y la tarjeta conserva las 3.
+    let servicio = con_semilla();
+    let cuatro: Vec<Uuid> = ["A", "B", "C", "D"]
+        .iter()
+        .map(|n| Uuid(etiqueta(&servicio, n)))
+        .collect();
+    let tarjeta = crear(
+        &servicio,
+        CardCreateParams {
+            label_ids: Some(cuatro[..3].to_vec()),
+            ..params("Informe", "2026-11-20")
+        },
+    )
+    .unwrap()
+    .valor;
+    assert_eq!(tarjeta.label_ids.len(), 3);
+    let otras = CardPatch {
+        label_ids: Some(cuatro[1..].to_vec()),
+        ..vacio_patch()
+    };
+    assert_eq!(
+        editar(&servicio, &tarjeta.id.0, otras)
+            .unwrap()
+            .valor
+            .label_ids
+            .len(),
+        3
+    );
+    let todas = CardPatch {
+        label_ids: Some(cuatro),
+        ..vacio_patch()
+    };
+    let e = editar(&servicio, &tarjeta.id.0, todas).unwrap_err();
+    assert_eq!(
+        (e.code, e.message.as_str(), e.field.as_deref()),
+        (
+            ErrorCode::LabelsTooMany,
+            "Puedes asignar hasta 3 etiquetas.",
+            Some("label_ids")
+        )
+    );
+    assert_eq!(contar(&servicio, "SELECT count(*) FROM card_label"), 3);
+}
+
+#[test]
 fn ca_he_07_hu04_ca01() {
     // HE-07-HU04-CA01 · Otro título válido: guarda, responde «Tarjeta actualizada.» (ET14) y encola el cambio
     // del campo con su hora (ET10: el evento cards_changed lo emite el puente).

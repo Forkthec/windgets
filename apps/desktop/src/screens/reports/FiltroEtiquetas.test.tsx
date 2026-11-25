@@ -72,6 +72,29 @@ describe('HE-13-HU05 · Filtrar los reportes por etiqueta', () => {
     await waitFor(() => expect(ultimosFiltros(nucleo)[0]).toEqual(['l-trabajo', 'l-casa']));
   });
 
+  it('RD-96 · El filtro admite hasta 3 etiquetas', async () => {
+    const OCIO = etiqueta('l-ocio', 'Ocio');
+    const { nucleo, filtro } = await abrir([CASA, ESTUDIO, OCIO, TRABAJO]);
+    const motivo = () => within(filtro).queryByText('Puedes elegir hasta 3 etiquetas.');
+    for (const n of ['Casa', 'Estudio']) fireEvent.click(boton(filtro, n));
+    expect(boton(filtro, 'Trabajo').disabled).toBe(false);
+    expect(motivo()).toBeNull();
+    fireEvent.click(boton(filtro, 'Ocio'));
+    // Con 3, la 4.ª no se puede elegir y se ve el motivo; las elegidas y «Todas las etiquetas» siguen activas.
+    expect(boton(filtro, 'Trabajo').disabled).toBe(true);
+    expect(motivo()).toBeTruthy();
+    for (const n of ['Todas las etiquetas', 'Casa', 'Estudio', 'Ocio']) {
+      expect(boton(filtro, n).disabled).toBe(false);
+    }
+    fireEvent.click(boton(filtro, 'Trabajo'));
+    const tres = ['l-casa', 'l-estudio', 'l-ocio'];
+    await waitFor(() => expect(ultimosFiltros(nucleo)).toEqual([tres, tres, tres]));
+    // Al quitar una, la 4.ª vuelve a estar disponible y el motivo desaparece.
+    fireEvent.click(boton(filtro, 'Casa'));
+    expect(boton(filtro, 'Trabajo').disabled).toBe(false);
+    expect(motivo()).toBeNull();
+  });
+
   it('HE-13-HU05-CA03 · Quitar el filtro de etiquetas', async () => {
     const { nucleo, filtro } = await abrir([CASA, TRABAJO]);
     fireEvent.click(boton(filtro, 'Trabajo'));

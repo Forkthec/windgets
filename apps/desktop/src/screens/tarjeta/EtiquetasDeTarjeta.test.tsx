@@ -54,17 +54,18 @@ describe('HE-07-HU02 · Asignar etiquetas a una tarjeta', () => {
     ]);
   });
 
-  it('HE-07-HU02-CA02 · Asignar más de 5 etiquetas', async () => {
+  // RD-96: el máximo por tarjeta es 3.
+  it('HE-07-HU02-CA02 · Asignar más de 3 etiquetas', async () => {
     const nombres = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
     const { formulario } = await abrirFormulario(nombres.map(etiqueta));
     abrirCampo(formulario);
-    for (const n of nombres.slice(0, 5)) fireEvent.click(within(formulario).getByLabelText(n));
+    for (const n of nombres.slice(0, 3)) fireEvent.click(within(formulario).getByLabelText(n));
     // ET06: las demás, deshabilitadas con el texto.
-    for (const n of ['F', 'G']) {
+    for (const n of ['D', 'E', 'F', 'G']) {
       expect((within(formulario).getByLabelText(n) as HTMLInputElement).disabled).toBe(true);
     }
     expect((within(formulario).getByLabelText('A') as HTMLInputElement).disabled).toBe(false);
-    expect(within(formulario).getByText('Puedes asignar máximo 5 etiquetas por tarjeta.')).toBeTruthy();
+    expect(within(formulario).getByText('Puedes asignar hasta 3 etiquetas.')).toBeTruthy();
   });
 
   it('HE-07-HU02-CA03 · Consultar el campo Etiquetas sin etiquetas creadas', async () => {

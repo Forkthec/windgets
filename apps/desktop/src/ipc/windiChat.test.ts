@@ -285,6 +285,10 @@ describe('EF-01 windi-chat · HE-14-HU02 (instrucción del sistema de INT-03)', 
 describe('EF-01 windi-chat · P27 (instrucción del sistema)', () => {
   const texto = instruccionDelSistema(CONTEXTO);
 
+  it('RD-96 · Windi sabe que una tarjeta tiene máximo 3 etiquetas', () => {
+    expect(texto).toContain('Una tarjeta tiene máximo 3 etiquetas.');
+  });
+
   it('P27 (C6) · HE-14-HU05-CA11 · «de HH:00 a (HH+1):00» va directo a la propuesta', () => {
     expect(texto).toContain(
       'Un bloque «de HH:00 a (HH+1):00», como «de 15:00 a 16:00», es un bloque válido de una hora',

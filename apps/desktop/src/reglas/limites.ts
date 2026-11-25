@@ -14,8 +14,8 @@ export const ETIQUETA_NOMBRE_MAX = 30;
 export const ETIQUETAS_MAX = 20;
 export const TARJETA_TITULO_MAX = 100;
 export const TARJETA_DESCRIPCION_MAX = 1000;
-/** Etiquetas por tarjeta (HE-07-HU02-ET04). */
-export const TARJETA_ETIQUETAS_MAX = 5;
+/** Etiquetas por tarjeta y en el filtro de Reportes (HE-07-HU02-ET04; docs/rediseno.md RD-96). */
+export const TARJETA_ETIQUETAS_MAX = 3;
 /** Rango personalizado de Reportes, contando el inicio y el fin (HE-13-HU01). */
 export const RANGO_DIAS_MAXIMOS = 366;
 
