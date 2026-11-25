@@ -124,6 +124,12 @@ function valoresDe(tarjeta: CardDetail): Valores {
   };
 }
 
+/** Las dos listas tienen las mismas etiquetas, sin importar el orden. */
+function mismasEtiquetas(unas: string[], otras: string[]): boolean {
+  const conjunto = new Set(unas);
+  return conjunto.size === new Set(otras).size && otras.every((id) => conjunto.has(id));
+}
+
 export interface FormularioTarjetaProps {
   /** La tarjeta que se edita (modo edición); sin ella, el formulario crea una tarjeta. */
   tarjeta?: CardDetail;
@@ -224,15 +230,16 @@ export function FormularioTarjeta({
     if (!fecha) return;
     let r: Result<Card>;
     if (tarjeta) {
-      // Edición: se envían todos los campos; vacío quita la descripción o la prioridad.
+      // Edición: se envían todos los campos; vacío quita la descripción o la prioridad. RD-96: las etiquetas solo
+      // si cambiaron, para que una tarjeta con más que el máximo guarde los demás datos sin tocarlas.
       const patch: CardPatch = {
         type: valores.type,
         title: valores.title.trim(),
         due_date: fechaIso(fecha),
         description: estaVacio(valores.description) ? null : valores.description,
         priority: valores.priority || null,
-        label_ids: valores.label_ids,
       };
+      if (!mismasEtiquetas(valores.label_ids, tarjeta.label_ids)) patch.label_ids = valores.label_ids;
       r = await invocar('card_update', { id: tarjeta.id, patch });
     } else {
       const params: CardCreateParams = {

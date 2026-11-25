@@ -2,7 +2,7 @@
 // y `labels.not_found` (pruebas ca_he_07_hu01_* y ca_he_07_hu02_* en servicio_del_planificador).
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Label } from '@/types';
+import type { CardUpdateParams, Label } from '@/types';
 import { Kanban } from '../kanban/Kanban';
 import { abrirPantalla, fijarHoy, llamadasA, type NucleoDelPlanificador, tarjeta } from '../kanban/pruebas';
 
@@ -182,7 +182,7 @@ describe('RD-92 · Una etiqueta elegida ya no existe', () => {
 
   it('RD-92 · al editar, lo dice en el campo Etiquetas, vuelve a leer y quita la elegida', async () => {
     const nucleo = await abrirPantalla('kanban', 'Tablero Kanban', Kanban, [
-      tarjeta({ id: 't-rd92', title: 'Informe', label_ids: ['x1', 'x2'] }),
+      tarjeta({ id: 't-rd92', title: 'Informe', label_ids: ['x1'] }),
     ]);
     nucleo.etiquetas.splice(0, nucleo.etiquetas.length, CASA, ESTUDIO);
     await act(async () => {
@@ -194,6 +194,7 @@ describe('RD-92 · Una etiqueta elegida ya no existe', () => {
     });
     const formulario = screen.getByRole('dialog', { name: 'Formulario de tarjeta' });
     abrirCampo(formulario);
+    fireEvent.click(within(formulario).getByLabelText('Estudio'));
     eliminarCasaAlGuardar(nucleo, 'card_update');
     const lecturas = llamadasA(nucleo, 'label_list').length;
     await guardar(formulario);
@@ -242,16 +243,14 @@ describe('RD-92 · Una etiqueta elegida ya no existe', () => {
 describe('RD-96 · Una tarjeta llega con más etiquetas que el máximo', () => {
   const MAXIMO = 'Puedes asignar hasta 3 etiquetas.';
   const IDS = ['x1', 'x2', 'x3', 'x4'];
+  const NOMBRES = ['A', 'B', 'C', 'D', 'E'];
 
-  it('RD-96 · al guardar lo dice en el campo Etiquetas y se puede desmarcar una', async () => {
+  /** Tablero con la tarjeta «Informe» y esas etiquetas, y su Formulario de tarjeta abierto en edición. */
+  async function abrirEdicion(labelIds: string[]) {
     const nucleo = await abrirPantalla('kanban', 'Tablero Kanban', Kanban, [
-      tarjeta({ id: 't-rd96', title: 'Informe', label_ids: IDS }),
+      tarjeta({ id: 't-rd96', title: 'Informe', label_ids: labelIds }),
     ]);
-    nucleo.etiquetas.splice(
-      0,
-      nucleo.etiquetas.length,
-      ...['A', 'B', 'C', 'D'].map((n, i) => etiqueta(n, i + 1)),
-    );
+    nucleo.etiquetas.splice(0, nucleo.etiquetas.length, ...NOMBRES.map((n, i) => etiqueta(n, i + 1)));
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Informe' }));
     });
@@ -260,16 +259,28 @@ describe('RD-96 · Una tarjeta llega con más etiquetas que el máximo', () => {
       fireEvent.click(within(detalle).getByRole('button', { name: 'Editar' }));
     });
     const formulario = screen.getByRole('dialog', { name: 'Formulario de tarjeta' });
-    const campo = within(formulario).getByRole('button', { name: 'Etiquetas asignadas' });
     const guardar = () =>
       act(async () => {
         fireEvent.click(within(formulario).getByRole('button', { name: 'Guardar' }));
       });
+    const marcar = (nombre: string) => fireEvent.click(within(formulario).getByLabelText(nombre));
+    return { nucleo, formulario, guardar, marcar };
+  }
+
+  /** Los `patch` enviados con `card_update`. */
+  const cambios = (nucleo: NucleoDelPlanificador) =>
+    (llamadasA(nucleo, 'card_update') as CardUpdateParams[]).map((p) => p.patch);
+
+  it('RD-96 · al cambiar las etiquetas lo dice en el campo Etiquetas y se puede desmarcar otra', async () => {
+    const { nucleo, formulario, guardar, marcar } = await abrirEdicion([...IDS, 'x5']);
+    const campo = within(formulario).getByRole('button', { name: 'Etiquetas asignadas' });
     nucleo.responder('card_update', () => ({
       ok: false,
       error: { code: 'labels.too_many', message: MAXIMO, field: 'label_ids' },
     }));
 
+    abrirCampo(formulario);
+    marcar('E'); // quedan 4: sigue por encima del máximo
     await guardar();
     // En el campo, con el foco y sin mensaje emergente.
     const aviso = document.getElementById(campo.getAttribute('aria-describedby') ?? '');
@@ -278,17 +289,49 @@ describe('RD-96 · Una tarjeta llega con más etiquetas que el máximo', () => {
     expect(document.activeElement).toBe(campo);
     expect(screen.queryByRole('alert')).toBeNull();
 
-    abrirCampo(formulario);
     for (const n of ['A', 'B', 'C', 'D']) {
       const casilla = within(formulario).getByLabelText(n) as HTMLInputElement;
       expect([casilla.checked, casilla.disabled]).toEqual([true, false]);
     }
-    fireEvent.click(within(formulario).getByLabelText('D'));
+    marcar('D');
     expect(campo.getAttribute('aria-invalid')).toBeNull();
     await guardar();
     expect(llamadasA(nucleo, 'card_update')).toEqual([
       { id: 't-rd96', patch: expect.objectContaining({ label_ids: IDS }) },
       { id: 't-rd96', patch: expect.objectContaining({ label_ids: IDS.slice(0, 3) }) },
     ]);
+  });
+
+  it('RD-96 · cambiar solo el título no envía las etiquetas y guarda', async () => {
+    const { nucleo, guardar } = await abrirEdicion(IDS);
+    fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Informe final' } });
+    await guardar();
+    expect(cambios(nucleo)).toEqual([expect.objectContaining({ title: 'Informe final' })]);
+    expect(cambios(nucleo)[0]).not.toHaveProperty('label_ids');
+    expect(screen.queryByRole('dialog', { name: 'Formulario de tarjeta' })).toBeNull();
+    expect(screen.getByText('Tarjeta actualizada.')).toBeTruthy();
+    expect(nucleo.tarjetas[0]?.label_ids).toEqual(IDS);
+  });
+
+  it('RD-96 · quitar y volver a poner una etiqueta no es un cambio: no las envía', async () => {
+    const { nucleo, formulario, guardar, marcar } = await abrirEdicion(['x1', 'x2']);
+    abrirCampo(formulario);
+    marcar('A');
+    marcar('A'); // la misma selección, en otro orden
+    await guardar();
+    expect(cambios(nucleo)).toHaveLength(1);
+    expect(cambios(nucleo)[0]).not.toHaveProperty('label_ids');
+  });
+
+  it.each([
+    ['agregar una', ['B'], ['x1', 'x2']],
+    ['reemplazar una por otra', ['A', 'B'], ['x2']],
+    ['quitarlas todas', ['A'], []],
+  ])('RD-96 · cambiar las etiquetas sí las envía: %s', async (_, marcas, despues) => {
+    const { nucleo, formulario, guardar, marcar } = await abrirEdicion(['x1']);
+    abrirCampo(formulario);
+    for (const n of marcas) marcar(n);
+    await guardar();
+    expect(cambios(nucleo)).toEqual([expect.objectContaining({ label_ids: despues })]);
   });
 });
