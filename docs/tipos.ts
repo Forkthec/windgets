@@ -555,6 +555,8 @@ export interface WeatherData {
   temperature_c: number;
   condition_code: string;
   condition_text: string;
+  /** RD-97: `true` de día, `false` de noche; falta si la consulta o el dato guardado no lo traen. */
+  is_day?: boolean;
 }
 export interface Headline { title: string; source: string; url: string; published_at: Instant }
 export interface NewsData { headlines: Headline[] }
@@ -1056,6 +1058,8 @@ export interface WeatherCurrentResponse {
   temperature_c: number;
   condition_code: string;
   condition_text: string;
+  /** RD-97: `true` de día, `false` de noche; falta si la función o la caché compartida no lo traen. */
+  is_day?: boolean;
   observed_at: Instant;
   cache: 'hit' | 'miss';
 }
@@ -1118,7 +1122,7 @@ export interface OpenMeteoGeocodingResponse {
   results?: Array<{ id: number; name: string; admin1?: string; country: string; latitude: number; longitude: number }>;
 }
 export interface OpenMeteoForecastResponse {
-  current: { time: string; temperature_2m: number; weather_code: number };
+  current: { time: string; temperature_2m: number; weather_code: number; is_day?: number };
 }
 
 /** INT-05 Noticias (GNews) */

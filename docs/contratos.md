@@ -259,7 +259,7 @@ El tema en edición vive en un borrador en el Núcleo (`ThemeDraft`; no se guard
 
 **Tamaño inicial y posición libre de un widget nuevo** (IPC-WID-04; píxeles lógicos sobre 1920 × 1080, como la semilla; se escalan con `ref_width` y `ref_height`): Clima 320 × 160; Noticias 480 × 360; Imagen estática 320 × 180; Carrusel de imágenes 480 × 270; Animación 320 × 180; Texto 320 × 160; Reproductor de música 320 × 160. Posición: se recorre el escritorio en pasos de 20 px, por filas de arriba abajo y de izquierda a derecha, y se toma la primera posición donde el rectángulo cabe entero en el área visible y no se superpone a ningún widget activo del tema (D-042). Si no hay ninguna, el widget se agrega en (0, 0) y la superposición se corrige en «Editar escritorio» (Duda/propuesta DP-20).
 
-`WeatherData = { city, temperature_c: number, condition_code: string, condition_text: string }`; `NewsData = { headlines: [ { title, source, url, published_at } ] (5) }`.
+`WeatherData = { city, temperature_c: number, condition_code: string, condition_text: string, is_day?: boolean }` (`is_day`: `true` de día y `false` de noche en la ciudad; falta si la consulta o el dato guardado no lo traen, `rediseno.md` RD-97); `NewsData = { headlines: [ { title, source, url, published_at } ] (5) }`.
 
 ### a.9 Edición de la distribución (`layout_edit_*`) — vista E (D-185)
 
@@ -384,7 +384,7 @@ Autenticación común: `Authorization: Bearer <JWT del usuario>` y `apikey: <ano
 | --- | --- | --- | --- | --- | --- | --- |
 | EF-01 | `windi-chat` | `{ client_request_id: uuid, message: string (1 a 2000), history: [ { role: 'user'\|'assistant', text: string } ] (últimos 20 turnos), context: { alias, today: DateIso, now_hour: number, columns: [ {id, name, role} ], labels: [ {id, name} ], cards: [ {id, type, title, due_date, priority, column_id, label_ids, completed_on, scheduled_date, scheduled_hour, description} ] (solo las necesarias para la pregunta), totals: { total, overdue, pending, completed }, counts: { by_column, by_label, by_priority, completed_by_date: [ {key, count} ] } (HE-14-HU09-ET06), active_proposal: object\|null } }` | `{ reply: string, intent: 'answer'\|'clarify'\|'propose'\|'out_of_scope', proposal: { action: 'create'\|'edit'\|'move'\|'delete'\|'create_label', items: [ { card_id: uuid\|null, changes: object\|null } ] }\|null }`. `create_label` (P29, HE-14-HU10): cada elemento es `{ card_id: null, changes: { name, color } }`; el contexto lleva además `colors: [ {id, name} ]` del catálogo de colores (HE-14-HU10-ET08). No hace cambios: solo propone (D-047). Llama a Gemini (INT-03) con la personalidad de HE-14-HU02 | `unauthorized` (401), `invalid_request` (400: mensaje fuera de 1 a 2000), `quota_exceeded` (429), `provider_error` (502), `timeout` (504, a los 13 s). Todo error se muestra al usuario como «No pude responder en este momento. Intenta de nuevo.» (HE-14-HU01-CA08) | JWT | HE-14-HU01, HE-14-HU03 a HE-14-HU07, HE-14-HU09 (D-132, D-193; RNF-11) |
 | EF-02 | `weather-geocode` | `{ query: string (1 a 100, recortado) }` | `{ results: [ { geo_id: string, name: string, admin1: string\|null, country: string, latitude: number, longitude: number } ] }` (hasta 5; el Núcleo toma la primera). Lista vacía = ciudad no reconocida | `unauthorized`, `invalid_request`, `provider_error` (502), `timeout` (504, a los 8 s). `results=[]` → el Núcleo devuelve `city.not_found` «No encontramos esa ciudad. Revisa el nombre e intenta de nuevo.» | JWT | HE-04-HU05 (CA04, ET06), HE-04-HU12 (CA04) |
-| EF-03 | `weather-current` | `{ geo_id: string, latitude: number, longitude: number }` | `{ geo_id, temperature_c: number, condition_code: string, condition_text: string, observed_at: Instant, cache: 'hit'\|'miss' }`. Guarda en `external_cache` con `expires_at = now + 30 min` (RNF-09) | `unauthorized`, `invalid_request`, `provider_error`, `timeout`. El widget muestra «No pudimos cargar el clima. Intenta de nuevo más tarde.» (HE-04-HU05-CA07) | JWT | HE-04-HU05 (CA07, ET07, ET08; RNF-09) |
+| EF-03 | `weather-current` | `{ geo_id: string, latitude: number, longitude: number }` | `{ geo_id, temperature_c: number, condition_code: string, condition_text: string, is_day?: boolean, observed_at: Instant, cache: 'hit'\|'miss' }`. Guarda en `external_cache` con `expires_at = now + 30 min` (RNF-09) | `unauthorized`, `invalid_request`, `provider_error`, `timeout`. El widget muestra «No pudimos cargar el clima. Intenta de nuevo más tarde.» (HE-04-HU05-CA07) | JWT | HE-04-HU05 (CA07, ET07, ET08; RNF-09) |
 | EF-04 | `news-headlines` | `{ edition?: string }` (Duda/propuesta DP-18: `'co'` por defecto) | `{ headlines: [ { title, source, url, published_at } ] (exactamente 5), fetched_at: Instant, cache: 'hit'\|'miss' }`. Guarda en `external_cache` con `expires_at = now + 60 min` | `unauthorized`, `provider_error`, `timeout`. El widget muestra «No pudimos cargar las noticias. Intenta de nuevo más tarde.» (HE-04-HU06-CA03) | JWT | HE-04-HU06 (CA03, ET05, ET06; RNF-09) |
 
 #### Ejemplos de las Edge Functions
@@ -421,7 +421,7 @@ POST /functions/v1/weather-geocode    { "query": "Popayán" }
 ```json
 POST /functions/v1/weather-current    { "geo_id": "3673269", "latitude": 2.4448, "longitude": -76.6147 }
 200 { "geo_id": "3673269", "temperature_c": 21.4, "condition_code": "partly_cloudy", "condition_text": "Parcialmente nublado",
-      "observed_at": "2026-11-09T15:00:00.000Z", "cache": "hit" }
+      "is_day": true, "observed_at": "2026-11-09T15:00:00.000Z", "cache": "hit" }
 ```
 
 **EF-04 `news-headlines`**
@@ -640,7 +640,7 @@ x-goog-api-key: <GEMINI_API_KEY>
 
 El backlog no nombra el proveedor (HE-04-HU05-ET06 dice «servicio de clima»). Propuesta: **Open-Meteo** (sin clave, sin costo para uso no comercial, cumple el presupuesto de $0). La llama la Edge Function `weather-geocode` / `weather-current`.
 - Buscar ciudad: `GET https://geocoding-api.open-meteo.com/v1/search?name={query}&count=5&language=es&format=json` → `results[]` con `id`, `name`, `admin1`, `country`, `latitude`, `longitude`. Sin `results` = ciudad no encontrada.
-- Clima actual: `GET https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,weather_code&timezone=auto` → `current.temperature_2m` (°C) y `current.weather_code` (código WMO). La Edge Function traduce el código a `condition_code` y `condition_text` en español (tabla siguiente).
+- Clima actual: `GET https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,weather_code,is_day&timezone=auto` → `current.temperature_2m` (°C), `current.weather_code` (código WMO) y `current.is_day` (1 de día, 0 de noche). La Edge Function traduce el código a `condition_code` y `condition_text` en español (tabla siguiente) y entrega `is_day` como `true` o `false`; si el proveedor no da 0 ni 1, responde sin ese campo (`rediseno.md` RD-97).
 - Tabla de equivalencias WMO → `condition_text` (la Edge Function la aplica; `condition_code` es el código WMO tal como llega): 0 «Despejado»; 1 «Mayormente despejado»; 2 «Parcialmente nublado»; 3 «Nublado»; 45 y 48 «Niebla»; 51, 53, 55, 56 y 57 «Llovizna»; 61, 63, 65, 66 y 67 «Lluvia»; 71, 73, 75 y 77 «Nieve»; 80, 81 y 82 «Chubascos»; 85 y 86 «Chubascos de nieve»; 95, 96 y 99 «Tormenta»; cualquier otro código «Condición no disponible». Sin ícono: el widget muestra solo texto (HE-04-HU05-ET02). La temperatura se redondea al entero más cercano y se muestra como «21 °C».
 - Varias ciudades en `geocode`: se usa la primera de `results` y se muestra su `name` sin `admin1` ni `country`.
 - Límites: uso gratuito sin clave sujeto a límites por IP del proveedor (la Edge Function comparte la caché de 30 min entre usuarios, por lo que las llamadas al proveedor son pocas). Verificar términos de uso al construir.
@@ -653,8 +653,8 @@ El backlog no nombra el proveedor (HE-04-HU05-ET06 dice «servicio de clima»). 
 GET https://geocoding-api.open-meteo.com/v1/search?name=Popay%C3%A1n&count=5&language=es&format=json
 200 { "results": [ { "id": 3673269, "name": "Popayán", "admin1": "Cauca", "country": "Colombia", "latitude": 2.4448, "longitude": -76.6147 } ] }
 
-GET https://api.open-meteo.com/v1/forecast?latitude=2.4448&longitude=-76.6147&current=temperature_2m,weather_code&timezone=auto
-200 { "current": { "time": "2026-11-09T10:00", "temperature_2m": 21.4, "weather_code": 2 } }
+GET https://api.open-meteo.com/v1/forecast?latitude=2.4448&longitude=-76.6147&current=temperature_2m,weather_code,is_day&timezone=auto
+200 { "current": { "time": "2026-11-09T10:00", "temperature_2m": 21.4, "weather_code": 2, "is_day": 1 } }
 ```
 
 ### INT-05 Noticias — D-139, RNF-09 (proveedor y edición: Duda/propuesta DP-18)

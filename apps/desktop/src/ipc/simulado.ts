@@ -245,6 +245,21 @@ const respuestas: Respuestas = {
   }),
   theme_draft_open: () => ({ ok: true, value: TEMA_SIMULADO }),
   widget_list: () => ({ ok: true, value: WIDGETS_SIMULADOS.map((w) => ({ ...w })) }),
+  // HE-04-HU05: el clima del ejemplo de EF-03 (contratos.md), de día (RD-97).
+  widget_get_data: () => ({
+    ok: true,
+    value: {
+      status: 'ok',
+      payload: {
+        city: 'Popayán',
+        temperature_c: 21.4,
+        condition_code: '2',
+        condition_text: 'Parcialmente nublado',
+        is_day: true,
+      },
+      fetched_at: '2026-11-09T15:00:00.000Z',
+    },
+  }),
   // HE-04-HU04: el catálogo con todo habilitado (el simulado no agrega widgets).
   widget_catalog_get: () => ({
     ok: true,

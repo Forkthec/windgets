@@ -635,7 +635,11 @@ export type Ok<T> = { ok: true, value: T, result_message?: ResultMessage, };
 
 export type OpenMeteoForecastResponse = { current: OpenMeteoForecastResponseCurrent, };
 
-export type OpenMeteoForecastResponseCurrent = { time: string, temperature_2m: number, weather_code: number, };
+export type OpenMeteoForecastResponseCurrent = { time: string, temperature_2m: number, weather_code: number, 
+/**
+ * 1 de día y 0 de noche (RD-97).
+ */
+is_day?: number, };
 
 export type OpenMeteoGeocodingResponse = { results?: Array<OpenMeteoGeocodingResponseResultsItem>, };
 
@@ -867,11 +871,20 @@ place?: GeocodeResult, };
 
 export type WeatherCurrentRequest = { geo_id: string, latitude: number, longitude: number, };
 
-export type WeatherCurrentResponse = { geo_id: string, temperature_c: number, condition_code: string, condition_text: string, observed_at: Instant, cache: WeatherCurrentResponseCache, };
+export type WeatherCurrentResponse = { geo_id: string, temperature_c: number, condition_code: string, condition_text: string, 
+/**
+ * `true` de día y `false` de noche en la ciudad (RD-97). Falta si la función desplegada o la caché compartida
+ * no lo traen.
+ */
+is_day?: boolean, observed_at: Instant, cache: WeatherCurrentResponseCache, };
 
 export type WeatherCurrentResponseCache = "hit" | "miss";
 
-export type WeatherData = { city: string, temperature_c: number, condition_code: string, condition_text: string, };
+export type WeatherData = { city: string, temperature_c: number, condition_code: string, condition_text: string, 
+/**
+ * `true` de día y `false` de noche en la ciudad (RD-97). Falta si la consulta o el dato guardado no lo traen.
+ */
+is_day?: boolean, };
 
 export type WeatherGeocodeRequest = { query: string, };
 

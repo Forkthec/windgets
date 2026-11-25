@@ -234,6 +234,10 @@ pub struct OpenMeteoForecastResponseCurrent {
     pub time: String,
     pub temperature_2m: f64,
     pub weather_code: i64,
+    /// 1 de día y 0 de noche (RD-97).
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub is_day: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
