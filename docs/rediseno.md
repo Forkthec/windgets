@@ -5,7 +5,8 @@ Desde el 22-nov-2026 el equipo está en una fase de rediseño visual guiada por 
 (Copy)» (<https://www.figma.com/design/h5LPoqlRnG5OTP6zru0pjS/Windgets--Copy->), con la página «00 · Fundamentos» y
 las pantallas sin sesión en «01 · Acceso». Para las ventanas con sesión manda, desde el 23-nov-2026, la copia de
 los prototipos «Windgets (Copy)» (<https://www.figma.com/design/KP2qmNWNT55KMceQI8hFGu/Windgets--Copy->), páginas
-«02 · Planificador» a «08 · Confirmaciones» (RD-27). Las HU, `interfaz.md` y `producto.md` quedan
+«02 · Planificador» a «08 · Confirmaciones» (RD-27). Desde el 24-nov-2026
+reemplaza a esas copias el archivo `GdUKUwVHz3Wm0Dqw16UX8k` (RD-82). Las HU, `interfaz.md` y `producto.md` quedan
 desactualizadas en lo que toca el rediseño, y no se editan una por una: **todo cambio del rediseño se anota aquí**.
 Cuando el rediseño termine se hace una sola edición de las HU y los modelos con la lista de «Pendiente para la
 edición final».
@@ -38,7 +39,8 @@ Los commits del rediseño usan el prefijo `rediseno: <verbo y objeto>`.
 
 Aprobadas por Paula el 2026-11-22. Valen para toda pantalla que se construya o cambie con el rediseño.
 
-1. **Fuente de verdad.** Manda el Figma «Windgets (Copy)» (`h5LPoqlRnG5OTP6zru0pjS`): «00 · Fundamentos» (`0:1`)
+1. **Fuente de verdad.** Desde el 24-nov-2026 manda el Figma «Windgets» `GdUKUwVHz3Wm0Dqw16UX8k` (RD-82); antes,
+   «Windgets (Copy)» (`h5LPoqlRnG5OTP6zru0pjS`): «00 · Fundamentos» (`0:1`)
    para colores, tipografía e íconos, y la página del área para las pantallas (hoy «01 · Acceso», `79:2`). Cada
    componente cita su marco con el id de nodo en un comentario (`// Figma 84:22 «Recuperar contraseña · Claro»`) y
    cada RD lo cita en «Alcance». Si el Figma choca con una HU, gana el RD que lo decide; si no hay RD, se pregunta a
@@ -175,6 +177,7 @@ Aprobadas por Paula el 2026-11-22. Valen para toda pantalla que se construya o c
 | RD-79 | 2026-11-24 | P42 | Agenda diaria | `docs/rediseno_final_prototipos.md` §6.4 (D-26): la fecha larga abre un mini calendario; debajo, la tira semanal «L 9 · M 10 · X 11 · J 12 · V 13 · S 14 · D 15» con el día elegido resaltado. La cabecera queda fija y solo la cuadrícula de horas y la lista de tarjetas sin horario se desplazan. Bloques de 40 px, títulos sin subrayado y cada tarjeta con su estado (RD-73). | HE-11-HU01-ET02 | `Agenda.test.tsx` (RD-79) |
 | RD-80 | 2026-11-24 | P42 | Reportes | `docs/rediseno_final_prototipos.md` §6.5 y `docs/rediseno_final_backend.md` §3.6-2, §4.8: todo de un vistazo sin scroll de página (gráfica de completadas a la izquierda, tasa de cumplimiento y anillo a la derecha); en el anillo las completadas en verde (estado); en «Personalizado», cada fecha con su calendario flotante y la vista valida antes de llamar al Núcleo que el fin no sea anterior al inicio y el máximo de 366 días, con los mensajes de HE-13-HU01 en Fecha de fin. La gráfica no cambia hasta «Aplicar». | HE-13-HU04-ET02 (color de completadas); RD-56 | `SelectorRango.test.tsx` (RD-80), `EstadosTarjetas.test.tsx` |
 | RD-81 | 2026-11-24 | P42 | Campos de contraseña | `docs/rediseno_final_prototipos.md` §3.9 (P54): todo campo de contraseña (Inicio de sesión, Registro, Nueva contraseña) lleva un ojo dentro del campo, a la derecha, que muestra u oculta lo escrito («Mostrar contraseña» / «Ocultar contraseña»). | HE-01-HU01, HU04, HU08 | `CampoTexto/Ojo.test.tsx` |
+| RD-82 | 2026-11-24 | P43 | Todo el rediseño | Desde el 24-nov-2026 la fuente de verdad es el Figma «Windgets» `GdUKUwVHz3Wm0Dqw16UX8k` (DI-01, IM-00, decisión de Paula). Reemplaza RD-27 y la referencia a `h5LPoqlRnG5OTP6zru0pjS` de la introducción y de la regla 1. Los ids de nodo citados en comentarios (`// Figma 84:22 …`) se actualizan solo cuando se toque ese componente. | Regla 1 de «Reglas de implementación del rediseño» (archivo del Figma) | — (documental) |
 
 ## Pendiente para la edición final
 
@@ -222,3 +225,4 @@ Al cerrar el rediseño, reescribir con las decisiones de arriba:
 - `interfaz.md` (P-IA-01, inventario), `RT.md` RT-01, `HE-14.md` (HU11 nueva) y `HE-04.md` (HU14 nueva; HU01-ET04 con el tipo `windi`): RD-70, RD-71 y `docs/hu_v13.md`.
 - `RT.md` RT-02, `HE-07.md` (HU01-ET04, ET05, ET11, ET27; HU02-ET01; HU03-ET02, ET06; CA nuevos HU01-CA13 y HU04-CA14) y `HE-09.md` (HU01-ET03, ET05, ET06; HU07-ET01): RD-72 a RD-75.
 - `HE-10.md` (HU01 a HU03, navegación y Panel del día), `HE-11.md` (HU01-ET02, ET06, ET07), `HE-13.md` (HU01, HU04-ET02) y `HE-01.md` (contraseñas): RD-76 a RD-81.
+- Introducción y regla 1 de este documento: un solo Figma vigente (RD-82).
