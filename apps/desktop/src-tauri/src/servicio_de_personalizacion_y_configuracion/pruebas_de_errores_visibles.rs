@@ -117,9 +117,8 @@ fn rd_87_elegir_una_paleta_desactivada_lo_dice_y_no_cambia_la_vista_previa() {
         font_id: None,
         font_size: None,
     };
-    let e = bloquear(servicio.actualizar_borrador(&base, USUARIO, &parche))
-        .err()
-        .expect("debe fallar");
+    let e =
+        bloquear(servicio.actualizar_borrador(&base, USUARIO, &parche)).expect_err("debe fallar");
     assert_eq!(
         (e.code, e.message.as_str(), e.field),
         (
