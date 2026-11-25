@@ -62,19 +62,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 Some("name"),
             ));
         }
-        let existe_el_color: i64 =
-            sqlx::query_scalar("SELECT count(*) FROM catalog_color WHERE id = ? AND is_active = 1")
-                .bind(&color)
-                .fetch_one(&mut *tx)
-                .await
-                .map_err(de_sqlx)?;
-        if existe_el_color == 0 {
-            return Err(error(
-                ErrorCode::ColorRequired,
-                messages::CAMPO_OBLIGATORIO,
-                Some("color_id"),
-            ));
-        }
+        comprobar_color_de_etiqueta(&mut tx, &color).await?;
         let ahora = instante(self.calendario.ahora_ms()).0;
         let (fields, mods) = campos(
             &[

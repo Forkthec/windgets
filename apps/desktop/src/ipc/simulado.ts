@@ -98,6 +98,29 @@ const WIDGETS_SIMULADOS: WidgetItem[] = (
   config: {},
 }));
 
+// HE-08-HU02-ET05, HE-09-HU03-ET06: los colores de la semilla (supabase/seed.sql).
+let coloresSimulados = (
+  [
+    ['gray', 'Gris', '#8A8D98'],
+    ['red', 'Rojo', '#E5484D'],
+    ['orange', 'Naranja', '#F76B15'],
+    ['yellow', 'Amarillo', '#DCBA04'],
+    ['green', 'Verde', '#30A46C'],
+    ['cyan', 'Cian', '#00D9E2'],
+    ['blue', 'Azul', '#3E63DD'],
+    ['purple', 'Morado', '#6604E6'],
+    ['pink', 'Rosa', '#DC026C'],
+  ] as const
+).map(([id, name, hex]) => ({ id: id as string, name, hex, thumbnail_url: '', is_cached: true }));
+
+// docs/rediseno.md RD-85: «Morado» hace de color que el catálogo desactivó con la ventana abierta: guardar con él
+// responde `color.invalid` y deja de ofrecerse. Con otro color, el simulado no crea columnas ni etiquetas.
+function conColorSimulado(colorId: string | undefined): Result<never> {
+  if (colorId !== 'purple') return error({ code: 'internal.unexpected', message: '' });
+  coloresSimulados = coloresSimulados.filter((c) => c.id !== colorId);
+  return error({ code: 'color.invalid', message: textos.COLOR_NO_DISPONIBLE, field: 'color_id' });
+}
+
 type Respuestas = {
   [K in CommandName]?: (params: CommandMap[K]['params']) => Result<CommandMap[K]['result']>;
 };
@@ -152,8 +175,12 @@ const respuestas: Respuestas = {
           ]
         : kind === 'font'
           ? [{ id: 'rubik', name: 'Rubik', thumbnail_url: '', is_cached: true }]
-          : [],
+          : kind === 'color'
+            ? [...coloresSimulados]
+            : [],
   }),
+  column_create: ({ color_id }) => conColorSimulado(color_id),
+  label_create: ({ color_id }) => conColorSimulado(color_id),
   theme_list: () => ({
     ok: true,
     value: [

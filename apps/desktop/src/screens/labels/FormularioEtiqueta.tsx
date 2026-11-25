@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
+import { useCallback, useId, useState, type FormEvent } from 'react';
 import { useEnvioUnico } from '@/reglas/envio';
 import { estaVacio, useMensajesDeCampo, type Validador } from '@/reglas/formulario';
 import type { Label } from '@/types';
 import textos from '@/types/messages.es.json';
 import { Boton } from '@/ui/Boton/Boton';
 import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
-import { CatalogoColores, type ColorDelCatalogo } from '@/ui/CatalogoColores/CatalogoColores';
+import { CatalogoColores } from '@/ui/CatalogoColores/CatalogoColores';
+import { useColoresDelCatalogo } from '@/ui/CatalogoColores/useColoresDelCatalogo';
 import { VentanaEmergente } from '@/ui/VentanaEmergente/VentanaEmergente';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { useMostrarError } from '@/ui/MensajeResultado/MensajeResultado';
@@ -45,20 +46,10 @@ export function FormularioEtiqueta({ etiqueta, alGuardar, alCancelar }: Formular
     name: etiqueta?.name ?? '',
     color_id: etiqueta?.color_id ?? '',
   });
-  const [colores, setColores] = useState<ColorDelCatalogo[]>([]);
+  // ET05: el color se toma del catálogo de colores (IPC-CAT-01).
+  const { colores, recargar } = useColoresDelCatalogo(invocar);
   const campos = useMensajesDeCampo(CAMPOS, REGLAS);
   const mostrarError = useMostrarError();
-
-  // ET05: el color se toma del catálogo de colores (IPC-CAT-01).
-  useEffect(() => {
-    let vigente = true;
-    void invocar('catalog_list', { kind: 'color' }).then((r) => {
-      if (vigente && r.ok) setColores(r.value.map((c) => ({ id: c.id, name: c.name, hex: c.hex ?? '' })));
-    });
-    return () => {
-      vigente = false;
-    };
-  }, [invocar]);
 
   const cambiar = (campo: Campo) => (valor: string) => {
     setValores((v) => ({ ...v, [campo]: valor }));
@@ -72,12 +63,14 @@ export function FormularioEtiqueta({ etiqueta, alGuardar, alCancelar }: Formular
       ? await invocar('label_update', { id: etiqueta.id, ...datos })
       : await invocar('label_create', datos);
     if (!r.ok) {
+      // RD-85: el color se desactivó con la ventana abierta: se vuelven a pedir los colores.
+      if (r.error.code === 'color.invalid') recargar();
       if (!campos.mostrarDelNucleo([r.error])) mostrarError(r.error);
       return;
     }
     const porDefecto = etiqueta ? textos.ETIQUETA_ACTUALIZADA : textos.ETIQUETA_CREADA;
     alGuardar(r.value, r.result_message?.message ?? porDefecto);
-  }, [alGuardar, campos, etiqueta, invocar, mostrarError, valores]);
+  }, [alGuardar, campos, etiqueta, invocar, mostrarError, recargar, valores]);
   const { ejecutar, enCurso } = useEnvioUnico(guardar);
 
   return (

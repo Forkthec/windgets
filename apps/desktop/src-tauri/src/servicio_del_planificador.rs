@@ -127,6 +127,38 @@ pub(crate) fn inesperado() -> AppError {
     error(ErrorCode::InternalUnexpected, "", None)
 }
 
+/// El color de columna elegido ya no está en el catálogo (RD-85).
+fn color_no_disponible() -> AppError {
+    error(
+        ErrorCode::ColorInvalid,
+        messages::COLOR_NO_DISPONIBLE,
+        Some("color_id"),
+    )
+}
+
+/// La vista solo ofrece colores del catálogo (HE-08-HU02-ET05): uno que no está cuenta como sin color, y uno que
+/// el catálogo desactivó con la ventana abierta se dice así (RD-85).
+pub(crate) async fn comprobar_color_de_etiqueta(
+    tx: &mut sqlx::SqliteConnection,
+    color: &str,
+) -> Result<(), AppError> {
+    let activo: Option<bool> =
+        sqlx::query_scalar("SELECT is_active FROM catalog_color WHERE id = ?")
+            .bind(color)
+            .fetch_optional(tx)
+            .await
+            .map_err(de_sqlx)?;
+    match activo {
+        Some(true) => Ok(()),
+        Some(false) => Err(color_no_disponible()),
+        None => Err(error(
+            ErrorCode::ColorRequired,
+            messages::CAMPO_OBLIGATORIO,
+            Some("color_id"),
+        )),
+    }
+}
+
 pub(crate) fn de_sqlx(_: sqlx::Error) -> AppError {
     inesperado()
 }
@@ -1063,20 +1095,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 Some("name"),
             ));
         }
-        let existe_el_color: i64 =
-            sqlx::query_scalar("SELECT count(*) FROM catalog_color WHERE id = ? AND is_active = 1")
-                .bind(&color)
-                .fetch_one(&mut *tx)
-                .await
-                .map_err(de_sqlx)?;
-        if existe_el_color == 0 {
-            // La vista solo ofrece colores del catálogo (ET05): uno que no está cuenta como sin color.
-            return Err(error(
-                ErrorCode::ColorRequired,
-                messages::CAMPO_OBLIGATORIO,
-                Some("color_id"),
-            ));
-        }
+        comprobar_color_de_etiqueta(&mut *tx, &color).await?;
 
         let id = uuid::Uuid::new_v4().to_string();
         let ahora = instante(self.calendario.ahora_ms()).0;
@@ -1750,9 +1769,9 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 .await
                 .map_err(de_sqlx)?;
         if existe_el_color == 0 {
-            // La vista solo ofrece colores del catálogo (ET05). DUDA: HE-09-HU03 el contrato no tiene un error
-            // para un color que no está en el catálogo; se responde `internal.unexpected`.
-            return Err(inesperado());
+            // La vista solo ofrece colores del catálogo (ET05): llega aquí si el catálogo lo desactivó con la
+            // ventana abierta (docs/rediseno.md RD-85).
+            return Err(color_no_disponible());
         }
         let posicion =
             existentes.iter().map(|(_, p)| *p).fold(0.0_f64, f64::max) + PASO_DE_POSICION;
@@ -1855,8 +1874,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
             .await
             .map_err(de_sqlx)?;
             if existe_el_color == 0 {
-                // Igual que al crear (DUDA: HE-09-HU03): el contrato no tiene un error para este caso.
-                return Err(inesperado());
+                return Err(color_no_disponible());
             }
         }
 
