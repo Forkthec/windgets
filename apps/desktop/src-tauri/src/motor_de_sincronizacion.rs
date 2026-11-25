@@ -1585,6 +1585,89 @@ mod pruebas {
         assert_eq!(total, 2);
     }
 
+    /// Las plantillas y paletas de los temas de Windgets, con los nombres y la plantilla por defecto que se pidan.
+    fn catalogo_de_temas(
+        version: i64,
+        claro: &str,
+        oscuro: &str,
+        por_defecto: &str,
+    ) -> CatalogPullResultVariant2 {
+        use crate::tipos::{CatalogPaletteRow, CatalogTemplateRow, Hex};
+        let mut respuesta = catalogo(version, false);
+        let modelo = respuesta.templates[0].clone();
+        respuesta.templates = [
+            ("default", "Windgets"),
+            ("claro", claro),
+            ("oscuro", oscuro),
+        ]
+        .into_iter()
+        .zip(1..)
+        .map(|((id, nombre), orden)| CatalogTemplateRow {
+            id: id.into(),
+            name: nombre.into(),
+            is_default: id == por_defecto,
+            sort_order: orden,
+            ..modelo.clone()
+        })
+        .collect();
+        respuesta.palettes = [("claro", claro), ("oscuro", oscuro)]
+            .into_iter()
+            .map(|(id, nombre)| CatalogPaletteRow {
+                id: id.into(),
+                name: nombre.into(),
+                color_primary: Hex("#F5F0FF".into()),
+                color_secondary: Hex("#B6A560".into()),
+                color_text: Hex("#17131D".into()),
+                sort_order: 1,
+                is_active: true,
+            })
+            .collect();
+        respuesta
+    }
+
+    #[test]
+    fn catalog_pull_trae_los_temas_de_windgets_y_su_plantilla_por_defecto() {
+        // IM-01 (docs/rediseno.md RD-94): quien tiene el catálogo anterior a la migración 0010 descarga los nombres
+        // nuevos y la plantilla por defecto pasa de «default» a «claro» sin chocar con el índice único local.
+        let base = BaseLocal::en_memoria();
+        let nube = NubeDePrueba::default();
+        *nube.catalogo.lock().unwrap() = Some(catalogo_de_temas(3, "Claro", "Oscuro", "default"));
+        bajar_catalogo(&base, &nube);
+        *nube.catalogo.lock().unwrap() = Some(catalogo_de_temas(
+            4,
+            "Windgets claro",
+            "Windgets oscuro",
+            "claro",
+        ));
+        bajar_catalogo(&base, &nube);
+        let filas = |consulta: &'static str| -> Vec<(String, String, i64)> {
+            bloquear(async {
+                sqlx::query_as(consulta)
+                    .fetch_all(base.pool().await.unwrap())
+                    .await
+                    .unwrap()
+            })
+        };
+        let fila = |id: &str, nombre: &str, n: i64| (id.to_string(), nombre.to_string(), n);
+        assert_eq!(
+            filas("SELECT id, name, is_default FROM catalog_template ORDER BY sort_order"),
+            [
+                fila("default", "Windgets", 0),
+                fila("claro", "Windgets claro", 1),
+                fila("oscuro", "Windgets oscuro", 0),
+            ]
+        );
+        assert_eq!(
+            filas("SELECT id, name, is_active FROM catalog_palette ORDER BY id"),
+            [
+                fila("claro", "Windgets claro", 1),
+                fila("oscuro", "Windgets oscuro", 1),
+            ]
+        );
+        assert_eq!(version_local(&base), 4);
+        assert_eq!(*nube.versiones_pedidas.lock().unwrap(), [0, 3]);
+    }
+
     #[test]
     fn catalog_pull_lee_las_dos_formas_de_respuesta() {
         assert_eq!(

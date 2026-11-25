@@ -61,7 +61,8 @@ function tableroSimulado(): BoardColumn[] {
   });
 }
 
-// Tema inicial «Mi tema» del simulado (HE-02-HU10-ET05): la plantilla por defecto y sus colores.
+// Tema «Mi tema» del simulado (HE-02-HU10-ET05): el de una cuenta anterior a la migración 0010, con la plantilla
+// «Windgets» (la del instalador) y sus colores. Las cuentas nuevas empiezan con «Windgets claro» (RD-94).
 const TEMA_SIMULADO: ThemeDraftView = {
   theme_id: 'mi-tema',
   name: 'Mi tema',
@@ -125,8 +126,8 @@ type Respuestas = {
   [K in CommandName]?: (params: CommandMap[K]['params']) => Result<CommandMap[K]['result']>;
 };
 
-// docs/rediseno.md RD-14, RD-29: las paletas «Claro» y «Oscuro» del catálogo, para el selector «Apariencia» con
-// sesión. El tema aplicado empieza con los colores de la plantilla por defecto (oscuro) y la paleta elegida se
+// docs/rediseno.md RD-14, RD-29, RD-94: las paletas «Windgets claro» y «Windgets oscuro» del catálogo. El tema
+// aplicado empieza con los colores de la plantilla «Windgets» (oscuro) y la paleta elegida se
 // aplica con el flujo de borrador (theme_draft_update → theme_draft_apply).
 const PALETAS_SIMULADAS = {
   claro: { primary: '#F5F0FF', secondary: '#B6A560', text: '#17131D' },
@@ -203,8 +204,8 @@ const respuestas: Respuestas = {
     value:
       kind === 'palette'
         ? [
-            paletaSimulada('claro', 'Claro', PALETAS_SIMULADAS.claro),
-            paletaSimulada('oscuro', 'Oscuro', PALETAS_SIMULADAS.oscuro),
+            paletaSimulada('claro', 'Windgets claro', PALETAS_SIMULADAS.claro),
+            paletaSimulada('oscuro', 'Windgets oscuro', PALETAS_SIMULADAS.oscuro),
             ...(paletaDesactivadaALaVista
               ? [paletaSimulada(PALETA_DESACTIVADA, 'Océano', PALETA_OCEANO)]
               : []),

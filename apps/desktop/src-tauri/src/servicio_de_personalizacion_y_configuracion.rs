@@ -265,7 +265,7 @@ impl ServicioDePersonalizacion {
                 f.try_get::<String, _>("default_font_id").map_err(de_sqlx)?,
             ),
             None => (
-                "default".to_string(),
+                escritorio::PLANTILLA_DEL_INSTALADOR.to_string(),
                 "#201B2B".to_string(),
                 "#DC026C".to_string(),
                 "#FFFFFF".to_string(),
@@ -436,7 +436,7 @@ impl ServicioDePersonalizacion {
         let mut miniaturas = Vec::with_capacity(filas.len());
         for f in &filas {
             let id: String = f.try_get("id").map_err(de_sqlx)?;
-            miniaturas.push(if id == "default" {
+            miniaturas.push(if id == escritorio::PLANTILLA_DEL_INSTALADOR {
                 Some(
                     carpetas
                         .recursos

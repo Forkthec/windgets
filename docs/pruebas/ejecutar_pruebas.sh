@@ -3,7 +3,8 @@
 # Windgets · ejecutar_pruebas.sh
 # Levanta un clúster temporal de PostgreSQL, crea el sustituto mínimo de los esquemas de Supabase
 # (00_stub_supabase.sql, que no forma parte de la entrega), aplica las migraciones reales
-# (0001 a 0004 y seed.sql) y ejecuta pruebas.sql y prueba_sqlite.py.
+# (0001 a 0004 y seed.sql) y ejecuta pruebas.sql y prueba_sqlite.py. Después prueba la migración
+# 0010_temas_windgets.sql de supabase/ (la carpeta del repositorio, junto a docs/) con pruebas_temas_windgets.sql.
 # Termina con «TODAS LAS PRUEBAS OK» (código 0) o con el error (código 1).
 #
 # Variables opcionales:
@@ -79,6 +80,35 @@ sed -E 's/^psql:[^ ]+ (NOTICE|INFO):  //; s/^(NOTICE|INFO):  //' "$SALIDA" | gre
 OK_PG=$(grep -cE 'NOTICE:  ok ' "$SALIDA")
 
 echo
+echo "== Migraciones del repositorio: temas de Windgets (pruebas_temas_windgets.sql)"
+REPO="$(dirname "$RAIZ")/supabase"
+[ -d "$REPO/migrations" ] || fallar "no se encontró $REPO/migrations"
+base_con_sustituto() {
+  "${PSQL[@]}" -d postgres -c "CREATE DATABASE $1 TEMPLATE template0 ENCODING 'UTF8' LC_COLLATE 'C.utf8' LC_CTYPE 'C.utf8'" >"$SALIDA" 2>&1 || fallar "no se creó $1"
+  "${PSQL[@]}" -d "$1" -f "$AQUI/00_stub_supabase.sql" >"$SALIDA" 2>&1 || fallar "$1: sustituto de Supabase"
+}
+# Como en la nube: 0001 a 0004 y, dentro de la prueba, la semilla de entonces y 0005 en adelante.
+base_con_sustituto windgets_temas
+for f in "$REPO"/migrations/000[1-4]_*.sql; do
+  "${PSQL[@]}" -d windgets_temas -f "$f" >"$SALIDA" 2>&1 || fallar "falló $f"
+done
+if ! "${PSQL[@]}" -d windgets_temas -v repo="$REPO" -f "$AQUI/pruebas_temas_windgets.sql" >"$SALIDA" 2>&1; then
+  fallar "pruebas_temas_windgets.sql"
+fi
+grep -E 'NOTICE:  ok ' "$SALIDA" | sed -E 's/^.*NOTICE:  //'
+OK_TEMAS=$(grep -cE 'NOTICE:  ok ' "$SALIDA")
+# Como en una base nueva (supabase db reset): todas las migraciones en orden y después seed.sql, dos veces.
+base_con_sustituto windgets_nueva
+for f in "$REPO"/migrations/*.sql "$REPO/seed.sql" "$REPO/seed.sql"; do
+  "${PSQL[@]}" -d windgets_nueva -f "$f" >"$SALIDA" 2>&1 || fallar "base nueva: falló $f"
+done
+NUEVA=$("${PSQL[@]}" -d windgets_nueva -Atc "SELECT (SELECT string_agg(id || '=' || name || ':' || is_default::text, ', ' ORDER BY sort_order) FROM catalog_template) || ' / ' || (SELECT string_agg(name, ', ' ORDER BY id) FROM catalog_palette WHERE id IN ('claro', 'oscuro'))")
+ESPERADA="default=Windgets:false, claro=Windgets claro:true, oscuro=Windgets oscuro:false / Windgets claro, Windgets oscuro"
+[ "$NUEVA" = "$ESPERADA" ] || { : >"$SALIDA"; fallar "base nueva: $NUEVA (esperado: $ESPERADA)"; }
+echo "ok   - base nueva: migraciones y seed.sql dejan los nombres nuevos y una sola plantilla por defecto"
+OK_TEMAS=$((OK_TEMAS + 1))
+
+echo
 echo "== Pruebas del esquema SQLite local (prueba_sqlite.py)"
 if ! python3 -I "$AQUI/prueba_sqlite.py" "$RAIZ/local/sqlite_esquema.sql" >"$SALIDA" 2>&1; then
   tail -15 "$SALIDA"; fallar "prueba_sqlite.py"
@@ -87,5 +117,5 @@ cat "$SALIDA"
 OK_SQ=$(grep -c '^ok ' "$SALIDA")
 
 echo
-echo "Comprobaciones correctas: $OK_PG en PostgreSQL + $OK_SQ en SQLite = $((OK_PG + OK_SQ))"
+echo "Comprobaciones correctas: $OK_PG en PostgreSQL + $OK_SQ en SQLite + $OK_TEMAS de los temas de Windgets = $((OK_PG + OK_SQ + OK_TEMAS))"
 echo "TODAS LAS PRUEBAS OK"

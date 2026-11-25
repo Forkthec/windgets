@@ -10,3 +10,4 @@ Carpeta de apoyo del artefacto «Especificación de construcción»: contiene ar
 | ejecutar_pruebas.sh | — | Vigente |
 | prueba_sqlite.py | — | Vigente |
 | pruebas.sql | — | Vigente |
+| pruebas_temas_windgets.sql | 2026-11-25 | Vigente |

@@ -40,12 +40,14 @@ export const SIN_CONEXION_ENVIAR_CODIGO = 'Sin conexión. Conéctate para enviar
 /** RD-18: debajo de las acciones, por qué el botón principal está deshabilitado sin conexión. */
 export const REQUIERE_CONEXION = (accion: string) => `${accion} requiere conexión a internet.`;
 
+export type NombreDelTemaInicial = 'Windgets claro' | 'Windgets oscuro';
+
 /**
- * RD-15: la paleta del modo no se pudo aplicar al tema de una cuenta nueva. RD-67 (rediseno_final_backend.md §2):
- * «paleta», no «tema», y el paso donde se elige. DUDA: texto a confirmar en la v13.
+ * RD-15: el tema del modo no se pudo aplicar a una cuenta nueva. Texto de RD-95 (IM-01), que reemplaza el de RD-15
+ * y el de RD-67.
  */
-export const TEMA_INICIAL_NO_APLICADO = (paleta: 'Claro' | 'Oscuro') =>
-  `No pudimos aplicar la paleta ${paleta}. Puedes elegirla en Personalización › 3 Colores y tipografía.`;
+export const TEMA_INICIAL_NO_APLICADO = (tema: NombreDelTemaInicial) =>
+  `No pudimos aplicar el tema ${tema}. Puedes elegirlo en Personalización.`;
 
 /**
  * RD-24: aviso de las pantallas de cuenta cuando el Núcleo responde un error sin texto (`internal.unexpected`,
