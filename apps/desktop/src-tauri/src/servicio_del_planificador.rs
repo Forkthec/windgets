@@ -368,15 +368,21 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
             return Err(primero);
         }
 
-        // DUDA: HE-07-HU01 la columna Por hacer llega con la primera descarga de la cuenta (sync_pull, P10);
-        // sin ella no hay dónde crear la tarjeta y la respuesta es `internal.unexpected` (docs/DUDAS.md).
+        // La columna Por hacer llega con la primera descarga de la cuenta (sync_pull): sin ella no hay dónde crear
+        // la tarjeta y se dice así (docs/rediseno.md RD-84).
         let columna: String =
             sqlx::query_scalar("SELECT id FROM kanban_column WHERE user_id = ? AND role = 'todo'")
                 .bind(user_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(de_sqlx)?
-                .ok_or_else(inesperado)?;
+                .ok_or_else(|| {
+                    error(
+                        ErrorCode::ColumnNotFound,
+                        messages::TABLERO_NO_DESCARGADO,
+                        None,
+                    )
+                })?;
 
         let etiquetas: Vec<String> = params
             .label_ids
@@ -2164,6 +2170,8 @@ pub use reportes::{agrupacion, resolver_rango};
 mod pruebas_de_completar;
 #[cfg(test)]
 mod pruebas_de_edicion;
+#[cfg(test)]
+mod pruebas_de_errores_visibles;
 #[cfg(test)]
 mod pruebas_de_etiquetas;
 #[cfg(test)]

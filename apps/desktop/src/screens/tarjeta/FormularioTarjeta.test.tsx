@@ -275,3 +275,19 @@ describe('RD-75 · Formulario de tarjeta del rediseño final', () => {
     expect(llamadasA(nucleo, 'card_assign_time_block')).toHaveLength(0);
   });
 });
+
+describe('RD-84 · Crear una tarjeta sin el tablero descargado', () => {
+  it('RD-84 · muestra el motivo y el formulario sigue abierto con lo escrito', async () => {
+    const texto = 'Aún no tenemos tu tablero. Conéctate para descargarlo e intenta de nuevo.';
+    const nucleo = await abrirFormulario();
+    nucleo.responder('card_create', () => ({
+      ok: false,
+      error: { code: 'column.not_found', message: texto },
+    }));
+    escribir('Título', 'Llamar al banco');
+    escribir('Fecha límite', '20/11/2026');
+    await guardar();
+    expect(screen.getByRole('alert').textContent).toContain(texto);
+    expect((screen.getByLabelText('Título') as HTMLInputElement).value).toBe('Llamar al banco');
+  });
+});
