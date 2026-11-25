@@ -248,7 +248,8 @@ fn resultado(code: &str, message: &str) -> ResultMessage {
     }
 }
 
-/// Fallas de Supabase comunes a los flujos de cuenta: sin red, sin respuesta y exceso de solicitudes.
+/// Fallas de Supabase comunes a los flujos de cuenta: sin red, sin respuesta, exceso de solicitudes y cuenta
+/// bloqueada (docs/rediseno.md RD-88: `user_banned` con cualquier estado 4xx).
 fn falla_comun(falla: &FallaDeAuth, sin_conexion: &str) -> Option<AppError> {
     match falla {
         FallaDeAuth::SinConexion => Some(error(ErrorCode::NetOffline, sin_conexion, None)),
@@ -260,6 +261,11 @@ fn falla_comun(falla: &FallaDeAuth, sin_conexion: &str) -> Option<AppError> {
         FallaDeAuth::Rechazo { estado: 429, .. } => Some(error(
             ErrorCode::AuthRateLimited,
             messages::DEMASIADOS_INTENTOS,
+            None,
+        )),
+        FallaDeAuth::Rechazo { codigo, .. } if codigo == "user_banned" => Some(error(
+            ErrorCode::AuthUserBanned,
+            messages::CUENTA_BLOQUEADA,
             None,
         )),
         FallaDeAuth::Rechazo { .. } => None,
@@ -1813,7 +1819,7 @@ pub(crate) mod pruebas {
 
     #[test]
     fn inicio_con_servicio_sin_respuesta_o_rechazo_imprevisto() {
-        // RT-04-CA13: sin respuesta, `service.unavailable`; un rechazo que ningún CA prevé, el genérico sin texto.
+        // RT-04-CA13: sin respuesta, `service.unavailable`; un rechazo que nadie prevé, el genérico sin texto.
         no_inicia(
             inicio(REGISTRADO, CLAVE),
             Some(FallaDeAuth::SinRespuesta),
@@ -1823,12 +1829,27 @@ pub(crate) mod pruebas {
         no_inicia(
             inicio(REGISTRADO, CLAVE),
             Some(FallaDeAuth::Rechazo {
-                estado: 422,
-                codigo: "user_banned".into(),
+                estado: 400,
+                codigo: "otra_regla".into(),
             }),
             ErrorCode::InternalUnexpected,
             "",
         );
+    }
+
+    #[test]
+    fn rd_88_una_cuenta_bloqueada_se_dice_al_iniciar_sesion() {
+        // La respuesta tal como llega de Supabase Auth, leída por el mismo lector del cliente.
+        let cuerpo = r#"{ "code": 400, "error_code": "user_banned", "msg": "User is banned" }"#;
+        for estado in [400, 403, 422] {
+            let falla = crate::cliente_de_supabase::interpretar_respuesta(estado, cuerpo);
+            no_inicia(
+                inicio(REGISTRADO, CLAVE),
+                Some(falla.unwrap_err()),
+                ErrorCode::AuthUserBanned,
+                "Tu cuenta está bloqueada. Escríbenos para revisarla.",
+            );
+        }
     }
 }
 

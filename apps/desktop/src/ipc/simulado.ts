@@ -378,10 +378,16 @@ const respuestas: Respuestas = {
   }),
   auth_register_cancel: () => ({ ok: true, value: null }),
   // HE-01-HU04: solo la cuenta de prueba entra, con la contraseña de los datos de prueba mínimos.
-  auth_sign_in: ({ email, password }) =>
-    email.trim().toLowerCase() === CUENTA_SIMULADA.email && password === CONTRASENA_SIMULADA
+  // docs/rediseno.md RD-88: `bloqueada@example.com` hace de cuenta que Supabase tiene bloqueada.
+  auth_sign_in: ({ email, password }) => {
+    const correo = email.trim().toLowerCase();
+    if (correo === 'bloqueada@example.com') {
+      return error({ code: 'auth.user_banned', message: textos.CUENTA_BLOQUEADA });
+    }
+    return correo === CUENTA_SIMULADA.email && password === CONTRASENA_SIMULADA
       ? { ok: true, value: { user_id: 'simulado', alias: CUENTA_SIMULADA.alias } }
-      : error({ code: 'auth.invalid_credentials', message: textos.CREDENCIALES_INCORRECTAS }),
+      : error({ code: 'auth.invalid_credentials', message: textos.CREDENCIALES_INCORRECTAS });
+  },
   // HE-01-HU05: fuera de Tauri no hay navegador ni regreso windgets://; la espera no recibe resultado.
   auth_google_start: () => ({
     ok: true,

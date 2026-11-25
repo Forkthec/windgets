@@ -541,3 +541,24 @@ fn sesion_de_recuperacion_vencida_o_ausente() {
         ErrorCode::CodeExpired
     );
 }
+
+#[test]
+fn rd_88_una_cuenta_bloqueada_se_dice_al_recuperar_la_contrasena() {
+    let bloqueada = || FallaDeAuth::Rechazo {
+        estado: 403,
+        codigo: "user_banned".into(),
+    };
+    let texto = "Tu cuenta está bloqueada. Escríbenos para revisarla.";
+    // Al pedir el código.
+    let (servicio, _) = servicio();
+    servicio.auth().fallar(bloqueada());
+    let error = solicitar(&servicio, REGISTRADO).unwrap_err();
+    assert_eq!(
+        (error.code, error.message.as_str(), error.field),
+        (ErrorCode::AuthUserBanned, texto, None)
+    );
+    // Al verificarlo: no se dice que el código es incorrecto.
+    let (servicio, _) = en_codigo();
+    servicio.auth().fallar(bloqueada());
+    no_verifica(&servicio, "100001", ErrorCode::AuthUserBanned, texto);
+}
