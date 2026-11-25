@@ -539,6 +539,25 @@ const respuestas: Respuestas = {
       },
     };
   },
+  // RD-98 (D-06): las tarjetas pendientes de hoy en adelante, la más cercana primero (IPC-CARD-16).
+  card_list_upcoming: ({ limit }) => {
+    if (limit < 1 || limit > 3) return error({ code: 'limit.out_of_range', message: '', field: 'limit' });
+    const hoy = fechaIso(new Date());
+    const orden = { high: 1, medium: 2, low: 3 };
+    const peso = (t: Card) => (t.priority ? orden[t.priority] : 4);
+    return {
+      ok: true,
+      value: tarjetasSimuladas
+        .filter((t) => t.column_id !== 'hecho' && t.due_date >= hoy)
+        .sort(
+          (a, b) =>
+            a.due_date.localeCompare(b.due_date) ||
+            peso(a) - peso(b) ||
+            a.created_at.localeCompare(b.created_at),
+        )
+        .slice(0, limit),
+    };
+  },
   // HE-11-HU01: la agenda de un día con la fecha y la hora del navegador.
   agenda_get_day: ({ date }) => {
     const ahora = new Date();

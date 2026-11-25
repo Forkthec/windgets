@@ -47,7 +47,7 @@ export type ErrorCode =
   | 'title.required' | 'title.too_long'
   | 'due_date.required' | 'due_date.invalid' | 'due_date.in_past'
   | 'description.too_long' | 'labels.too_many' | 'labels.not_found'
-  | 'card.not_found' | 'column.not_found'
+  | 'card.not_found' | 'limit.out_of_range' | 'column.not_found'
   | 'time_block.past' | 'time_block.after_due_date'
   // etiquetas y columnas
   | 'name.required' | 'name.too_long' | 'name.duplicate'
@@ -361,6 +361,7 @@ export interface CardSetCompletedParams { card_id: Uuid; completed: boolean }
 export interface PlannerItem { card: Card; hour: Hour | null }
 export interface PlannerSummary { total: number; completed: number; remaining: number; percent: number }
 export interface PlannerToday { date: DateIso; items: PlannerItem[]; summary: PlannerSummary }
+export interface CardListUpcomingParams { limit: number }
 
 export interface AgendaDayParams { date: DateIso }
 export interface AgendaBlock { hour: Hour; cards: Card[]; is_past: boolean }
@@ -703,6 +704,7 @@ export interface CommandMap {
   card_move: { params: CardMoveParams; result: Card };
   card_set_completed: { params: CardSetCompletedParams; result: Card };
   planner_get_today: { params: NoParams; result: PlannerToday };
+  card_list_upcoming: { params: CardListUpcomingParams; result: Card[] };
   agenda_get_day: { params: AgendaDayParams; result: AgendaDay };
   card_assign_time_block: { params: CardAssignTimeBlockParams; result: Card };
   card_unassign_time_block: { params: CardUnassignTimeBlockParams; result: Card };

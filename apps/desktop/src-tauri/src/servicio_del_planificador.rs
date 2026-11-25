@@ -50,6 +50,8 @@ pub const TITULO_MAX: usize = 100;
 pub const DESCRIPCION_MAX: usize = 1000;
 /// Etiquetas por tarjeta (HE-07-HU02-ET04; D-14, `docs/rediseno.md` RD-96) y por filtro de Reportes.
 pub const ETIQUETAS_MAX: usize = 3;
+/// Tarjetas que entrega como mucho «Próximas a vencer» (D-06; `docs/rediseno.md` RD-98).
+pub const PROXIMAS_MAX: i64 = 3;
 /// Nombre de etiqueta: de 1 a 30 caracteres (HE-08-HU02-ET03).
 pub const NOMBRE_DE_ETIQUETA_MAX: usize = 30;
 /// Etiquetas por usuario (HE-08-HU02-ET06).
@@ -1486,6 +1488,44 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 percent: porcentaje,
             },
         })
+    }
+
+    /// IPC-CARD-16 `card_list_upcoming` (D-06; `docs/rediseno.md` RD-98): las tarjetas pendientes (fuera de
+    /// Hecho) con fecha límite de hoy en adelante, según la fecha del computador, la más cercana primero. Una
+    /// tarjeta eliminada ya no está en la base local. Lee solo la base local, así que funciona sin conexión.
+    pub async fn proximas_a_vencer(
+        &self,
+        user_id: &str,
+        limit: i64,
+    ) -> Result<Vec<Card>, AppError> {
+        if !(1..=PROXIMAS_MAX).contains(&limit) {
+            // DUDA: RD-98 el texto de `limit.out_of_range` no está definido; va sin texto (docs/DUDAS.md).
+            return Err(error(ErrorCode::LimitOutOfRange, "", Some("limit")));
+        }
+        let dia = self.calendario.hoy();
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        // DUDA: RD-98 el desempate de esta lista no está definido; se usa el de rediseno_final_backend.md §5.9:
+        // prioridad de alta a baja (sin prioridad al final) y creación (docs/DUDAS.md).
+        let filas = sqlx::query(&format!(
+            "{SELECT_TARJETA} WHERE c.user_id = ? AND k.role <> 'done' AND c.due_date >= ? \
+             ORDER BY c.due_date, CASE c.priority WHEN 'high' THEN 1 WHEN 'medium' THEN 2 \
+             WHEN 'low' THEN 3 ELSE 4 END, c.created_at, c.id LIMIT ?"
+        ))
+        .bind(user_id)
+        .bind(dia.format("%Y-%m-%d").to_string())
+        .bind(limit)
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        let etiquetas = self.etiquetas_por_tarjeta(user_id).await?;
+        filas
+            .iter()
+            .map(|fila| {
+                let id: String = fila.try_get("id")?;
+                tarjeta_de_fila(fila, etiquetas.get(&id).cloned().unwrap_or_default(), dia)
+            })
+            .collect::<Result<_, sqlx::Error>>()
+            .map_err(de_sqlx)
     }
 
     /// IPC-CARD-09 `agenda_get_day` (HE-11-HU01): los 24 bloques horarios del día con sus tarjetas (ET01, ET03)

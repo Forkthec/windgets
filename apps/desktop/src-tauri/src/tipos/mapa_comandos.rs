@@ -164,6 +164,13 @@ pub struct CommandMapPlannerGetToday {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "index.ts")]
+pub struct CommandMapCardListUpcoming {
+    pub params: CardListUpcomingParams,
+    pub result: Vec<Card>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
 pub struct CommandMapAgendaGetDay {
     pub params: AgendaDayParams,
     pub result: AgendaDay,
@@ -768,6 +775,7 @@ pub struct CommandMap {
     pub card_move: CommandMapCardMove,
     pub card_set_completed: CommandMapCardSetCompleted,
     pub planner_get_today: CommandMapPlannerGetToday,
+    pub card_list_upcoming: CommandMapCardListUpcoming,
     pub agenda_get_day: CommandMapAgendaGetDay,
     pub card_assign_time_block: CommandMapCardAssignTimeBlock,
     pub card_unassign_time_block: CommandMapCardUnassignTimeBlock,

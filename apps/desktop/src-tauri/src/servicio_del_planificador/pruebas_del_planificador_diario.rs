@@ -121,3 +121,126 @@ fn ca_he_06_hu02_ca06() {
     assert_eq!(vigia.revisar(dia(15)), Some(DateIso("2026-11-15".into())));
     assert_eq!(vigia.revisar(dia(15)), None);
 }
+
+// IPC-CARD-16 `card_list_upcoming` (D-06; docs/rediseno.md RD-98): «Próximas a vencer».
+
+fn proximas(servicio: &ServicioDelPlanificador<CalendarioDePrueba>, limit: i64) -> Vec<String> {
+    bloquear(servicio.proximas_a_vencer(USUARIO, limit))
+        .unwrap()
+        .into_iter()
+        .map(|t| t.title)
+        .collect()
+}
+
+fn ejecutar(servicio: &ServicioDelPlanificador<CalendarioDePrueba>, sql: &str) {
+    bloquear(async {
+        sqlx::query(sql)
+            .execute(servicio.base().pool().await.unwrap())
+            .await
+            .unwrap();
+    });
+}
+
+#[test]
+fn rd_98_entrega_como_mucho_3_la_mas_cercana_primero() {
+    let servicio = con_semilla();
+    assert!(proximas(&servicio, 3).is_empty());
+    for (titulo, fecha) in [
+        ("Diciembre", "2026-12-01"),
+        ("Pasado mañana", "2026-11-16"),
+        ("Mañana", "2026-11-15"),
+    ] {
+        tarjeta_en(&servicio, POR_HACER, titulo, fecha, 1024.0);
+    }
+    let casa = etiqueta(&servicio, "Casa");
+    let mut de_hoy = params("Hoy", "2026-11-14");
+    de_hoy.label_ids = Some(vec![Uuid(casa.clone())]);
+    crear(&servicio, de_hoy).unwrap();
+    assert_eq!(proximas(&servicio, 3), ["Hoy", "Mañana", "Pasado mañana"]);
+    assert_eq!(proximas(&servicio, 1), ["Hoy"]);
+    let primera = bloquear(servicio.proximas_a_vencer(USUARIO, 1)).unwrap();
+    assert_eq!(primera[0].label_ids, [Uuid(casa)]);
+}
+
+#[test]
+fn rd_98_cuenta_desde_hoy_y_deja_fuera_las_vencidas() {
+    let servicio = con_semilla();
+    tarjeta_en(&servicio, POR_HACER, "Ayer", "2026-11-13", 1024.0);
+    tarjeta_en(&servicio, POR_HACER, "Hoy", "2026-11-14", 2048.0);
+    tarjeta_en(&servicio, POR_HACER, "Mañana", "2026-11-15", 3072.0);
+    assert_eq!(proximas(&servicio, 3), ["Hoy", "Mañana"]);
+    // Al cambiar el día del computador, la que era de hoy queda vencida y sale.
+    servicio
+        .calendario
+        .0
+        .fetch_add(86_400_000, std::sync::atomic::Ordering::SeqCst);
+    assert_eq!(proximas(&servicio, 3), ["Mañana"]);
+}
+
+#[test]
+fn rd_98_no_incluye_las_hechas_ni_las_eliminadas() {
+    let servicio = con_semilla();
+    tarjeta_en(&servicio, HECHO, "Hecha", "2026-11-15", 1024.0);
+    let eliminada = tarjeta_en(&servicio, POR_HACER, "Eliminada", "2026-11-15", 1024.0);
+    bloquear(servicio.eliminar_tarjeta(USUARIO, &eliminada)).unwrap();
+    tarjeta_en(&servicio, EN_PROGRESO, "En progreso", "2026-11-20", 1024.0);
+    assert_eq!(proximas(&servicio, 3), ["En progreso"]);
+}
+
+#[test]
+fn rd_98_solo_lee_la_cuenta_activa() {
+    let servicio = con_semilla();
+    ejecutar(
+        &servicio,
+        &format!(
+            "INSERT INTO card (id, user_id, created_at, title, due_date, column_id, position) VALUES \
+             ('00000000-0000-4000-8000-0000000000e1', '{OTRO_USUARIO}', '2026-11-01T00:00:00.000Z', \
+             'De otra cuenta', '2026-11-14', '00000000-0000-4000-8000-0000000000d1', 1024)"
+        ),
+    );
+    tarjeta_en(&servicio, POR_HACER, "Propia", "2026-11-20", 1024.0);
+    assert_eq!(proximas(&servicio, 3), ["Propia"]);
+}
+
+#[test]
+fn rd_98_a_igual_fecha_desempata_por_prioridad_y_creacion() {
+    let servicio = con_semilla();
+    for (titulo, prioridad, creada) in [
+        ("Sin prioridad", "NULL", "01"),
+        ("Baja", "'low'", "01"),
+        ("Alta nueva", "'high'", "03"),
+        ("Media", "'medium'", "01"),
+        ("Alta antigua", "'high'", "02"),
+    ] {
+        let id = tarjeta_en(&servicio, POR_HACER, titulo, "2026-11-15", 1024.0);
+        ejecutar(
+            &servicio,
+            &format!(
+                "UPDATE card SET priority = {prioridad}, created_at = '2026-11-{creada}T00:00:00.000Z' \
+                 WHERE id = '{id}'"
+            ),
+        );
+    }
+    assert_eq!(
+        proximas(&servicio, 3),
+        ["Alta antigua", "Alta nueva", "Media"]
+    );
+    ejecutar(
+        &servicio,
+        "DELETE FROM card WHERE priority IN ('high', 'medium')",
+    );
+    assert_eq!(proximas(&servicio, 3), ["Baja", "Sin prioridad"]);
+}
+
+#[test]
+fn rd_98_un_limite_fuera_de_1_a_3_es_limit_out_of_range() {
+    let servicio = con_semilla();
+    for limit in [i64::MIN, -1, 0, 4, i64::MAX] {
+        let e = bloquear(servicio.proximas_a_vencer(USUARIO, limit)).unwrap_err();
+        assert_eq!(
+            (e.code, e.message.as_str(), e.field.as_deref()),
+            (ErrorCode::LimitOutOfRange, "", Some("limit")),
+            "limit = {limit}"
+        );
+    }
+}

@@ -72,6 +72,9 @@ pub enum ErrorCode {
     LabelsNotFound,
     #[serde(rename = "card.not_found")]
     CardNotFound,
+    /// IPC-CARD-16 `card_list_upcoming` (`docs/rediseno.md` RD-98): `limit` fuera de 1 a 3.
+    #[serde(rename = "limit.out_of_range")]
+    LimitOutOfRange,
     #[serde(rename = "column.not_found")]
     ColumnNotFound,
     #[serde(rename = "time_block.past")]

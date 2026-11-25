@@ -92,6 +92,7 @@ pub fn run() {
             puente_ipc::card_assign_time_block,
             puente_ipc::card_unassign_time_block,
             puente_ipc::planner_get_today,
+            puente_ipc::card_list_upcoming,
             puente_ipc::sync_get_status,
             puente_ipc::theme_list,
             puente_ipc::theme_draft_open,

@@ -25,14 +25,15 @@ use crate::tipos::{
     AuthRecoverySetPasswordParams, AuthRecoveryVerifyParams, AuthRegisterStartParams,
     AuthRegisterStartResult, AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState,
     AuthSignInParams, AuthSignOutInfo, Card, CardAssignTimeBlockParams, CardCreateParams,
-    CardDetail, CardIdParams, CardListBoardResult, CardMoveParams, CardSetCompletedParams,
-    CardUpdateParams, CatalogItem, CatalogKind, CatalogListParams, ChangeOp, CodeSent, Column,
-    ColumnCreateParams, ColumnReorderParams, ColumnUpdateParams, Connectivity, EntityChange,
-    ErrorCode, EventMapAuthGoogleResultStatus, EventMapConnectivityChanged, EventMapSessionChanged,
-    EventMapSessionChangedReason, EventMapSessionChangedState, ImageImportParams,
-    ImageImportResult, IpcErr, IpcOk, IpcResult, KanbanWidgetData, Label, LabelCreateParams,
-    NoParams, OriginKind, PlannerToday, SessionInfo, ThemeDraftOpenParams, ThemeDraftResetParams,
-    ThemeDraftSelectParams, ThemeDraftStatus, ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
+    CardDetail, CardIdParams, CardListBoardResult, CardListUpcomingParams, CardMoveParams,
+    CardSetCompletedParams, CardUpdateParams, CatalogItem, CatalogKind, CatalogListParams,
+    ChangeOp, CodeSent, Column, ColumnCreateParams, ColumnReorderParams, ColumnUpdateParams,
+    Connectivity, EntityChange, ErrorCode, EventMapAuthGoogleResultStatus,
+    EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
+    EventMapSessionChangedState, ImageImportParams, ImageImportResult, IpcErr, IpcOk, IpcResult,
+    KanbanWidgetData, Label, LabelCreateParams, NoParams, OriginKind, PlannerToday, SessionInfo,
+    ThemeDraftOpenParams, ThemeDraftResetParams, ThemeDraftSelectParams, ThemeDraftStatus,
+    ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
 };
 use crate::tipos::{
     AppliedThemeView, ApplyMode, AssetResolveParams, AssetResolveResult,
@@ -2553,6 +2554,23 @@ pub async fn planner_get_today(
     let _ = params;
     Ok(leido(match usuario(&nucleo) {
         Ok(user_id) => nucleo.planificador.planificador_de_hoy(&user_id).await,
+        Err(e) => Err(e),
+    }))
+}
+
+/// IPC-CARD-16 `card_list_upcoming` (D-06; `docs/rediseno.md` RD-98): las próximas tarjetas a vencer.
+#[tauri::command]
+pub async fn card_list_upcoming(
+    nucleo: State<'_, Nucleo>,
+    params: CardListUpcomingParams,
+) -> Result<IpcResult<Vec<Card>>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .proximas_a_vencer(&user_id, params.limit)
+                .await
+        }
         Err(e) => Err(e),
     }))
 }
