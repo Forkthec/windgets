@@ -184,6 +184,7 @@ Aprobadas por Paula el 2026-11-22. Valen para toda pantalla que se construya o c
 | RD-86 | 2026-11-25 | P43 | Temas y «Personalización del wallpaper» | Un tema que se eliminó en otro computador responde `theme.not_found` con «Este tema ya no existe.» al aplicarlo, renombrarlo, eliminarlo o elegirlo en «Tema en edición», y al guardar o aplicar la vista previa que partió de él. La lista se vuelve a leer y «Renombrar tema» se cierra. La vista previa conserva sus cambios y su tema sigue en la lista «Tema en edición»: «Guardar como tema» crea uno nuevo con ellos. Antes respondía el genérico, o decía que había guardado | HE-02-HU10, HE-02-HU11, HE-02-HU12, HE-03-HU03, HE-03-HU04, HE-03-HU05 (no definen el caso) | `rd_86_*` (servicio_de_personalizacion_y_configuracion), `reglas/RD-86.test.tsx` |
 | RD-87 | 2026-11-25 | P43 | «Personalización del wallpaper», sección «Paletas» | Elegir una paleta que el catálogo desactivó con la pantalla abierta responde `palette.not_found` con «Esta paleta ya no está disponible. Elige otra.», debajo de las paletas, y el catálogo se vuelve a leer. La vista previa no cambia. Antes respondía el genérico | HE-02-HU07 (no define el caso) | `rd_87_*` (servicio_de_personalizacion_y_configuracion), `reglas/RD-87.test.tsx` |
 | RD-88 | 2026-11-25 | P43 | Inicio de sesión y Recuperar contraseña | Una cuenta que Supabase tiene bloqueada (`user_banned`) responde `auth.user_banned` con «Tu cuenta está bloqueada. Escríbenos para revisarla.», en el aviso de la pantalla. Antes iniciar sesión respondía el genérico sin texto, y verificar el código de recuperación decía que el código no era correcto. Un rechazo con una regla desconocida sigue en el genérico | HE-01-HU04, HE-01-HU06, HE-01-HU07 (no definen el caso) | `rd_88_*` (servicio_de_sesion), `reglas/RD-88.test.tsx` |
+| RD-89 | 2026-11-25 | P43 | Toda la aplicación | Un comando que necesita la sesión y no la tiene, o cuyo token venció sin poder renovarse, responde `session.expired` con «Tu sesión venció. Inicia sesión de nuevo.». Antes respondía el genérico sin texto | `contratos.md` DP-02 (el caso caía en `internal.unexpected`) | `rd_89_*` (puente_ipc) |
 
 ## Pendiente para la edición final
 
@@ -238,3 +239,4 @@ Al cerrar el rediseño, reescribir con las decisiones de arriba:
 - `HE-02.md` HU10 a HU12 y `HE-03.md` HU03 a HU05: el tema eliminado en otro computador (RD-86).
 - `HE-02.md` HU07: la paleta desactivada (RD-87).
 - `HE-01.md` HU04, HU06 y HU07: la cuenta bloqueada (RD-88).
+- `contratos.md` (`session.expired`): también sin sesión guardada (RD-89).
