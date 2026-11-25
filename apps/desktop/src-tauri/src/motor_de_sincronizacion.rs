@@ -691,6 +691,7 @@ mod pruebas {
         recibidos: Mutex<Vec<SyncPushParams>>,
         respuestas: Mutex<Vec<SyncChangeResult>>,
         paginas: Mutex<Vec<SyncPullResult>>,
+        cursores_pedidos: Mutex<Vec<i64>>,
         hora: Option<i64>,
         catalogo: Mutex<Option<CatalogPullResultVariant2>>,
         versiones_pedidas: Mutex<Vec<i64>>,
@@ -738,6 +739,10 @@ mod pruebas {
             if let Some(falla) = &self.falla {
                 return Err(falla.clone());
             }
+            self.cursores_pedidos
+                .lock()
+                .unwrap()
+                .push(params.p_since_seq);
             let mut paginas = self.paginas.lock().unwrap();
             Ok(if paginas.is_empty() {
                 SyncPullResult {
@@ -1482,6 +1487,68 @@ mod pruebas {
         );
         assert_eq!(bloquear(estado(base)).unwrap().pending_count, 0);
         assert_eq!(nube.recibidos.lock().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn rd_96_tras_la_migracion_una_etiqueta_que_la_nube_conserva_no_se_pierde_entre_paginas() {
+        // Aquí hay 4 confirmadas (A, B, C, D) y la nube ya quitó A. D baja en la primera página, cuando A aún se ve:
+        // la fila que ya existe se actualiza sin chocar con el disparador. La eliminación de A llega en la segunda y
+        // quedan las mismas que en la nube. La descarga sigue desde donde iba.
+        use crate::repositorios_y_archivos_locales::pruebas::{
+            asignada, base_version_9, id_de_la_etiqueta, id_de_la_tarjeta,
+        };
+        let base = base_version_9(0, &[(1, 1, 1, 3), (1, 2, 2, 4), (1, 3, 3, 5), (1, 4, 4, 6)]);
+        let fila = |etiqueta: u8, seq: i64, borrada: bool| -> SyncRow {
+            serde_json::from_value(serde_json::json!({
+                "entity_kind": "card_label",
+                "entity_id": asignada(1, etiqueta),
+                "fields": {
+                    "card_id": id_de_la_tarjeta(1),
+                    "label_id": id_de_la_etiqueta(etiqueta),
+                    "created_at": format!("2026-11-01T00:00:0{etiqueta}.000Z"),
+                },
+                "field_mods": {},
+                "deleted_at": if borrada { serde_json::json!(MARCA) } else { serde_json::Value::Null },
+                "updated_seq": seq,
+            }))
+            .unwrap()
+        };
+        let nube = NubeDePrueba::default();
+        for (filas, next_seq, has_more) in [
+            (vec![fila(4, 41, false)], 41, true),
+            (vec![fila(1, 42, true)], 42, false),
+        ] {
+            nube.paginas.lock().unwrap().push(SyncPullResult {
+                server_now: Instant(instante(AHORA)),
+                rows: filas,
+                next_seq,
+                has_more,
+            });
+        }
+        // Un computador que ya sincronizaba antes de actualizar: la descarga completa de P23 ya está hecha.
+        bloquear(async {
+            sqlx::query(
+                "INSERT INTO device_setting (key, value, updated_at) VALUES (?, 'true', ?)",
+            )
+            .bind(REDESCARGA)
+            .bind(MARCA)
+            .execute(base.pool().await.unwrap())
+            .await
+            .unwrap();
+        });
+        bloquear(descargar(&base, &nube, &SESION)).unwrap();
+        assert_eq!(*nube.cursores_pedidos.lock().unwrap(), [40, 41]);
+        assert_eq!(
+            textos(&base, ASIGNADAS),
+            [2, 3, 4].map(|e| asignada(1, e)).to_vec()
+        );
+        assert_eq!(
+            textos(
+                &base,
+                "SELECT CAST(updated_seq AS TEXT) FROM card_label ORDER BY id"
+            ),
+            ["4", "5", "41"]
+        );
     }
 
     #[test]

@@ -238,3 +238,57 @@ describe('RD-92 · Una etiqueta elegida ya no existe', () => {
     expect(campo(formulario).textContent).toBe('CasaEstudio');
   });
 });
+
+describe('RD-96 · Una tarjeta llega con más etiquetas que el máximo', () => {
+  const MAXIMO = 'Puedes asignar hasta 3 etiquetas.';
+  const IDS = ['x1', 'x2', 'x3', 'x4'];
+
+  it('RD-96 · al guardar lo dice en el campo Etiquetas y se puede desmarcar una', async () => {
+    const nucleo = await abrirPantalla('kanban', 'Tablero Kanban', Kanban, [
+      tarjeta({ id: 't-rd96', title: 'Informe', label_ids: IDS }),
+    ]);
+    nucleo.etiquetas.splice(
+      0,
+      nucleo.etiquetas.length,
+      ...['A', 'B', 'C', 'D'].map((n, i) => etiqueta(n, i + 1)),
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Informe' }));
+    });
+    await act(async () => {
+      const detalle = screen.getByRole('dialog', { name: 'Detalle de tarjeta' });
+      fireEvent.click(within(detalle).getByRole('button', { name: 'Editar' }));
+    });
+    const formulario = screen.getByRole('dialog', { name: 'Formulario de tarjeta' });
+    const campo = within(formulario).getByRole('button', { name: 'Etiquetas asignadas' });
+    const guardar = () =>
+      act(async () => {
+        fireEvent.click(within(formulario).getByRole('button', { name: 'Guardar' }));
+      });
+    nucleo.responder('card_update', () => ({
+      ok: false,
+      error: { code: 'labels.too_many', message: MAXIMO, field: 'label_ids' },
+    }));
+
+    await guardar();
+    // En el campo, con el foco y sin mensaje emergente.
+    const aviso = document.getElementById(campo.getAttribute('aria-describedby') ?? '');
+    expect(aviso?.textContent).toBe(MAXIMO);
+    expect(campo.getAttribute('aria-invalid')).toBe('true');
+    expect(document.activeElement).toBe(campo);
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    abrirCampo(formulario);
+    for (const n of ['A', 'B', 'C', 'D']) {
+      const casilla = within(formulario).getByLabelText(n) as HTMLInputElement;
+      expect([casilla.checked, casilla.disabled]).toEqual([true, false]);
+    }
+    fireEvent.click(within(formulario).getByLabelText('D'));
+    expect(campo.getAttribute('aria-invalid')).toBeNull();
+    await guardar();
+    expect(llamadasA(nucleo, 'card_update')).toEqual([
+      { id: 't-rd96', patch: expect.objectContaining({ label_ids: IDS }) },
+      { id: 't-rd96', patch: expect.objectContaining({ label_ids: IDS.slice(0, 3) }) },
+    ]);
+  });
+});

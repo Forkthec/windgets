@@ -1,9 +1,9 @@
 -- ============================================================================
 -- Windgets · pruebas_etiquetas_por_tarjeta.sql
--- Pruebas de la migración 0011_etiquetas_por_tarjeta.sql (D-14; docs/rediseno.md RD-96) sobre las migraciones
--- reales del repositorio. ejecutar_pruebas.sh la corre en una base con el sustituto de Supabase, 0001 a 0010 y
+-- Pruebas de las migraciones 0011_etiquetas_por_tarjeta.sql y 0012_recorte_etiquetas.sql (D-14; docs/rediseno.md
+-- RD-96) sobre las migraciones reales del repositorio. ejecutar_pruebas.sh la corre en una base con el sustituto de Supabase, 0001 a 0010 y
 -- seed.sql, y le pasa `-v repo=<carpeta supabase/>`. Primero crea tarjetas con las asignaciones que se podían tener
--- con el máximo anterior, después aplica 0011 y comprueba el recorte, R7 y que lo demás no cambia.
+-- con el máximo anterior, después aplica 0011 y 0012 y comprueba el recorte, R7 y que lo demás no cambia.
 -- Cualquier fallo lanza una excepción 'FALLO: ...' y detiene el script.
 -- ============================================================================
 \set ON_ERROR_STOP on
@@ -63,28 +63,29 @@ SELECT t.tarjeta('deBeto', 'beto', ARRAY[1, 2, 3, 4]);
 CREATE TABLE t.antes AS TABLE public.card_label;
 
 \i :repo/migrations/0011_etiquetas_por_tarjeta.sql
+\i :repo/migrations/0012_recorte_etiquetas.sql
 
 CREATE FUNCTION t.vivas(p_card text) RETURNS uuid[] LANGUAGE sql STABLE AS
 $$ SELECT coalesce(array_agg(id ORDER BY id), '{}') FROM public.card_label WHERE card_id = t.id(p_card) AND deleted_at IS NULL $$;
 
 SELECT t.eq(t.vivas('c5'), ARRAY[t.id('c5', 2), t.id('c5', 4), t.id('c5', 5)],
-            '0011: de 5 etiquetas quedan las 3 más antiguas por created_at');
+            '0012: de 5 etiquetas quedan las 3 más antiguas por created_at');
 SELECT t.eq(t.vivas('empate'), ARRAY[t.id('empate', 1), t.id('empate', 2), t.id('empate', 3)],
-            '0011: con la misma hora decide el id');
+            '0012: con la misma hora decide el id');
 SELECT t.eq(t.vivas('deBeto'), ARRAY[t.id('deBeto', 1), t.id('deBeto', 2), t.id('deBeto', 3)],
-            '0011: el recorte llega a todas las cuentas');
+            '0012: el recorte llega a todas las cuentas');
 SELECT t.eq((SELECT count(*) FROM (
                SELECT card_id FROM public.card_label WHERE deleted_at IS NULL GROUP BY card_id HAVING count(*) > 3) x),
-            0::bigint, '0011: ninguna tarjeta queda con más de 3 etiquetas');
+            0::bigint, '0012: ninguna tarjeta queda con más de 3 etiquetas');
 SELECT t.ok((SELECT count(*) = 4 AND bool_and(c.deleted_at IS NOT NULL
                     AND c.updated_seq > (SELECT max(updated_seq) FROM t.antes))
                FROM public.card_label c JOIN t.antes a USING (id)
               WHERE a.deleted_at IS NULL AND c IS DISTINCT FROM a),
-            '0011: solo las 4 sobrantes cambian: eliminadas y con un updated_seq nuevo');
+            '0012: solo las 4 sobrantes cambian: eliminadas y con un updated_seq nuevo');
 SELECT t.eq((SELECT count(*) FROM public.card_label c JOIN t.antes a USING (id)
               WHERE a.card_id IN (t.id('c3'), t.id('c1'), t.id('borrada')) AND c IS NOT DISTINCT FROM a),
-            8::bigint, '0011: las tarjetas con 3 o menos no se tocan, ni las asignaciones ya eliminadas');
-SELECT t.eq((SELECT count(*) FROM public.card_label), (SELECT count(*) FROM t.antes), '0011: no borra filas');
+            8::bigint, '0012: las tarjetas con 3 o menos no se tocan, ni las asignaciones ya eliminadas');
+SELECT t.eq((SELECT count(*) FROM public.card_label), (SELECT count(*) FROM t.antes), '0012: no borra filas');
 
 -- La función redefinida conserva sus permisos y su configuración.
 SELECT t.ok((SELECT p.prosecdef AND 'search_path=public, pg_temp' = ANY (p.proconfig) AND 'TimeZone=UTC' = ANY (p.proconfig)
@@ -101,7 +102,7 @@ SELECT t.eq((SELECT array_agg(f ->> 'entity_id' ORDER BY f ->> 'entity_id')
               WHERE f ->> 'entity_kind' = 'card_label' AND f ->> 'deleted_at' IS NOT NULL),
             (SELECT array_agg(id::text ORDER BY id::text)
                FROM unnest(ARRAY[t.id('c5', 1), t.id('c5', 3), t.id('empate', 4)]) id),
-            '0011: sync_pull entrega las sobrantes como eliminadas');
+            '0012: sync_pull entrega las sobrantes como eliminadas');
 
 -- R7 después de 0011: el máximo es 3.
 CREATE FUNCTION t.asignar(p_cid integer, p_card text, p_label integer, p_at timestamptz) RETURNS jsonb LANGUAGE sql AS $$

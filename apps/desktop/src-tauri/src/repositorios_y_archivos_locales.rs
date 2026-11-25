@@ -100,9 +100,10 @@ async fn migrar_a_9(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     Ok(())
 }
 
-/// En las tarjetas que tengan más etiquetas que el máximo quedan las mismas que deja la nube
-/// ([`etiquetas_sobrantes`]) y el disparador pasa al máximo nuevo. Si se quitó alguna, la próxima descarga empieza
-/// desde el principio para quedar igual que la nube.
+/// El disparador pasa al máximo nuevo y, de las asignaciones que sobren en una tarjeta ([`etiquetas_sobrantes`]),
+/// se quitan solo las altas que siguen en la cola. Las que la nube ya tiene no se tocan: su información aquí puede
+/// estar vieja (otro computador pudo quitar una que aún se ve) y borrar una perdería una etiqueta que la nube
+/// conserva. Las recorta la nube (0012) y bajan como eliminadas; mientras tanto la tarjeta puede tener más.
 async fn migrar_a_10(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
     let desfase: i64 = sqlx::query_scalar("SELECT clock_offset_ms FROM sync_state WHERE id = 1")
@@ -117,13 +118,19 @@ async fn migrar_a_10(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     for tarjeta in &tarjetas {
         let asignaciones = asignaciones_de(&mut tx, tarjeta).await?;
         for id in etiquetas_sobrantes(asignaciones, desfase) {
-            quitar_asignacion_sobrante(&mut tx, &id).await?;
-        }
-    }
-    if !tarjetas.is_empty() {
-        sqlx::query("UPDATE sync_state SET last_pulled_seq = 0 WHERE id = 1")
-            .execute(&mut *tx)
+            // Un alta ya enviada y aún sin descargar tiene `updated_seq = 0`, pero no está en la cola.
+            let alta_pendiente: bool = sqlx::query_scalar(
+                "SELECT EXISTS (SELECT 1 FROM card_label c JOIN pending_change p \
+                   ON p.entity_kind = 'card_label' AND p.entity_id = c.id AND p.op = 'upsert' \
+                 WHERE c.id = ? AND c.updated_seq = 0)",
+            )
+            .bind(&id)
+            .fetch_one(&mut *tx)
             .await?;
+            if alta_pendiente {
+                quitar_asignacion_sobrante(&mut tx, &id).await?;
+            }
+        }
     }
     let disparador = format!(
         "CREATE TRIGGER trg_limit_card_labels BEFORE INSERT ON card_label \
@@ -148,7 +155,7 @@ pub struct Asignacion {
     pub updated_seq: i64,
 }
 
-/// RD-96, la regla de R7 y de `0011_etiquetas_por_tarjeta.sql`: de las asignaciones de una tarjeta quedan las
+/// RD-96, la regla de R7 (0011) y de `0012_recorte_etiquetas.sql`: de las asignaciones de una tarjeta quedan las
 /// [`ETIQUETAS_MAX`] primeras por (`created_at`, `id`) en el reloj de la nube; devuelve los `id` de las demás. Una
 /// asignación que la nube aún no confirma (`updated_seq = 0`) tiene la hora del computador: se le suma el desfase,
 /// como hará `sync_push`.
@@ -455,7 +462,7 @@ pub fn almacen_de_la_aplicacion() -> Box<dyn AlmacenDeSesion> {
 }
 
 #[cfg(test)]
-mod pruebas {
+pub(crate) mod pruebas {
     use super::*;
 
     /// Una base creada con el esquema anterior a la versión 9 (sin 'windi'), con un Reloj y su fila de tema.
@@ -530,25 +537,47 @@ mod pruebas {
     const CUENTA: &str = "00000000-0000-4000-8000-000000000001";
 
     /// El `id` de la asignación de la etiqueta `etiqueta` en la tarjeta `tarjeta`.
-    fn asignada(tarjeta: u8, etiqueta: u8) -> String {
+    pub(crate) fn asignada(tarjeta: u8, etiqueta: u8) -> String {
         format!("00000000-0000-4000-8000-00000003{tarjeta:02}{etiqueta:02}")
+    }
+
+    pub(crate) fn id_de_la_tarjeta(tarjeta: u8) -> String {
+        format!("00000000-0000-4000-8000-0000000001{tarjeta:02}")
+    }
+
+    pub(crate) fn id_de_la_etiqueta(etiqueta: u8) -> String {
+        format!("00000000-0000-4000-8000-0000000002{etiqueta:02}")
+    }
+
+    /// El esquema con el disparador anterior a la versión 10 (máximo 5 etiquetas).
+    fn con_el_disparador_de_5(esquema: &str) -> String {
+        let anterior = esquema.replace(
+            &format!("WHERE card_id = NEW.card_id) >= {ETIQUETAS_MAX}"),
+            "WHERE card_id = NEW.card_id) >= 5",
+        );
+        assert!(anterior.contains("NEW.card_id) >= 5"));
+        anterior
     }
 
     /// Una base de la versión 9 (máximo 5 etiquetas), con las tarjetas y asignaciones que se pidan:
     /// `(tarjeta, etiqueta, segundo de creación, updated_seq)`. Las que la nube no ha confirmado (`updated_seq = 0`)
     /// tienen su alta pendiente.
-    fn base_version_9(desfase_ms: i64, asignaciones: &[(u8, u8, u8, i64)]) -> BaseLocal {
-        let anterior = ESQUEMA
-            .replace(
-                &format!("WHERE card_id = NEW.card_id) >= {ETIQUETAS_MAX}"),
-                "WHERE card_id = NEW.card_id) >= 5",
-            )
+    pub(crate) fn base_version_9(desfase_ms: i64, asignaciones: &[(u8, u8, u8, i64)]) -> BaseLocal {
+        let anterior = con_el_disparador_de_5(ESQUEMA)
             .replace("PRAGMA user_version = 10;", "PRAGMA user_version = 9;");
-        assert!(anterior.contains("NEW.card_id) >= 5"));
+        base_con_asignaciones(&anterior, desfase_ms, asignaciones)
+    }
+
+    /// Una base creada con el esquema indicado, con las asignaciones de [`base_version_9`] y el cursor en 40.
+    fn base_con_asignaciones(
+        anterior: &str,
+        desfase_ms: i64,
+        asignaciones: &[(u8, u8, u8, i64)],
+    ) -> BaseLocal {
         let base = BaseLocal::en_memoria();
         tauri::async_runtime::block_on(async {
             let pool = &base.pool;
-            sqlx::raw_sql(&anterior).execute(pool).await.unwrap();
+            sqlx::raw_sql(anterior).execute(pool).await.unwrap();
             let columna = "00000000-0000-4000-8000-000000000400";
             sqlx::raw_sql(&format!(
                 "INSERT INTO profile (user_id, alias, created_at) VALUES \
@@ -567,8 +596,8 @@ mod pruebas {
             for &(tarjeta, etiqueta, segundo, seq) in asignaciones {
                 let hora = format!("2026-11-01T00:00:{segundo:02}.000Z");
                 let id = asignada(tarjeta, etiqueta);
-                let card = format!("00000000-0000-4000-8000-0000000001{tarjeta:02}");
-                let label = format!("00000000-0000-4000-8000-0000000002{etiqueta:02}");
+                let card = id_de_la_tarjeta(tarjeta);
+                let label = id_de_la_etiqueta(etiqueta);
                 sqlx::raw_sql(&format!(
                     "INSERT OR IGNORE INTO card (id, user_id, created_at, title, due_date, column_id, position) \
                        VALUES ('{card}', '{CUENTA}', '{hora}', 'T', '2026-12-01', '{columna}', {tarjeta});\
@@ -596,11 +625,50 @@ mod pruebas {
         sqlx::query_scalar(sql).fetch_all(pool).await.unwrap()
     }
 
+    const EN_COLA: &str = "SELECT entity_id || ' ' || op FROM pending_change ORDER BY entity_id";
+    const ASIGNADAS: &str = "SELECT id FROM card_label ORDER BY id";
+
+    fn altas_de(asignaciones: &[(u8, u8)]) -> Vec<String> {
+        asignaciones
+            .iter()
+            .map(|&(t, e)| format!("{} upsert", asignada(t, e)))
+            .collect()
+    }
+
+    fn ids_de(asignaciones: &[(u8, u8)]) -> Vec<String> {
+        asignaciones.iter().map(|&(t, e)| asignada(t, e)).collect()
+    }
+
+    async fn version_y_cursor(pool: &SqlitePool) -> (i64, i64) {
+        sqlx::query_as(
+            "SELECT (SELECT user_version FROM pragma_user_version), last_pulled_seq FROM sync_state",
+        )
+        .fetch_one(pool)
+        .await
+        .unwrap()
+    }
+
+    /// El disparador ya no admite otra etiqueta en una tarjeta que tiene 3.
+    async fn no_admite_una_cuarta(pool: &SqlitePool, tarjeta: u8, etiqueta: u8) {
+        let cuarta = sqlx::query(
+            "INSERT INTO card_label (id, user_id, created_at, card_id, label_id) \
+             VALUES (?, ?, '2026-11-01T00:00:04.000Z', ?, ?)",
+        )
+        .bind(asignada(tarjeta, etiqueta))
+        .bind(CUENTA)
+        .bind(id_de_la_tarjeta(tarjeta))
+        .bind(id_de_la_etiqueta(etiqueta))
+        .execute(pool)
+        .await
+        .unwrap_err();
+        assert!(cuarta.to_string().contains("limit_card_labels"));
+    }
+
     #[test]
-    fn la_migracion_local_10_deja_las_3_etiquetas_mas_antiguas_de_cada_tarjeta() {
-        // RD-96: la tarjeta 1 tiene 5 sin enviar y desordenadas; en la 2 hay un empate de hora (decide el id); la 3
-        // tiene 3 y no se toca. Las altas de las sobrantes salen de la cola, sin encolar eliminaciones, y la descarga
-        // vuelve a empezar.
+    fn la_migracion_local_10_quita_las_altas_pendientes_que_sobran() {
+        // RD-96: la tarjeta 1 tiene 5 sin enviar y desordenadas: salen las 2 más recientes; en la 2 hay un empate de
+        // hora entre dos sin enviar (decide el id); la 3 tiene 3 y no se toca. Las altas de las sobrantes salen de la
+        // cola, sin encolar eliminaciones, y el cursor de la descarga no cambia.
         let base = base_version_9(
             0,
             &[
@@ -611,8 +679,8 @@ mod pruebas {
                 (1, 5, 30, 0),
                 (2, 1, 1, 7),
                 (2, 2, 2, 8),
-                (2, 4, 3, 9),
-                (2, 3, 3, 10),
+                (2, 4, 3, 0),
+                (2, 3, 3, 0),
                 (3, 1, 1, 0),
                 (3, 2, 2, 0),
                 (3, 3, 3, 0),
@@ -630,54 +698,122 @@ mod pruebas {
                 (3, 1),
                 (3, 2),
                 (3, 3),
-            ]
-            .map(|(t, e)| asignada(t, e));
-            assert_eq!(
-                textos(pool, "SELECT id FROM card_label ORDER BY id").await,
-                quedan
-            );
-            let cola = "SELECT entity_id || ' ' || op FROM pending_change ORDER BY entity_id";
-            let en_cola = [(1, 2), (1, 4), (1, 5), (3, 1), (3, 2), (3, 3)]
-                .map(|(t, e)| format!("{} upsert", asignada(t, e)));
-            assert_eq!(textos(pool, cola).await, en_cola);
-            let version: i64 = sqlx::query_scalar("PRAGMA user_version")
-                .fetch_one(pool)
+            ];
+            assert_eq!(textos(pool, ASIGNADAS).await, ids_de(&quedan));
+            let en_cola = [(1, 2), (1, 4), (1, 5), (2, 3), (3, 1), (3, 2), (3, 3)];
+            assert_eq!(textos(pool, EN_COLA).await, altas_de(&en_cola));
+            assert_eq!(version_y_cursor(pool).await, (10, 40));
+            no_admite_una_cuarta(pool, 3, 4).await;
+        });
+    }
+
+    #[test]
+    fn la_migracion_local_10_conserva_las_asignaciones_que_la_nube_ya_tiene() {
+        // RD-96: ni las descargadas (`updated_seq > 0`) ni la ya enviada y aún sin descargar (`updated_seq = 0`, fuera
+        // de la cola) se borran aquí, aunque la tarjeta quede con más de 3: las recorta la nube. El cursor no cambia.
+        let base = base_version_9(
+            0,
+            &[
+                (1, 1, 1, 3),
+                (1, 2, 2, 4),
+                (1, 3, 3, 5),
+                (1, 4, 4, 6),
+                (2, 1, 1, 7),
+                (2, 2, 2, 8),
+                (2, 3, 3, 9),
+                (2, 4, 4, 0),
+            ],
+        );
+        tauri::async_runtime::block_on(async {
+            sqlx::query("DELETE FROM pending_change")
+                .execute(&base.pool)
                 .await
                 .unwrap();
-            let cursor: i64 = sqlx::query_scalar("SELECT last_pulled_seq FROM sync_state")
-                .fetch_one(pool)
-                .await
-                .unwrap();
-            assert_eq!((version, cursor), (10, 0));
-            // El disparador ya no admite una 4.ª.
-            let cuarta = sqlx::query(
-                "INSERT INTO card_label (id, user_id, created_at, card_id, label_id) \
-                 VALUES (?, ?, '2026-11-01T00:00:04.000Z', '00000000-0000-4000-8000-000000000103', \
-                         '00000000-0000-4000-8000-000000000204')",
-            )
-            .bind(asignada(3, 4))
-            .bind(CUENTA)
-            .execute(pool)
-            .await
-            .unwrap_err();
-            assert!(cuarta.to_string().contains("limit_card_labels"));
+            let pool = base.pool().await.unwrap();
+            let todas = [
+                (1, 1),
+                (1, 2),
+                (1, 3),
+                (1, 4),
+                (2, 1),
+                (2, 2),
+                (2, 3),
+                (2, 4),
+            ];
+            assert_eq!(textos(pool, ASIGNADAS).await, ids_de(&todas));
+            assert_eq!(version_y_cursor(pool).await, (10, 40));
         });
     }
 
     #[test]
     fn la_migracion_local_10_compara_las_horas_en_el_reloj_de_la_nube() {
-        // El computador va 30 s adelantado (desfase -30 s): sus altas sin enviar son anteriores a las confirmadas de
-        // los segundos 20 y 25, como las verá `sync_push`.
+        // El computador va 30 s adelantado (desfase -30 s): su alta del segundo 40 es anterior a las confirmadas de los
+        // segundos 20 y 25, como la verá `sync_push`, y la del 57 es la que sobra. Sin el desfase saldrían las dos.
         let base = base_version_9(
             -30_000,
-            &[(1, 1, 20, 5), (1, 2, 25, 6), (1, 3, 40, 0), (1, 4, 45, 0)],
+            &[(1, 1, 20, 5), (1, 2, 25, 6), (1, 3, 40, 0), (1, 4, 57, 0)],
         );
         tauri::async_runtime::block_on(async {
             let pool = base.pool().await.unwrap();
             assert_eq!(
-                textos(pool, "SELECT id FROM card_label ORDER BY id").await,
-                [(1, 1), (1, 3), (1, 4)].map(|(t, e)| asignada(t, e))
+                textos(pool, ASIGNADAS).await,
+                ids_de(&[(1, 1), (1, 2), (1, 3)])
             );
+            assert_eq!(textos(pool, EN_COLA).await, altas_de(&[(1, 3)]));
+        });
+    }
+
+    #[test]
+    fn una_base_de_la_version_8_pasa_por_la_9_hasta_la_10_con_sus_asignaciones() {
+        // Sin 'windi' y con el disparador de 5: la tarjeta 1 llega con 4 confirmadas, que se conservan; en la 2 sobra el
+        // alta pendiente; la 3 tiene 3. Al final valen el widget de la 9 y el disparador de la 10.
+        let version_8 = con_el_disparador_de_5(ESQUEMA)
+            .replace(",'windi')", ")")
+            .replace("PRAGMA user_version = 10;", "PRAGMA user_version = 0;");
+        assert!(!version_8.contains("'windi'"));
+        let base = base_con_asignaciones(
+            &version_8,
+            0,
+            &[
+                (1, 1, 1, 3),
+                (1, 2, 2, 4),
+                (1, 3, 3, 5),
+                (1, 4, 4, 6),
+                (2, 1, 1, 7),
+                (2, 2, 2, 8),
+                (2, 3, 3, 9),
+                (2, 4, 4, 0),
+                (3, 1, 1, 10),
+                (3, 2, 2, 11),
+                (3, 3, 3, 12),
+            ],
+        );
+        tauri::async_runtime::block_on(async {
+            let pool = base.pool().await.unwrap();
+            let quedan = [
+                (1, 1),
+                (1, 2),
+                (1, 3),
+                (1, 4),
+                (2, 1),
+                (2, 2),
+                (2, 3),
+                (3, 1),
+                (3, 2),
+                (3, 3),
+            ];
+            assert_eq!(textos(pool, ASIGNADAS).await, ids_de(&quedan));
+            assert!(textos(pool, EN_COLA).await.is_empty());
+            assert_eq!(version_y_cursor(pool).await, (10, 40));
+            sqlx::query(
+                "INSERT INTO widget (id, user_id, created_at, type, is_default) \
+                 VALUES ('00000000-0000-4000-8000-0000000000c1', ?, '2026-11-01T00:00:00.000Z', 'windi', 0)",
+            )
+            .bind(CUENTA)
+            .execute(pool)
+            .await
+            .unwrap();
+            no_admite_una_cuarta(pool, 3, 4).await;
         });
     }
 

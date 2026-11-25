@@ -159,7 +159,7 @@ export function FormularioTarjeta({
     [tarjeta?.due_date, valores.block_date, valores.block_hour],
   );
   const campos = useMensajesDeCampo(CAMPOS, reglas);
-  // RD-92: el único mensaje del campo Etiquetas que da el Núcleo.
+  // RD-92 y RD-96: el mensaje del Núcleo para el campo Etiquetas.
   const [avisoDeEtiquetas, setAvisoDeEtiquetas] = useState('');
   const idDelAviso = `${idFormulario}-aviso-de-etiquetas`;
 
@@ -203,10 +203,11 @@ export function FormularioTarjeta({
 
   const fallo = useCallback(
     (error: AppError) => {
-      if (error.code === 'labels.not_found') {
+      // RD-96: una tarjeta puede traer más etiquetas que el máximo; se avisa en su campo y se desmarcan.
+      if (error.code === 'labels.not_found' || error.code === 'labels.too_many') {
         setAvisoDeEtiquetas(textoDelError(error));
         document.getElementById(`${idDelAviso}-campo`)?.focus();
-        void soltarEtiquetasEliminadas();
+        if (error.code === 'labels.not_found') void soltarEtiquetasEliminadas();
         return;
       }
       if (error.field && campos.mostrarDelNucleo([error])) return;

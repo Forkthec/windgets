@@ -1,13 +1,11 @@
 -- ============================================================================
 -- Windgets · 0011_etiquetas_por_tarjeta.sql
 -- D-14: máximo 3 etiquetas por tarjeta (docs/rediseno.md RD-96; antes eran 5).
---   1. R7 de la sincronización conserva las 3 asignaciones más antiguas de cada tarjeta. La función
---      _sync_apply_change es la de 0003_funciones.sql sin más cambios que ese número. CREATE OR REPLACE
---      conserva el dueño y los permisos, y la definición repite SECURITY DEFINER, search_path y la zona horaria.
---   2. En las tarjetas con más de 3 asignaciones vivas quedan las 3 primeras por (created_at, id), el mismo
---      orden de R7; las demás pasan a eliminadas. El disparador trg_z_updated_seq les da un updated_seq nuevo,
---      así que los computadores las reciben como eliminadas en su próxima descarga. Las tarjetas con 3 o menos
---      no se tocan. Antes del recorte se toma el mismo candado por cuenta que usa sync_push.
+--   R7 de la sincronización conserva las 3 asignaciones más antiguas de cada tarjeta. La función
+--   _sync_apply_change es la de 0003_funciones.sql sin más cambios que ese número. CREATE OR REPLACE
+--   conserva el dueño y los permisos, y la definición repite SECURITY DEFINER, search_path y la zona horaria.
+--   Las asignaciones sobrantes que ya existen las recorta 0012_recorte_etiquetas.sql, en su propia
+--   transacción: así los sync_push que llegan mientras recorta ya usan la R7 de aquí.
 -- Equivalente local: docs/local/sqlite_esquema.sql (trg_limit_card_labels, versión 10).
 -- ============================================================================
 
@@ -287,24 +285,4 @@ BEGIN
     END IF;
     RETURN public._sync_result(v_cid, 'rejected', false, v_reason, v_existing);
   END;
-END $$;
-
--- Recorte de las asignaciones sobrantes
-DO $$
-DECLARE v_uid uuid;
-BEGIN
-  FOR v_uid IN
-    SELECT DISTINCT r.user_id
-      FROM (SELECT user_id, row_number() OVER (PARTITION BY card_id ORDER BY created_at, id) AS rn
-              FROM public.card_label WHERE deleted_at IS NULL) r
-     WHERE r.rn > 3
-     ORDER BY r.user_id
-  LOOP
-    PERFORM pg_advisory_xact_lock(hashtextextended('windgets:' || v_uid::text, 0));
-  END LOOP;
-
-  UPDATE public.card_label c SET deleted_at = date_trunc('milliseconds', now())
-    FROM (SELECT id, row_number() OVER (PARTITION BY card_id ORDER BY created_at, id) AS rn
-            FROM public.card_label WHERE deleted_at IS NULL) r
-   WHERE c.id = r.id AND r.rn > 3;
 END $$;
