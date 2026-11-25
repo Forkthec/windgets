@@ -74,6 +74,7 @@ export function Personalization() {
   // HE-02-HU06 y HU07: el catálogo de tipografías y el de paletas.
   const [fuentes, setFuentes] = useState<CatalogItem[]>([]);
   const [paletas, setPaletas] = useState<CatalogItem[]>([]);
+  const [mensajeDePaleta, setMensajeDePaleta] = useState('');
   // HE-02-HU09-ET03: los widgets activos y el monitor principal para la vista previa.
   const [escritorio, setEscritorio] = useState<{ widgets: WidgetRect[]; monitor: Monitor | null } | null>(
     null,
@@ -114,6 +115,11 @@ export function Personalization() {
     [leerTemas, mostrarError],
   );
 
+  const leerPaletas = useCallback(async () => {
+    const r = await invocar('catalog_list', { kind: 'palette' });
+    if (r.ok) setPaletas(r.value);
+  }, [invocar]);
+
   useEffect(() => {
     let vigente = true;
     void invocar('theme_draft_open', {}).then((r) => {
@@ -126,9 +132,7 @@ export function Personalization() {
     void invocar('catalog_list', { kind: 'font' }).then((r) => {
       if (vigente && r.ok) setFuentes(r.value);
     });
-    void invocar('catalog_list', { kind: 'palette' }).then((r) => {
-      if (vigente && r.ok) setPaletas(r.value);
-    });
+    void leerPaletas();
     void invocar('layer_get_initial_state', {}).then((r) => {
       if (!vigente || !r.ok) return;
       const { monitors, widgets } = r.value;
@@ -138,7 +142,7 @@ export function Personalization() {
     return () => {
       vigente = false;
     };
-  }, [invocar, leerTemas]);
+  }, [invocar, leerPaletas, leerTemas]);
 
   // Los temas guardados cambian al guardar, crear o eliminar uno (EV-12 `themes_changed`).
   useEffect(() => escuchar('themes_changed', () => void leerTemas()), [escuchar, leerTemas]);
@@ -206,6 +210,21 @@ export function Personalization() {
     const r = await invocar('theme_draft_update', { patch });
     if (r.ok) setBorrador(r.value);
     else mostrarError(r.error);
+  };
+
+  // HE-02-HU07-CA01: la paleta pone los tres colores. Si el catálogo la desactivó, se dice en la sección y el
+  // catálogo se vuelve a leer (RD-87).
+  const elegirPaleta = async (id: string) => {
+    const r = await invocar('theme_draft_update', { patch: { palette_id: id } });
+    if (r.ok) {
+      setBorrador(r.value);
+      setMensajeDePaleta('');
+    } else if (r.error.code === 'palette.not_found') {
+      setMensajeDePaleta(textoDelError(r.error));
+      void leerPaletas();
+    } else {
+      mostrarError(r.error);
+    }
   };
 
   // HE-02-HU05: el color se valida en el Núcleo; si no es válido, la vista previa no cambia (ET05).
@@ -573,7 +592,8 @@ export function Personalization() {
                         <Paletas
                           paletas={paletas}
                           actual={borrador.content.palette_id}
-                          alElegir={(id) => void cambiar({ palette_id: id })}
+                          alElegir={(id) => void elegirPaleta(id)}
+                          mensaje={mensajeDePaleta || undefined}
                         />
                       )}
                     </div>

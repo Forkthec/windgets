@@ -132,6 +132,22 @@ const PALETAS_SIMULADAS = {
   claro: { primary: '#F5F0FF', secondary: '#B6A560', text: '#17131D' },
   oscuro: { primary: '#201B2B', secondary: '#5D566B', text: '#F8F5FF' },
 } as const;
+// docs/rediseno.md RD-87: «Océano» hace de paleta que el catálogo desactivó: elegirla responde
+// `palette.not_found` y deja de ofrecerse.
+const PALETA_DESACTIVADA = 'oceano';
+const PALETA_OCEANO = { primary: '#0B3954', secondary: '#087E8B', text: '#F5F5F5' };
+let paletaDesactivadaALaVista = true;
+function paletaSimulada(id: string, name: string, c: { primary: string; secondary: string; text: string }) {
+  return {
+    id,
+    name,
+    thumbnail_url: '',
+    is_cached: true,
+    color_primary: c.primary,
+    color_secondary: c.secondary,
+    color_text: c.text,
+  };
+}
 let contenidoAplicado = TEMA_SIMULADO.content;
 let paletaEnBorrador: keyof typeof PALETAS_SIMULADAS | null = null;
 
@@ -160,6 +176,10 @@ const respuestas: Respuestas = {
     },
   }),
   theme_draft_update: ({ patch }) => {
+    if (patch.palette_id === PALETA_DESACTIVADA) {
+      paletaDesactivadaALaVista = false;
+      return error({ code: 'palette.not_found', message: textos.PALETA_NO_DISPONIBLE });
+    }
     if (patch.palette_id === 'claro' || patch.palette_id === 'oscuro') paletaEnBorrador = patch.palette_id;
     return { ok: true, value: TEMA_SIMULADO };
   },
@@ -183,8 +203,11 @@ const respuestas: Respuestas = {
     value:
       kind === 'palette'
         ? [
-            { id: 'claro', name: 'Claro', thumbnail_url: '', is_cached: true },
-            { id: 'oscuro', name: 'Oscuro', thumbnail_url: '', is_cached: true },
+            paletaSimulada('claro', 'Claro', PALETAS_SIMULADAS.claro),
+            paletaSimulada('oscuro', 'Oscuro', PALETAS_SIMULADAS.oscuro),
+            ...(paletaDesactivadaALaVista
+              ? [paletaSimulada(PALETA_DESACTIVADA, 'Océano', PALETA_OCEANO)]
+              : []),
           ]
         : kind === 'font'
           ? [{ id: 'rubik', name: 'Rubik', thumbnail_url: '', is_cached: true }]

@@ -1,4 +1,4 @@
-//! Pruebas del Núcleo de los errores visibles de la personalización (docs/rediseno.md RD-86): lo que se puede
+//! Pruebas del Núcleo de los errores visibles de la personalización (docs/rediseno.md RD-86 y RD-87): lo que se puede
 //! prever llega con su código y su texto, nunca como `internal.unexpected`.
 
 use super::pruebas_de_colores::primario;
@@ -92,4 +92,43 @@ fn rd_86_guardar_y_aplicar_la_vista_previa_de_un_tema_eliminado_lo_dicen_y_conse
     assert_eq!(borrador.content.colors.primary, Hex("#112233".into()));
     // La salida: «Guardar como tema» crea uno nuevo con la vista previa.
     bloquear(servicio.guardar_como_tema(&base, USUARIO, "Playa", AHORA_MS)).unwrap();
+}
+
+#[test]
+fn rd_87_elegir_una_paleta_desactivada_lo_dice_y_no_cambia_la_vista_previa() {
+    let (base, servicio) = con_temas();
+    bloquear(async {
+        sqlx::query(
+            "INSERT INTO catalog_palette (id, name, color_primary, color_secondary, color_text, is_active, fetched_at) \
+             VALUES ('oceano', 'Océano', '#0B3954', '#087E8B', '#F5F5F5', 0, '2026-11-01T00:00:00.000Z')",
+        )
+        .execute(base.pool().await.unwrap())
+        .await
+        .unwrap();
+    });
+    let antes = bloquear(servicio.abrir_borrador(&base, USUARIO, None)).unwrap();
+    let parche = ThemeDraftPatch {
+        template_id: None,
+        background: None,
+        colors: None,
+        palette_id: Some(Some("oceano".into())),
+        font_id: None,
+        font_size: None,
+    };
+    let e = bloquear(servicio.actualizar_borrador(&base, USUARIO, &parche))
+        .err()
+        .expect("debe fallar");
+    assert_eq!(
+        (e.code, e.message.as_str(), e.field),
+        (
+            ErrorCode::PaletteNotFound,
+            "Esta paleta ya no está disponible. Elige otra.",
+            None
+        )
+    );
+    let despues = bloquear(servicio.abrir_borrador(&base, USUARIO, None)).unwrap();
+    assert_eq!(
+        (despues.dirty, despues.content.colors),
+        (false, antes.content.colors)
+    );
 }

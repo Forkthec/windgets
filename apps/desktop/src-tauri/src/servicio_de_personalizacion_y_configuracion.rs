@@ -738,8 +738,7 @@ impl ServicioDePersonalizacion {
     }
 
     /// Los tres colores de una paleta del catálogo (HE-02-HU07-ET02).
-    /// DUDA: HE-02-HU07 IPC-THEME-05 no define un error para una paleta que no está en el catálogo (la vista solo
-    /// ofrece las del catálogo). Valor usado: `internal.unexpected`, como un color fuera del catálogo (HE-09-HU03).
+    /// RD-87: la vista puede ofrecer todavía una paleta que el catálogo desactivó (`palette.not_found`).
     async fn paleta(base: &BaseLocal, id: &str) -> Result<(String, ThemeColors), AppError> {
         let pool = base.pool().await.map_err(de_sqlx)?;
         let fila = sqlx::query(
@@ -749,7 +748,13 @@ impl ServicioDePersonalizacion {
         .fetch_optional(pool)
         .await
         .map_err(de_sqlx)?
-        .ok_or_else(inesperado)?;
+        .ok_or_else(|| {
+            error(
+                ErrorCode::PaletteNotFound,
+                messages::PALETA_NO_DISPONIBLE,
+                None,
+            )
+        })?;
         let color = |columna: &str| -> Result<Hex, AppError> {
             Ok(Hex(fila
                 .try_get::<String, _>(columna)
