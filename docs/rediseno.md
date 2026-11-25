@@ -186,6 +186,7 @@ Aprobadas por Paula el 2026-11-22. Valen para toda pantalla que se construya o c
 | RD-88 | 2026-11-25 | P43 | Inicio de sesión y Recuperar contraseña | Una cuenta que Supabase tiene bloqueada (`user_banned`) responde `auth.user_banned` con «Tu cuenta está bloqueada. Escríbenos para revisarla.», en el aviso de la pantalla. Antes iniciar sesión respondía el genérico sin texto, y verificar el código de recuperación decía que el código no era correcto. Un rechazo con una regla desconocida sigue en el genérico | HE-01-HU04, HE-01-HU06, HE-01-HU07 (no definen el caso) | `rd_88_*` (servicio_de_sesion), `reglas/RD-88.test.tsx` |
 | RD-89 | 2026-11-25 | P43 | Toda la aplicación | Un comando que necesita la sesión y no la tiene, o cuyo token venció sin poder renovarse, responde `session.expired` con «Tu sesión venció. Inicia sesión de nuevo.». Antes respondía el genérico sin texto | `contratos.md` DP-02 (el caso caía en `internal.unexpected`) | `rd_89_*` (puente_ipc) |
 | RD-90 | 2026-11-25 | P43 | Formularios | Los límites de los campos viven en `apps/desktop/src/reglas/limites.ts`, y una prueba compara cada largo máximo con su columna en `sqlite_esquema.sql`. No cambia ningún límite ni ningún texto | — | `reglas/limites.test.ts` |
+| RD-91 | 2026-11-25 | P43 | Formulario de tarjeta y Agregar carrusel | Los errores de forma salen todos a la vez. En el Formulario de tarjeta, la fecha o la hora que falta del bloque horario sale junto con los demás mensajes, no después de corregirlos. En Agregar carrusel, al salir del campo Intervalo aparece su mensaje (HE-04-HU08-CA07 y CA08) si está mal, aunque «Agregar» siga deshabilitada por las imágenes; mientras se escribe no aparece nada, y el mensaje no mueve las acciones. Los formularios de un solo dato (Guardar como tema, Renombrar tema, Agregar Clima, Texto e Imagen estática) no cambian y quedan con su prueba | HE-04-HU08 (no define el mensaje antes de «Agregar») | `RD-91 ·` en las pruebas de cada formulario, `e2e/rediseno-widgets.spec.ts` |
 
 ## Pendiente para la edición final
 
@@ -242,3 +243,4 @@ Al cerrar el rediseño, reescribir con las decisiones de arriba:
 - `HE-01.md` HU04, HU06 y HU07: la cuenta bloqueada (RD-88).
 - `contratos.md` (`session.expired`): también sin sesión guardada (RD-89).
 - Ninguna HU: los límites en un solo módulo (RD-90).
+- `HE-04.md` HU08 y `HE-07.md` HU01: cuándo salen los mensajes del intervalo y del bloque horario (RD-91).

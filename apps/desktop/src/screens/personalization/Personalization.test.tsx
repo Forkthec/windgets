@@ -978,6 +978,15 @@ describe('HE-03-HU02 · Guardar como tema', () => {
   const guardar = (ventana: HTMLElement) =>
     within(ventana).getByRole('button', { name: 'Guardar' }) as HTMLButtonElement;
 
+  it('RD-91 · el único campo muestra su error', async () => {
+    const { nucleo, ventana } = await abrirVentana();
+    diligenciarNombre(ventana, 'a'.repeat(41));
+    expect(within(ventana).getByText('El nombre no puede superar los 40 caracteres.')).toBeTruthy();
+    fireEvent.click(guardar(ventana));
+    expect(ventana.querySelectorAll('.wg-campo__mensaje')).toHaveLength(1);
+    expect(llamadasA(nucleo, 'theme_draft_save_as')).toEqual([]);
+  });
+
   it('HE-03-HU02-CA01 · Guardar como tema nuevo', async () => {
     const { nucleo, ventana } = await abrirVentana();
     nucleo.responder('theme_draft_save_as', ({ name }) => ({

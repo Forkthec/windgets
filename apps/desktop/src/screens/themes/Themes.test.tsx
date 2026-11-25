@@ -238,6 +238,15 @@ describe('HE-03-HU04 · Renombrar un tema', () => {
     return { n, ventana, campo: within(ventana).getByLabelText('Nombre') as HTMLInputElement };
   }
 
+  it('RD-91 · el único campo muestra su error', async () => {
+    const { n, ventana, campo } = await abrirRenombrar();
+    fireEvent.change(campo, { target: { value: 'a'.repeat(41) } });
+    expect(within(ventana).getByText('El nombre no puede superar los 40 caracteres.')).toBeTruthy();
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Guardar' }));
+    expect(ventana.querySelectorAll('.wg-campo__mensaje')).toHaveLength(1);
+    expect(llamadasA(n, 'theme_rename')).toEqual([]);
+  });
+
   it('HE-03-HU04-CA07 · Abrir la ventana Renombrar tema', async () => {
     const { ventana, campo } = await abrirRenombrar();
     expect(campo.value).toBe('Mi tema');

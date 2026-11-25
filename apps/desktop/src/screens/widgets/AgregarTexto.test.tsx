@@ -59,6 +59,15 @@ describe('HE-04-HU10 · Agregar el widget Texto', () => {
     expect(agregar.disabled).toBe(true);
   });
 
+  it('RD-91 · el único campo muestra su error y «Agregar» no envía nada', async () => {
+    const { n, sub, campo, agregar } = await abrir();
+    fireEvent.change(campo, { target: { value: 'a'.repeat(201) } });
+    expect(sub.querySelectorAll('.wg-campo__mensaje')).toHaveLength(1);
+    expect(agregar.disabled).toBe(true);
+    fireEvent.click(agregar);
+    expect(llamadasA(n, 'widget_add')).toEqual([]);
+  });
+
   it('HE-04-HU10-CA04 · la subpantalla no ofrece opciones de fuente ni de tamaño', async () => {
     const { sub } = await abrir();
     expect(within(sub).queryByLabelText(/Fuente|Tamaño/)).toBeNull();

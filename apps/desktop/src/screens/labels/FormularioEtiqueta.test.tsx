@@ -162,3 +162,21 @@ describe('HE-08-HU02 · Crear una etiqueta', () => {
     expect(within(ventana).getByRole('button', { name: 'Cancelar' })).toBeTruthy();
   });
 });
+
+describe('RD-91 · Todos los errores del Formulario de etiqueta a la vez', () => {
+  it('RD-91 · nombre largo y color sin elegir', async () => {
+    const nucleo = await abrir();
+    const ventana = await abrirFormulario();
+    escribirNombre(ventana, 'a'.repeat(31));
+    guardar(ventana);
+    await waitFor(() =>
+      expect(mensajeDe(within(ventana).getByLabelText('Nombre'))).toBe(
+        'El nombre de la etiqueta no puede superar los 30 caracteres.',
+      ),
+    );
+    expect(mensajeDe(within(ventana).getByRole('radio', { name: 'Azul' }))).toBe(
+      'Este campo es obligatorio.',
+    );
+    expect(llamadasA(nucleo, 'label_create')).toEqual([]);
+  });
+});

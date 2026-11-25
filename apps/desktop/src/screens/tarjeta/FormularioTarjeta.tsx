@@ -55,9 +55,13 @@ const PRIORIDADES: Array<{ valor: Priority | ''; texto: string }> = [
 
 /**
  * Reglas de campo (HE-07-HU01-ET06 a ET10). `fechaOriginal` es la fecha límite de la tarjeta que se edita:
- * sin cambiarla, no se compara con hoy (HE-07-HU04-ET08).
+ * sin cambiarla, no se compara con hoy (HE-07-HU04-ET08). `bloque` es lo diligenciado en el bloque horario: su
+ * fecha y su hora van juntas (D-20).
  */
-function validadores(fechaOriginal?: string): Record<Campo, Validador> {
+function validadores(
+  fechaOriginal: string | undefined,
+  bloque: { fecha: string; hora: string },
+): Record<Campo, Validador> {
   return {
     title: (v) => {
       if (estaVacio(v)) return textos.CAMPO_OBLIGATORIO;
@@ -71,10 +75,14 @@ function validadores(fechaOriginal?: string): Record<Campo, Validador> {
       return fecha < hoy() ? textos.FECHA_LIMITE_ANTERIOR_A_HOY : undefined;
     },
     description: (v) => ([...v].length > TARJETA_DESCRIPCION_MAX ? textos.DESCRIPCION_MUY_LARGA : undefined),
-    // D-20: el bloque horario es opcional; si tiene fecha, la fecha debe ser válida. Que no sea pasado ni posterior
-    // a la fecha límite lo valida el Núcleo (`time_block.past`, `time_block.after_due_date`).
-    block_date: (v) => (estaVacio(v) || leerFecha(v) ? undefined : textos.FECHA_INVALIDA),
-    block_hour: () => undefined,
+    // D-20: el bloque horario es opcional; si tiene fecha u hora, necesita las dos y la fecha debe ser válida. Van
+    // aquí para que salgan a la vez que los demás mensajes (docs/rediseno.md RD-91). Que no sea pasado ni posterior a
+    // la fecha límite lo valida el Núcleo (`time_block.past`, `time_block.after_due_date`).
+    block_date: (v) => {
+      if (estaVacio(v)) return bloque.hora ? textos.CAMPO_OBLIGATORIO : undefined;
+      return leerFecha(v) ? undefined : textos.FECHA_INVALIDA;
+    },
+    block_hour: (v) => (!v && !estaVacio(bloque.fecha) ? textos.CAMPO_OBLIGATORIO : undefined),
   };
 }
 
@@ -146,7 +154,10 @@ export function FormularioTarjeta({
   const [creandoEtiqueta, setCreandoEtiqueta] = useState(false);
   const mostrarResultado = useMensajeDeResultado();
   const mostrarError = useMostrarError();
-  const reglas = useMemo(() => validadores(tarjeta?.due_date), [tarjeta?.due_date]);
+  const reglas = useMemo(
+    () => validadores(tarjeta?.due_date, { fecha: valores.block_date, hora: valores.block_hour }),
+    [tarjeta?.due_date, valores.block_date, valores.block_hour],
+  );
   const campos = useMensajesDeCampo(CAMPOS, reglas);
 
   // HE-07-HU01-ET12; HE-07-HU02-ET03, ET10: solo las etiquetas creadas, en el orden del Núcleo (A a la Z).
@@ -186,13 +197,6 @@ export function FormularioTarjeta({
 
   const guardar = useCallback(async () => {
     if (!campos.validarTodo(valores)) return;
-    // D-20: fecha y hora del bloque horario van juntas.
-    const faltan: Array<Pick<AppError, 'field' | 'message'>> = [];
-    if (!estaVacio(valores.block_date) && !valores.block_hour)
-      faltan.push({ message: textos.CAMPO_OBLIGATORIO, field: 'block_hour' });
-    if (estaVacio(valores.block_date) && valores.block_hour)
-      faltan.push({ message: textos.CAMPO_OBLIGATORIO, field: 'block_date' });
-    if (faltan.length > 0) return campos.mostrarDelNucleo(faltan);
     const fecha = leerFecha(valores.due_date);
     if (!fecha) return;
     let r: Result<Card>;

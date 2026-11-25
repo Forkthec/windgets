@@ -181,3 +181,46 @@ describe('HE-04-HU08 · Agregar el widget Carrusel de imágenes', () => {
     expect(llamadasA(n, 'widget_add')).toEqual([]);
   });
 });
+
+describe('RD-91 · Todos los errores del Carrusel a la vez', () => {
+  const FUERA = 'El intervalo debe estar entre 3 y 60 segundos.';
+  const POCAS = 'Selecciona al menos 2 imágenes para el carrusel.';
+
+  it('RD-91 · pocas imágenes e intervalo fuera de rango se ven a la vez al salir del campo', async () => {
+    const { n, sub, boton } = await abrir();
+    await delCatalogo(sub, ['Mar']);
+    fireEvent.focus(intervalo(sub));
+    fireEvent.change(intervalo(sub), { target: { value: '2' } });
+    // Mientras se escribe no aparece el mensaje.
+    expect(within(sub).queryByText(FUERA)).toBeNull();
+    fireEvent.blur(intervalo(sub));
+    expect(within(sub).getByText(FUERA)).toBeTruthy();
+    expect(within(sub).getByText(POCAS)).toBeTruthy();
+    expect(boton('Agregar').disabled).toBe(true);
+    expect(llamadasA(n, 'widget_add')).toEqual([]);
+  });
+
+  it('RD-91 · al salir del campo vacío dice que es obligatorio; al corregirlo se quita', async () => {
+    const { sub } = await abrir();
+    fireEvent.change(intervalo(sub), { target: { value: ' ' } });
+    fireEvent.blur(intervalo(sub));
+    expect(within(sub).getByText('Este campo es obligatorio.')).toBeTruthy();
+    fireEvent.change(intervalo(sub), { target: { value: '10' } });
+    fireEvent.blur(intervalo(sub));
+    expect(sub.querySelectorAll('.wg-campo__mensaje')).toHaveLength(0);
+  });
+
+  it('RD-91 · salir de un intervalo válido no borra lo que respondió el Núcleo', async () => {
+    const { sub, boton } = await abrir((n) =>
+      n.responder('widget_add', () => ({
+        ok: false as const,
+        error: { code: 'interval.out_of_range' as ErrorCode, message: FUERA, field: 'interval_seconds' },
+      })),
+    );
+    await delCatalogo(sub, ['Mar', 'Monte']);
+    fireEvent.click(boton('Agregar'));
+    expect(await within(sub).findByText(FUERA)).toBeTruthy();
+    fireEvent.blur(intervalo(sub));
+    expect(within(sub).getByText(FUERA)).toBeTruthy();
+  });
+});

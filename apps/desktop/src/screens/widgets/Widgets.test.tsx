@@ -631,6 +631,15 @@ describe('HE-04-HU05 · Agregar el widget Clima', () => {
     expect(llamadasA(nucleo, 'weather_city_search')).toEqual([]);
   });
 
+  it('RD-91 · el único campo muestra su error y «Agregar» no envía nada', async () => {
+    const { nucleo, sub, campo, agregar } = await abrirClima();
+    fireEvent.change(campo, { target: { value: 'a'.repeat(101) } });
+    expect(within(sub).getByText('La ciudad no puede superar los 100 caracteres.')).toBeTruthy();
+    expect(sub.querySelectorAll('.wg-campo__mensaje')).toHaveLength(1);
+    expect(agregar.disabled).toBe(true);
+    expect(llamadasA(nucleo, 'widget_add')).toEqual([]);
+  });
+
   it('HE-04-HU05-CA10 · Sugerencias al escribir', async () => {
     // ET18 (P29): desde 2 caracteres, tras una pausa, hasta 5 lugares con nombre, región y país; con 1 no consulta.
     const { nucleo, sub, campo, agregar } = await abrirClima();

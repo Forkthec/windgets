@@ -491,3 +491,14 @@ describe('Rediseño · Error sin texto', () => {
     expect(within(paso('Nueva contraseña')).getByRole('alert').textContent).toBe(INESPERADO);
   });
 });
+
+describe('RD-91 · Todos los errores de Recuperar contraseña a la vez', () => {
+  it('RD-91 · la contraseña nueva y su confirmación mal a la vez', async () => {
+    const nucleo = await enNueva();
+    diligenciar('clave', 'otra');
+    await seleccionar('Guardar contraseña');
+    expect(textoDebajoDe('Nueva contraseña')).toBe(INVALIDA);
+    expect(textoDebajoDe('Confirmar contraseña')).toBe('Las contraseñas no coinciden.');
+    expect(llamadasA(nucleo, 'auth_recovery_set_password')).toHaveLength(0);
+  });
+});

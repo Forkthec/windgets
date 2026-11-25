@@ -171,6 +171,19 @@ body[data-sesion] .wg-subpantalla-widget__catalogo button[aria-pressed='true'] {
   font-size: 15px;
   font-weight: 500;
 }
+/* RD-91: el mensaje del intervalo aparece al salir del campo, a veces porque se está haciendo clic en una acción. Va
+ * superpuesto en el espacio que sigue al campo para no mover las acciones debajo del cursor. */
+.wg-subpantalla-widget__formulario--sin-salto {
+  position: relative;
+  /* El espacio fijo que deja el mensaje separado del texto que sigue. */
+  margin-bottom: 8px;
+}
+.wg-subpantalla-widget__formulario--sin-salto .wg-campo__mensaje {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+}
 /* RD-58 a RD-60: las acciones abajo a la izquierda, 12 px entre ellas, con la principal antes de «Regresar» (84:756,
  * 84:758); de 48 px de alto y radio 9. */
 .wg-subpantalla-widget__acciones {

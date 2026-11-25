@@ -140,3 +140,16 @@ describe('HE-09-HU03 · Crear una columna', () => {
     expect(within(ventana).getByRole('button', { name: 'Cancelar' })).toBeTruthy();
   });
 });
+
+describe('RD-91 · Todos los errores del Formulario de columna a la vez', () => {
+  it('RD-91 · solo el nombre puede estar mal: el color ya viene elegido (HE-09-HU03-ET06)', async () => {
+    const nucleo = await abrirTablero();
+    const ventana = await abrirFormulario();
+    escribirNombre(ventana, '   ');
+    guardar(ventana);
+    await waitFor(() => expect(mensajeDeNombre(ventana)).toBe('Este campo es obligatorio.'));
+    expect(ventana.querySelectorAll('.wg-campo__mensaje')).toHaveLength(1);
+    expect((within(ventana).getByRole('radio', { name: 'Gris' }) as HTMLInputElement).checked).toBe(true);
+    expect(llamadasA(nucleo, 'column_create')).toEqual([]);
+  });
+});

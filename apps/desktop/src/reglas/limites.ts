@@ -26,6 +26,8 @@ export const TEXTO_WIDGET_MAX = 200;
 /** HE-04: de 2 a 10 imágenes (D-040). */
 export const CARRUSEL_IMAGENES_MIN = 2;
 export const CARRUSEL_IMAGENES_MAX = 10;
+export const CARRUSEL_INTERVALO_MIN = 3;
+export const CARRUSEL_INTERVALO_MAX = 60;
 
 // Windi (HE-14-HU01-ET03).
 export const WINDI_MENSAJE_MAX = 2000;

@@ -291,3 +291,42 @@ describe('RD-84 · Crear una tarjeta sin el tablero descargado', () => {
     expect((screen.getByLabelText('Título') as HTMLInputElement).value).toBe('Llamar al banco');
   });
 });
+
+describe('RD-91 · Todos los errores del Formulario de tarjeta a la vez', () => {
+  it('RD-91 · título, fecha límite, descripción y bloque horario mal a la vez', async () => {
+    await rechaza(
+      {
+        Título: 't'.repeat(101),
+        'Fecha límite': '31/02/2026',
+        Descripción: 'd'.repeat(1001),
+        'Fecha del bloque': '31/02/2026',
+      },
+      {
+        Título: 'El título no puede superar los 100 caracteres.',
+        'Fecha límite': 'Diligencia una fecha válida.',
+        Descripción: 'La descripción no puede superar los 1000 caracteres.',
+        'Fecha del bloque': 'Diligencia una fecha válida.',
+        'Hora del bloque': 'Este campo es obligatorio.',
+      },
+    );
+  });
+
+  it('RD-91 · la hora que falta sale junto con el título vacío, no después', async () => {
+    await rechaza(
+      { 'Fecha del bloque': '14/11/2026' },
+      {
+        Título: 'Este campo es obligatorio.',
+        'Fecha límite': 'Este campo es obligatorio.',
+        'Hora del bloque': 'Este campo es obligatorio.',
+      },
+    );
+  });
+
+  it('RD-91 · la fecha que falta sale junto con el título vacío', async () => {
+    await abrirFormulario();
+    fireEvent.change(screen.getByLabelText('Hora del bloque'), { target: { value: '9' } });
+    await guardar();
+    expect(textoDebajoDe('Título')).toBe('Este campo es obligatorio.');
+    expect(textoDebajoDe('Fecha del bloque')).toBe('Este campo es obligatorio.');
+  });
+});

@@ -1,4 +1,9 @@
-import { CARRUSEL_IMAGENES_MAX, CARRUSEL_IMAGENES_MIN } from '@/reglas/limites';
+import {
+  CARRUSEL_IMAGENES_MAX,
+  CARRUSEL_IMAGENES_MIN,
+  CARRUSEL_INTERVALO_MAX,
+  CARRUSEL_INTERVALO_MIN,
+} from '@/reglas/limites';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useState } from 'react';
 import { useEnvioUnico } from '@/reglas/envio';
@@ -18,6 +23,15 @@ import { textoDelError } from '@/ipc/textoDelError';
 interface Elegida {
   imagen: ImageRef;
   nombre: string;
+}
+
+/** CA07, CA08 (ET04): la vista repite la regla del intervalo; el Núcleo vuelve a validar el rango. */
+function errorDelIntervalo(valor: string): string | undefined {
+  const texto = valor.trim();
+  if (texto === '') return textos.CAMPO_OBLIGATORIO;
+  const segundos = Number(texto);
+  const enRango = segundos >= CARRUSEL_INTERVALO_MIN && segundos <= CARRUSEL_INTERVALO_MAX;
+  return Number.isInteger(segundos) && enRango ? undefined : textos.INTERVALO_FUERA_DE_RANGO;
 }
 
 export interface AgregarCarruselProps {
@@ -84,18 +98,20 @@ export function AgregarCarrusel({ alRegresar, alIrAWidgets }: AgregarCarruselPro
     setMensajeIntervalo('');
   };
 
+  // docs/rediseno.md RD-91: al salir del campo se dice lo que está mal, aunque «Agregar» siga deshabilitada por las
+  // imágenes. Mientras se escribe no aparece nada.
+  const salirDelIntervalo = () => {
+    const mensaje = errorDelIntervalo(intervalo);
+    if (mensaje) setMensajeIntervalo(mensaje);
+  };
+
   const agregar = useCallback(async () => {
-    // CA07, CA08 (ET04): la vista repite la regla del intervalo; el Núcleo vuelve a validar el rango.
-    const texto = intervalo.trim();
-    if (texto === '') {
-      setMensajeIntervalo(textos.CAMPO_OBLIGATORIO);
+    const mensaje = errorDelIntervalo(intervalo);
+    if (mensaje) {
+      setMensajeIntervalo(mensaje);
       return;
     }
-    const segundos = Number(texto);
-    if (!Number.isInteger(segundos) || segundos < 3 || segundos > 60) {
-      setMensajeIntervalo(textos.INTERVALO_FUERA_DE_RANGO);
-      return;
-    }
+    const segundos = Number(intervalo.trim());
     const r = await invocar('widget_add', {
       type: 'image_carousel',
       config: { items: elegidas.map((e) => e.imagen), interval_seconds: segundos },
@@ -147,11 +163,12 @@ export function AgregarCarrusel({ alRegresar, alIrAWidgets }: AgregarCarruselPro
           ))}
         </ul>
       )}
-      <div className="wg-subpantalla-widget__formulario">
+      <div className="wg-subpantalla-widget__formulario wg-subpantalla-widget__formulario--sin-salto">
         <CampoTexto
           etiqueta="Intervalo (segundos)"
           valor={intervalo}
           alCambiar={cambiarIntervalo}
+          onBlur={salirDelIntervalo}
           inputMode="numeric"
           mensaje={mensajeIntervalo || undefined}
         />

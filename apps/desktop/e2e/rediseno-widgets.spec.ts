@@ -132,3 +132,28 @@ test('RD-61, RD-66 · El indicador de sincronización en 12 px y el color del te
   expect(await estilo(indicador, 'font-size')).toBe('12px');
   expect(await estilo(indicador, 'color')).toBe(await colorDe(page, '--wg-texto'));
 });
+
+test('RD-91 · Carrusel: el mensaje del intervalo no mueve las acciones y el clic en «Regresar» responde', async ({
+  page,
+}) => {
+  await entrar(page);
+  const sub = await agregarWidget(page);
+  await sub.getByRole('button', { name: /^Carrusel de imágenes/ }).click();
+  const carrusel = page.getByRole('main', { name: 'Carrusel de imágenes' });
+  const regresar = carrusel.getByRole('button', { name: 'Regresar', exact: true });
+  const campo = carrusel.getByLabel('Intervalo (segundos)');
+  const antes = await caja(regresar);
+  await campo.fill('2');
+  await campo.blur();
+  const mensaje = carrusel.getByText('El intervalo debe estar entre 3 y 60 segundos.');
+  await expect(mensaje).toBeVisible();
+  cerca((await caja(regresar)).y, antes.y);
+  // El mensaje cabe entre el campo y el texto de formatos, sin taparlo.
+  const m = await caja(mensaje);
+  const formatos = await caja(carrusel.getByText('JPG, JPEG o PNG. Máximo 20 MB.'));
+  expect(formatos.y - (m.y + m.height)).toBeGreaterThanOrEqual(8 - TOLERANCIA);
+  // Con el cursor en el campo y un valor mal, un clic cerca del borde superior de «Regresar» responde.
+  await campo.fill('1');
+  await regresar.click({ position: { x: 10, y: 3 } });
+  await expect(page.getByRole('main', { name: 'Agregar widget' })).toBeVisible();
+});

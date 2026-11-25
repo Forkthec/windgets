@@ -35,4 +35,10 @@ describe('RD-90 · Límites de largo', () => {
       'widget.text_content': limites.TEXTO_WIDGET_MAX,
     });
   });
+
+  it('RD-91 · el intervalo del carrusel es el de la base local', () => {
+    expect(esquema).toContain(
+      `carousel_interval_seconds BETWEEN ${limites.CARRUSEL_INTERVALO_MIN} AND ${limites.CARRUSEL_INTERVALO_MAX}`,
+    );
+  });
 });
