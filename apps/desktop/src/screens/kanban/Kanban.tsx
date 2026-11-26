@@ -21,7 +21,7 @@ import type {
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
 import { MenuDeAcciones } from '@/ui/MenuDeAcciones/MenuDeAcciones';
-import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
+import { useMensajeDeResultado, useMostrarError } from '@/ui/MensajeResultado/MensajeResultado';
 import textos from '@/types/messages.es.json';
 import { FormularioColumna } from './FormularioColumna';
 import { useNucleo, useParametrosDeNavegacion } from '@/ventana_principal/VentanaPrincipal';
@@ -32,6 +32,7 @@ import { NOMBRE_DE_PRIORIDAD, NOMBRE_DE_TIPO } from '../tarjeta/nombres';
 import './kanban.css';
 import { useVentanasDeTarjeta } from '../tarjeta/useVentanasDeTarjeta';
 import { ENCABEZADO, type LugarDeSoltar, movimientoDelArrastre, ordenDelArrastre } from './arrastre';
+import { NombreEmergente } from '@/ui/NombreEmergente/NombreEmergente';
 
 // P-KAN-01 Tablero Kanban (Menú principal > Planificador > Tablero Kanban; HE-09-HU01). Las columnas y las
 // tarjetas vienen del Núcleo (IPC-CARD-05); la pantalla se vuelve a leer con cards_changed y columns_changed.
@@ -243,16 +244,17 @@ function Columna({
         <span className="wg-columna__cantidad">{column.card_count}</span>
         {/* D-08 (RD-74): «+» solo en el encabezado de Por hacer; la tarjeta nace allí (HE-07-HU01). */}
         {column.role === 'todo' && (
-          <button
-            type="button"
-            className="wg-icono-boton wg-columna__nueva"
-            aria-label="Nueva tarjeta"
-            title="Nueva tarjeta"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={alNuevaTarjeta}
-          >
-            +
-          </button>
+          <NombreEmergente texto="Nueva tarjeta">
+            <button
+              type="button"
+              className="wg-icono-boton wg-columna__nueva"
+              aria-label="Nueva tarjeta"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={alNuevaTarjeta}
+            >
+              +
+            </button>
+          </NombreEmergente>
         )}
         {/* HE-09-HU04-ET01, HE-09-HU06-ET01 (RT-02-ET10): «Editar» y «Eliminar» en el botón de acciones «⋮» de
             cada columna. En las por defecto, «Eliminar» está deshabilitada y su motivo aparece al pasar el mouse
@@ -287,6 +289,7 @@ function Columna({
 export function Kanban() {
   const { invocar, escuchar } = useNucleo();
   const mostrarResultado = useMensajeDeResultado();
+  const mostrarError = useMostrarError();
   const [columnas, setColumnas] = useState<BoardColumn[] | null>(null);
   // Formulario de columna abierto: `null` para crear (HE-09-HU03) o la columna que se edita (HE-09-HU04).
   const [formularioColumna, setFormularioColumna] = useState<{ columna: Column | null } | null>(null);
@@ -324,7 +327,8 @@ export function Kanban() {
   const cambiarVista = async (nueva: PreferenceBoardCardView) => {
     if (nueva === vista) return;
     setVista(nueva);
-    await invocar('preference_set', { board_card_view: nueva });
+    const r = await invocar('preference_set', { board_card_view: nueva });
+    if (!r.ok) mostrarError(r.error);
   };
 
   // Un arrastre que termina dispara un clic sobre la tarjeta: durante ese instante no se abre el detalle.
@@ -334,7 +338,11 @@ export function Kanban() {
   // HE-09-HU06-CA01, CA03, CA07: M-09 sin tarjetas o M-13 con la cantidad y el nombre actual de Por hacer.
   const preguntarEliminar = async (columna: Column) => {
     const r = await invocar('column_get_delete_info', { id: columna.id });
-    if (!r.ok) return;
+    if (!r.ok) {
+      mostrarError(r.error);
+      void leer();
+      return;
+    }
     const { name, card_count, destination_name } = r.value;
     const texto =
       card_count === 0
@@ -349,7 +357,8 @@ export function Kanban() {
   const eliminarColumna = async (columna: Column) => {
     setPorEliminar(null);
     const r = await invocar('column_delete', { id: columna.id });
-    mostrarResultado(r.ok ? (r.result_message?.message ?? textos.COLUMNA_ELIMINADA) : r.error.message);
+    if (r.ok) mostrarResultado(r.result_message?.message ?? textos.COLUMNA_ELIMINADA);
+    else mostrarError(r.error);
     void leer();
   };
 
@@ -371,20 +380,21 @@ export function Kanban() {
   const mover = useCallback(
     async (movimiento: CardMoveParams) => {
       const r = await invocar('card_move', movimiento);
-      if (!r.ok && r.error.code === 'card.not_found') mostrarResultado(r.error.message);
+      if (!r.ok) mostrarError(r.error);
       await leer();
     },
-    [invocar, leer, mostrarResultado],
+    [invocar, leer, mostrarError],
   );
   // Arrastrar empieza al desplazar el puntero unos píxeles: así seleccionar el título o «Mover a» no arrastra.
   const sensores = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   // HE-09-HU05: reordenar con el encabezado. Sin mensaje de resultado (DP-05); el tablero se vuelve a leer.
   const reordenar = useCallback(
     async (orden: string[]) => {
-      await invocar('column_reorder', { column_ids: orden });
+      const r = await invocar('column_reorder', { column_ids: orden });
+      if (!r.ok) mostrarError(r.error);
       await leer();
     },
-    [invocar, leer],
+    [invocar, leer, mostrarError],
   );
   const soltada = useCallback(
     ({ active, over }: DragEndEvent) => {
@@ -450,26 +460,28 @@ export function Kanban() {
           resaltada (`aria-pressed`). «Nueva tarjeta» va en Por hacer y «Nueva columna» es la columna fantasma. */}
       <div className="wg-fila wg-kanban__barra-superior">
         <div className="wg-segmentado" role="group" aria-label="Vista de las tarjetas">
-          <button
-            type="button"
-            className="wg-segmentado__opcion"
-            aria-label="Vista compacta"
-            title="Vista compacta"
-            aria-pressed={vista === 'compact'}
-            onClick={() => void cambiarVista('compact')}
-          >
-            <IconoDeVista expandida={false} />
-          </button>
-          <button
-            type="button"
-            className="wg-segmentado__opcion"
-            aria-label="Vista expandida"
-            title="Vista expandida"
-            aria-pressed={vista === 'expanded'}
-            onClick={() => void cambiarVista('expanded')}
-          >
-            <IconoDeVista expandida />
-          </button>
+          <NombreEmergente texto="Vista compacta">
+            <button
+              type="button"
+              className="wg-segmentado__opcion"
+              aria-label="Vista compacta"
+              aria-pressed={vista === 'compact'}
+              onClick={() => void cambiarVista('compact')}
+            >
+              <IconoDeVista expandida={false} />
+            </button>
+          </NombreEmergente>
+          <NombreEmergente texto="Vista expandida">
+            <button
+              type="button"
+              className="wg-segmentado__opcion"
+              aria-label="Vista expandida"
+              aria-pressed={vista === 'expanded'}
+              onClick={() => void cambiarVista('expanded')}
+            >
+              <IconoDeVista expandida />
+            </button>
+          </NombreEmergente>
         </div>
       </div>
       {columnas && (
@@ -503,17 +515,18 @@ export function Kanban() {
               ))}
               {/* D-09 (RD-74): «+» gris tras la última columna. HE-09-HU03-ET01, ET08: con 10 columnas,
                   deshabilitada con su motivo (RT-04). */}
-              <button
-                type="button"
-                className="wg-columna-fantasma"
-                aria-label="Nueva columna"
-                title={enElMaximo ? textos.MAXIMO_DE_COLUMNAS : 'Nueva columna'}
-                disabled={enElMaximo}
-                aria-describedby={enElMaximo ? 'wg-motivo-nueva-columna' : undefined}
-                onClick={() => setFormularioColumna({ columna: null })}
-              >
-                +
-              </button>
+              <NombreEmergente texto={enElMaximo ? textos.MAXIMO_DE_COLUMNAS : 'Nueva columna'}>
+                <button
+                  type="button"
+                  className="wg-columna-fantasma"
+                  aria-label="Nueva columna"
+                  disabled={enElMaximo}
+                  aria-describedby={enElMaximo ? 'wg-motivo-nueva-columna' : undefined}
+                  onClick={() => setFormularioColumna({ columna: null })}
+                >
+                  +
+                </button>
+              </NombreEmergente>
               {enElMaximo && (
                 <span id="wg-motivo-nueva-columna" className="wg-oculto">
                   {textos.MAXIMO_DE_COLUMNAS}
@@ -539,6 +552,12 @@ export function Kanban() {
         <FormularioColumna
           columna={formularioColumna.columna ?? undefined}
           alCancelar={() => setFormularioColumna(null)}
+          alDesaparecer={(error) => {
+            // RD-92: cierra el formulario, dice por qué y vuelve a leer el tablero.
+            setFormularioColumna(null);
+            mostrarError(error);
+            void leer();
+          }}
           alGuardar={(_, mensaje) => {
             // HE-09-HU03-CA01, HE-09-HU04-CA01: el tablero muestra la columna nueva o editada y el mensaje.
             setFormularioColumna(null);

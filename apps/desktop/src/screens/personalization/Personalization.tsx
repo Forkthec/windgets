@@ -4,6 +4,7 @@ import { recursoDelFondo } from '@/capa/Capa';
 import { urlDeArchivo } from '@/ipc/archivos';
 import textos from '@/types/messages.es.json';
 import type {
+  AppError,
   ApplyMode,
   CatalogItem,
   Legibility,
@@ -16,7 +17,7 @@ import type {
 import { Boton } from '@/ui/Boton/Boton';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { EstadoVacio } from '@/ui/EstadoVacio/EstadoVacio';
-import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
+import { useMensajeDeResultado, useMostrarError } from '@/ui/MensajeResultado/MensajeResultado';
 import { Selector } from '@/ui/Selector/Selector';
 import { useGuardiaDeSalida, useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { AjusteDelFondo } from './AjusteDelFondo';
@@ -26,6 +27,7 @@ import { Paletas } from './Paletas';
 import { VistaPrevia } from './VistaPrevia';
 import { familia, PIXELES_DEL_TAMANO } from '@/ui/tema/temaAplicado';
 import { Tipografia } from './Tipografia';
+import { textoDelError } from '@/ipc/textoDelError';
 import './wallpaper.css';
 
 // P-WAL-01 Personalización del wallpaper (Menú principal > Personalización > Personalización del wallpaper;
@@ -65,12 +67,14 @@ export function Personalization() {
       return nuevas;
     });
   const mostrarResultado = useMensajeDeResultado();
+  const mostrarError = useMostrarError();
   const [temas, setTemas] = useState<ThemeSummary[]>([]);
   const [borrador, setBorrador] = useState<ThemeDraftView | null>(null);
   const [plantillas, setPlantillas] = useState<CatalogItem[]>([]);
   // HE-02-HU06 y HU07: el catálogo de tipografías y el de paletas.
   const [fuentes, setFuentes] = useState<CatalogItem[]>([]);
   const [paletas, setPaletas] = useState<CatalogItem[]>([]);
+  const [mensajeDePaleta, setMensajeDePaleta] = useState('');
   // HE-02-HU09-ET03: los widgets activos y el monitor principal para la vista previa.
   const [escritorio, setEscritorio] = useState<{ widgets: WidgetRect[]; monitor: Monitor | null } | null>(
     null,
@@ -102,6 +106,20 @@ export function Personalization() {
     if (r.ok) setTemas(r.value);
   }, [invocar]);
 
+  /** El error de una acción sobre un tema; si ya no existe (RD-86), la lista se vuelve a leer. */
+  const fallar = useCallback(
+    (error: AppError) => {
+      mostrarError(error);
+      if (error.code === 'theme.not_found') void leerTemas();
+    },
+    [leerTemas, mostrarError],
+  );
+
+  const leerPaletas = useCallback(async () => {
+    const r = await invocar('catalog_list', { kind: 'palette' });
+    if (r.ok) setPaletas(r.value);
+  }, [invocar]);
+
   useEffect(() => {
     let vigente = true;
     void invocar('theme_draft_open', {}).then((r) => {
@@ -114,9 +132,7 @@ export function Personalization() {
     void invocar('catalog_list', { kind: 'font' }).then((r) => {
       if (vigente && r.ok) setFuentes(r.value);
     });
-    void invocar('catalog_list', { kind: 'palette' }).then((r) => {
-      if (vigente && r.ok) setPaletas(r.value);
-    });
+    void leerPaletas();
     void invocar('layer_get_initial_state', {}).then((r) => {
       if (!vigente || !r.ok) return;
       const { monitors, widgets } = r.value;
@@ -126,7 +142,7 @@ export function Personalization() {
     return () => {
       vigente = false;
     };
-  }, [invocar, leerTemas]);
+  }, [invocar, leerPaletas, leerTemas]);
 
   // Los temas guardados cambian al guardar, crear o eliminar uno (EV-12 `themes_changed`).
   useEffect(() => escuchar('themes_changed', () => void leerTemas()), [escuchar, leerTemas]);
@@ -181,7 +197,11 @@ export function Personalization() {
       setPendiente(null);
     } else if (r.error.code === 'draft.unsaved_changes') {
       // CA03: la lista sigue en el tema anterior hasta que se confirme (CA06).
-      setPendiente({ id, mensaje: r.error.message });
+      setPendiente({ id, mensaje: textoDelError(r.error) });
+    } else {
+      setPendiente(null);
+      mostrarError(r.error);
+      void leerTemas();
     }
   };
 
@@ -189,6 +209,22 @@ export function Personalization() {
   const cambiar = async (patch: ThemeDraftPatch) => {
     const r = await invocar('theme_draft_update', { patch });
     if (r.ok) setBorrador(r.value);
+    else mostrarError(r.error);
+  };
+
+  // HE-02-HU07-CA01: la paleta pone los tres colores. Si el catálogo la desactivó, se dice en la sección y el
+  // catálogo se vuelve a leer (RD-87).
+  const elegirPaleta = async (id: string) => {
+    const r = await invocar('theme_draft_update', { patch: { palette_id: id } });
+    if (r.ok) {
+      setBorrador(r.value);
+      setMensajeDePaleta('');
+    } else if (r.error.code === 'palette.not_found') {
+      setMensajeDePaleta(textoDelError(r.error));
+      void leerPaletas();
+    } else {
+      mostrarError(r.error);
+    }
   };
 
   // HE-02-HU05: el color se valida en el Núcleo; si no es válido, la vista previa no cambia (ET05).
@@ -198,7 +234,12 @@ export function Personalization() {
       setBorrador(r.value);
       setMensajesDeColor((m) => ({ ...m, [campo]: undefined }));
     } else if (r.error.field === campo) {
-      setMensajesDeColor((m) => ({ ...m, [campo]: { code: r.error.code, message: r.error.message } }));
+      setMensajesDeColor((m) => ({
+        ...m,
+        [campo]: { code: r.error.code, message: textoDelError(r.error) },
+      }));
+    } else {
+      mostrarError(r.error);
     }
   };
 
@@ -214,7 +255,7 @@ export function Personalization() {
   // HE-02-HU13-CA01: «Cancelar» vuelve a lo último guardado del tema en edición, sin guardar nada (ET01, ET02).
   const cancelar = async () => {
     const r = await invocar('theme_draft_discard', {});
-    if (!r.ok) return;
+    if (!r.ok) return mostrarError(r.error);
     setBorrador(r.value);
     setMensajesDeColor({});
     mostrarResultado(r.result_message?.message ?? '');
@@ -235,10 +276,17 @@ export function Personalization() {
     setSalida(null);
   };
 
+  /** «Salir sin guardar»: descarta y sale; si no se puede descartar, se queda en la pantalla con el motivo. */
+  const descartarYSalir = async () => {
+    const r = await invocar('theme_draft_discard', {});
+    if (!r.ok) mostrarError(r.error);
+    responderSalida(r.ok);
+  };
+
   // HE-02-HU08: vuelve a los colores o a la tipografía de la plantilla (ET01, ET02).
   const restablecer = async (part: 'colors' | 'typography') => {
     const r = await invocar('theme_draft_reset', { part });
-    if (!r.ok) return;
+    if (!r.ok) return mostrarError(r.error);
     setBorrador(r.value);
     if (part === 'colors') setMensajesDeColor({});
   };
@@ -259,7 +307,7 @@ export function Personalization() {
     const r = await invocar('image_import', { path: ruta, purpose: 'background' });
     if (!r.ok) {
       // CA05 a CA07: el archivo no se sube y la vista previa sigue igual.
-      setRechazo(r.error.message);
+      setRechazo(textoDelError(r.error));
       return;
     }
     setRechazo('');
@@ -270,10 +318,7 @@ export function Personalization() {
   const abrirCatalogoDeImagenes = async () => {
     const r = await invocar('catalog_list', { kind: 'image' });
     // RT-04 (P26): si el Núcleo no pudo leer el catálogo, se muestra su error en vez de no hacer nada.
-    if (!r.ok) {
-      if (r.error.message) mostrarResultado(r.error.message);
-      return;
-    }
+    if (!r.ok) return mostrarError(r.error);
     setImagenes(r.value);
   };
 
@@ -281,8 +326,10 @@ export function Personalization() {
   const guardar = async () => {
     const r = await invocar('theme_draft_save', {});
     if (!r.ok) {
-      if (r.error.message) mostrarResultado(r.error.message);
-      return;
+      if (r.error.code === 'theme.not_found') return fallar(r.error);
+      // RD-93: «Ya tienes el tema…» (HE-02-HU11-ET06) es una advertencia; en lo demás el tipo sale del texto (RD-63).
+      const tipo = r.error.code === 'theme.content_duplicate' ? 'advertencia' : undefined;
+      return mostrarResultado(textoDelError(r.error), tipo);
     }
     mostrarResultado(r.result_message?.message ?? '');
     const abierto = await invocar('theme_draft_open', {});
@@ -296,8 +343,8 @@ export function Personalization() {
     setAlAplicar('');
     const r = await invocar('theme_draft_apply', { mode });
     if (!r.ok) {
-      if (r.error.code === 'draft.unsaved_changes_on_apply') setAlAplicar(r.error.message);
-      else if (r.error.message) mostrarResultado(r.error.message);
+      if (r.error.code === 'draft.unsaved_changes_on_apply') setAlAplicar(textoDelError(r.error));
+      else fallar(r.error);
       return;
     }
     mostrarResultado(r.result_message?.message ?? '');
@@ -359,9 +406,11 @@ export function Personalization() {
               <Selector
                 etiqueta="Tema en edición"
                 valor={borrador.theme_id}
-                opciones={(temas.length > 0 ? temas : [{ id: borrador.theme_id, name: borrador.name }]).map(
-                  (t) => ({ valor: t.id, texto: t.name }),
-                )}
+                // El tema en edición va en la lista aunque aún no esté guardado o ya no exista (RD-86).
+                opciones={(temas.some((t) => t.id === borrador.theme_id)
+                  ? temas
+                  : [{ id: borrador.theme_id, name: borrador.name }, ...temas]
+                ).map((t) => ({ valor: t.id, texto: t.name }))}
                 alCambiar={(id) => void seleccionar(id)}
               />
             </div>
@@ -544,7 +593,8 @@ export function Personalization() {
                         <Paletas
                           paletas={paletas}
                           actual={borrador.content.palette_id}
-                          alElegir={(id) => void cambiar({ palette_id: id })}
+                          alElegir={(id) => void elegirPaleta(id)}
+                          mensaje={mensajeDePaleta || undefined}
                         />
                       )}
                     </div>
@@ -620,7 +670,7 @@ export function Personalization() {
           opcionPrincipal="Salir sin guardar"
           opcionSalir="Seguir editando"
           // CA03: se descartan los cambios y se abre la pantalla elegida; el escritorio no cambia.
-          alConfirmar={() => void invocar('theme_draft_discard', {}).then(() => responderSalida(true))}
+          alConfirmar={() => void descartarYSalir()}
           // CA04: se cierra el mensaje y la vista previa conserva sus cambios.
           alCancelar={() => responderSalida(false)}
         />
@@ -637,11 +687,12 @@ export function Personalization() {
           alConfirmar={() =>
             void invocar('theme_draft_save', {}).then((r) => {
               if (r.ok) mostrarResultado(r.result_message?.message ?? '');
+              else fallar(r.error);
               responderSalida(r.ok);
             })
           }
           // CA06: sale; lo aplicado sigue en el escritorio y el tema guardado no cambia (ET05).
-          alElegirSecundaria={() => void invocar('theme_draft_discard', {}).then(() => responderSalida(true))}
+          alElegirSecundaria={() => void descartarYSalir()}
           // CA09: se cierra el mensaje y los cambios siguen intactos.
           alCancelar={() => responderSalida(false)}
         />

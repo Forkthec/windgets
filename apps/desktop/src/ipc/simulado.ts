@@ -61,7 +61,8 @@ function tableroSimulado(): BoardColumn[] {
   });
 }
 
-// Tema inicial «Mi tema» del simulado (HE-02-HU10-ET05): la plantilla por defecto y sus colores.
+// Tema «Mi tema» del simulado (HE-02-HU10-ET05): el de una cuenta anterior a la migración 0010, con la plantilla
+// «Windgets» (la del instalador) y sus colores. Las cuentas nuevas empiezan con «Windgets claro» (RD-94).
 const TEMA_SIMULADO: ThemeDraftView = {
   theme_id: 'mi-tema',
   name: 'Mi tema',
@@ -98,21 +99,73 @@ const WIDGETS_SIMULADOS: WidgetItem[] = (
   config: {},
 }));
 
+// HE-08-HU02-ET05, HE-09-HU03-ET06: los colores de la semilla (supabase/seed.sql).
+let coloresSimulados = (
+  [
+    ['gray', 'Gris', '#8A8D98'],
+    ['red', 'Rojo', '#E5484D'],
+    ['orange', 'Naranja', '#F76B15'],
+    ['yellow', 'Amarillo', '#DCBA04'],
+    ['green', 'Verde', '#30A46C'],
+    ['cyan', 'Cian', '#00D9E2'],
+    ['blue', 'Azul', '#3E63DD'],
+    ['purple', 'Morado', '#6604E6'],
+    ['pink', 'Rosa', '#DC026C'],
+  ] as const
+).map(([id, name, hex]) => ({ id: id as string, name, hex, thumbnail_url: '', is_cached: true }));
+
+// docs/rediseno.md RD-85: «Morado» hace de color que el catálogo desactivó con la ventana abierta: guardar con él
+// responde `color.invalid` y deja de ofrecerse. Con otro color, el simulado no crea columnas ni etiquetas.
+function conColorSimulado(colorId: string | undefined): Result<never> {
+  if (colorId !== 'purple') return error({ code: 'internal.unexpected', message: '' });
+  coloresSimulados = coloresSimulados.filter((c) => c.id !== colorId);
+  return error({ code: 'color.invalid', message: textos.COLOR_NO_DISPONIBLE, field: 'color_id' });
+}
+
 type Respuestas = {
   [K in CommandName]?: (params: CommandMap[K]['params']) => Result<CommandMap[K]['result']>;
 };
 
-// docs/rediseno.md RD-14, RD-29: las paletas «Claro» y «Oscuro» del catálogo, para el selector «Apariencia» con
-// sesión. El tema aplicado empieza con los colores de la plantilla por defecto (oscuro) y la paleta elegida se
+// docs/rediseno.md RD-14, RD-29, RD-94: las paletas «Windgets claro» y «Windgets oscuro» del catálogo. El tema
+// aplicado empieza con los colores de la plantilla «Windgets» (oscuro) y la paleta elegida se
 // aplica con el flujo de borrador (theme_draft_update → theme_draft_apply).
 const PALETAS_SIMULADAS = {
   claro: { primary: '#F5F0FF', secondary: '#B6A560', text: '#17131D' },
   oscuro: { primary: '#201B2B', secondary: '#5D566B', text: '#F8F5FF' },
 } as const;
+// docs/rediseno.md RD-87: «Océano» hace de paleta que el catálogo desactivó: elegirla responde
+// `palette.not_found` y deja de ofrecerse.
+const PALETA_DESACTIVADA = 'oceano';
+const PALETA_OCEANO = { primary: '#0B3954', secondary: '#087E8B', text: '#F5F5F5' };
+let paletaDesactivadaALaVista = true;
+function paletaSimulada(id: string, name: string, c: { primary: string; secondary: string; text: string }) {
+  return {
+    id,
+    name,
+    thumbnail_url: '',
+    is_cached: true,
+    color_primary: c.primary,
+    color_secondary: c.secondary,
+    color_text: c.text,
+  };
+}
 let contenidoAplicado = TEMA_SIMULADO.content;
 let paletaEnBorrador: keyof typeof PALETAS_SIMULADAS | null = null;
 
+// docs/rediseno.md RD-86: «Verano» hace de tema que se eliminó en otro computador: cualquier acción sobre él
+// responde `theme.not_found` y deja de aparecer en la lista.
+const TEMA_ELIMINADO = 'verano';
+let eliminadoALaVista = true;
+function conTemaSimulado(themeId: string): Result<never> {
+  if (themeId !== TEMA_ELIMINADO) return error({ code: 'internal.unexpected', message: '' });
+  eliminadoALaVista = false;
+  return error({ code: 'theme.not_found', message: textos.TEMA_NO_EXISTE });
+}
+
 const respuestas: Respuestas = {
+  theme_apply: ({ theme_id }) => conTemaSimulado(theme_id),
+  theme_rename: ({ theme_id }) => conTemaSimulado(theme_id),
+  theme_delete: ({ theme_id }) => conTemaSimulado(theme_id),
   theme_get_applied: () => ({
     ok: true,
     value: {
@@ -124,6 +177,10 @@ const respuestas: Respuestas = {
     },
   }),
   theme_draft_update: ({ patch }) => {
+    if (patch.palette_id === PALETA_DESACTIVADA) {
+      paletaDesactivadaALaVista = false;
+      return error({ code: 'palette.not_found', message: textos.PALETA_NO_DISPONIBLE });
+    }
     if (patch.palette_id === 'claro' || patch.palette_id === 'oscuro') paletaEnBorrador = patch.palette_id;
     return { ok: true, value: TEMA_SIMULADO };
   },
@@ -147,13 +204,20 @@ const respuestas: Respuestas = {
     value:
       kind === 'palette'
         ? [
-            { id: 'claro', name: 'Claro', thumbnail_url: '', is_cached: true },
-            { id: 'oscuro', name: 'Oscuro', thumbnail_url: '', is_cached: true },
+            paletaSimulada('claro', 'Windgets claro', PALETAS_SIMULADAS.claro),
+            paletaSimulada('oscuro', 'Windgets oscuro', PALETAS_SIMULADAS.oscuro),
+            ...(paletaDesactivadaALaVista
+              ? [paletaSimulada(PALETA_DESACTIVADA, 'Océano', PALETA_OCEANO)]
+              : []),
           ]
         : kind === 'font'
           ? [{ id: 'rubik', name: 'Rubik', thumbnail_url: '', is_cached: true }]
-          : [],
+          : kind === 'color'
+            ? [...coloresSimulados]
+            : [],
   }),
+  column_create: ({ color_id }) => conColorSimulado(color_id),
+  label_create: ({ color_id }) => conColorSimulado(color_id),
   theme_list: () => ({
     ok: true,
     value: [
@@ -165,10 +229,37 @@ const respuestas: Respuestas = {
         has_unapplied_changes: false,
         has_unsaved_changes: false,
       },
+      ...(eliminadoALaVista
+        ? [
+            {
+              id: TEMA_ELIMINADO,
+              name: 'Verano',
+              last_modified_at: '2026-10-20T00:00:00.000Z',
+              is_applied: false,
+              has_unapplied_changes: false,
+              has_unsaved_changes: false,
+            },
+          ]
+        : []),
     ],
   }),
   theme_draft_open: () => ({ ok: true, value: TEMA_SIMULADO }),
   widget_list: () => ({ ok: true, value: WIDGETS_SIMULADOS.map((w) => ({ ...w })) }),
+  // HE-04-HU05: el clima del ejemplo de EF-03 (contratos.md), de día (RD-97).
+  widget_get_data: () => ({
+    ok: true,
+    value: {
+      status: 'ok',
+      payload: {
+        city: 'Popayán',
+        temperature_c: 21.4,
+        condition_code: '2',
+        condition_text: 'Parcialmente nublado',
+        is_day: true,
+      },
+      fetched_at: '2026-11-09T15:00:00.000Z',
+    },
+  }),
   // HE-04-HU04: el catálogo con todo habilitado (el simulado no agrega widgets).
   widget_catalog_get: () => ({
     ok: true,
@@ -207,11 +298,12 @@ const respuestas: Respuestas = {
   }),
   widget_set_active: ({ widget_id, active }) => {
     const w = WIDGETS_SIMULADOS.find((x) => x.widget_id === widget_id);
-    if (!w) return error({ code: 'widget.not_found', message: '' });
+    if (!w) return error({ code: 'widget.not_found', message: textos.WIDGET_NO_EXISTE });
     w.is_active = active;
     return { ok: true, value: { ...w } };
   },
-  theme_draft_select: () => ({ ok: true, value: TEMA_SIMULADO }),
+  theme_draft_select: ({ theme_id }) =>
+    theme_id === TEMA_ELIMINADO ? conTemaSimulado(theme_id) : { ok: true, value: TEMA_SIMULADO },
   connectivity_get: () => ({ ok: true, value: { online: true } }),
   // HE-04-HU03: fuera de Windows no hay formato regional que leer; 24 horas (ET02).
   system_time_format_get: () => ({ ok: true, value: { hour_cycle: 'h23', two_digit_hour: true } }),
@@ -302,10 +394,16 @@ const respuestas: Respuestas = {
   }),
   auth_register_cancel: () => ({ ok: true, value: null }),
   // HE-01-HU04: solo la cuenta de prueba entra, con la contraseña de los datos de prueba mínimos.
-  auth_sign_in: ({ email, password }) =>
-    email.trim().toLowerCase() === CUENTA_SIMULADA.email && password === CONTRASENA_SIMULADA
+  // docs/rediseno.md RD-88: `bloqueada@example.com` hace de cuenta que Supabase tiene bloqueada.
+  auth_sign_in: ({ email, password }) => {
+    const correo = email.trim().toLowerCase();
+    if (correo === 'bloqueada@example.com') {
+      return error({ code: 'auth.user_banned', message: textos.CUENTA_BLOQUEADA });
+    }
+    return correo === CUENTA_SIMULADA.email && password === CONTRASENA_SIMULADA
       ? { ok: true, value: { user_id: 'simulado', alias: CUENTA_SIMULADA.alias } }
-      : error({ code: 'auth.invalid_credentials', message: textos.CREDENCIALES_INCORRECTAS }),
+      : error({ code: 'auth.invalid_credentials', message: textos.CREDENCIALES_INCORRECTAS });
+  },
   // HE-01-HU05: fuera de Tauri no hay navegador ni regreso windgets://; la espera no recibe resultado.
   auth_google_start: () => ({
     ok: true,
@@ -441,6 +539,25 @@ const respuestas: Respuestas = {
       },
     };
   },
+  // RD-98 (D-06): las tarjetas pendientes de hoy en adelante, la más cercana primero (IPC-CARD-16).
+  card_list_upcoming: ({ limit }) => {
+    if (limit < 1 || limit > 3) return error({ code: 'limit.out_of_range', message: '', field: 'limit' });
+    const hoy = fechaIso(new Date());
+    const orden = { high: 1, medium: 2, low: 3 };
+    const peso = (t: Card) => (t.priority ? orden[t.priority] : 4);
+    return {
+      ok: true,
+      value: tarjetasSimuladas
+        .filter((t) => t.column_id !== 'hecho' && t.due_date >= hoy)
+        .sort(
+          (a, b) =>
+            a.due_date.localeCompare(b.due_date) ||
+            peso(a) - peso(b) ||
+            a.created_at.localeCompare(b.created_at),
+        )
+        .slice(0, limit),
+    };
+  },
   // HE-11-HU01: la agenda de un día con la fecha y la hora del navegador.
   agenda_get_day: ({ date }) => {
     const ahora = new Date();
@@ -501,7 +618,7 @@ const respuestas: Respuestas = {
     const t = tarjetasSimuladas.find((c) => c.id === card_id);
     const destino = COLUMNAS_SIMULADAS.find((c) => c.id === column_id);
     if (!t) return error({ code: 'card.not_found', message: textos.TARJETA_NO_EXISTE });
-    if (!destino) return error({ code: 'column.not_found', message: '' });
+    if (!destino) return error({ code: 'column.not_found', message: textos.COLUMNA_NO_EXISTE });
     const otras = tarjetasSimuladas
       .filter((c) => c.column_id === column_id && c.id !== card_id)
       .sort((a, b) => a.position - b.position);

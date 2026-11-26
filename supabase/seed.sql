@@ -17,18 +17,19 @@ INSERT INTO public.catalog_font (id, family_name, display_name, file_path, licen
   ('nunito',         'Nunito',         'Nunito',         'fonts/nunito.woff2',         'OFL-1.1', 5)
 ON CONFLICT (id) DO NOTHING;
 
--- Plantilla por defecto (glosario: Plantilla por defecto; HE-02-HU01-ET02, CA01). Viaja además dentro del
--- instalador para el primer inicio y para trabajar sin conexión (D-198).
+-- Plantillas (HE-02-HU01-ET02, CA01). «default» viaja además dentro del instalador para el primer inicio y para
+-- trabajar sin conexión (D-198). La plantilla por defecto es «claro», «Windgets claro» (0010; docs/rediseno.md
+-- RD-94).
 INSERT INTO public.catalog_template
   (id, name, thumbnail_path, bundle_path, default_background_path,
    default_color_primary, default_color_secondary, default_color_text, default_font_id, is_default, sort_order)
 VALUES
   ('default', 'Windgets', 'templates/default/thumbnail.png', 'templates/default/', 'templates/default/background.jpg',
-   '#201B2B', '#DC026C', '#FFFFFF', 'rubik', true, 1),
-  -- P29 (0008): plantillas genéricas con los colores de sus paletas.
-  ('claro',  'Claro',  'templates/claro/thumbnail.png',  'templates/claro/',  'templates/claro/background.jpg',
-   '#F5F0FF', '#B6A560', '#17131D', 'rubik', false, 2),
-  ('oscuro', 'Oscuro', 'templates/oscuro/thumbnail.png', 'templates/oscuro/', 'templates/oscuro/background.jpg',
+   '#201B2B', '#DC026C', '#FFFFFF', 'rubik', false, 1),
+  -- P29 (0008): plantillas con los colores de sus paletas; nombres de 0010.
+  ('claro',  'Windgets claro',  'templates/claro/thumbnail.png',  'templates/claro/',  'templates/claro/background.jpg',
+   '#F5F0FF', '#B6A560', '#17131D', 'rubik', true, 2),
+  ('oscuro', 'Windgets oscuro', 'templates/oscuro/thumbnail.png', 'templates/oscuro/', 'templates/oscuro/background.jpg',
    '#201B2B', '#5D566B', '#F8F5FF', 'rubik', false, 3)
 ON CONFLICT (id) DO NOTHING;
 

@@ -4,6 +4,7 @@ import { EncabezadoDeRuta } from '@/reglas/ruta';
 import type { AddableWidgetType } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { textoDelError } from '@/ipc/textoDelError';
 
 // Subpantalla de un widget que se agrega sin datos (Noticias, HE-04-HU06-ET01; Reproductor de música, HE-04-HU11):
 // la miga de pan «Widgets > Agregar widget > <widget>», la descripción del widget y las opciones «Agregar» y
@@ -32,7 +33,7 @@ export function AgregarSinDatos({
   const agregar = useCallback(async () => {
     const r = await invocar('widget_add', { type: tipo, config: {} });
     if (!r.ok) {
-      setMensaje(r.error.message);
+      setMensaje(textoDelError(r.error));
       return;
     }
     alIrAWidgets();

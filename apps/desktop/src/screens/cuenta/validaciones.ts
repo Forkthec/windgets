@@ -1,3 +1,4 @@
+import { ALIAS_MAX, CONTRASENA_MAX, CONTRASENA_MIN, CORREO_MAX } from '@/reglas/limites';
 import { estaVacio, type Validador } from '@/reglas/formulario';
 import { TEXTOS } from './textos';
 
@@ -10,7 +11,7 @@ const largo = (valor: string) => [...valor].length;
 /** Alias (HE-01-HU01-ET02 a ET04): obligatorio y de 1 a 30 caracteres. */
 export const validarAlias: Validador = (valor) => {
   if (estaVacio(valor)) return TEXTOS.CAMPO_OBLIGATORIO;
-  if (largo(valor.trim()) > 30) return TEXTOS.ALIAS_MUY_LARGO;
+  if (largo(valor.trim()) > ALIAS_MAX) return TEXTOS.ALIAS_MUY_LARGO;
   return undefined;
 };
 
@@ -27,7 +28,7 @@ export function formatoDeCorreo(correo: string): boolean {
 export const validarCorreo: Validador = (valor) => {
   const correo = valor.trim();
   if (correo === '') return TEXTOS.CAMPO_OBLIGATORIO;
-  if (largo(correo) > 64) return TEXTOS.CORREO_MUY_LARGO;
+  if (largo(correo) > CORREO_MAX) return TEXTOS.CORREO_MUY_LARGO;
   if (!formatoDeCorreo(correo)) return TEXTOS.CORREO_INVALIDO;
   return undefined;
 };
@@ -39,7 +40,12 @@ export const validarCorreo: Validador = (valor) => {
 export const validarContrasena: Validador = (valor) => {
   if (estaVacio(valor)) return TEXTOS.CAMPO_OBLIGATORIO;
   const n = largo(valor);
-  const valida = n >= 8 && n <= 64 && /[A-Z]/.test(valor) && /[a-z]/.test(valor) && /[0-9]/.test(valor);
+  const valida =
+    n >= CONTRASENA_MIN &&
+    n <= CONTRASENA_MAX &&
+    /[A-Z]/.test(valor) &&
+    /[a-z]/.test(valor) &&
+    /[0-9]/.test(valor);
   return valida ? undefined : TEXTOS.CONTRASENA_INVALIDA;
 };
 

@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
+import { NombreEmergente } from '../NombreEmergente/NombreEmergente';
 
 // Navegación de fechas (docs/rediseno_final_prototipos.md §3.6, §6.3 y §6.4; docs/rediseno.md RD-76): arriba, el
-// título (que puede abrir un selector), las flechas ‹ › con su nombre accesible y su tooltip, y «Ir a hoy» como un
-// ícono de calendario con el número del día actual.
+// título (que puede abrir un selector), las flechas ‹ › con su nombre accesible y su nombre emergente (RD-100), y «Ir a
+// hoy» como un ícono de calendario con el número del día actual.
 
 export interface NavegacionDeFechaProps {
   /** El título o el botón que abre el selector de mes y año o el mini calendario. */
@@ -45,38 +46,31 @@ export function NavegacionDeFecha({
   return (
     <div className="wg-navegacion-fecha">
       <div className="wg-navegacion-fecha__titulo">{titulo}</div>
-      <button
-        type="button"
-        className="wg-icono-boton"
-        aria-label={anterior}
-        title={anterior}
-        onClick={alAnterior}
-      >
-        <Flecha izquierda />
-      </button>
-      <button
-        type="button"
-        className="wg-icono-boton"
-        aria-label={siguiente}
-        title={siguiente}
-        onClick={alSiguiente}
-      >
-        <Flecha izquierda={false} />
-      </button>
-      <button
-        type="button"
-        className="wg-icono-boton wg-navegacion-fecha__hoy"
-        aria-label="Ir a hoy"
-        title="Ir a hoy"
-        onClick={alIrAHoy}
-      >
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-          <path d="M3 6H19V19H3V6ZM3 9.5H19M7 3V6M15 3V6" stroke="currentColor" strokeWidth="1.4" />
-          <text x="11" y="17.2" textAnchor="middle" fontSize="7.5" fontWeight="700" fill="currentColor">
-            {diaDeHoy}
-          </text>
-        </svg>
-      </button>
+      <NombreEmergente texto={anterior}>
+        <button type="button" className="wg-icono-boton" aria-label={anterior} onClick={alAnterior}>
+          <Flecha izquierda />
+        </button>
+      </NombreEmergente>
+      <NombreEmergente texto={siguiente}>
+        <button type="button" className="wg-icono-boton" aria-label={siguiente} onClick={alSiguiente}>
+          <Flecha izquierda={false} />
+        </button>
+      </NombreEmergente>
+      <NombreEmergente texto="Ir a hoy">
+        <button
+          type="button"
+          className="wg-icono-boton wg-navegacion-fecha__hoy"
+          aria-label="Ir a hoy"
+          onClick={alIrAHoy}
+        >
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+            <path d="M3 6H19V19H3V6ZM3 9.5H19M7 3V6M15 3V6" stroke="currentColor" strokeWidth="1.4" />
+            <text x="11" y="17.2" textAnchor="middle" fontSize="7.5" fontWeight="700" fill="currentColor">
+              {diaDeHoy}
+            </text>
+          </svg>
+        </button>
+      </NombreEmergente>
       {derecha && <div className="wg-navegacion-fecha__derecha">{derecha}</div>}
     </div>
   );

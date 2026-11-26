@@ -156,6 +156,12 @@ pub struct PlannerToday {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "index.ts")]
+pub struct CardListUpcomingParams {
+    pub limit: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "index.ts")]
 pub struct AgendaDayParams {
     pub date: DateIso,
 }

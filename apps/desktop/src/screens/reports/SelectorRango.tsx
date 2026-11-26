@@ -1,3 +1,4 @@
+import { RANGO_DIAS_MAXIMOS } from '@/reglas/limites';
 import { useCallback, useState } from 'react';
 import { estaVacio, useMensajesDeCampo, type Validador } from '@/reglas/formulario';
 import type { RangeInput, ResolvedRange } from '@/types';
@@ -8,9 +9,7 @@ import { Selector } from '@/ui/Selector/Selector';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { SelectorFecha } from '@/ui/SelectorFecha/SelectorFecha';
 import { escribirFecha, fechaIso, leerFecha } from '../tarjeta/fechas';
-
-/** HE-13-HU01: el rango personalizado tiene como máximo 366 días, contando el inicio y el fin. */
-const DIAS_MAXIMOS = 366;
+import { useMostrarError } from '@/ui/MensajeResultado/MensajeResultado';
 
 // Selector Rango de fechas de la pantalla Reportes (HE-13-HU01). El Núcleo resuelve el rango (IPC-REP-01) y
 // vuelve a validar el personalizado (D-188).
@@ -48,18 +47,19 @@ export function SelectorRango({ alAplicar, deshabilitado = false }: SelectorRang
   const [opcion, setOpcion] = useState<Opcion>('last_30');
   const [fechas, setFechas] = useState<Record<Campo, string>>({ start: '', end: '' });
   const campos = useMensajesDeCampo(CAMPOS, REGLAS);
+  const mostrarError = useMostrarError();
 
   const resolver = useCallback(
     async (rango: RangeInput) => {
       const r = await invocar('report_resolve_range', { range: rango });
       // ET10: con un error, el reporte no se actualiza.
       if (!r.ok) {
-        if (r.error.field) campos.mostrarDelNucleo([r.error]);
+        if (!campos.mostrarDelNucleo([r.error])) mostrarError(r.error);
         return;
       }
       alAplicar(r.value);
     },
-    [alAplicar, campos, invocar],
+    [alAplicar, campos, invocar, mostrarError],
   );
 
   const elegir = (valor: string) => {
@@ -83,7 +83,7 @@ export function SelectorRango({ alAplicar, deshabilitado = false }: SelectorRang
       return;
     }
     const dias = Math.round((fin.getTime() - inicio.getTime()) / 86_400_000) + 1;
-    if (dias > DIAS_MAXIMOS) {
+    if (dias > RANGO_DIAS_MAXIMOS) {
       campos.mostrarDelNucleo([{ field: 'end', message: textos.RANGO_MUY_LARGO }]);
       return;
     }

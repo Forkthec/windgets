@@ -338,8 +338,8 @@ WHEN (SELECT count(*) FROM theme WHERE user_id = NEW.user_id) >= 10
 BEGIN SELECT RAISE(ABORT, 'limit_themes'); END;                        -- HE-03-HU02-ET05; D-035
 
 CREATE TRIGGER trg_limit_card_labels BEFORE INSERT ON card_label
-WHEN (SELECT count(*) FROM card_label WHERE card_id = NEW.card_id) >= 5
-BEGIN SELECT RAISE(ABORT, 'limit_card_labels'); END;                   -- HE-07-HU02-ET04
+WHEN (SELECT count(*) FROM card_label WHERE card_id = NEW.card_id) >= 3
+BEGIN SELECT RAISE(ABORT, 'limit_card_labels'); END;                   -- HE-07-HU02-ET04; RD-96
 
 CREATE TRIGGER trg_limit_carousel_items BEFORE INSERT ON widget_carousel_item
 WHEN (SELECT count(*) FROM widget_carousel_item WHERE widget_id = NEW.widget_id) >= 10
@@ -452,5 +452,5 @@ CREATE TABLE external_widget_cache (
   error_code TEXT
 );
 
--- Versión del esquema local (migraciones locales en repositorios_y_archivos_locales.rs). 9: widget Windi (0009).
-PRAGMA user_version = 9;
+-- Versión del esquema local (migraciones locales en repositorios_y_archivos_locales.rs). 10: máximo 3 etiquetas por tarjeta (0011).
+PRAGMA user_version = 10;

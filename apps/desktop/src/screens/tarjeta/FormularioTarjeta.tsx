@@ -1,3 +1,4 @@
+import { TARJETA_DESCRIPCION_MAX, TARJETA_ETIQUETAS_MAX, TARJETA_TITULO_MAX } from '@/reglas/limites';
 import { useCallback, useEffect, useId, useMemo, useState, type FormEvent } from 'react';
 import { useEnvioUnico } from '@/reglas/envio';
 import { estaVacio, useMensajesDeCampo, type Validador } from '@/reglas/formulario';
@@ -17,13 +18,14 @@ import { Boton } from '@/ui/Boton/Boton';
 import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
 import { Casilla } from '@/ui/Casilla/Casilla';
 import { Segmentado } from '@/ui/Segmentado/Segmentado';
-import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
+import { useMensajeDeResultado, useMostrarError } from '@/ui/MensajeResultado/MensajeResultado';
 import { Selector } from '@/ui/Selector/Selector';
 import { SelectorFecha } from '@/ui/SelectorFecha/SelectorFecha';
 import { VentanaEmergente } from '@/ui/VentanaEmergente/VentanaEmergente';
 import { FormularioEtiqueta } from '../labels/FormularioEtiqueta';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { escribirFecha, fechaIso, fechaVisible, hoy, leerFecha } from './fechas';
+import { textoDelError } from '@/ipc/textoDelError';
 
 // docs/rediseno.md RD-75 (rediseno_final_prototipos.md §3.8 y §6.7; rediseno_final_backend.md §4.5): Tipo y Prioridad
 // como controles segmentados («Sin prioridad» elegido por defecto), la fecha con un calendario flotante sin días
@@ -32,11 +34,6 @@ import { escribirFecha, fechaIso, fechaVisible, hoy, leerFecha } from './fechas'
 // P-TAR-02 Formulario de tarjeta. Modo creación (HE-07-HU01) y modo edición (HE-07-HU04, con las mismas reglas
 // de campos, ET04). Ventana emergente sobre la pantalla de origen (RT-02). La vista repite solo las validaciones
 // de campo para mostrar el mensaje al instante; el Núcleo vuelve a validar (D-188).
-
-const TITULO_MAX = 100;
-/** Etiquetas por tarjeta (HE-07-HU02-ET04). */
-const ETIQUETAS_MAX = 5;
-const DESCRIPCION_MAX = 1000;
 
 const CAMPOS = ['title', 'due_date', 'description', 'block_date', 'block_hour'] as const;
 type Campo = (typeof CAMPOS)[number];
@@ -58,13 +55,17 @@ const PRIORIDADES: Array<{ valor: Priority | ''; texto: string }> = [
 
 /**
  * Reglas de campo (HE-07-HU01-ET06 a ET10). `fechaOriginal` es la fecha límite de la tarjeta que se edita:
- * sin cambiarla, no se compara con hoy (HE-07-HU04-ET08).
+ * sin cambiarla, no se compara con hoy (HE-07-HU04-ET08). `bloque` es lo diligenciado en el bloque horario: su
+ * fecha y su hora van juntas (D-20).
  */
-function validadores(fechaOriginal?: string): Record<Campo, Validador> {
+function validadores(
+  fechaOriginal: string | undefined,
+  bloque: { fecha: string; hora: string },
+): Record<Campo, Validador> {
   return {
     title: (v) => {
       if (estaVacio(v)) return textos.CAMPO_OBLIGATORIO;
-      return [...v.trim()].length > TITULO_MAX ? textos.TITULO_MUY_LARGO : undefined;
+      return [...v.trim()].length > TARJETA_TITULO_MAX ? textos.TITULO_MUY_LARGO : undefined;
     },
     due_date: (v) => {
       if (estaVacio(v)) return textos.CAMPO_OBLIGATORIO;
@@ -73,11 +74,15 @@ function validadores(fechaOriginal?: string): Record<Campo, Validador> {
       if (fechaOriginal !== undefined && fechaIso(fecha) === fechaOriginal) return undefined;
       return fecha < hoy() ? textos.FECHA_LIMITE_ANTERIOR_A_HOY : undefined;
     },
-    description: (v) => ([...v].length > DESCRIPCION_MAX ? textos.DESCRIPCION_MUY_LARGA : undefined),
-    // D-20: el bloque horario es opcional; si tiene fecha, la fecha debe ser válida. Que no sea pasado ni posterior
-    // a la fecha límite lo valida el Núcleo (`time_block.past`, `time_block.after_due_date`).
-    block_date: (v) => (estaVacio(v) || leerFecha(v) ? undefined : textos.FECHA_INVALIDA),
-    block_hour: () => undefined,
+    description: (v) => ([...v].length > TARJETA_DESCRIPCION_MAX ? textos.DESCRIPCION_MUY_LARGA : undefined),
+    // D-20: el bloque horario es opcional; si tiene fecha u hora, necesita las dos y la fecha debe ser válida. Van
+    // aquí para que salgan a la vez que los demás mensajes (docs/rediseno.md RD-91). Que no sea pasado ni posterior a
+    // la fecha límite lo valida el Núcleo (`time_block.past`, `time_block.after_due_date`).
+    block_date: (v) => {
+      if (estaVacio(v)) return bloque.hora ? textos.CAMPO_OBLIGATORIO : undefined;
+      return leerFecha(v) ? undefined : textos.FECHA_INVALIDA;
+    },
+    block_hour: (v) => (!v && !estaVacio(bloque.fecha) ? textos.CAMPO_OBLIGATORIO : undefined),
   };
 }
 
@@ -119,6 +124,14 @@ function valoresDe(tarjeta: CardDetail): Valores {
   };
 }
 
+const CAMPOS_DE_TEXTO = ['title', 'due_date', 'description', 'block_date', 'block_hour'] as const;
+
+/** Las dos listas tienen las mismas etiquetas, sin importar el orden. */
+function mismasEtiquetas(unas: string[], otras: string[]): boolean {
+  const conjunto = new Set(unas);
+  return conjunto.size === new Set(otras).size && otras.every((id) => conjunto.has(id));
+}
+
 export interface FormularioTarjetaProps {
   /** La tarjeta que se edita (modo edición); sin ella, el formulario crea una tarjeta. */
   tarjeta?: CardDetail;
@@ -144,12 +157,26 @@ export function FormularioTarjeta({
   const [valores, setValores] = useState<Valores>(() =>
     tarjeta ? valoresDe(tarjeta) : { ...VACIO, due_date: fechaLimite ? fechaVisible(fechaLimite) : '' },
   );
+  // RD-106: lo que tenía al abrir; si lo escrito difiere, «×» y Esc piden «Salir sin guardar».
+  const [inicial] = useState(valores);
+  const hayCambios =
+    CAMPOS_DE_TEXTO.some((c) => valores[c] !== inicial[c]) ||
+    valores.type !== inicial.type ||
+    valores.priority !== inicial.priority ||
+    !mismasEtiquetas(valores.label_ids, inicial.label_ids);
   const [etiquetas, setEtiquetas] = useState<Label[]>([]);
   const [listaAbierta, setListaAbierta] = useState(false);
   const [creandoEtiqueta, setCreandoEtiqueta] = useState(false);
   const mostrarResultado = useMensajeDeResultado();
-  const reglas = useMemo(() => validadores(tarjeta?.due_date), [tarjeta?.due_date]);
+  const mostrarError = useMostrarError();
+  const reglas = useMemo(
+    () => validadores(tarjeta?.due_date, { fecha: valores.block_date, hora: valores.block_hour }),
+    [tarjeta?.due_date, valores.block_date, valores.block_hour],
+  );
   const campos = useMensajesDeCampo(CAMPOS, reglas);
+  // RD-92 y RD-96: el mensaje del Núcleo para el campo Etiquetas.
+  const [avisoDeEtiquetas, setAvisoDeEtiquetas] = useState('');
+  const idDelAviso = `${idFormulario}-aviso-de-etiquetas`;
 
   // HE-07-HU01-ET12; HE-07-HU02-ET03, ET10: solo las etiquetas creadas, en el orden del Núcleo (A a la Z).
   const leerEtiquetas = useCallback(async () => {
@@ -166,47 +193,62 @@ export function FormularioTarjeta({
     };
   }, [invocar]);
 
+  // RD-92: una etiqueta elegida se eliminó en otro computador: se vuelve a leer la lista y se quita de la
+  // selección, porque ya no aparece para desmarcarla.
+  const soltarEtiquetasEliminadas = useCallback(async () => {
+    const r = await invocar('label_list', {});
+    if (!r.ok) return;
+    setEtiquetas(r.value);
+    const quedan = new Set(r.value.map((e) => e.id));
+    setValores((v) => ({ ...v, label_ids: v.label_ids.filter((id) => quedan.has(id)) }));
+  }, [invocar]);
+
   const cambiar = (campo: Campo) => (valor: string) => {
     setValores((v) => ({ ...v, [campo]: valor }));
     campos.alCorregir(campo, valor);
   };
 
-  const marcarEtiqueta = (id: string, marcada: boolean) =>
+  const marcarEtiqueta = (id: string, marcada: boolean) => {
+    setAvisoDeEtiquetas('');
     setValores((v) => ({
       ...v,
       label_ids: marcada ? [...v.label_ids, id] : v.label_ids.filter((e) => e !== id),
     }));
+  };
 
   const fallo = useCallback(
     (error: AppError) => {
-      if (error.field) campos.mostrarDelNucleo([error]);
-      else if (error.code === 'card.not_found') alNoExistir?.(error.message);
+      // RD-96: una tarjeta puede traer más etiquetas que el máximo; se avisa en su campo y se desmarcan.
+      if (error.code === 'labels.not_found' || error.code === 'labels.too_many') {
+        setAvisoDeEtiquetas(textoDelError(error));
+        document.getElementById(`${idDelAviso}-campo`)?.focus();
+        if (error.code === 'labels.not_found') void soltarEtiquetasEliminadas();
+        return;
+      }
+      if (error.field && campos.mostrarDelNucleo([error])) return;
+      if (error.code === 'card.not_found' && alNoExistir) alNoExistir(textoDelError(error));
+      else mostrarError(error);
     },
-    [alNoExistir, campos],
+    [alNoExistir, campos, idDelAviso, mostrarError, soltarEtiquetasEliminadas],
   );
 
   const guardar = useCallback(async () => {
+    setAvisoDeEtiquetas('');
     if (!campos.validarTodo(valores)) return;
-    // D-20: fecha y hora del bloque horario van juntas.
-    const faltan: Array<Pick<AppError, 'field' | 'message'>> = [];
-    if (!estaVacio(valores.block_date) && !valores.block_hour)
-      faltan.push({ message: textos.CAMPO_OBLIGATORIO, field: 'block_hour' });
-    if (estaVacio(valores.block_date) && valores.block_hour)
-      faltan.push({ message: textos.CAMPO_OBLIGATORIO, field: 'block_date' });
-    if (faltan.length > 0) return campos.mostrarDelNucleo(faltan);
     const fecha = leerFecha(valores.due_date);
     if (!fecha) return;
     let r: Result<Card>;
     if (tarjeta) {
-      // Edición: se envían todos los campos; vacío quita la descripción o la prioridad.
+      // Edición: se envían todos los campos; vacío quita la descripción o la prioridad. RD-96: las etiquetas solo
+      // si cambiaron, para que una tarjeta con más que el máximo guarde los demás datos sin tocarlas.
       const patch: CardPatch = {
         type: valores.type,
         title: valores.title.trim(),
         due_date: fechaIso(fecha),
         description: estaVacio(valores.description) ? null : valores.description,
         priority: valores.priority || null,
-        label_ids: valores.label_ids,
       };
+      if (!mismasEtiquetas(valores.label_ids, tarjeta.label_ids)) patch.label_ids = valores.label_ids;
       r = await invocar('card_update', { id: tarjeta.id, patch });
     } else {
       const params: CardCreateParams = {
@@ -268,6 +310,7 @@ export function FormularioTarjeta({
     <VentanaEmergente
       titulo="Formulario de tarjeta"
       alSalir={alCancelar}
+      hayCambios={hayCambios}
       acciones={
         <>
           <Boton onClick={alCancelar}>Cancelar</Boton>
@@ -328,11 +371,19 @@ export function FormularioTarjeta({
           alCambiar={(p) => setValores((v) => ({ ...v, priority: p }))}
         />
         {/* HE-07-HU02-ET01 y RD-75 (§3.8): desplegable con casillas; las elegidas se ven como chips de su color. */}
-        <div className="wg-campo wg-etiquetas-desplegable" role="group" aria-label="Etiquetas">
+        <div
+          className="wg-campo wg-etiquetas-desplegable"
+          role="group"
+          aria-label="Etiquetas"
+          aria-describedby={avisoDeEtiquetas ? idDelAviso : undefined}
+        >
           <span className="wg-campo__etiqueta">Etiquetas</span>
           <button
+            id={`${idDelAviso}-campo`}
             type="button"
             className="wg-campo__entrada wg-etiquetas-desplegable__campo"
+            aria-invalid={avisoDeEtiquetas ? true : undefined}
+            aria-describedby={avisoDeEtiquetas ? idDelAviso : undefined}
             aria-expanded={listaAbierta}
             aria-label="Etiquetas asignadas"
             onClick={() => setListaAbierta((a) => !a)}
@@ -371,18 +422,23 @@ export function FormularioTarjeta({
                           etiqueta={e.name}
                           marcada={marcada}
                           // ET04, ET06: en el máximo, las demás quedan deshabilitadas con su motivo.
-                          deshabilitada={!marcada && valores.label_ids.length >= ETIQUETAS_MAX}
+                          deshabilitada={!marcada && valores.label_ids.length >= TARJETA_ETIQUETAS_MAX}
                           alCambiar={(m) => marcarEtiqueta(e.id, m)}
                         />
                       </span>
                     );
                   })}
-                  {valores.label_ids.length >= ETIQUETAS_MAX && (
+                  {valores.label_ids.length >= TARJETA_ETIQUETAS_MAX && (
                     <span className="wg-motivo">{textos.MAXIMO_ETIQUETAS}</span>
                   )}
                 </div>
               )}
             </div>
+          )}
+          {avisoDeEtiquetas && (
+            <span id={idDelAviso} className="wg-campo__mensaje">
+              {avisoDeEtiquetas}
+            </span>
           )}
         </div>
         <CampoTexto

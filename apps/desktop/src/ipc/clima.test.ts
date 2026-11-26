@@ -9,6 +9,7 @@ import {
   leerClima,
   leerPeticionDeClima,
   urlDeBusqueda,
+  urlDelClima,
   vigente,
 } from '../../../../supabase/functions/_compartido/clima';
 
@@ -75,5 +76,32 @@ describe('EF-03 weather-current · HE-04-HU05', () => {
 
   it('HE-04-HU05-CA07 · una respuesta sin datos es una falla del proveedor', () => {
     expect(leerClima({ error: true }, '1', ahora)).toBeNull();
+  });
+
+  it('RD-97 · pide `is_day` a Open-Meteo y dice si es de día o de noche', () => {
+    expect(urlDelClima(2.44, -76.61)).toBe(
+      'https://api.open-meteo.com/v1/forecast?latitude=2.44&longitude=-76.61&current=temperature_2m,weather_code,is_day&timezone=auto',
+    );
+    const actual = { temperature_2m: 21.4, weather_code: 2 };
+    expect(leerClima({ current: { ...actual, is_day: 1 } }, '1', ahora)?.is_day).toBe(true);
+    expect(leerClima({ current: { ...actual, is_day: 0 } }, '1', ahora)?.is_day).toBe(false);
+  });
+
+  it('RD-97 · sin `is_day`, o con un valor que no es 0 ni 1, entrega el clima sin ese campo', () => {
+    const actual = { temperature_2m: 21.4, weather_code: 2 };
+    const sinDato = {
+      geo_id: '1',
+      temperature_c: 21.4,
+      condition_code: '2',
+      condition_text: 'Parcialmente nublado',
+      observed_at: '2026-11-14T12:00:00.000Z',
+    };
+    for (const extra of [{}, { is_day: null }, { is_day: 2 }, { is_day: '1' }]) {
+      expect(leerClima({ current: { ...actual, ...extra } }, '1', ahora)).toStrictEqual(sinDato);
+    }
+    // La caché compartida escrita antes del cambio se entrega como está.
+    expect(vigente({ payload: sinDato, expires_at: '2026-11-14T12:29:59.000Z' }, ahora)).toStrictEqual(
+      sinDato,
+    );
   });
 });

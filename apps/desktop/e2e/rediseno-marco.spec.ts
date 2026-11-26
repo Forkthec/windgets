@@ -108,6 +108,75 @@ test('RD-66 · Miga de pan de 13 px, título de 26 px y márgenes de 24 px', asy
   await expect(miga).toHaveText('Configuración');
 });
 
+/** Ninguna pantalla usa todavía la ranura `acciones` (RD-105): se arma en el encabezado real la misma estructura que
+ * dibuja `EncabezadoDePantalla` con ella, con las mismas clases, para medir el CSS en el navegador. */
+async function conAcciones(page: Page, botones: number) {
+  await page.evaluate((n) => {
+    const titulo = document.querySelector('.wg-encabezado-pantalla__titulo');
+    if (!titulo) throw new Error('sin título');
+    const fila = document.createElement('div');
+    fila.className = 'wg-encabezado-pantalla__fila';
+    const acciones = document.createElement('div');
+    acciones.className = 'wg-encabezado-pantalla__acciones';
+    for (let i = 1; i <= n; i += 1) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'wg-boton wg-boton--secundario';
+      b.textContent = `Acción de ejemplo ${i}`;
+      acciones.append(b);
+    }
+    titulo.replaceWith(fila);
+    fila.append(titulo, acciones);
+  }, botones);
+}
+
+test('RD-105 · A 1200 × 800 el título y los controles van en la misma fila y a 960 × 600 bajan sin scroll horizontal', async ({
+  page,
+}) => {
+  await entrar(page, { width: 1200, height: 800 });
+  await abrir(page, 'Widgets');
+  await conAcciones(page, 2);
+  const titulo = page.getByRole('heading', { level: 1 });
+  const acciones = page.locator('.wg-encabezado-pantalla__acciones');
+  const t = await caja(titulo);
+  const a = await caja(acciones);
+  cerca(t.y + t.height / 2, a.y + a.height / 2);
+  expect(a.x, 'controles a la derecha del título').toBeGreaterThan(t.x + t.width);
+  const tarjeta = await caja(page.locator('.wg-ventana-principal__pantalla'));
+  cerca(a.x + a.width, tarjeta.x + tarjeta.width);
+  // El indicador de sincronización, en la esquina de arriba, no tapa los controles.
+  const indicador = await caja(page.locator('.wg-encabezado-pantalla__derecha'));
+  expect(indicador.y + indicador.height, 'el indicador tapa los controles').toBeLessThanOrEqual(
+    a.y + TOLERANCIA,
+  );
+
+  // Con más controles de los que caben junto al título: segunda línea, a la derecha y sin scroll horizontal.
+  await page.setViewportSize({ width: 960, height: 600 });
+  await page.evaluate(() => {
+    const acc = document.querySelector('.wg-encabezado-pantalla__acciones');
+    for (let i = 3; i <= 6; i += 1) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'wg-boton wg-boton--secundario';
+      b.textContent = `Acción de ejemplo ${i}`;
+      acc?.append(b);
+    }
+  });
+  const t2 = await caja(titulo);
+  const a2 = await caja(acciones);
+  expect(a2.y, 'los controles bajan a una segunda línea').toBeGreaterThanOrEqual(
+    t2.y + t2.height - TOLERANCIA,
+  );
+  const tarjeta2 = await caja(page.locator('.wg-ventana-principal__pantalla'));
+  cerca(a2.x + a2.width, tarjeta2.x + tarjeta2.width);
+  const sinScroll = await page.evaluate(() => {
+    const e = document.querySelector('.wg-encabezado-pantalla') as HTMLElement;
+    const raiz = document.documentElement;
+    return e.scrollWidth <= e.clientWidth && raiz.scrollWidth <= raiz.clientWidth;
+  });
+  expect(sinScroll).toBe(true);
+});
+
 test('RD-68 · Ninguna pantalla del menú hace scroll de página a 1093 × 560', async ({ page }) => {
   await entrar(page);
   for (const opcion of [
@@ -127,11 +196,12 @@ test('RD-68 · Ninguna pantalla del menú hace scroll de página a 1093 × 560',
   }
 });
 
-test('RD-68 · Botones de 34 px con texto de 14 px', async ({ page }) => {
+// RD-99 reemplaza la altura de RD-68: 36 px.
+test('RD-68, RD-99 · Botones de 36 px con texto de 14 px', async ({ page }) => {
   await entrar(page);
   await abrir(page, 'Widgets');
   const agregar = page.getByRole('button', { name: 'Agregar widget' });
-  cerca((await caja(agregar)).height, 34);
+  cerca((await caja(agregar)).height, 36);
   expect(await estilo(agregar, 'font-size')).toBe('14px');
 });
 

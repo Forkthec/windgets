@@ -3,7 +3,7 @@ import type { Escuchar } from '@/ipc/eventos';
 import type { Invoke } from '@/types';
 import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
 import type { ModoDeCuenta } from './apariencia';
-import { TEMA_INICIAL_NO_APLICADO } from './textosDelRediseno';
+import { TEMA_INICIAL_NO_APLICADO, type NombreDelTemaInicial } from './textosDelRediseno';
 
 // docs/rediseno.md RD-15: el primer tema de una cuenta nueva toma la paleta del modo elegido en las pantallas de
 // cuenta («claro» u «oscuro», migración 0007) y la tipografía Rubik, y se aplica. Usa el flujo de Personalización
@@ -16,7 +16,11 @@ export const FUENTE_INICIAL = 'rubik';
 /** Cuánto se espera la primera descarga del catálogo antes de avisar que el tema no se aplicó. */
 export const ESPERA_DEL_CATALOGO_MS = 60_000;
 
-export const NOMBRE_DEL_MODO: Record<ModoDeCuenta, 'Claro' | 'Oscuro'> = { claro: 'Claro', oscuro: 'Oscuro' };
+/** El nombre del tema de cada modo en el catálogo (migración 0010; RD-94). */
+export const NOMBRE_DEL_MODO: Record<ModoDeCuenta, NombreDelTemaInicial> = {
+  claro: 'Windgets claro',
+  oscuro: 'Windgets oscuro',
+};
 
 type Intento = 'aplicado' | 'sin_catalogo' | 'fallo';
 

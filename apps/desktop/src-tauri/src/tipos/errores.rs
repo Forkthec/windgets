@@ -51,6 +51,9 @@ pub enum ErrorCode {
     AuthInvalidCredentials,
     #[serde(rename = "auth.sign_out_failed")]
     AuthSignOutFailed,
+    /// RD-88 (P43): Supabase tiene la cuenta bloqueada.
+    #[serde(rename = "auth.user_banned")]
+    AuthUserBanned,
     #[serde(rename = "title.required")]
     TitleRequired,
     #[serde(rename = "title.too_long")]
@@ -69,6 +72,9 @@ pub enum ErrorCode {
     LabelsNotFound,
     #[serde(rename = "card.not_found")]
     CardNotFound,
+    /// IPC-CARD-16 `card_list_upcoming` (`docs/rediseno.md` RD-98): `limit` fuera de 1 a 3.
+    #[serde(rename = "limit.out_of_range")]
+    LimitOutOfRange,
     #[serde(rename = "column.not_found")]
     ColumnNotFound,
     #[serde(rename = "time_block.past")]
@@ -119,6 +125,12 @@ pub enum ErrorCode {
     ThemeAppliedNotDeletable,
     #[serde(rename = "theme.content_duplicate")]
     ThemeContentDuplicate,
+    /// RD-86 (P43): el tema ya no existe (se eliminó en otro computador).
+    #[serde(rename = "theme.not_found")]
+    ThemeNotFound,
+    /// RD-87 (P43): el catálogo desactivó la paleta elegida.
+    #[serde(rename = "palette.not_found")]
+    PaletteNotFound,
     #[serde(rename = "background.already_default")]
     BackgroundAlreadyDefault,
     #[serde(rename = "template.not_found")]

@@ -49,7 +49,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 .await
                 .map_err(de_sqlx)?;
         if !existentes.iter().any(|(i, _)| *i == id) {
-            return Err(error(ErrorCode::LabelNotFound, "", None));
+            return Err(etiqueta_no_existe());
         }
         let clave = nombre.to_lowercase();
         if existentes
@@ -62,19 +62,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 Some("name"),
             ));
         }
-        let existe_el_color: i64 =
-            sqlx::query_scalar("SELECT count(*) FROM catalog_color WHERE id = ? AND is_active = 1")
-                .bind(&color)
-                .fetch_one(&mut *tx)
-                .await
-                .map_err(de_sqlx)?;
-        if existe_el_color == 0 {
-            return Err(error(
-                ErrorCode::ColorRequired,
-                messages::CAMPO_OBLIGATORIO,
-                Some("color_id"),
-            ));
-        }
+        comprobar_color_de_etiqueta(&mut tx, &color).await?;
         let ahora = instante(self.calendario.ahora_ms()).0;
         let (fields, mods) = campos(
             &[
@@ -127,7 +115,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 .fetch_optional(pool)
                 .await
                 .map_err(de_sqlx)?
-                .ok_or_else(|| error(ErrorCode::LabelNotFound, "", None))?;
+                .ok_or_else(etiqueta_no_existe)?;
         let cantidad: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM card_label WHERE label_id = ? AND user_id = ?",
         )
@@ -168,7 +156,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
             .map_err(de_sqlx)?
             .rows_affected();
         if borradas == 0 {
-            return Err(error(ErrorCode::LabelNotFound, "", None));
+            return Err(etiqueta_no_existe());
         }
         let ahora = instante(self.calendario.ahora_ms()).0;
         // Las uniones con las tarjetas se borran en cascada (sqlite_esquema.sql).

@@ -74,3 +74,15 @@ describe('HE-02-HU14 · Ajuste de la imagen por monitor', () => {
     expect(await screen.findByText(texto)).toBeTruthy();
   });
 });
+
+describe('RD-83 · Ajuste de la imagen por monitor', () => {
+  it('RD-83 · un error sin texto va en el selector con el genérico', async () => {
+    montar(configuracion(['fill', 'fill']), () => ({
+      ok: false,
+      error: { code: 'internal.unexpected', message: '' },
+    }));
+    const segundo = (await screen.findByLabelText('Ajuste del monitor 2')) as HTMLSelectElement;
+    fireEvent.change(segundo, { target: { value: 'fit' } });
+    expect(await screen.findByText('Ocurrió un error inesperado. Intenta de nuevo.')).toBeTruthy();
+  });
+});

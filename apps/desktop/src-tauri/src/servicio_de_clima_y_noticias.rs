@@ -319,6 +319,7 @@ pub async fn actualizar_clima(
                 // ET13: el texto lo pone el Núcleo con la tabla del contrato.
                 condition_text: condicion(&r.condition_code).to_string(),
                 condition_code: r.condition_code,
+                is_day: r.is_day,
             })),
         ),
         Err(FallaDeAuth::SinConexion) => (WidgetDataStatus::Offline, None),

@@ -3,6 +3,7 @@
 import { act, fireEvent, render, screen as pantalla, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { Capa } from '@/capa/Capa';
+import textos from '@/types/messages.es.json';
 import type { Escuchar } from '@/ipc/eventos';
 import type {
   ErrorCode,
@@ -223,10 +224,13 @@ describe('HE-04-HU01 · Widgets', () => {
     const eliminar = within(fila(0)).getByRole('button', { name: 'Eliminar' });
     expect(eliminar.classList.contains('wg-enlace-texto')).toBe(true);
     const motivo = 'Los widgets por defecto no se pueden eliminar. Puedes desactivarlos.';
-    expect(eliminar.getAttribute('title')).toBe(motivo);
     expect(document.getElementById(eliminar.getAttribute('aria-describedby') ?? '')?.textContent).toBe(
       motivo,
     );
+    // RD-100: al pasar el puntero, el nombre emergente muestra el mismo motivo.
+    fireEvent.pointerEnter(eliminar);
+    expect((await screen.findByRole('tooltip')).textContent).toBe(motivo);
+    fireEvent.pointerLeave(eliminar);
     // En un widget agregado no hay motivo.
     expect(
       within(fila(4)).getByRole('button', { name: 'Eliminar' }).getAttribute('aria-describedby'),
@@ -631,6 +635,15 @@ describe('HE-04-HU05 · Agregar el widget Clima', () => {
     expect(llamadasA(nucleo, 'weather_city_search')).toEqual([]);
   });
 
+  it('RD-91 · el único campo muestra su error y «Agregar» no envía nada', async () => {
+    const { nucleo, sub, campo, agregar } = await abrirClima();
+    fireEvent.change(campo, { target: { value: 'a'.repeat(101) } });
+    expect(within(sub).getByText('La ciudad no puede superar los 100 caracteres.')).toBeTruthy();
+    expect(sub.querySelectorAll('.wg-campo__mensaje')).toHaveLength(1);
+    expect(agregar.disabled).toBe(true);
+    expect(llamadasA(nucleo, 'widget_add')).toEqual([]);
+  });
+
   it('HE-04-HU05-CA10 · Sugerencias al escribir', async () => {
     // ET18 (P29): desde 2 caracteres, tras una pausa, hasta 5 lugares con nombre, región y país; con 1 no consulta.
     const { nucleo, sub, campo, agregar } = await abrirClima();
@@ -838,6 +851,71 @@ describe('HE-04-HU12 · Configurar un widget agregado', () => {
     fireEvent.click(within(ventana).getByRole('button', { name: 'Guardar' }));
     expect(await within(ventana).findByText(t)).toBeTruthy();
   });
+
+  describe('RD-106 · «×» y Esc piden «Salir sin guardar» solo si hay datos', () => {
+    const cerrar = (ventana: HTMLElement) =>
+      fireEvent.click(within(ventana).getByRole('button', { name: 'Cerrar' }));
+    const abierta = () => screen.queryByRole('dialog', { name: 'Configurar' });
+
+    it('RD-106 · Texto con el texto cambiado: «×» muestra la confirmación de descarte', async () => {
+      const { ventana } = await configurar([...POR_DEFECTO, texto], 'w-texto');
+      fireEvent.change(within(ventana).getByLabelText('Texto'), { target: { value: 'Repasar' } });
+      cerrar(ventana);
+      expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+      expect(abierta()).toBeTruthy();
+    });
+
+    it('RD-106 · Texto con el texto cambiado: Esc muestra la confirmación de descarte', async () => {
+      const { ventana } = await configurar([...POR_DEFECTO, texto], 'w-texto');
+      fireEvent.change(within(ventana).getByLabelText('Texto'), { target: { value: 'Repasar' } });
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+      expect(abierta()).toBeTruthy();
+    });
+
+    it('RD-106 · Texto sin cambios: «×» cierra sin confirmar', async () => {
+      const { ventana } = await configurar([...POR_DEFECTO, texto], 'w-texto');
+      cerrar(ventana);
+      expect(screen.queryByText(textos.SALIR_SIN_GUARDAR)).toBeNull();
+      expect(abierta()).toBeNull();
+    });
+
+    it('RD-106 · Clima con la ciudad escrita: «×» y Esc muestran la confirmación de descarte', async () => {
+      const { ventana } = await configurar([...POR_DEFECTO, clima('Popayán')], 'w-clima', sugerir);
+      fireEvent.change(within(ventana).getByLabelText('Ciudad'), { target: { value: 'Cal' } });
+      cerrar(ventana);
+      expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Seguir editando' }));
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+      expect(abierta()).toBeTruthy();
+    });
+
+    it('RD-106 · Clima sin cambios: «×» cierra sin confirmar', async () => {
+      const { ventana } = await configurar([...POR_DEFECTO, clima('Popayán')], 'w-clima', sugerir);
+      cerrar(ventana);
+      expect(screen.queryByText(textos.SALIR_SIN_GUARDAR)).toBeNull();
+      expect(abierta()).toBeNull();
+    });
+
+    it('RD-106 · Clima con solo la ciudad elegida (el texto queda igual): «×» y Esc piden el descarte', async () => {
+      // El campo ya dice «Popayán, Cauca, Colombia»; elegir esa misma sugerencia no cambia el texto, pero sí la ciudad.
+      const { ventana } = await configurar(
+        [...POR_DEFECTO, clima('Popayán, Cauca, Colombia')],
+        'w-clima',
+        sugerir,
+      );
+      const campo = within(ventana).getByLabelText('Ciudad') as HTMLInputElement;
+      await elegirCiudad(ventana, campo, 'Pop', 'Popayán, Cauca, Colombia');
+      expect(campo.value).toBe('Popayán, Cauca, Colombia');
+      cerrar(ventana);
+      expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Seguir editando' }));
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+      expect(abierta()).toBeTruthy();
+    });
+  });
 });
 
 describe('rediseno_final_backend.md §3.2 · Lista de widgets', () => {
@@ -848,5 +926,82 @@ describe('rediseno_final_backend.md §3.2 · Lista de widgets', () => {
     expect((await screen.findByRole('alert')).textContent).toBe(
       'No pudimos completar la operación. Intenta de nuevo más tarde.',
     );
+  });
+});
+
+describe('RD-83 · Widgets: ninguna acción falla en silencio', () => {
+  const falla = () => ({ ok: false as const, error: { code: 'internal.unexpected' as const, message: '' } });
+  const GENERICO = 'Ocurrió un error inesperado. Intenta de nuevo.';
+
+  it('RD-83 · «Editar escritorio» sin texto muestra el genérico', async () => {
+    const nucleo = await abrir(POR_DEFECTO);
+    nucleo.responder('layout_edit_open', falla);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Editar escritorio' }));
+    });
+    expect(screen.getByRole('alert').textContent).toContain(GENERICO);
+  });
+
+  it('RD-83 · el interruptor sin texto muestra el genérico', async () => {
+    const nucleo = await abrir(POR_DEFECTO);
+    nucleo.responder('widget_set_active', falla);
+    await act(async () => {
+      fireEvent.click(within(fila(0)).getByRole('switch'));
+    });
+    expect(screen.getByRole('alert').textContent).toContain(GENERICO);
+  });
+});
+
+describe('RD-92 · El widget ya no existe', () => {
+  const texto = widget({
+    widget_id: 'w-texto',
+    type: 'text',
+    display_name: 'Texto',
+    distinguishing_value: 'Estudiar',
+    can_configure: true,
+    config: { text: 'Estudiar' },
+  });
+
+  /** Abre Widgets con un widget Texto que el Núcleo ya no encuentra al usar `comando`. */
+  async function eliminadoEnOtroComputador(
+    comando: 'widget_configure' | 'widget_set_active' | 'widget_delete',
+  ) {
+    const nucleo = await abrir([...POR_DEFECTO, texto]);
+    nucleo.responder(comando, () => {
+      nucleo.widgets.splice(POR_DEFECTO.length, 1);
+      return { ok: false, error: { code: 'widget.not_found', message: 'Este widget ya no existe.' } };
+    });
+    const lecturas = llamadasA(nucleo, 'widget_list').length;
+    return { nucleo, filaDelTexto: fila(POR_DEFECTO.length), lecturas };
+  }
+
+  async function loDiceYVuelveALeer(nucleo: NucleoDelPlanificador, lecturas: number) {
+    expect((await screen.findByRole('alert')).textContent).toContain('Este widget ya no existe.');
+    await waitFor(() => expect(filas()).toHaveLength(POR_DEFECTO.length));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(llamadasA(nucleo, 'widget_list').length).toBeGreaterThan(lecturas);
+  }
+
+  it('RD-92 · guardar un widget eliminado cierra «Configurar», lo dice y vuelve a leer la lista', async () => {
+    const { nucleo, filaDelTexto, lecturas } = await eliminadoEnOtroComputador('widget_configure');
+    fireEvent.click(within(filaDelTexto).getByRole('button', { name: 'Configurar' }));
+    const ventana = await screen.findByRole('dialog', { name: 'Configurar' });
+    fireEvent.change(within(ventana).getByLabelText('Texto'), { target: { value: 'Repasar' } });
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Guardar' }));
+    await loDiceYVuelveALeer(nucleo, lecturas);
+  });
+
+  it('RD-92 · el interruptor de un widget eliminado lo dice y vuelve a leer la lista', async () => {
+    const { nucleo, filaDelTexto, lecturas } = await eliminadoEnOtroComputador('widget_set_active');
+    fireEvent.click(within(filaDelTexto).getByRole('switch'));
+    await loDiceYVuelveALeer(nucleo, lecturas);
+  });
+
+  it('RD-92 · confirmar la eliminación de un widget eliminado lo dice y vuelve a leer la lista', async () => {
+    const { nucleo, filaDelTexto, lecturas } = await eliminadoEnOtroComputador('widget_delete');
+    fireEvent.click(within(filaDelTexto).getByRole('button', { name: 'Eliminar' }));
+    const ventana = await screen.findByRole('dialog');
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Confirmar' }));
+    await loDiceYVuelveALeer(nucleo, lecturas);
   });
 });

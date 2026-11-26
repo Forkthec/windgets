@@ -18,8 +18,9 @@ pub struct Carpetas {
     pub recursos: PathBuf,
 }
 
-/// La plantilla que trae el instalador y que nunca se baja (HE-02-HU01-ET02).
-const PLANTILLA_POR_DEFECTO: &str = "default";
+/// La plantilla que trae el instalador y que nunca se baja (HE-02-HU01-ET02). Ya no es la plantilla por defecto del
+/// catálogo (`is_default`), que es «Windgets claro» (docs/rediseno.md RD-94).
+pub(super) const PLANTILLA_DEL_INSTALADOR: &str = "default";
 
 fn texto(ruta: &Path) -> String {
     ruta.to_string_lossy().into_owned()
@@ -78,7 +79,7 @@ impl ServicioDePersonalizacion {
                 .map_err(de_sqlx)?;
                 relativa.map(|r| carpetas.archivos.join(r))
             }
-            AssetKind::CatalogTemplate if id == PLANTILLA_POR_DEFECTO => Some(
+            AssetKind::CatalogTemplate if id == PLANTILLA_DEL_INSTALADOR => Some(
                 carpetas
                     .recursos
                     .join("assets/templates/default/background.jpg"),

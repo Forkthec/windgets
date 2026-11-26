@@ -1,3 +1,4 @@
+import { WINDI_MENSAJE_MAX } from '@/reglas/limites';
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import type { Label, WindiMessage, WindiProposal } from '@/types';
 import textos from '@/types/messages.es.json';
@@ -6,6 +7,7 @@ import { Boton } from '@/ui/Boton/Boton';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import windiSaludo from '../cuenta/activos/windi-saludo.svg';
 import { Propuesta } from './Propuesta';
+import { textoDelError } from '@/ipc/textoDelError';
 import './windi.css';
 import { useAvisarEscribiendo } from '@/ventana_principal/PanelDeWindi';
 
@@ -17,9 +19,6 @@ import { useAvisarEscribiendo } from '@/ventana_principal/PanelDeWindi';
 // HE-14-HU03: cada propuesta va en el chat después de la respuesta que la trajo, con «Confirmar» y «Rechazar».
 // DUDA: HE-14-HU03 IPC-WIN-01 devuelve solo la última propuesta. Valor usado: la vista guarda las anteriores
 // mientras está abierta, para mostrar la «Descartada» (CA04) (docs/DUDAS.md).
-
-/** Largo máximo de un mensaje (HE-14-HU01-ET03). */
-export const LARGO_MAXIMO = 2000;
 
 /** Una propuesta y el mensaje de Windi después del cual se muestra. */
 interface PropuestaEnElChat {
@@ -150,13 +149,19 @@ export function Windi() {
   };
 
   const rechazar = async (propuesta: WindiProposal) => {
+    setAvisoAlConfirmar(null);
     const r = await invocar('windi_reject_proposal', { proposal_id: propuesta.id });
-    setPropuestas((lista) => conEstado(lista, propuesta.id, r.ok ? 'rejected' : 'discarded'));
+    if (r.ok) setPropuestas((lista) => conEstado(lista, propuesta.id, 'rejected'));
+    else if (r.error.code === 'proposal.discarded')
+      setPropuestas((lista) => conEstado(lista, propuesta.id, 'discarded'));
+    else if (r.error.code === 'net.offline') setSinConexionAlConfirmar(true);
+    // RD-83: con cualquier otro error la propuesta sigue pendiente y se ve el motivo.
+    else setAvisoAlConfirmar(textoDelError(r.error));
     await leer();
   };
 
   const largo = [...texto].length;
-  const muyLargo = largo > LARGO_MAXIMO;
+  const muyLargo = largo > WINDI_MENSAJE_MAX;
   // ET02, ET04, ET12: «Enviar» deshabilitado vacío, con más de 2000 caracteres, sin conexión o mientras responde.
   const puedeEnviar = enLinea && !escribiendo && texto.trim().length > 0 && !muyLargo;
 
@@ -236,7 +241,7 @@ export function Windi() {
         />
         <div className="wg-fila wg-windi__pie">
           {/* ET01: el contador «<caracteres> / 2000». */}
-          <span id={`${idCampo}-contador`}>{`${largo} / ${LARGO_MAXIMO}`}</span>
+          <span id={`${idCampo}-contador`}>{`${largo} / ${WINDI_MENSAJE_MAX}`}</span>
           {/* ET04 (RT-04): el motivo de «Enviar» deshabilitado. */}
           {muyLargo && <span className="wg-motivo">{textos.MENSAJE_MUY_LARGO}</span>}
           <Boton principal disabled={!puedeEnviar} onClick={enviarCampo}>

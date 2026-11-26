@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { ScreenId } from '@/types';
+import { NombreEmergente } from '../NombreEmergente/NombreEmergente';
 import { IconoDelMenu, TRAZO_DEL_MENU } from './IconosDelMenu';
 
 // Menú lateral (rediseno_final_prototipos.md §2.2 y §4.1; rediseno_final_backend.md §4.2; docs/rediseno.md RD-65,
@@ -31,7 +32,7 @@ export const OPCIONES_MENU: ReadonlyArray<{ pantalla: ScreenId; texto: string; b
 export interface MenuPrincipalProps {
   actual: ScreenId;
   alElegir: (pantalla: ScreenId) => void;
-  /** D-25: contraído, solo los íconos (con su nombre accesible y su texto al pasar el mouse). */
+  /** D-25: contraído, solo los íconos (con su nombre accesible y su nombre emergente, RD-100). */
   contraido?: boolean;
   /** Lo que va al pie después de Configuración (el ícono «Cerrar sesión»). */
   pie?: ReactNode;
@@ -52,17 +53,18 @@ function Opcion({
 }) {
   return (
     <li>
-      <button
-        type="button"
-        className="wg-boton wg-menu__opcion"
-        aria-current={pantalla === actual ? 'page' : undefined}
-        aria-label={contraido ? texto : undefined}
-        title={contraido ? texto : undefined}
-        onClick={() => alElegir(pantalla)}
-      >
-        <IconoDelMenu trazo={TRAZO_DEL_MENU[pantalla]} />
-        {!contraido && texto}
-      </button>
+      <NombreEmergente texto={contraido ? texto : undefined}>
+        <button
+          type="button"
+          className="wg-boton wg-menu__opcion"
+          aria-current={pantalla === actual ? 'page' : undefined}
+          aria-label={contraido ? texto : undefined}
+          onClick={() => alElegir(pantalla)}
+        >
+          <IconoDelMenu trazo={TRAZO_DEL_MENU[pantalla]} />
+          {!contraido && texto}
+        </button>
+      </NombreEmergente>
     </li>
   );
 }

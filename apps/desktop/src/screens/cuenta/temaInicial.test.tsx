@@ -52,7 +52,7 @@ async function entrar(boton: 'Cuenta nueva' | 'Cuenta existente') {
 }
 
 const NO_APLICADO = (paleta: string) =>
-  `No pudimos aplicar la paleta ${paleta}. Puedes elegirla en Personalización › 3 Colores y tipografía.`;
+  `No pudimos aplicar el tema ${paleta}. Puedes elegirlo en Personalización.`;
 
 beforeEach(() => window.localStorage.clear());
 afterEach(() => {
@@ -106,7 +106,7 @@ describe('RD-15 · Tema inicial de una cuenta nueva', () => {
     conBorrador(nucleo, 'mal');
     await entrar('Cuenta nueva');
     expect(llamadasA(nucleo, 'theme_draft_discard')).toHaveLength(1);
-    expect(screen.getByRole('status').textContent).toContain(NO_APLICADO('Claro'));
+    expect(screen.getByRole('status').textContent).toContain(NO_APLICADO('Windgets claro'));
     expect(screen.queryByRole('main', { name: 'Inicio de sesión' })).toBeNull();
   });
 
@@ -120,7 +120,7 @@ describe('RD-15 · Tema inicial de una cuenta nueva', () => {
     await act(async () => {
       vi.advanceTimersByTime(ESPERA_DEL_CATALOGO_MS);
     });
-    expect(screen.getByRole('status').textContent).toContain(NO_APLICADO('Oscuro'));
+    expect(screen.getByRole('status').textContent).toContain(NO_APLICADO('Windgets oscuro'));
     conCatalogo(nucleo, CATALOGO_COMPLETO);
     nucleo.emitir('sync_completed', { pushed: 0, pulled: 1, after_reconnect: false });
     await act(async () => {});

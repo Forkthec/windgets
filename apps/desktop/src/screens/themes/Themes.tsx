@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { ThemeSummary } from '@/types';
+import type { AppError, ThemeSummary } from '@/types';
 import textos from '@/types/messages.es.json';
 import { Boton } from '@/ui/Boton/Boton';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { MenuDeAcciones } from '@/ui/MenuDeAcciones/MenuDeAcciones';
-import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
+import { useMensajeDeResultado, useMostrarError } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { escribirFecha } from '../tarjeta/fechas';
 import { RenombrarTema } from './RenombrarTema';
+import { textoDelError } from '@/ipc/textoDelError';
 import './temas.css';
 
 // P-TEM-01 Temas (Menú principal > Personalización > Temas; HE-03-HU01): la colección de temas guardados. Es la
@@ -21,6 +22,7 @@ function fechaDeModificacion(instante: string): string {
 export function Themes() {
   const { invocar, escuchar } = useNucleo();
   const mostrarResultado = useMensajeDeResultado();
+  const mostrarError = useMostrarError();
   const [temas, setTemas] = useState<ThemeSummary[] | null>(null);
   // HE-03-HU03: el tema que se va a aplicar (M-05) y el aviso de cambios sin guardar en la vista previa (M-15).
   const [porAplicar, setPorAplicar] = useState<ThemeSummary | null>(null);
@@ -34,6 +36,12 @@ export function Themes() {
     const r = await invocar('theme_list', {});
     if (r.ok) setTemas(r.value);
   }, [invocar]);
+
+  /** El error de una acción; si el tema ya no existe (RD-86), la lista se vuelve a leer. */
+  const fallar = (error: AppError) => {
+    mostrarError(error);
+    if (error.code === 'theme.not_found') void leer();
+  };
 
   useEffect(() => {
     void leer();
@@ -59,9 +67,9 @@ export function Themes() {
       mostrarResultado(r.result_message?.message ?? '');
       void leer();
     } else if (r.error.code === 'draft.unsaved_changes') {
-      setSinGuardar({ tema, mensaje: r.error.message });
-    } else if (r.error.message) {
-      mostrarResultado(r.error.message);
+      setSinGuardar({ tema, mensaje: textoDelError(r.error) });
+    } else {
+      fallar(r.error);
     }
   };
 
@@ -72,8 +80,8 @@ export function Themes() {
     if (r.ok) {
       mostrarResultado(r.result_message?.message ?? '');
       void leer();
-    } else if (r.error.message) {
-      mostrarResultado(r.error.message);
+    } else {
+      fallar(r.error);
     }
   };
 
@@ -81,7 +89,7 @@ export function Themes() {
   const guardarYAplicar = async (tema: ThemeSummary) => {
     const r = await invocar('theme_draft_save', {});
     if (r.ok) await aplicar(tema);
-    else if (r.error.message) mostrarResultado(r.error.message);
+    else fallar(r.error);
   };
 
   return (
@@ -154,6 +162,10 @@ export function Themes() {
             void leer();
           }}
           alCancelar={() => setPorRenombrar(null)}
+          alDesaparecer={(error) => {
+            setPorRenombrar(null);
+            fallar(error);
+          }}
         />
       )}
       {porEliminar && (

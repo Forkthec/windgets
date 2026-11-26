@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { NOMBRE_DEL_WIDGET } from '@/capa/Capa';
 import type { Monitor, ThemeContent, WidgetRect } from '@/types';
-import { derivarTokens } from '@/ui/tema/derivar';
+import { tokensDeLosColores } from '@/ui/tema/derivar';
 
 // Vista previa del escritorio de Personalización del wallpaper (HE-02-HU09): el wallpaper y los widgets activos
 // con los cambios del tema en edición, antes de aplicarlos (ET01, ET03). Se pinta con lo que devuelve el Núcleo
@@ -24,7 +24,7 @@ const porcentaje = (valor: number, total: number) => `${(valor / total) * 100}%`
 
 export function VistaPrevia({ contenido, imagen, fuente, tamano, widgets, monitor }: VistaPreviaProps) {
   const { colors } = contenido;
-  const tokens = derivarTokens({
+  const tokens = tokensDeLosColores({
     primary: colors.primary,
     secondary: colors.secondary,
     text: colors.text,

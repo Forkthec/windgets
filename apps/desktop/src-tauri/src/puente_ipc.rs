@@ -25,14 +25,15 @@ use crate::tipos::{
     AuthRecoverySetPasswordParams, AuthRecoveryVerifyParams, AuthRegisterStartParams,
     AuthRegisterStartResult, AuthRegisterVerifyParams, AuthRegisterVerifyResult, AuthSessionState,
     AuthSignInParams, AuthSignOutInfo, Card, CardAssignTimeBlockParams, CardCreateParams,
-    CardDetail, CardIdParams, CardListBoardResult, CardMoveParams, CardSetCompletedParams,
-    CardUpdateParams, CatalogItem, CatalogKind, CatalogListParams, ChangeOp, CodeSent, Column,
-    ColumnCreateParams, ColumnReorderParams, ColumnUpdateParams, Connectivity, EntityChange,
-    ErrorCode, EventMapAuthGoogleResultStatus, EventMapConnectivityChanged, EventMapSessionChanged,
-    EventMapSessionChangedReason, EventMapSessionChangedState, ImageImportParams,
-    ImageImportResult, IpcErr, IpcOk, IpcResult, KanbanWidgetData, Label, LabelCreateParams,
-    NoParams, OriginKind, PlannerToday, SessionInfo, ThemeDraftOpenParams, ThemeDraftResetParams,
-    ThemeDraftSelectParams, ThemeDraftStatus, ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
+    CardDetail, CardIdParams, CardListBoardResult, CardListUpcomingParams, CardMoveParams,
+    CardSetCompletedParams, CardUpdateParams, CatalogItem, CatalogKind, CatalogListParams,
+    ChangeOp, CodeSent, Column, ColumnCreateParams, ColumnReorderParams, ColumnUpdateParams,
+    Connectivity, EntityChange, ErrorCode, EventMapAuthGoogleResultStatus,
+    EventMapConnectivityChanged, EventMapSessionChanged, EventMapSessionChangedReason,
+    EventMapSessionChangedState, ImageImportParams, ImageImportResult, IpcErr, IpcOk, IpcResult,
+    KanbanWidgetData, Label, LabelCreateParams, NoParams, OriginKind, PlannerToday, SessionInfo,
+    ThemeDraftOpenParams, ThemeDraftResetParams, ThemeDraftSelectParams, ThemeDraftStatus,
+    ThemeDraftUpdateParams, ThemeDraftView, ThemeSummary,
 };
 use crate::tipos::{
     AppliedThemeView, ApplyMode, AssetResolveParams, AssetResolveResult,
@@ -837,19 +838,29 @@ pub fn auth_get_session(
     correcto(nucleo.sesion.estado_de_sesion())
 }
 
-/// El `user_id` de la sesión guardada: los comandos del planificador solo se usan con la sesión iniciada
-/// (RT-01). Sin sesión no hay pantalla que los llame; si pasara, la respuesta es `internal.unexpected`.
-fn usuario(nucleo: &Nucleo) -> Result<String, AppError> {
-    nucleo
-        .sesion
-        .sesion_guardada()
+/// Un comando que necesita la sesión llegó sin ella, o su token venció y no se renovó: `session.expired`
+/// (docs/rediseno.md RD-89).
+fn sin_sesion() -> AppError {
+    AppError {
+        code: ErrorCode::SessionExpired,
+        message: crate::messages::SESION_VENCIDA.to_string(),
+        field: None,
+        params: None,
+    }
+}
+
+fn usuario_de(
+    sesion: Option<crate::repositorios_y_archivos_locales::SesionGuardada>,
+) -> Result<String, AppError> {
+    sesion
         .map(|s| s.user_id.to_lowercase())
-        .ok_or(AppError {
-            code: ErrorCode::InternalUnexpected,
-            message: String::new(),
-            field: None,
-            params: None,
-        })
+        .ok_or_else(sin_sesion)
+}
+
+/// El `user_id` de la sesión guardada: los comandos del planificador solo se usan con la sesión iniciada
+/// (RT-01). Sin ella, [`sin_sesion`].
+fn usuario(nucleo: &Nucleo) -> Result<String, AppError> {
+    usuario_de(nucleo.sesion.sesion_guardada())
 }
 
 /// EV-07 `cards_changed` tras crear, editar, mover, completar o eliminar tarjetas en este computador.
@@ -1189,7 +1200,7 @@ pub async fn widget_add(
     params: crate::tipos::WidgetAddParams,
 ) -> Result<IpcResult<crate::tipos::WidgetItem>, ()> {
     let Some(sesion) = sesion_para_la_nube(&app, &nucleo).await else {
-        return Ok(leido(Err(crate::servicio_del_planificador::inesperado())));
+        return Ok(leido(Err(sin_sesion())));
     };
     let user_id = sesion.user_id.to_lowercase();
     let cliente = nucleo.sesion.auth();
@@ -1311,7 +1322,7 @@ pub async fn weather_city_search(
     params: crate::tipos::WeatherCitySearchParams,
 ) -> Result<IpcResult<Vec<crate::tipos::GeocodeResult>>, ()> {
     let Some(sesion) = sesion_para_la_nube(&app, &nucleo).await else {
-        return Ok(leido(Err(crate::servicio_del_planificador::inesperado())));
+        return Ok(leido(Err(sin_sesion())));
     };
     Ok(leido(
         crate::servicio_de_clima_y_noticias::buscar_ciudades(
@@ -1333,7 +1344,7 @@ pub async fn widget_configure(
 ) -> Result<IpcResult<crate::tipos::WidgetItem>, ()> {
     use crate::servicio_de_personalizacion_y_configuracion::agregar::Configuracion;
     let Some(sesion) = sesion_para_la_nube(&app, &nucleo).await else {
-        return Ok(leido(Err(crate::servicio_del_planificador::inesperado())));
+        return Ok(leido(Err(sin_sesion())));
     };
     let user_id = sesion.user_id.to_lowercase();
     let base = nucleo.planificador.base();
@@ -2547,6 +2558,23 @@ pub async fn planner_get_today(
     }))
 }
 
+/// IPC-CARD-16 `card_list_upcoming` (D-06; `docs/rediseno.md` RD-98): las próximas tarjetas a vencer.
+#[tauri::command]
+pub async fn card_list_upcoming(
+    nucleo: State<'_, Nucleo>,
+    params: CardListUpcomingParams,
+) -> Result<IpcResult<Vec<Card>>, ()> {
+    Ok(leido(match usuario(&nucleo) {
+        Ok(user_id) => {
+            nucleo
+                .planificador
+                .proximas_a_vencer(&user_id, params.limit)
+                .await
+        }
+        Err(e) => Err(e),
+    }))
+}
+
 /// IPC-THEME-01 `theme_list` (HE-02-HU10): los temas guardados, el más reciente primero.
 #[tauri::command]
 pub async fn theme_list(
@@ -3040,7 +3068,7 @@ pub async fn windi_send_message(
     params: crate::tipos::WindiSendMessageParams,
 ) -> Result<IpcResult<crate::tipos::WindiSendMessageResult>, ()> {
     let Some(sesion) = sesion_para_la_nube(&app, &nucleo).await else {
-        return Ok(leido(Err(crate::servicio_del_planificador::inesperado())));
+        return Ok(leido(Err(sin_sesion())));
     };
     let user_id = sesion.user_id.to_lowercase();
     let ahora = chrono::Local::now();
@@ -3088,7 +3116,7 @@ pub async fn windi_confirm_proposal(
     params: crate::tipos::WindiConfirmProposalParams,
 ) -> Result<IpcResult<crate::tipos::WindiConfirmProposalResult>, ()> {
     let Some(sesion) = sesion_para_la_nube(&app, &nucleo).await else {
-        return Ok(leido(Err(crate::servicio_del_planificador::inesperado())));
+        return Ok(leido(Err(sin_sesion())));
     };
     let user_id = sesion.user_id.to_lowercase();
     let cliente = nucleo.sesion.auth();
@@ -3306,5 +3334,35 @@ mod pruebas_del_alcance_de_archivos {
                 Some(std::path::Path::new(&appdata))
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod pruebas_de_la_sesion_ausente {
+    use super::*;
+    use crate::repositorios_y_archivos_locales::SesionGuardada;
+
+    #[test]
+    fn rd_89_un_comando_sin_sesion_dice_que_la_sesion_vencio() {
+        let error = usuario_de(None).unwrap_err();
+        assert_eq!(
+            (error.code, error.message.as_str(), error.field),
+            (
+                ErrorCode::SessionExpired,
+                "Tu sesión venció. Inicia sesión de nuevo.",
+                None
+            )
+        );
+        let sesion = SesionGuardada {
+            access_token: "acceso".into(),
+            refresh_token: "renovacion".into(),
+            expires_at: 0,
+            user_id: "0B6E7F3A-1111-4222-8333-444455556666".into(),
+            alias: "Ana".into(),
+        };
+        assert_eq!(
+            usuario_de(Some(sesion)).unwrap(),
+            "0b6e7f3a-1111-4222-8333-444455556666"
+        );
     }
 }

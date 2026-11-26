@@ -53,6 +53,20 @@ describe('HE-04-HU05 · Widget Clima', () => {
     expect(textos(widget)).toEqual(['Popayán', '21 °C', 'Parcialmente nublado']);
   });
 
+  it('RD-97 · de día, de noche o sin el dato, el widget muestra lo mismo', async () => {
+    const { widget, nucleo } = await pintar({ status: 'ok', payload: POPAYAN, fetched_at: null });
+    const sinElDato = widget.innerHTML;
+    for (const is_day of [true, false]) {
+      nucleo.emitir('widget_data_changed', {
+        widget_id: 'w-clima',
+        status: 'ok',
+        payload: { ...POPAYAN, is_day },
+      });
+      expect(widget.innerHTML).toBe(sinElDato);
+    }
+    expect(textos(widget)).toEqual(['Popayán', '21 °C', 'Parcialmente nublado']);
+  });
+
   it('HE-04-HU05-CA06 · Actualización periódica', async () => {
     const { widget, nucleo } = await pintar({ status: 'ok', payload: POPAYAN, fetched_at: null });
     nucleo.emitir('widget_data_changed', {

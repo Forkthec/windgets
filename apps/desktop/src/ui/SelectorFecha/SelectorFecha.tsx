@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { DayPicker, type Matcher } from 'react-day-picker';
 import { es } from 'react-day-picker/locale';
 import 'react-day-picker/style.css';
+import { NombreEmergente } from '../NombreEmergente/NombreEmergente';
 
 export interface SelectorFechaProps {
   etiqueta: string;
@@ -72,23 +73,24 @@ export function SelectorFecha({
     );
   return (
     <div ref={caja} className="wg-selector-fecha" role="group" aria-label={etiqueta}>
-      <button
-        type="button"
-        className="wg-icono-boton wg-selector-fecha__abrir"
-        aria-label={`Abrir ${etiqueta.toLowerCase()}`}
-        title="Elegir en el calendario"
-        aria-expanded={abierto}
-        onClick={() => setAbierto((a) => !a)}
-      >
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-          <path
-            d="M1.8 7.2H16.2M5.4 1.8V4.5M12.6 1.8V4.5M1.8 4.5H16.2V15.3H1.8V4.5Z"
-            stroke="currentColor"
-            strokeWidth="1.44"
-            strokeLinecap="round"
-          />
-        </svg>
-      </button>
+      <NombreEmergente texto="Elegir en el calendario">
+        <button
+          type="button"
+          className="wg-icono-boton wg-selector-fecha__abrir"
+          aria-label={`Abrir ${etiqueta.toLowerCase()}`}
+          aria-expanded={abierto}
+          onClick={() => setAbierto((a) => !a)}
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            <path
+              d="M1.8 7.2H16.2M5.4 1.8V4.5M12.6 1.8V4.5M1.8 4.5H16.2V15.3H1.8V4.5Z"
+              stroke="currentColor"
+              strokeWidth="1.44"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+      </NombreEmergente>
       {abierto && <div className="wg-selector-fecha__flotante">{calendario}</div>}
     </div>
   );

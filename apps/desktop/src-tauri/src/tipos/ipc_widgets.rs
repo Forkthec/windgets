@@ -87,6 +87,10 @@ pub struct WeatherData {
     pub temperature_c: f64,
     pub condition_code: String,
     pub condition_text: String,
+    /// `true` de día y `false` de noche en la ciudad (RD-97). Falta si la consulta o el dato guardado no lo traen.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub is_day: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]

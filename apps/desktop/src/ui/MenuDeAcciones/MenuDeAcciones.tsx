@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent as EventoDeTeclado, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { NombreEmergente } from '../NombreEmergente/NombreEmergente';
 
 // Botón de acciones «⋮» y su menú (RT-02-ET10 a ET12, RT-02-CA10). Agrupa las acciones de un elemento de una
 // lista; el menú no es una ventana emergente: no bloquea el fondo (RT-02, regla). Se cierra con Esc, al elegir
 // una opción o al seleccionar fuera; se recorre con las flechas y, al cerrarse, el foco vuelve al botón (ET11).
-// Una opción deshabilitada se ve en gris y muestra su motivo al pasar el mouse (RT-04). El menú se dibuja con
+// Una opción deshabilitada se ve en gris y muestra su motivo al pasar el mouse (RT-04, en el nombre emergente de
+// RD-100). El menú se dibuja con
 // `position: fixed` fuera del contenedor, así que ningún contenedor lo recorta ni le agrega barra (ET12).
 
 export interface OpcionDeMenu {
@@ -174,18 +176,19 @@ export function MenuDeAcciones({
     >
       {visibles.map((o) => (
         <li key={o.etiqueta} role="none">
-          <button
-            type="button"
-            role={o.marcada === undefined ? 'menuitem' : 'menuitemradio'}
-            aria-checked={o.marcada}
-            aria-haspopup={o.submenu ? 'menu' : undefined}
-            disabled={o.deshabilitada}
-            title={o.deshabilitada ? o.motivo : undefined}
-            className="wg-menu-acciones__opcion"
-            onClick={() => elegir(o)}
-          >
-            {o.etiqueta}
-          </button>
+          <NombreEmergente texto={o.deshabilitada ? o.motivo : undefined}>
+            <button
+              type="button"
+              role={o.marcada === undefined ? 'menuitem' : 'menuitemradio'}
+              aria-checked={o.marcada}
+              aria-haspopup={o.submenu ? 'menu' : undefined}
+              disabled={o.deshabilitada}
+              className="wg-menu-acciones__opcion"
+              onClick={() => elegir(o)}
+            >
+              {o.etiqueta}
+            </button>
+          </NombreEmergente>
         </li>
       ))}
     </ul>

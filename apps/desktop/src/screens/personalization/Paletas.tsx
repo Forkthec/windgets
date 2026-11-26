@@ -8,9 +8,11 @@ export interface PaletasProps {
   /** La paleta del tema en edición; `null` si los colores no son los de una paleta (ET03). */
   actual: string | null;
   alElegir: (id: string) => void;
+  /** El error al elegir: la paleta ya no está disponible (docs/rediseno.md RD-87). */
+  mensaje?: string;
 }
 
-export function Paletas({ paletas, actual, alElegir }: PaletasProps) {
+export function Paletas({ paletas, actual, alElegir, mensaje }: PaletasProps) {
   return (
     <>
       {actual === null && <p>Personalizada</p>}
@@ -36,6 +38,11 @@ export function Paletas({ paletas, actual, alElegir }: PaletasProps) {
           </li>
         ))}
       </ul>
+      {mensaje && (
+        <p role="alert" className="wg-campo__mensaje">
+          {mensaje}
+        </p>
+      )}
     </>
   );
 }

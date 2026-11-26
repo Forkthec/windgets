@@ -184,6 +184,14 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         user_id: &str,
         filtro: &ReportFilter,
     ) -> Result<Vec<TarjetaDelReporte>, AppError> {
+        // RD-96: el filtro admite las mismas etiquetas que una tarjeta.
+        if filtro.label_ids.len() > ETIQUETAS_MAX {
+            return Err(error(
+                ErrorCode::LabelsTooMany,
+                messages::MAXIMO_ETIQUETAS_DEL_FILTRO,
+                Some("label_ids"),
+            ));
+        }
         let pool = self.base.pool().await.map_err(de_sqlx)?;
         let filas: Vec<(String, String, Option<String>, String)> = sqlx::query_as(
             "SELECT id, substr(created_at, 1, 10), completed_on, due_date FROM card WHERE user_id = ?",

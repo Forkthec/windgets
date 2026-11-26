@@ -3,6 +3,7 @@
 import { fireEvent, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Column } from '@/types';
+import textos from '@/types/messages.es.json';
 import { Kanban } from './Kanban';
 import { abrirPantalla, fijarHoy, llamadasA, screen } from './pruebas';
 
@@ -138,5 +139,46 @@ describe('HE-09-HU03 · Crear una columna', () => {
     expect(within(ventana).getAllByRole('radio').length).toBe(3);
     expect(within(ventana).getByRole('button', { name: 'Guardar' })).toBeTruthy();
     expect(within(ventana).getByRole('button', { name: 'Cancelar' })).toBeTruthy();
+  });
+});
+
+describe('RD-91 · Todos los errores del Formulario de columna a la vez', () => {
+  it('RD-91 · solo el nombre puede estar mal: el color ya viene elegido (HE-09-HU03-ET06)', async () => {
+    const nucleo = await abrirTablero();
+    const ventana = await abrirFormulario();
+    escribirNombre(ventana, '   ');
+    guardar(ventana);
+    await waitFor(() => expect(mensajeDeNombre(ventana)).toBe('Este campo es obligatorio.'));
+    expect(ventana.querySelectorAll('.wg-campo__mensaje')).toHaveLength(1);
+    expect((within(ventana).getByRole('radio', { name: 'Gris' }) as HTMLInputElement).checked).toBe(true);
+    expect(llamadasA(nucleo, 'column_create')).toEqual([]);
+  });
+});
+
+describe('RD-106 · Columna: «×» y Esc piden «Salir sin guardar» solo si hay datos', () => {
+  it('RD-106 · con datos escritos, «×» muestra la confirmación de descarte', async () => {
+    await abrirTablero();
+    const ventana = await abrirFormulario();
+    escribirNombre(ventana, 'Revisión');
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Cerrar' }));
+    expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Nueva columna' })).toBeTruthy();
+  });
+
+  it('RD-106 · con datos escritos, Esc muestra la confirmación de descarte', async () => {
+    await abrirTablero();
+    const ventana = await abrirFormulario();
+    escribirNombre(ventana, 'Revisión');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Nueva columna' })).toBeTruthy();
+  });
+
+  it('RD-106 · sin cambios, «×» cierra sin confirmar', async () => {
+    await abrirTablero();
+    const ventana = await abrirFormulario();
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Cerrar' }));
+    expect(screen.queryByText(textos.SALIR_SIN_GUARDAR)).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Nueva columna' })).toBeNull();
   });
 });

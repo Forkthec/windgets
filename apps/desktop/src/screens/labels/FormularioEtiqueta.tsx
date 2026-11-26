@@ -1,19 +1,20 @@
-import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
+import { ETIQUETA_NOMBRE_MAX } from '@/reglas/limites';
+import { useCallback, useId, useState, type FormEvent } from 'react';
 import { useEnvioUnico } from '@/reglas/envio';
 import { estaVacio, useMensajesDeCampo, type Validador } from '@/reglas/formulario';
-import type { Label } from '@/types';
+import type { AppError, Label } from '@/types';
 import textos from '@/types/messages.es.json';
 import { Boton } from '@/ui/Boton/Boton';
 import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
-import { CatalogoColores, type ColorDelCatalogo } from '@/ui/CatalogoColores/CatalogoColores';
+import { CatalogoColores } from '@/ui/CatalogoColores/CatalogoColores';
+import { useColoresDelCatalogo } from '@/ui/CatalogoColores/useColoresDelCatalogo';
 import { VentanaEmergente } from '@/ui/VentanaEmergente/VentanaEmergente';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { useMostrarError } from '@/ui/MensajeResultado/MensajeResultado';
 
 // P-ETQ-02 Formulario de etiqueta, título «Nueva etiqueta» (HE-08-HU02-ET01, ET02) o «Editar etiqueta» con el
 // nombre y el color actuales (HE-08-HU03-ET01, ET02). Ventana emergente sobre la
 // pantalla Etiquetas (RT-02). La vista repite las validaciones de campo; el Núcleo vuelve a validar (D-188).
-
-const NOMBRE_MAX = 30;
 
 const CAMPOS = ['name', 'color_id'] as const;
 type Campo = (typeof CAMPOS)[number];
@@ -22,7 +23,7 @@ type Campo = (typeof CAMPOS)[number];
 const REGLAS: Record<Campo, Validador> = {
   name: (v) => {
     if (estaVacio(v)) return textos.CAMPO_OBLIGATORIO;
-    return [...v.trim()].length > NOMBRE_MAX ? textos.NOMBRE_DE_ETIQUETA_MUY_LARGO : undefined;
+    return [...v.trim()].length > ETIQUETA_NOMBRE_MAX ? textos.NOMBRE_DE_ETIQUETA_MUY_LARGO : undefined;
   },
   color_id: (v) => (estaVacio(v) ? textos.CAMPO_OBLIGATORIO : undefined),
 };
@@ -34,9 +35,16 @@ export interface FormularioEtiquetaProps {
   alGuardar: (etiqueta: Label, mensaje: string) => void;
   /** «Cancelar» (o Esc): cierra sin crear (CA07, RT-02). */
   alCancelar: () => void;
+  /** RD-92: la etiqueta que se edita se eliminó en otro computador. */
+  alDesaparecer?: (error: AppError) => void;
 }
 
-export function FormularioEtiqueta({ etiqueta, alGuardar, alCancelar }: FormularioEtiquetaProps) {
+export function FormularioEtiqueta({
+  etiqueta,
+  alGuardar,
+  alCancelar,
+  alDesaparecer,
+}: FormularioEtiquetaProps) {
   const { invocar } = useNucleo();
   const idFormulario = useId();
   // CA09: el campo Nombre vacío y ningún color elegido (sin valor por defecto, D-162).
@@ -44,19 +52,13 @@ export function FormularioEtiqueta({ etiqueta, alGuardar, alCancelar }: Formular
     name: etiqueta?.name ?? '',
     color_id: etiqueta?.color_id ?? '',
   });
-  const [colores, setColores] = useState<ColorDelCatalogo[]>([]);
-  const campos = useMensajesDeCampo(CAMPOS, REGLAS);
-
+  // RD-106: lo que tenía al abrir; si lo escrito difiere, «×» y Esc piden «Salir sin guardar».
+  const [inicial] = useState(valores);
+  const hayCambios = valores.name !== inicial.name || valores.color_id !== inicial.color_id;
   // ET05: el color se toma del catálogo de colores (IPC-CAT-01).
-  useEffect(() => {
-    let vigente = true;
-    void invocar('catalog_list', { kind: 'color' }).then((r) => {
-      if (vigente && r.ok) setColores(r.value.map((c) => ({ id: c.id, name: c.name, hex: c.hex ?? '' })));
-    });
-    return () => {
-      vigente = false;
-    };
-  }, [invocar]);
+  const { colores, recargar } = useColoresDelCatalogo(invocar);
+  const campos = useMensajesDeCampo(CAMPOS, REGLAS);
+  const mostrarError = useMostrarError();
 
   const cambiar = (campo: Campo) => (valor: string) => {
     setValores((v) => ({ ...v, [campo]: valor }));
@@ -70,18 +72,22 @@ export function FormularioEtiqueta({ etiqueta, alGuardar, alCancelar }: Formular
       ? await invocar('label_update', { id: etiqueta.id, ...datos })
       : await invocar('label_create', datos);
     if (!r.ok) {
-      if (r.error.field) campos.mostrarDelNucleo([r.error]);
+      if (r.error.code === 'label.not_found' && alDesaparecer) return alDesaparecer(r.error);
+      // RD-85: el color se desactivó con la ventana abierta: se vuelven a pedir los colores.
+      if (r.error.code === 'color.invalid') recargar();
+      if (!campos.mostrarDelNucleo([r.error])) mostrarError(r.error);
       return;
     }
     const porDefecto = etiqueta ? textos.ETIQUETA_ACTUALIZADA : textos.ETIQUETA_CREADA;
     alGuardar(r.value, r.result_message?.message ?? porDefecto);
-  }, [alGuardar, campos, etiqueta, invocar, valores]);
+  }, [alDesaparecer, alGuardar, campos, etiqueta, invocar, mostrarError, recargar, valores]);
   const { ejecutar, enCurso } = useEnvioUnico(guardar);
 
   return (
     <VentanaEmergente
       titulo={etiqueta ? 'Editar etiqueta' : 'Nueva etiqueta'}
       alSalir={alCancelar}
+      hayCambios={hayCambios}
       acciones={
         <>
           <Boton onClick={alCancelar}>Cancelar</Boton>

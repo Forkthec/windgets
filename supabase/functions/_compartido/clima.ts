@@ -30,6 +30,8 @@ export interface ClimaActual {
   temperature_c: number;
   condition_code: string;
   condition_text: string;
+  /** `true` de día y `false` de noche en la ciudad (RD-97); sin el dato del proveedor, no viene. */
+  is_day?: boolean;
   observed_at: string;
 }
 
@@ -74,7 +76,7 @@ export function leerPeticionDeClima(cuerpo: unknown): { geo_id: string; latitude
 }
 
 export function urlDelClima(latitud: number, longitud: number): string {
-  return `https://api.open-meteo.com/v1/forecast?latitude=${latitud}&longitude=${longitud}&current=temperature_2m,weather_code&timezone=auto`;
+  return `https://api.open-meteo.com/v1/forecast?latitude=${latitud}&longitude=${longitud}&current=temperature_2m,weather_code,is_day&timezone=auto`;
 }
 
 /** HE-04-HU05-ET13 (INT-04): la condición en español según el código WMO. */
@@ -93,16 +95,20 @@ export function condicion(codigo: number): string {
   return 'Condición no disponible';
 }
 
-/** El clima actual de Open-Meteo; `null` si la respuesta no trae temperatura y código. */
+/**
+ * El clima actual de Open-Meteo; `null` si la respuesta no trae temperatura y código. `is_day` llega como 1 (día) o
+ * 0 (noche); con otro valor o sin él, el clima se entrega sin ese dato (RD-97).
+ */
 export function leerClima(respuesta: unknown, geoId: string, ahora: Date): ClimaActual | null {
   if (!esObjeto(respuesta) || !esObjeto(respuesta.current)) return null;
-  const { temperature_2m, weather_code } = respuesta.current;
+  const { temperature_2m, weather_code, is_day } = respuesta.current;
   if (typeof temperature_2m !== 'number' || typeof weather_code !== 'number') return null;
   return {
     geo_id: geoId,
     temperature_c: temperature_2m,
     condition_code: String(weather_code),
     condition_text: condicion(weather_code),
+    ...(is_day === 0 || is_day === 1 ? { is_day: is_day === 1 } : {}),
     observed_at: ahora.toISOString(),
   };
 }

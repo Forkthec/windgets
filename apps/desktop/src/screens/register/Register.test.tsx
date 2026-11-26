@@ -556,3 +556,23 @@ describe('Rediseño · Error sin texto', () => {
     );
   });
 });
+
+describe('RD-91 · Todos los errores del Registro a la vez', () => {
+  it('RD-91 · cada campo mal por una razón distinta', async () => {
+    const nucleo = await registro();
+    diligenciar({
+      Alias: 'a'.repeat(31),
+      'Correo electrónico': 'ana@example',
+      Contraseña: 'clave',
+      'Confirmar contraseña': 'otra',
+    });
+    await crearCuenta();
+    for (const etiqueta of ['Alias', 'Correo electrónico', 'Contraseña', 'Confirmar contraseña']) {
+      expect(textoDebajoDe(etiqueta)).toBeTruthy();
+    }
+    expect(textoDebajoDe('Correo electrónico')).toBe('Diligencia un correo electrónico válido.');
+    expect(textoDebajoDe('Contraseña')).toBe(INVALIDA);
+    expect(textoDebajoDe('Confirmar contraseña')).toBe('Las contraseñas no coinciden.');
+    expect(llamadasA(nucleo, 'auth_register_start')).toHaveLength(0);
+  });
+});

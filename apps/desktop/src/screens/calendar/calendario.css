@@ -44,10 +44,6 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 4px;
 }
-.wg-selector-mes__meses .wg-segmentado__opcion:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
 
 /* Mes: celdas compactas que reparten el alto. */
 .wg-calendario-pantalla .wg-calendario {

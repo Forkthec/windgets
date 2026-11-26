@@ -1,4 +1,5 @@
 import type { Tokens } from './tokens';
+import { temaDeWindgets } from './tokens_por_defecto';
 
 // Tokens de la interfaz a partir de los colores y la tipografía de un tema (interfaz.md, «Tema a tokens»).
 // DUDA: HE-03-HU06 IPC-THEME-02 devuelve el contenido del tema, no los tokens, aunque interfaz.md dice que el
@@ -82,13 +83,25 @@ export interface TemaParaTokens {
   tamano: string;
 }
 
+/** Los tres colores de estado sobre la superficie y sus rellenos. */
+function estadosSobre(superficie: string) {
+  const vencida = estado(4, superficie);
+  const pendiente = estado(45, superficie);
+  const completada = estado(140, superficie);
+  return {
+    estado_vencida: vencida,
+    estado_pendiente: pendiente,
+    estado_completada: completada,
+    relleno_vencida: mezclar(vencida, superficie, 0.3),
+    relleno_pendiente: mezclar(pendiente, superficie, 0.3),
+    relleno_completada: mezclar(completada, superficie, 0.3),
+  };
+}
+
 export function derivarTokens({ primary: P, secondary: S, text: X, fuente, tamano }: TemaParaTokens): Tokens {
   const extremo = luminancia(X) >= 0.18 ? OSCURO : BLANCO;
   const superficie = mezclar(S, extremo, 0.6);
   const accion = mezclar(S, X, 0.3);
-  const vencida = estado(4, superficie);
-  const pendiente = estado(45, superficie);
-  const completada = estado(140, superficie);
   return {
     marco: P.toUpperCase(),
     sobre_marco: sobre(P),
@@ -101,13 +114,19 @@ export function derivarTokens({ primary: P, secondary: S, text: X, fuente, taman
     accion,
     sobre_accion: sobre(accion),
     borde: mezclar(X, P, 0.4),
-    estado_vencida: vencida,
-    estado_pendiente: pendiente,
-    estado_completada: completada,
-    relleno_vencida: mezclar(vencida, superficie, 0.3),
-    relleno_pendiente: mezclar(pendiente, superficie, 0.3),
-    relleno_completada: mezclar(completada, superficie, 0.3),
+    ...estadosSobre(superficie),
     fuente,
     tamano_fuente: tamano,
   };
+}
+
+/**
+ * Los tokens con los que se pinta un tema: la tabla fija si es «Windgets claro» u «oscuro» (docs/rediseno.md RD-94)
+ * y, en cualquier otro, los derivados. Los estados no están en la tabla: salen con la misma fórmula sobre la
+ * superficie fija.
+ */
+export function tokensDeLosColores(tema: TemaParaTokens): Tokens {
+  const derivados = derivarTokens(tema);
+  const fijo = temaDeWindgets(tema);
+  return fijo ? { ...derivados, ...fijo.tokens, ...estadosSobre(fijo.tokens.superficie) } : derivados;
 }

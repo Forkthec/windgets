@@ -223,6 +223,11 @@ pub struct WeatherCurrentResponse {
     pub temperature_c: f64,
     pub condition_code: String,
     pub condition_text: String,
+    /// `true` de día y `false` de noche en la ciudad (RD-97). Falta si la función desplegada o la caché compartida
+    /// no lo traen.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub is_day: Option<bool>,
     pub observed_at: Instant,
     pub cache: WeatherCurrentResponseCache,
 }

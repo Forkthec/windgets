@@ -57,6 +57,115 @@ fn rechaza(patch: CardPatch, code: ErrorCode, message: &str, field: &str) {
 }
 
 #[test]
+fn rd_96_una_tarjeta_con_mas_de_3_etiquetas_confirmadas_se_puede_editar() {
+    // La nube sin migrar puede dejar 4. Guardarlas todas responde `labels.too_many` en `label_ids`; sin tocar las
+    // etiquetas se guarda, y quitando las que sobran (con una nueva en el lugar de otra) también.
+    let servicio = con_semilla();
+    let ejecutar = |sql: &str| {
+        bloquear(async {
+            sqlx::raw_sql(sql)
+                .execute(servicio.base().pool().await.unwrap())
+                .await
+                .unwrap();
+        });
+    };
+    let ids: Vec<Uuid> = ["A", "B", "C", "D", "E"]
+        .iter()
+        .map(|n| Uuid(etiqueta(&servicio, n)))
+        .collect();
+    let tarjeta = una_tarjeta(&servicio);
+    // Como llegan de la descarga: sin el disparador, que solo mira las altas.
+    ejecutar("DROP TRIGGER trg_limit_card_labels");
+    for (i, id) in ids[..4].iter().enumerate() {
+        ejecutar(&format!(
+            "INSERT INTO card_label (id, user_id, created_at, updated_seq, card_id, label_id) \
+             VALUES ('{}', '{USUARIO}', '2026-11-01T00:00:0{i}.000Z', {}, '{}', '{}')",
+            id_de_card_label(&tarjeta.id.0, &id.0),
+            i + 1,
+            tarjeta.id.0,
+            id.0
+        ));
+    }
+    ejecutar(
+        "CREATE TRIGGER trg_limit_card_labels BEFORE INSERT ON card_label \
+         WHEN (SELECT count(*) FROM card_label WHERE card_id = NEW.card_id) >= 3 \
+         BEGIN SELECT RAISE(ABORT, 'limit_card_labels'); END",
+    );
+    let todas = CardPatch {
+        label_ids: Some(ids[..4].to_vec()),
+        ..vacio_patch()
+    };
+    let e = editar(&servicio, &tarjeta.id.0, todas).unwrap_err();
+    assert_eq!(
+        (e.code, e.message.as_str(), e.field.as_deref()),
+        (
+            ErrorCode::LabelsTooMany,
+            "Puedes asignar hasta 3 etiquetas.",
+            Some("label_ids")
+        )
+    );
+    let titulo = CardPatch {
+        title: Some("Informe final".into()),
+        ..vacio_patch()
+    };
+    let editada = editar(&servicio, &tarjeta.id.0, titulo).unwrap().valor;
+    assert_eq!(editada.label_ids.len(), 4);
+    let tres = CardPatch {
+        label_ids: Some(vec![ids[0].clone(), ids[1].clone(), ids[4].clone()]),
+        ..vacio_patch()
+    };
+    let editada = editar(&servicio, &tarjeta.id.0, tres).unwrap().valor;
+    assert_eq!(editada.label_ids.len(), 3);
+    assert_eq!(contar(&servicio, "SELECT count(*) FROM card_label"), 3);
+}
+
+#[test]
+fn rd_96_una_tarjeta_admite_3_etiquetas_y_la_4_no_se_guarda() {
+    // RD-96: con 3 se guarda; con 4 sale `labels.too_many` en `label_ids` y la tarjeta conserva las 3.
+    let servicio = con_semilla();
+    let cuatro: Vec<Uuid> = ["A", "B", "C", "D"]
+        .iter()
+        .map(|n| Uuid(etiqueta(&servicio, n)))
+        .collect();
+    let tarjeta = crear(
+        &servicio,
+        CardCreateParams {
+            label_ids: Some(cuatro[..3].to_vec()),
+            ..params("Informe", "2026-11-20")
+        },
+    )
+    .unwrap()
+    .valor;
+    assert_eq!(tarjeta.label_ids.len(), 3);
+    let otras = CardPatch {
+        label_ids: Some(cuatro[1..].to_vec()),
+        ..vacio_patch()
+    };
+    assert_eq!(
+        editar(&servicio, &tarjeta.id.0, otras)
+            .unwrap()
+            .valor
+            .label_ids
+            .len(),
+        3
+    );
+    let todas = CardPatch {
+        label_ids: Some(cuatro),
+        ..vacio_patch()
+    };
+    let e = editar(&servicio, &tarjeta.id.0, todas).unwrap_err();
+    assert_eq!(
+        (e.code, e.message.as_str(), e.field.as_deref()),
+        (
+            ErrorCode::LabelsTooMany,
+            "Puedes asignar hasta 3 etiquetas.",
+            Some("label_ids")
+        )
+    );
+    assert_eq!(contar(&servicio, "SELECT count(*) FROM card_label"), 3);
+}
+
+#[test]
 fn ca_he_07_hu04_ca01() {
     // HE-07-HU04-CA01 · Otro título válido: guarda, responde «Tarjeta actualizada.» (ET14) y encola el cambio
     // del campo con su hora (ET10: el evento cards_changed lo emite el puente).

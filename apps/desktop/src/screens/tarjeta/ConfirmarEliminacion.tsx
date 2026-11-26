@@ -4,6 +4,8 @@ import type { CardDetail } from '@/types';
 import textos from '@/types/messages.es.json';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
+import { useMostrarError } from '@/ui/MensajeResultado/MensajeResultado';
+import { textoDelError } from '@/ipc/textoDelError';
 
 // M-08 Confirmación de eliminar una tarjeta (HE-07-HU05-ET01, ET02): ventana emergente sobre el Detalle de
 // tarjeta (RT-02, RT-04). La tarjeta se elimina solo al confirmar (CA01).
@@ -25,11 +27,13 @@ export function ConfirmarEliminacion({
   alNoExistir,
 }: ConfirmarEliminacionProps) {
   const { invocar } = useNucleo();
+  const mostrarError = useMostrarError();
   const eliminar = useCallback(async () => {
     const r = await invocar('card_delete', { id: tarjeta.id });
     if (r.ok) alEliminar(r.result_message?.message ?? textos.TARJETA_ELIMINADA);
-    else if (r.error.code === 'card.not_found') alNoExistir(r.error.message);
-  }, [alEliminar, alNoExistir, invocar, tarjeta.id]);
+    else if (r.error.code === 'card.not_found') alNoExistir(textoDelError(r.error));
+    else mostrarError(r.error);
+  }, [alEliminar, alNoExistir, invocar, mostrarError, tarjeta.id]);
   const { ejecutar } = useEnvioUnico(eliminar);
   return (
     // DUDA: HE-07-HU05 el título de la ventana de confirmación no está definido; se usa «Eliminar».

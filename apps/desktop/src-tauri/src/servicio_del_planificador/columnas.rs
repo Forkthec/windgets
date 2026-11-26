@@ -31,7 +31,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 .fetch_optional(pool)
                 .await
                 .map_err(de_sqlx)?
-                .ok_or_else(|| error(ErrorCode::ColumnNotFound, "", None))?;
+                .ok_or_else(columna_no_existe)?;
         let cantidad: i64 =
             sqlx::query_scalar("SELECT COUNT(*) FROM card WHERE column_id = ? AND user_id = ?")
                 .bind(&id)
@@ -64,7 +64,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 .fetch_optional(pool)
                 .await
                 .map_err(de_sqlx)?
-                .ok_or_else(|| error(ErrorCode::ColumnNotFound, "", None))?;
+                .ok_or_else(columna_no_existe)?;
         if rol != "custom" {
             return Err(error(
                 ErrorCode::ColumnDefaultNotDeletable,

@@ -146,3 +146,13 @@ describe('RD-80 · Rango personalizado válido antes de aplicar', () => {
     expect(screen.getByRole('button', { name: 'Abrir selector de la fecha de fin' })).toBeTruthy();
   });
 });
+
+describe('RD-91 · Todos los errores del rango a la vez', () => {
+  it('RD-91 · las dos fechas mal a la vez', async () => {
+    const nucleo = await abrir();
+    await personalizado('', '31/02/2026');
+    await waitFor(() => expect(mensajeDe('Fecha de inicio')).toBe('Este campo es obligatorio.'));
+    expect(mensajeDe('Fecha de fin')).toBe('Diligencia una fecha válida.');
+    expect(pedidos(nucleo)).toEqual([]);
+  });
+});

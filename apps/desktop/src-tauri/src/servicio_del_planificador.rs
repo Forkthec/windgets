@@ -48,8 +48,10 @@ pub fn clave_alfabetica(nombre: &str) -> String {
 pub const TITULO_MAX: usize = 100;
 /// Descripción: hasta 1000 caracteres (HE-07-HU01-ET10, D-026).
 pub const DESCRIPCION_MAX: usize = 1000;
-/// Etiquetas por tarjeta (HE-07-HU02-ET04).
-pub const ETIQUETAS_MAX: usize = 5;
+/// Etiquetas por tarjeta (HE-07-HU02-ET04; D-14, `docs/rediseno.md` RD-96) y por filtro de Reportes.
+pub const ETIQUETAS_MAX: usize = 3;
+/// Tarjetas que entrega como mucho «Próximas a vencer» (D-06; `docs/rediseno.md` RD-98).
+pub const PROXIMAS_MAX: i64 = 3;
 /// Nombre de etiqueta: de 1 a 30 caracteres (HE-08-HU02-ET03).
 pub const NOMBRE_DE_ETIQUETA_MAX: usize = 30;
 /// Etiquetas por usuario (HE-08-HU02-ET06).
@@ -125,6 +127,38 @@ pub(crate) fn error(code: ErrorCode, message: &str, field: Option<&str>) -> AppE
 
 pub(crate) fn inesperado() -> AppError {
     error(ErrorCode::InternalUnexpected, "", None)
+}
+
+/// El color de columna elegido ya no está en el catálogo (RD-85).
+fn color_no_disponible() -> AppError {
+    error(
+        ErrorCode::ColorInvalid,
+        messages::COLOR_NO_DISPONIBLE,
+        Some("color_id"),
+    )
+}
+
+/// La vista solo ofrece colores del catálogo (HE-08-HU02-ET05): uno que no está cuenta como sin color, y uno que
+/// el catálogo desactivó con la ventana abierta se dice así (RD-85).
+pub(crate) async fn comprobar_color_de_etiqueta(
+    tx: &mut sqlx::SqliteConnection,
+    color: &str,
+) -> Result<(), AppError> {
+    let activo: Option<bool> =
+        sqlx::query_scalar("SELECT is_active FROM catalog_color WHERE id = ?")
+            .bind(color)
+            .fetch_optional(tx)
+            .await
+            .map_err(de_sqlx)?;
+    match activo {
+        Some(true) => Ok(()),
+        Some(false) => Err(color_no_disponible()),
+        None => Err(error(
+            ErrorCode::ColorRequired,
+            messages::CAMPO_OBLIGATORIO,
+            Some("color_id"),
+        )),
+    }
 }
 
 pub(crate) fn de_sqlx(_: sqlx::Error) -> AppError {
@@ -226,7 +260,26 @@ pub fn validar_descripcion(descripcion: Option<&str>) -> Option<AppError> {
         })
 }
 
-/// Etiquetas (HE-07-HU02-ET04): máximo 5 por tarjeta. Que existan se comprueba contra la base.
+/// RD-92: la columna se eliminó en otro computador.
+fn columna_no_existe() -> AppError {
+    error(ErrorCode::ColumnNotFound, messages::COLUMNA_NO_EXISTE, None)
+}
+
+/// RD-92: la etiqueta se eliminó en otro computador.
+fn etiqueta_no_existe() -> AppError {
+    error(ErrorCode::LabelNotFound, messages::ETIQUETA_NO_EXISTE, None)
+}
+
+/// RD-92: una etiqueta elegida en el Formulario de tarjeta se eliminó en otro computador (campo Etiquetas).
+fn etiqueta_de_la_tarjeta_no_existe() -> AppError {
+    error(
+        ErrorCode::LabelsNotFound,
+        messages::ETIQUETA_NO_EXISTE,
+        Some("label_ids"),
+    )
+}
+
+/// Etiquetas (HE-07-HU02-ET04; RD-96): máximo [`ETIQUETAS_MAX`] por tarjeta. Que existan se comprueba contra la base.
 pub fn validar_cantidad_de_etiquetas(etiquetas: &[Uuid]) -> Option<AppError> {
     (etiquetas.len() > ETIQUETAS_MAX).then(|| {
         error(
@@ -368,15 +421,21 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
             return Err(primero);
         }
 
-        // DUDA: HE-07-HU01 la columna Por hacer llega con la primera descarga de la cuenta (sync_pull, P10);
-        // sin ella no hay dónde crear la tarjeta y la respuesta es `internal.unexpected` (docs/DUDAS.md).
+        // La columna Por hacer llega con la primera descarga de la cuenta (sync_pull): sin ella no hay dónde crear
+        // la tarjeta y se dice así (docs/rediseno.md RD-84).
         let columna: String =
             sqlx::query_scalar("SELECT id FROM kanban_column WHERE user_id = ? AND role = 'todo'")
                 .bind(user_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(de_sqlx)?
-                .ok_or_else(inesperado)?;
+                .ok_or_else(|| {
+                    error(
+                        ErrorCode::ColumnNotFound,
+                        messages::TABLERO_NO_DESCARGADO,
+                        None,
+                    )
+                })?;
 
         let etiquetas: Vec<String> = params
             .label_ids
@@ -399,7 +458,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                     .map_err(de_sqlx)?;
             if existe == 0 {
                 // Sin texto: la vista solo ofrece etiquetas existentes (HE-07-HU02-ET03).
-                return Err(error(ErrorCode::LabelsNotFound, "", Some("label_ids")));
+                return Err(etiqueta_de_la_tarjeta_no_existe());
             }
         }
 
@@ -634,7 +693,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                         .await
                         .map_err(de_sqlx)?;
                 if existe == 0 {
-                    return Err(error(ErrorCode::LabelsNotFound, "", Some("label_ids")));
+                    return Err(etiqueta_de_la_tarjeta_no_existe());
                 }
             }
             let actuales: Vec<String> = actual.label_ids.iter().map(|u| u.0.clone()).collect();
@@ -797,8 +856,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(de_sqlx)?
-                // Sin texto: la vista solo ofrece columnas que existen.
-                .ok_or_else(|| error(ErrorCode::ColumnNotFound, "", None))?;
+                .ok_or_else(columna_no_existe)?;
 
         // Posiciones de las demás tarjetas de la columna de destino.
         let otras: Vec<(String, f64)> = sqlx::query_as(
@@ -1057,20 +1115,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 Some("name"),
             ));
         }
-        let existe_el_color: i64 =
-            sqlx::query_scalar("SELECT count(*) FROM catalog_color WHERE id = ? AND is_active = 1")
-                .bind(&color)
-                .fetch_one(&mut *tx)
-                .await
-                .map_err(de_sqlx)?;
-        if existe_el_color == 0 {
-            // La vista solo ofrece colores del catálogo (ET05): uno que no está cuenta como sin color.
-            return Err(error(
-                ErrorCode::ColorRequired,
-                messages::CAMPO_OBLIGATORIO,
-                Some("color_id"),
-            ));
-        }
+        comprobar_color_de_etiqueta(&mut *tx, &color).await?;
 
         let id = uuid::Uuid::new_v4().to_string();
         let ahora = instante(self.calendario.ahora_ms()).0;
@@ -1445,6 +1490,44 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
         })
     }
 
+    /// IPC-CARD-16 `card_list_upcoming` (D-06; `docs/rediseno.md` RD-98): las tarjetas pendientes (fuera de
+    /// Hecho) con fecha límite de hoy en adelante, según la fecha del computador, la más cercana primero. Una
+    /// tarjeta eliminada ya no está en la base local. Lee solo la base local, así que funciona sin conexión.
+    pub async fn proximas_a_vencer(
+        &self,
+        user_id: &str,
+        limit: i64,
+    ) -> Result<Vec<Card>, AppError> {
+        if !(1..=PROXIMAS_MAX).contains(&limit) {
+            // DUDA: RD-98 el texto de `limit.out_of_range` no está definido; va sin texto (docs/DUDAS.md).
+            return Err(error(ErrorCode::LimitOutOfRange, "", Some("limit")));
+        }
+        let dia = self.calendario.hoy();
+        let pool = self.base.pool().await.map_err(de_sqlx)?;
+        // DUDA: RD-98 el desempate de esta lista no está definido; se usa el de rediseno_final_backend.md §5.9:
+        // prioridad de alta a baja (sin prioridad al final) y creación (docs/DUDAS.md).
+        let filas = sqlx::query(&format!(
+            "{SELECT_TARJETA} WHERE c.user_id = ? AND k.role <> 'done' AND c.due_date >= ? \
+             ORDER BY c.due_date, CASE c.priority WHEN 'high' THEN 1 WHEN 'medium' THEN 2 \
+             WHEN 'low' THEN 3 ELSE 4 END, c.created_at, c.id LIMIT ?"
+        ))
+        .bind(user_id)
+        .bind(dia.format("%Y-%m-%d").to_string())
+        .bind(limit)
+        .fetch_all(pool)
+        .await
+        .map_err(de_sqlx)?;
+        let etiquetas = self.etiquetas_por_tarjeta(user_id).await?;
+        filas
+            .iter()
+            .map(|fila| {
+                let id: String = fila.try_get("id")?;
+                tarjeta_de_fila(fila, etiquetas.get(&id).cloned().unwrap_or_default(), dia)
+            })
+            .collect::<Result<_, sqlx::Error>>()
+            .map_err(de_sqlx)
+    }
+
     /// IPC-CARD-09 `agenda_get_day` (HE-11-HU01): los 24 bloques horarios del día con sus tarjetas (ET01, ET03)
     /// y las tarjetas sin horario: las que no están en Hecho ni tienen bloque (ET04). Lee solo la base local,
     /// así que funciona igual sin conexión (ET08).
@@ -1744,9 +1827,9 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 .await
                 .map_err(de_sqlx)?;
         if existe_el_color == 0 {
-            // La vista solo ofrece colores del catálogo (ET05). DUDA: HE-09-HU03 el contrato no tiene un error
-            // para un color que no está en el catálogo; se responde `internal.unexpected`.
-            return Err(inesperado());
+            // La vista solo ofrece colores del catálogo (ET05): llega aquí si el catálogo lo desactivó con la
+            // ventana abierta (docs/rediseno.md RD-85).
+            return Err(color_no_disponible());
         }
         let posicion =
             existentes.iter().map(|(_, p)| *p).fold(0.0_f64, f64::max) + PASO_DE_POSICION;
@@ -1821,7 +1904,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
                 .await
                 .map_err(de_sqlx)?;
         if existe == 0 {
-            return Err(error(ErrorCode::ColumnNotFound, "", None));
+            return Err(columna_no_existe());
         }
         if let Some(nombre) = &nombre {
             let otras: Vec<String> =
@@ -1849,8 +1932,7 @@ impl<C: Calendario> ServicioDelPlanificador<C> {
             .await
             .map_err(de_sqlx)?;
             if existe_el_color == 0 {
-                // Igual que al crear (DUDA: HE-09-HU03): el contrato no tiene un error para este caso.
-                return Err(inesperado());
+                return Err(color_no_disponible());
             }
         }
 
@@ -2164,6 +2246,8 @@ pub use reportes::{agrupacion, resolver_rango};
 mod pruebas_de_completar;
 #[cfg(test)]
 mod pruebas_de_edicion;
+#[cfg(test)]
+mod pruebas_de_errores_visibles;
 #[cfg(test)]
 mod pruebas_de_etiquetas;
 #[cfg(test)]
@@ -2584,24 +2668,25 @@ pub(crate) mod pruebas {
 
     #[test]
     fn etiquetas_de_mas_o_inexistentes_no_crean_la_tarjeta() {
-        // IPC-CARD-01: `labels.too_many` (HE-07-HU02-CA02) y `labels.not_found` sin texto (HE-07-HU02-ET03).
+        // IPC-CARD-01: `labels.too_many` (HE-07-HU02-CA02) y `labels.not_found` (HE-07-HU02-ET03; RD-92).
         let servicio = con_semilla();
-        let seis: Vec<Uuid> = (0..6)
+        let cuatro: Vec<Uuid> = (0..4)
             .map(|i| Uuid(etiqueta(&servicio, &format!("E{i}"))))
             .collect();
         let e = crear(
             &servicio,
             CardCreateParams {
-                label_ids: Some(seis),
+                label_ids: Some(cuatro),
                 ..params("Informe", "2026-11-14")
             },
         )
         .unwrap_err();
         assert_eq!(
-            (e.code, e.message.as_str()),
+            (e.code, e.message.as_str(), e.field.as_deref()),
             (
                 ErrorCode::LabelsTooMany,
-                "Puedes asignar máximo 5 etiquetas por tarjeta."
+                "Puedes asignar hasta 3 etiquetas.",
+                Some("label_ids")
             )
         );
         let e = crear(
@@ -2614,7 +2699,7 @@ pub(crate) mod pruebas {
         .unwrap_err();
         assert_eq!(
             (e.code, e.message.as_str()),
-            (ErrorCode::LabelsNotFound, "")
+            (ErrorCode::LabelsNotFound, "Esta etiqueta ya no existe.")
         );
         assert_eq!(contar(&servicio, "SELECT count(*) FROM card"), 0);
     }

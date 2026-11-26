@@ -143,3 +143,23 @@ describe('HE-04-HU07 · Agregar el widget Imagen estática', () => {
     expect(await screen.findByRole('main', { name: 'Agregar widget' })).toBeTruthy();
   });
 });
+
+describe('RD-91 · Todos los errores de Imagen estática a la vez', () => {
+  it('RD-91 · el único dato es la imagen: su rechazo se muestra y «Agregar» sigue deshabilitada', async () => {
+    vi.mocked(open).mockResolvedValue('C:\\fotos\\mapa.gif');
+    const texto = 'Formato no permitido. Selecciona imágenes JPG, JPEG o PNG.';
+    const { n, sub, agregar } = await abrir((n) =>
+      n.responder('image_import', rechazo('image.format_not_allowed', texto)),
+    );
+    fireEvent.click(within(sub).getByRole('button', { name: 'Subir imagen' }));
+    await waitFor(() =>
+      expect(
+        within(sub)
+          .getAllByRole('alert')
+          .map((a) => a.textContent),
+      ).toEqual([texto]),
+    );
+    expect(agregar.disabled).toBe(true);
+    expect(llamadasA(n, 'widget_add')).toEqual([]);
+  });
+});

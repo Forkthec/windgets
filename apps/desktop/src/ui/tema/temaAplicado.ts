@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Escuchar } from '@/ipc/eventos';
 import type { FontSize, Invoke, ThemeContent } from '@/types';
-import { derivarTokens } from './derivar';
+import { contraste, tokensDeLosColores } from './derivar';
 import { aplicarTokens, type Tokens } from './tokens';
 import { TOKENS_POR_DEFECTO } from './tokens_por_defecto';
 
@@ -12,9 +12,9 @@ import { TOKENS_POR_DEFECTO } from './tokens_por_defecto';
 /** Modo de la ventana principal con sesión (RD-28). */
 export type ModoDelTema = 'claro' | 'oscuro';
 
-/** RD-28: claro si el texto que mejor contrasta con el principal del tema es el oscuro. */
+/** RD-28: claro si el texto que mejor contrasta con el principal del tema (el marco) es el oscuro. */
 export const modoDeLosTokens = (tokens: Tokens): ModoDelTema =>
-  tokens.sobre_marco === '#FFFFFF' ? 'oscuro' : 'claro';
+  contraste('#121216', tokens.marco) >= contraste('#FFFFFF', tokens.marco) ? 'claro' : 'oscuro';
 
 /** HE-02-HU06-ET05: 14 px en «Pequeño», 16 px en «Mediano» y 20 px en «Grande». */
 export const PIXELES_DEL_TAMANO: Record<FontSize, string> = { small: '14px', medium: '16px', large: '20px' };
@@ -26,7 +26,7 @@ export const familia = (nombre: string): string => `'${nombre}', 'Segoe UI', san
 export async function tokensDelTema(invocar: Invoke, contenido: ThemeContent): Promise<Tokens> {
   const fuentes = await invocar('catalog_list', { kind: 'font' });
   const nombre = fuentes.ok ? fuentes.value.find((f) => f.id === contenido.font.id)?.name : undefined;
-  return derivarTokens({
+  return tokensDeLosColores({
     ...contenido.colors,
     fuente: nombre ? familia(nombre) : TOKENS_POR_DEFECTO.fuente,
     tamano: PIXELES_DEL_TAMANO[contenido.font.size],

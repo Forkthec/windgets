@@ -180,9 +180,14 @@ describe('RT-04 · Mensajes, opciones deshabilitadas y alineación', () => {
         Noticias
       </Boton>,
     );
-    expect(screen.getByRole('button', { name: 'Noticias' }).getAttribute('title')).toBe(
+    const sinEspacio = screen.getByRole('button', { name: 'Noticias' });
+    expect(document.getElementById(sinEspacio.getAttribute('aria-describedby') ?? '')?.textContent).toBe(
       'Ya agregaste este widget.',
     );
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    fireEvent.pointerEnter(sinEspacio);
+    act(() => void vi.advanceTimersByTime(400));
+    expect(screen.getByRole('tooltip').textContent).toBe('Ya agregaste este widget.');
   });
 
   it('RT-04-CA06 · Aviso por error de un servicio externo', () => {

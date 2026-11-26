@@ -12,9 +12,7 @@
 body[data-sesion] {
   --wgm-seleccion-fondo: color-mix(in srgb, var(--wg-accion) 22%, var(--wg-superficie-alta));
   --wgm-seleccion-texto: var(--wg-tinta);
-  --wgm-secundario: var(--wg-superficie-baja);
   --wgm-interruptor: var(--wg-accion);
-  --wgm-principal-borde: var(--wg-accion);
   --wgm-deshabilitado: color-mix(in srgb, var(--wg-linea) 45%, var(--wg-superficie-baja));
   --wgm-deshabilitado-texto: var(--wg-texto);
   --wgm-emergente: var(--wg-superficie);
@@ -93,6 +91,30 @@ body[data-sesion] .wg-ventana-principal__principal {
   font-size: 26px;
   font-weight: 700;
   line-height: 32px;
+}
+/* RD-105 (IM-08): con la ranura `acciones`, el título y los controles comparten fila, centrados en vertical; si los
+ * controles no caben, bajan a una segunda línea alineada a la derecha. El margen superior del título pasa a la fila
+ * para que no cambie su posición. El espacio entre ellos (16 px en horizontal y 4 px en vertical) es provisional
+ * (IM-08, docs/DUDAS.md): el valor exacto lo dará el Figma. */
+.wg-encabezado-pantalla__fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--wg-unidad) calc(var(--wg-unidad) * 4); /* IM-08 */
+  margin-top: 4px;
+}
+.wg-encabezado-pantalla__fila > .wg-encabezado-pantalla__titulo {
+  margin: 0;
+}
+.wg-encabezado-pantalla__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--wg-unidad);
+  margin-left: auto;
+  max-width: 100%;
 }
 .wg-encabezado-pantalla__derecha {
   position: absolute;
@@ -254,26 +276,18 @@ body[data-sesion] .wg-boton.wg-menu__opcion[aria-current='page'] .wg-menu__icono
   color: var(--wg-tinta);
 }
 
-/* ---------- Controles (RD-33; RD-68: botones y campos de 32 a 36 px, texto de 14 px) ---------- */
-body[data-sesion] .wg-boton {
-  min-height: 34px;
-  padding: 0 12px;
-  border: var(--wgm-borde-control) solid var(--wg-borde);
-  border-radius: 8px;
-  background: var(--wgm-secundario);
-  color: var(--wg-tinta);
+/* ---------- Controles (RD-33; RD-68: texto de 14 px. La forma de los botones está en `tokens.css`, RD-99) ---------- */
+body[data-sesion] .wg-boton:where(:not(.wg-boton--icono)) {
   font-size: 14px;
   font-weight: 500;
-}
-body[data-sesion] .wg-boton--principal {
-  border-color: var(--wgm-principal-borde);
-  background: var(--wg-accion);
-  color: var(--wg-sobre-accion);
 }
 body[data-sesion] .wg-boton:disabled {
   border-color: transparent;
   background: var(--wgm-deshabilitado);
   color: var(--wgm-deshabilitado-texto);
+}
+body[data-sesion] .wg-boton.wg-boton--icono:disabled {
+  background: transparent;
 }
 body[data-sesion] .wg-boton:focus-visible,
 body[data-sesion] .wg-interruptor:focus-visible,

@@ -1,3 +1,9 @@
+import {
+  CARRUSEL_IMAGENES_MAX,
+  CARRUSEL_IMAGENES_MIN,
+  CARRUSEL_INTERVALO_MAX,
+  CARRUSEL_INTERVALO_MIN,
+} from '@/reglas/limites';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useState } from 'react';
 import { useEnvioUnico } from '@/reglas/envio';
@@ -8,18 +14,24 @@ import { Boton } from '@/ui/Boton/Boton';
 import { CampoTexto } from '@/ui/CampoTexto/CampoTexto';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { MiniaturaDelCatalogo } from './MiniaturaDelCatalogo';
+import { textoDelError } from '@/ipc/textoDelError';
 
 // Subpantalla Carrusel de imágenes (Widgets > Agregar widget > Carrusel de imágenes; HE-04-HU08-ET01): «Subir
 // imagen», «Catálogo de imágenes», la lista de imágenes elegidas con «<cantidad> de 10», el campo Intervalo en
 // segundos (5 por defecto) y las opciones «Agregar» y «Regresar» (RT-03).
 
-/** ET02, ET05 (D-040): de 2 a 10 imágenes. */
-const MINIMO = 2;
-const MAXIMO = 10;
-
 interface Elegida {
   imagen: ImageRef;
   nombre: string;
+}
+
+/** CA07, CA08 (ET04): la vista repite la regla del intervalo; el Núcleo vuelve a validar el rango. */
+function errorDelIntervalo(valor: string): string | undefined {
+  const texto = valor.trim();
+  if (texto === '') return textos.CAMPO_OBLIGATORIO;
+  const segundos = Number(texto);
+  const enRango = segundos >= CARRUSEL_INTERVALO_MIN && segundos <= CARRUSEL_INTERVALO_MAX;
+  return Number.isInteger(segundos) && enRango ? undefined : textos.INTERVALO_FUERA_DE_RANGO;
 }
 
 export interface AgregarCarruselProps {
@@ -34,12 +46,12 @@ export function AgregarCarrusel({ alRegresar, alIrAWidgets }: AgregarCarruselPro
   const [rechazo, setRechazo] = useState('');
   const [intervalo, setIntervalo] = useState('5');
   const [mensajeIntervalo, setMensajeIntervalo] = useState('');
-  const lleno = elegidas.length >= MAXIMO;
+  const lleno = elegidas.length >= CARRUSEL_IMAGENES_MAX;
 
   /** ET06: si se eligen varias a la vez que superan el límite, solo entran las que caben. */
   const sumar = (nuevas: Elegida[]) =>
     setElegidas((actuales) => {
-      const caben = nuevas.slice(0, MAXIMO - actuales.length);
+      const caben = nuevas.slice(0, CARRUSEL_IMAGENES_MAX - actuales.length);
       if (caben.length < nuevas.length) setRechazo(textos.CARRUSEL_DEMASIADAS_IMAGENES);
       return [...actuales, ...caben];
     });
@@ -58,11 +70,11 @@ export function AgregarCarrusel({ alRegresar, alIrAWidgets }: AgregarCarruselPro
     }
     setRechazo('');
     const nuevas: Elegida[] = [];
-    for (const ruta of rutas.slice(0, MAXIMO - elegidas.length)) {
+    for (const ruta of rutas.slice(0, CARRUSEL_IMAGENES_MAX - elegidas.length)) {
       const r = await invocar('image_import', { path: ruta, purpose: 'carousel_item' });
       if (!r.ok) {
         // CA05, CA06 (ET03): ese archivo no entra al carrusel.
-        setRechazo(r.error.message);
+        setRechazo(textoDelError(r.error));
         continue;
       }
       nuevas.push({
@@ -71,12 +83,14 @@ export function AgregarCarrusel({ alRegresar, alIrAWidgets }: AgregarCarruselPro
       });
     }
     sumar(nuevas);
-    if (rutas.length > MAXIMO - elegidas.length) setRechazo(textos.CARRUSEL_DEMASIADAS_IMAGENES);
+    if (rutas.length > CARRUSEL_IMAGENES_MAX - elegidas.length)
+      setRechazo(textos.CARRUSEL_DEMASIADAS_IMAGENES);
   };
 
   const abrirCatalogo = async () => {
     const r = await invocar('catalog_list', { kind: 'image' });
     if (r.ok) setCatalogo(r.value);
+    else setRechazo(textoDelError(r.error));
   };
 
   const cambiarIntervalo = (valor: string) => {
@@ -84,25 +98,27 @@ export function AgregarCarrusel({ alRegresar, alIrAWidgets }: AgregarCarruselPro
     setMensajeIntervalo('');
   };
 
+  // docs/rediseno.md RD-91: al salir del campo se dice lo que está mal, aunque «Agregar» siga deshabilitada por las
+  // imágenes. Mientras se escribe no aparece nada.
+  const salirDelIntervalo = () => {
+    const mensaje = errorDelIntervalo(intervalo);
+    if (mensaje) setMensajeIntervalo(mensaje);
+  };
+
   const agregar = useCallback(async () => {
-    // CA07, CA08 (ET04): la vista repite la regla del intervalo; el Núcleo vuelve a validar el rango.
-    const texto = intervalo.trim();
-    if (texto === '') {
-      setMensajeIntervalo(textos.CAMPO_OBLIGATORIO);
+    const mensaje = errorDelIntervalo(intervalo);
+    if (mensaje) {
+      setMensajeIntervalo(mensaje);
       return;
     }
-    const segundos = Number(texto);
-    if (!Number.isInteger(segundos) || segundos < 3 || segundos > 60) {
-      setMensajeIntervalo(textos.INTERVALO_FUERA_DE_RANGO);
-      return;
-    }
+    const segundos = Number(intervalo.trim());
     const r = await invocar('widget_add', {
       type: 'image_carousel',
       config: { items: elegidas.map((e) => e.imagen), interval_seconds: segundos },
     });
     if (!r.ok) {
-      if (r.error.field === 'interval_seconds') setMensajeIntervalo(r.error.message);
-      else setRechazo(r.error.message);
+      if (r.error.field === 'interval_seconds') setMensajeIntervalo(textoDelError(r.error));
+      else setRechazo(textoDelError(r.error));
       return;
     }
     alIrAWidgets();
@@ -122,7 +138,7 @@ export function AgregarCarrusel({ alRegresar, alIrAWidgets }: AgregarCarruselPro
       />
       {/* docs/rediseno.md RD-60: las imágenes del carrusel en una fila de fondo de columna (84:818). */}
       <div className="wg-subpantalla-widget__dato">
-        <p>{`${elegidas.length} de ${MAXIMO}`}</p>
+        <p>{`${elegidas.length} de ${CARRUSEL_IMAGENES_MAX}`}</p>
         <ol aria-label="Imágenes elegidas">
           {elegidas.map((e, i) => (
             <li key={`${i}-${e.nombre}`}>{e.nombre}</li>
@@ -147,11 +163,12 @@ export function AgregarCarrusel({ alRegresar, alIrAWidgets }: AgregarCarruselPro
           ))}
         </ul>
       )}
-      <div className="wg-subpantalla-widget__formulario">
+      <div className="wg-subpantalla-widget__formulario wg-subpantalla-widget__formulario--sin-salto">
         <CampoTexto
           etiqueta="Intervalo (segundos)"
           valor={intervalo}
           alCambiar={cambiarIntervalo}
+          onBlur={salirDelIntervalo}
           inputMode="numeric"
           mensaje={mensajeIntervalo || undefined}
         />
@@ -175,8 +192,8 @@ export function AgregarCarrusel({ alRegresar, alIrAWidgets }: AgregarCarruselPro
         {/* ET07: con menos de 2 imágenes, deshabilitada con su texto (RT-04). */}
         <Boton
           principal
-          disabled={elegidas.length < MINIMO || enCurso}
-          motivo={elegidas.length < MINIMO ? textos.CARRUSEL_POCAS_IMAGENES : undefined}
+          disabled={elegidas.length < CARRUSEL_IMAGENES_MIN || enCurso}
+          motivo={elegidas.length < CARRUSEL_IMAGENES_MIN ? textos.CARRUSEL_POCAS_IMAGENES : undefined}
           onClick={() => void ejecutar()}
         >
           Agregar

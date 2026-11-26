@@ -34,6 +34,7 @@ import { ContextoDeBloqueo } from '@/ui/VentanaEmergente/VentanaEmergente';
 import { ProveedorDeApariencia, RaizDeCuenta, type ModoDeCuenta } from '@/screens/cuenta/apariencia';
 import { useTemaInicial } from '@/screens/cuenta/temaInicial';
 import { CerrarSesion } from '@/screens/settings/CerrarSesion';
+import { NombreEmergente } from '@/ui/NombreEmergente/NombreEmergente';
 
 // Ventana principal (C-01, interfaz.md): RT-01 (menú principal y pantalla principal) y el bloqueo del fondo de
 // RT-02 (ventanas emergentes). Las pantallas de cada HU se registran en `pantallas` a medida que se construyen.
@@ -362,16 +363,20 @@ export function VentanaPrincipal({
                 windgets
               </div>
             )}
-            <button
-              type="button"
-              className="wg-menu__ocultar"
-              aria-label={menuContraido ? AMPLIAR_MENU : OCULTAR_MENU}
-              title={menuContraido ? AMPLIAR_MENU : OCULTAR_MENU}
-              aria-expanded={!menuContraido}
-              onClick={() => contraerMenu(!menuContraido)}
-            >
-              <IconoDelMenu trazo={menuContraido ? TRAZO_ABRIR : TRAZO_CONTRAER} className="wg-menu__icono" />
-            </button>
+            <NombreEmergente texto={menuContraido ? AMPLIAR_MENU : OCULTAR_MENU}>
+              <button
+                type="button"
+                className="wg-menu__ocultar"
+                aria-label={menuContraido ? AMPLIAR_MENU : OCULTAR_MENU}
+                aria-expanded={!menuContraido}
+                onClick={() => contraerMenu(!menuContraido)}
+              >
+                <IconoDelMenu
+                  trazo={menuContraido ? TRAZO_ABRIR : TRAZO_CONTRAER}
+                  className="wg-menu__icono"
+                />
+              </button>
+            </NombreEmergente>
           </div>
           <MenuPrincipal
             actual={pantalla}
@@ -458,17 +463,18 @@ function CerrarSesionDelMenu({ contraido }: { contraido: boolean }) {
     <CerrarSesion
       alFallar={(mensaje) => mostrar(mensaje, 'error')}
       disparador={(abrir, enCurso) => (
-        <button
-          type="button"
-          className="wg-boton wg-menu__opcion wg-menu__cerrar-sesion"
-          aria-label="Cerrar sesión"
-          title="Cerrar sesión"
-          disabled={enCurso}
-          onClick={abrir}
-        >
-          <IconoDelMenu trazo={TRAZO_CERRAR_SESION} />
-          {!contraido && <span aria-hidden="true">Cerrar sesión</span>}
-        </button>
+        <NombreEmergente texto={contraido ? 'Cerrar sesión' : undefined}>
+          <button
+            type="button"
+            className="wg-boton wg-menu__opcion wg-menu__cerrar-sesion"
+            aria-label="Cerrar sesión"
+            disabled={enCurso}
+            onClick={abrir}
+          >
+            <IconoDelMenu trazo={TRAZO_CERRAR_SESION} />
+            {!contraido && <span aria-hidden="true">Cerrar sesión</span>}
+          </button>
+        </NombreEmergente>
       )}
     />
   );

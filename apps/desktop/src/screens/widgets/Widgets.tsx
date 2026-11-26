@@ -7,11 +7,12 @@ import { Aviso } from '@/ui/Aviso/Aviso';
 import { Boton } from '@/ui/Boton/Boton';
 import { Confirmacion } from '@/ui/Confirmacion/Confirmacion';
 import { Interruptor } from '@/ui/Interruptor/Interruptor';
-import { useMensajeDeResultado } from '@/ui/MensajeResultado/MensajeResultado';
+import { useMensajeDeResultado, useMostrarError } from '@/ui/MensajeResultado/MensajeResultado';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { AgregarWidget } from './AgregarWidget';
 import { FormularioDeWidget } from './FormularioDeWidget';
 import './widgets.css';
+import { NombreEmergente } from '@/ui/NombreEmergente/NombreEmergente';
 
 // P-WID-01 Widgets (Menú principal > Personalización > Widgets; HE-04-HU01). La lista sale del Núcleo ya en
 // orden: primero los widgets por defecto y luego los agregados (IPC-WID-01 widget_list). «Editar escritorio»
@@ -36,6 +37,7 @@ export function descripcionDeWidget(widget: WidgetItem): string {
 export function Widgets() {
   const { invocar, escuchar } = useNucleo();
   const mostrarResultado = useMensajeDeResultado();
+  const mostrarError = useMostrarError();
   const [widgets, setWidgets] = useState<WidgetItem[] | null>(null);
   // rediseno_final_backend.md §3.2 y §3.6-7: si la lista no se puede leer, la pantalla lo dice (RT-04, RD-24); antes
   // quedaba vacía y en silencio.
@@ -61,17 +63,19 @@ export function Widgets() {
   // lista vuelve a leer, también si el widget ya no existe (`widget.not_found`).
   const alternar = useCallback(
     async (widget: WidgetItem, activo: boolean) => {
-      await invocar('widget_set_active', { widget_id: widget.widget_id, active: activo });
+      const r = await invocar('widget_set_active', { widget_id: widget.widget_id, active: activo });
+      if (!r.ok) mostrarError(r.error);
       await leer();
     },
-    [invocar, leer],
+    [invocar, leer, mostrarError],
   );
 
   // HE-04-HU13-CA01, CA04, CA05: lo quita de la cuenta y de todos los temas, con «Widget eliminado.».
   const eliminar = async (widget: WidgetItem) => {
     setPorEliminar(null);
     const r = await invocar('widget_delete', { widget_id: widget.widget_id });
-    mostrarResultado(r.ok ? (r.result_message?.message ?? '') : r.error.message);
+    if (r.ok) mostrarResultado(r.result_message?.message ?? '');
+    else mostrarError(r.error);
     await leer();
   };
 
@@ -98,6 +102,12 @@ export function Widgets() {
     [leer, mostrarResultado],
   );
 
+  // HE-05-HU01-ET05: la pantalla de edición la abre el Núcleo; si no puede, se ve el motivo (RD-83).
+  const editarEscritorio = async () => {
+    const r = await invocar('layout_edit_open', {});
+    if (!r.ok) mostrarError(r.error);
+  };
+
   if (ruta.actual === 'agregar') return <AgregarWidget alRegresar={ruta.regresar} />;
 
   return (
@@ -108,7 +118,7 @@ export function Widgets() {
           Agregar widget
         </Boton>
         {/* HE-05-HU01-ET05: oculta esta ventana y abre la pantalla de edición (IPC-LAY-01). */}
-        <Boton onClick={() => void invocar('layout_edit_open', {})}>Editar escritorio</Boton>
+        <Boton onClick={() => void editarEscritorio()}>Editar escritorio</Boton>
       </div>
       {errorAlLeer && <Aviso texto={errorAlLeer} />}
       {widgets && (
@@ -142,16 +152,17 @@ export function Widgets() {
               )}
               {/* HE-04-HU13-ET04: en los widgets por defecto, deshabilitada con su motivo (RT-04); RD-35: el motivo
                   va al pasar el mouse y como descripción accesible. */}
-              <button
-                type="button"
-                className="wg-enlace-texto wg-lista-widgets__eliminar"
-                disabled={!w.can_delete}
-                title={w.can_delete ? undefined : textos.WIDGET_POR_DEFECTO_NO_ELIMINABLE}
-                aria-describedby={w.can_delete ? undefined : `${w.widget_id}-motivo`}
-                onClick={() => setPorEliminar(w)}
-              >
-                Eliminar
-              </button>
+              <NombreEmergente texto={w.can_delete ? undefined : textos.WIDGET_POR_DEFECTO_NO_ELIMINABLE}>
+                <button
+                  type="button"
+                  className="wg-enlace-texto wg-lista-widgets__eliminar"
+                  disabled={!w.can_delete}
+                  aria-describedby={w.can_delete ? undefined : `${w.widget_id}-motivo`}
+                  onClick={() => setPorEliminar(w)}
+                >
+                  Eliminar
+                </button>
+              </NombreEmergente>
               {!w.can_delete && (
                 <span id={`${w.widget_id}-motivo`} className="wg-oculto">
                   {textos.WIDGET_POR_DEFECTO_NO_ELIMINABLE}
@@ -169,6 +180,12 @@ export function Widgets() {
             void leer();
           }}
           alCancelar={() => setPorConfigurar(null)}
+          alDesaparecer={(error) => {
+            // RD-92: cierra el formulario, dice por qué y vuelve a leer la lista.
+            setPorConfigurar(null);
+            mostrarError(error);
+            void leer();
+          }}
         />
       )}
       {porEliminar && (

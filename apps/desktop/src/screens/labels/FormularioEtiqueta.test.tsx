@@ -3,6 +3,7 @@
 import { fireEvent, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Label } from '@/types';
+import textos from '@/types/messages.es.json';
 import { abrirPantalla, fijarHoy, llamadasA, screen } from '../kanban/pruebas';
 import { Labels } from './Labels';
 
@@ -160,5 +161,51 @@ describe('HE-08-HU02 · Crear una etiqueta', () => {
     expect(radios.some((r) => r.checked)).toBe(false);
     expect(within(ventana).getByRole('button', { name: 'Guardar' })).toBeTruthy();
     expect(within(ventana).getByRole('button', { name: 'Cancelar' })).toBeTruthy();
+  });
+});
+
+describe('RD-91 · Todos los errores del Formulario de etiqueta a la vez', () => {
+  it('RD-91 · nombre largo y color sin elegir', async () => {
+    const nucleo = await abrir();
+    const ventana = await abrirFormulario();
+    escribirNombre(ventana, 'a'.repeat(31));
+    guardar(ventana);
+    await waitFor(() =>
+      expect(mensajeDe(within(ventana).getByLabelText('Nombre'))).toBe(
+        'El nombre de la etiqueta no puede superar los 30 caracteres.',
+      ),
+    );
+    expect(mensajeDe(within(ventana).getByRole('radio', { name: 'Azul' }))).toBe(
+      'Este campo es obligatorio.',
+    );
+    expect(llamadasA(nucleo, 'label_create')).toEqual([]);
+  });
+});
+
+describe('RD-106 · Etiqueta: «×» y Esc piden «Salir sin guardar» solo si hay datos', () => {
+  it('RD-106 · con datos escritos, «×» muestra la confirmación de descarte', async () => {
+    await abrir();
+    const ventana = await abrirFormulario();
+    escribirNombre(ventana, 'Estudio');
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Cerrar' }));
+    expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Nueva etiqueta' })).toBeTruthy();
+  });
+
+  it('RD-106 · con datos escritos, Esc muestra la confirmación de descarte', async () => {
+    await abrir();
+    const ventana = await abrirFormulario();
+    escribirNombre(ventana, 'Estudio');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Nueva etiqueta' })).toBeTruthy();
+  });
+
+  it('RD-106 · sin cambios, «×» cierra sin confirmar', async () => {
+    await abrir();
+    const ventana = await abrirFormulario();
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Cerrar' }));
+    expect(screen.queryByText(textos.SALIR_SIN_GUARDAR)).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Nueva etiqueta' })).toBeNull();
   });
 });

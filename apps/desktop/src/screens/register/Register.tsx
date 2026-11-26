@@ -1,3 +1,4 @@
+import { ALIAS_MAX, CONTRASENA_MAX, CORREO_MAX } from '@/reglas/limites';
 import { useCallback, useMemo, useState, type FormEvent } from 'react';
 import { useEnvioUnico } from '@/reglas/envio';
 import { useMensajesDeCampo } from '@/reglas/formulario';
@@ -15,7 +16,6 @@ import { MarcoDeCuenta } from '../cuenta/MarcoDeCuenta';
 import {
   AYUDA_CONTRASENA,
   ERROR_INESPERADO,
-  MAXIMO,
   PANTALLAS,
   PASOS_DE_REGISTRO,
 } from '../cuenta/textosDelRediseno';
@@ -130,7 +130,7 @@ export function Register() {
           id={campos.ids.alias}
           etiqueta="Alias"
           obligatorio
-          maximo={MAXIMO.alias}
+          maximo={ALIAS_MAX}
           valor={valores.alias}
           alCambiar={cambiar('alias')}
           mensaje={campos.mensajes.alias}
@@ -140,7 +140,7 @@ export function Register() {
           etiqueta="Correo electrónico"
           type="email"
           obligatorio
-          maximo={MAXIMO.correo}
+          maximo={CORREO_MAX}
           valor={valores.email}
           alCambiar={cambiar('email')}
           mensaje={campos.mensajes.email}
@@ -150,7 +150,7 @@ export function Register() {
           etiqueta="Contraseña"
           type="password"
           obligatorio
-          maximo={MAXIMO.contrasena}
+          maximo={CONTRASENA_MAX}
           ayuda={AYUDA_CONTRASENA}
           valor={valores.password}
           alCambiar={cambiar('password')}

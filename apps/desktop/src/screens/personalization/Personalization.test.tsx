@@ -978,6 +978,38 @@ describe('HE-03-HU02 · Guardar como tema', () => {
   const guardar = (ventana: HTMLElement) =>
     within(ventana).getByRole('button', { name: 'Guardar' }) as HTMLButtonElement;
 
+  it('RD-91 · el único campo muestra su error', async () => {
+    const { nucleo, ventana } = await abrirVentana();
+    diligenciarNombre(ventana, 'a'.repeat(41));
+    expect(within(ventana).getByText('El nombre no puede superar los 40 caracteres.')).toBeTruthy();
+    fireEvent.click(guardar(ventana));
+    expect(ventana.querySelectorAll('.wg-campo__mensaje')).toHaveLength(1);
+    expect(llamadasA(nucleo, 'theme_draft_save_as')).toEqual([]);
+  });
+
+  it('RD-106 · con el nombre escrito, «×» muestra la confirmación de descarte', async () => {
+    const { ventana } = await abrirVentana();
+    diligenciarNombre(ventana, 'Otoño');
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Cerrar' }));
+    expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Guardar como tema' })).toBeTruthy();
+  });
+
+  it('RD-106 · con el nombre escrito, Esc muestra la confirmación de descarte', async () => {
+    const { ventana } = await abrirVentana();
+    diligenciarNombre(ventana, 'Otoño');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Guardar como tema' })).toBeTruthy();
+  });
+
+  it('RD-106 · sin cambios, «×» cierra sin confirmar', async () => {
+    const { ventana } = await abrirVentana();
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Cerrar' }));
+    expect(screen.queryByText(textos.SALIR_SIN_GUARDAR)).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Guardar como tema' })).toBeNull();
+  });
+
   it('HE-03-HU02-CA01 · Guardar como tema nuevo', async () => {
     const { nucleo, ventana } = await abrirVentana();
     nucleo.responder('theme_draft_save_as', ({ name }) => ({
@@ -1145,6 +1177,23 @@ describe('HE-02-HU11 · Guardar los cambios de la vista previa', () => {
     );
     expect(guardar().disabled).toBe(false);
     expect(llamadasA(nucleo, 'theme_draft_open')).toHaveLength(1);
+  });
+
+  it('RD-93 · El contenido repetido al guardar se muestra como advertencia', async () => {
+    const nucleo = await abrir(true);
+    await waitFor(() => expect(guardar().disabled).toBe(false));
+    nucleo.responder('theme_draft_save', () => ({
+      ok: false,
+      error: {
+        code: 'theme.content_duplicate',
+        message: 'Ya tienes el tema “Verano” con estas mismas propiedades.',
+      },
+    }));
+    fireEvent.click(guardar());
+    const texto = await screen.findByText('Ya tienes el tema “Verano” con estas mismas propiedades.');
+    const mensaje = texto.closest('.wg-resultado');
+    expect(mensaje?.classList.contains('wg-resultado--advertencia')).toBe(true);
+    expect(mensaje?.getAttribute('role')).toBe('status');
   });
 
   it('HE-02-HU11-CA03 · Guardar sin cambios', async () => {
@@ -1422,5 +1471,48 @@ describe('INT-09 · Miniaturas del catálogo que todavía no se descargaron', ()
         .getByRole('button', { name: /Windgets/ })
         .querySelector('img'),
     ).toBeTruthy();
+  });
+});
+
+describe('RD-83 · Personalización: ninguna acción falla en silencio', () => {
+  const falla = () => ({ ok: false as const, error: { code: 'internal.unexpected' as const, message: '' } });
+  const avisos = () =>
+    screen
+      .queryAllByRole('alert')
+      .map((a) => a.textContent)
+      .join(' ');
+
+  it.each([
+    ['elegir una plantilla', 'theme_draft_update', /Minimal/],
+    ['«Cancelar»', 'theme_draft_discard', 'Cancelar'],
+    ['«Restablecer colores»', 'theme_draft_reset', 'Restablecer colores'],
+    ['«Aplicar»', 'theme_draft_apply', 'Aplicar'],
+    ['«Catálogo de imágenes»', 'catalog_list', 'Catálogo de imágenes'],
+  ] as const)('RD-83 · %s sin texto muestra el genérico', async (_, comando, opcion) => {
+    // «Aplicar» solo se habilita con cambios (HE-02-HU12-ET06).
+    const nucleo = await abrir(comando === 'theme_draft_apply');
+    await waitFor(() => expect(lista().value).toBe('t1'));
+    const accion = screen.getByRole('button', { name: opcion }) as HTMLButtonElement;
+    await waitFor(() => expect(accion.disabled).toBe(false));
+    nucleo.responder(comando, falla);
+    fireEvent.click(accion);
+    await waitFor(() => expect(avisos()).toContain(textos.ERROR_INESPERADO));
+  });
+
+  it('RD-83 · «Salir sin guardar» que no puede descartar se queda en la pantalla con el motivo', async () => {
+    const nucleo = await abrir(true);
+    nucleo.responder('theme_draft_get_status', () => ({
+      ok: true,
+      value: { dirty: true, applied_unsaved: false, theme_name: 'Mi tema' },
+    }));
+    nucleo.responder('theme_draft_discard', falla);
+    fireEvent.click(screen.getByRole('button', { name: 'Personalización' }));
+    const menu = screen.getByRole('navigation', { name: 'Menú principal' });
+    fireEvent.click(within(menu).getByRole('button', { name: 'Planificador diario' }));
+    const dialogo = await screen.findByRole('dialog');
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Salir sin guardar' }));
+    await waitFor(() => expect(avisos()).toContain(textos.ERROR_INESPERADO));
+    expect(screen.getByRole('main', { name: 'Personalización del wallpaper' })).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });

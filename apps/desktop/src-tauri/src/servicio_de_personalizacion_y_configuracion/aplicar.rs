@@ -27,6 +27,7 @@ impl ServicioDePersonalizacion {
     ) -> Result<ConMensaje<ThemeIdResult>, AppError> {
         self.abrir_borrador(base, user_id, None).await?;
         let mut borrador = self.con_borrador(|b| b.clone()).ok_or_else(inesperado)?;
+        Self::comprobar_que_existe(base, user_id, &borrador.theme_id).await?;
         validar_colores(&borrador.contenido)?;
 
         let mensaje = match modo {
@@ -119,11 +120,10 @@ impl ServicioDePersonalizacion {
         descartar_borrador: bool,
         ahora_ms: i64,
     ) -> Result<ConMensaje<ThemeIdResult>, AppError> {
-        // DUDA: HE-03-HU03 IPC-THEME-12 no define un error para un tema que ya no existe. Valor usado:
-        // `internal.unexpected` (la lista solo ofrece temas guardados).
+        // RD-86: la lista puede ofrecer todavía un tema que se eliminó en otro computador.
         let (nombre, contenido) = Self::guardado(base, user_id, theme_id)
             .await?
-            .ok_or_else(inesperado)?;
+            .ok_or_else(tema_no_existe)?;
         let ya_aplicado = Self::aplicado(base, user_id)
             .await?
             .is_some_and(|(id, copia)| id == theme_id && es_la_misma_copia(&copia, &contenido));

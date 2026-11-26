@@ -6,6 +6,7 @@ import type { CatalogItem } from '@/types';
 import { Boton } from '@/ui/Boton/Boton';
 import { useNucleo } from '@/ventana_principal/VentanaPrincipal';
 import { MiniaturaDelCatalogo } from './MiniaturaDelCatalogo';
+import { textoDelError } from '@/ipc/textoDelError';
 
 // Subpantalla Animación (Widgets > Agregar widget > Animación; HE-04-HU09-ET01): el catálogo de animaciones con la
 // miniatura y el nombre de cada una, la animación elegida en reproducción (ET03) y las opciones «Agregar» y
@@ -21,6 +22,7 @@ export function AgregarAnimacion({ alRegresar, alIrAWidgets }: AgregarAnimacionP
   const [catalogo, setCatalogo] = useState<CatalogItem[] | null>(null);
   const [elegida, setElegida] = useState<CatalogItem | null>(null);
   const [video, setVideo] = useState<string | null>(null);
+  const [mensaje, setMensaje] = useState('');
 
   useEffect(() => {
     let vigente = true;
@@ -36,14 +38,17 @@ export function AgregarAnimacion({ alRegresar, alIrAWidgets }: AgregarAnimacionP
   const elegir = async (a: CatalogItem) => {
     setElegida(a);
     setVideo(null);
+    setMensaje('');
     const archivo = await invocar('asset_resolve', { kind: 'catalog_animation', id: a.id });
-    if (archivo.ok && archivo.value.state === 'ready') setVideo(urlDeArchivo(archivo.value.url));
+    if (!archivo.ok) setMensaje(textoDelError(archivo.error));
+    else if (archivo.value.state === 'ready') setVideo(urlDeArchivo(archivo.value.url));
   };
 
   const agregar = useCallback(async () => {
     if (!elegida) return;
     const r = await invocar('widget_add', { type: 'animation', config: { animation_id: elegida.id } });
     if (r.ok) alIrAWidgets();
+    else setMensaje(textoDelError(r.error));
   }, [alIrAWidgets, elegida, invocar]);
   const { ejecutar, enCurso } = useEnvioUnico(agregar);
 
@@ -88,6 +93,7 @@ export function AgregarAnimacion({ alRegresar, alIrAWidgets }: AgregarAnimacionP
           )}
         </section>
       )}
+      {mensaje && <p role="alert">{mensaje}</p>}
       {/* docs/rediseno.md RD-59: «Agregar» y «Regresar» abajo a la izquierda (84:844, 84:846). */}
       <div className="wg-subpantalla-widget__acciones">
         <Boton principal disabled={!elegida || enCurso} onClick={() => void ejecutar()}>

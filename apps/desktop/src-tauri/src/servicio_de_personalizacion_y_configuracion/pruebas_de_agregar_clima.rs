@@ -22,6 +22,7 @@ const AHORA_MS: i64 = 1_794_657_600_000;
 /// Servicio de clima simulado: Popayán y Cali existen; el clima responde lo que se le indique.
 pub(super) struct ClimaSimulado {
     clima: Mutex<Result<(f64, &'static str), FallaDeAuth>>,
+    de_dia: Mutex<Option<bool>>,
     noticias: Mutex<Result<usize, FallaDeAuth>>,
     consultas: Mutex<Vec<String>>,
 }
@@ -30,6 +31,7 @@ impl ClimaSimulado {
     pub(super) fn nuevo() -> Self {
         Self {
             clima: Mutex::new(Ok((21.4, "2"))),
+            de_dia: Mutex::new(None),
             noticias: Mutex::new(Ok(6)),
             consultas: Mutex::new(Vec::new()),
         }
@@ -83,6 +85,7 @@ impl NubeDeClima for ClimaSimulado {
             temperature_c: t,
             condition_code: codigo.into(),
             condition_text: String::new(),
+            is_day: *self.de_dia.lock().unwrap(),
             observed_at: Instant("2026-11-14T12:00:00.000Z".into()),
             cache: WeatherCurrentResponseCache::Miss,
         })
@@ -439,6 +442,75 @@ fn ca_he_04_hu05_ca11() {
     malo.latitude = 120.0;
     let e = bloquear(clima::elegir_lugar(&nube, "jwt", "x", Some(&malo))).unwrap_err();
     assert_eq!(e.code, ErrorCode::CityNotFound);
+}
+
+#[test]
+fn rd_97_guarda_si_es_de_dia() {
+    // RD-97 · `is_day` de la consulta llega al dato del widget y a la caché local.
+    let (base, servicio) = con_widgets_por_defecto();
+    let nube = ClimaSimulado::nuevo();
+    let w = agregar(&base, &servicio, &nube, "Popayán").unwrap();
+    let widget = de_clima(&base, &w.widget_id.0);
+    for (ms, de_dia) in [(0, true), (1, false)] {
+        *nube.de_dia.lock().unwrap() = Some(de_dia);
+        let nuevo = bloquear(actualizar_clima(
+            &base,
+            &nube,
+            "jwt",
+            &widget,
+            AHORA_MS + ms,
+        ))
+        .unwrap();
+        let guardado = bloquear(clima::datos(&base, &w.widget_id.0)).unwrap();
+        for datos in [nuevo, guardado] {
+            let Some(WidgetDataPayload::WeatherData(d)) = datos.payload else {
+                panic!("sin clima")
+            };
+            assert_eq!(d.is_day, Some(de_dia));
+        }
+    }
+}
+
+#[test]
+fn rd_97_sin_is_day_funciona_como_antes() {
+    // RD-97 · Función sin desplegar: la respuesta no trae `is_day` (o es nulo) y se lee sin error.
+    for extra in ["", r#""is_day":null,"#] {
+        let respuesta: WeatherCurrentResponse = serde_json::from_str(&format!(
+            r#"{{"geo_id":"3673269","temperature_c":21.4,"condition_code":"2",
+                "condition_text":"Parcialmente nublado",{extra}
+                "observed_at":"2026-11-14T12:00:00.000Z","cache":"hit"}}"#
+        ))
+        .unwrap();
+        assert_eq!(respuesta.is_day, None);
+    }
+    let (base, servicio) = con_widgets_por_defecto();
+    let nube = ClimaSimulado::nuevo();
+    let w = agregar(&base, &servicio, &nube, "Popayán").unwrap();
+    let widget = de_clima(&base, &w.widget_id.0);
+    let datos = bloquear(actualizar_clima(&base, &nube, "jwt", &widget, AHORA_MS)).unwrap();
+    assert_eq!(datos.status, WidgetDataStatus::Ok);
+    let json = serde_json::to_value(datos.payload.unwrap()).unwrap();
+    assert!(json.get("is_day").is_none(), "{json}");
+    // Caché local escrita por la versión anterior: se lee y se conserva sin conexión.
+    bloquear(async {
+        sqlx::query("UPDATE external_widget_cache SET payload = ? WHERE widget_id = ?")
+            .bind(
+                r#"{"city":"Popayán","temperature_c":20.0,"condition_code":"0","condition_text":"Despejado"}"#,
+            )
+            .bind(&w.widget_id.0)
+            .execute(base.pool().await.unwrap())
+            .await
+            .unwrap();
+    });
+    nube.responde(Err(FallaDeAuth::SinConexion));
+    let sin_red = bloquear(actualizar_clima(&base, &nube, "jwt", &widget, AHORA_MS + 1)).unwrap();
+    let Some(WidgetDataPayload::WeatherData(d)) = sin_red.payload else {
+        panic!("sin clima")
+    };
+    assert_eq!(
+        (d.condition_text.as_str(), d.temperature_c, d.is_day),
+        ("Despejado", 20.0, None)
+    );
 }
 
 // HE-04-HU06 · Agregar el widget Noticias.

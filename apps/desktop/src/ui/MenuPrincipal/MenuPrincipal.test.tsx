@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { MenuPrincipal } from './MenuPrincipal';
 
@@ -37,12 +37,19 @@ describe('Menú principal', () => {
     }
   });
 
-  it('D-25 · Contraído muestra solo los íconos, con su nombre accesible y su texto al pasar el mouse', () => {
+  it('D-25 · Contraído muestra solo los íconos, con su nombre accesible y su texto al pasar el mouse', async () => {
     render(<MenuPrincipal actual="kanban" alElegir={() => {}} contraido />);
     expect(document.querySelectorAll('.wg-menu__titulo-bloque')).toHaveLength(0);
     const kanban = screen.getByRole('button', { name: 'Tablero Kanban' });
     expect(kanban.textContent).toBe('');
-    expect(kanban.getAttribute('title')).toBe('Tablero Kanban');
     expect(kanban.getAttribute('aria-current')).toBe('page');
+    // RD-100: el texto sale en el nombre emergente; repite el nombre accesible y no describe al botón.
+    fireEvent.pointerEnter(kanban);
+    await waitFor(() =>
+      expect(document.querySelector('.wg-nombre-emergente:not([hidden])')?.textContent).toBe(
+        'Tablero Kanban',
+      ),
+    );
+    expect(kanban.getAttribute('aria-describedby')).toBeNull();
   });
 });

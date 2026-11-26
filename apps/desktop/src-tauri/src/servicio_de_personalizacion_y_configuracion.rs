@@ -226,6 +226,21 @@ impl ServicioDePersonalizacion {
             .map_err(de_sqlx)
     }
 
+    /// RD-86: el tema pedido, o el que está en edición, se eliminó en otro computador (`theme.not_found`). El
+    /// tema inicial virtual todavía no se ha guardado y no cuenta.
+    async fn comprobar_que_existe(
+        base: &BaseLocal,
+        user_id: &str,
+        theme_id: &str,
+    ) -> Result<(), AppError> {
+        if theme_id != TEMA_INICIAL_VIRTUAL
+            && Self::guardado(base, user_id, theme_id).await?.is_none()
+        {
+            return Err(tema_no_existe());
+        }
+        Ok(())
+    }
+
     /// La plantilla por defecto como contenido de un tema nuevo (HE-02-HU10-ET05).
     async fn contenido_inicial(base: &BaseLocal) -> Result<ThemeContent, AppError> {
         let pool = base.pool().await.map_err(de_sqlx)?;
@@ -250,7 +265,7 @@ impl ServicioDePersonalizacion {
                 f.try_get::<String, _>("default_font_id").map_err(de_sqlx)?,
             ),
             None => (
-                "default".to_string(),
+                escritorio::PLANTILLA_DEL_INSTALADOR.to_string(),
                 "#201B2B".to_string(),
                 "#DC026C".to_string(),
                 "#FFFFFF".to_string(),
@@ -339,6 +354,8 @@ impl ServicioDePersonalizacion {
         theme_id: &str,
         descartar_cambios: bool,
     ) -> Result<ThemeDraftView, AppError> {
+        // RD-86: antes de preguntar por los cambios sin guardar, el tema pedido debe existir.
+        Self::comprobar_que_existe(base, user_id, theme_id).await?;
         if let Some(actual) = self.con_borrador(|b| b.clone())
             && actual.dirty()
             && actual.theme_id != theme_id
@@ -419,7 +436,7 @@ impl ServicioDePersonalizacion {
         let mut miniaturas = Vec::with_capacity(filas.len());
         for f in &filas {
             let id: String = f.try_get("id").map_err(de_sqlx)?;
-            miniaturas.push(if id == "default" {
+            miniaturas.push(if id == escritorio::PLANTILLA_DEL_INSTALADOR {
                 Some(
                     carpetas
                         .recursos
@@ -721,8 +738,7 @@ impl ServicioDePersonalizacion {
     }
 
     /// Los tres colores de una paleta del catálogo (HE-02-HU07-ET02).
-    /// DUDA: HE-02-HU07 IPC-THEME-05 no define un error para una paleta que no está en el catálogo (la vista solo
-    /// ofrece las del catálogo). Valor usado: `internal.unexpected`, como un color fuera del catálogo (HE-09-HU03).
+    /// RD-87: la vista puede ofrecer todavía una paleta que el catálogo desactivó (`palette.not_found`).
     async fn paleta(base: &BaseLocal, id: &str) -> Result<(String, ThemeColors), AppError> {
         let pool = base.pool().await.map_err(de_sqlx)?;
         let fila = sqlx::query(
@@ -732,7 +748,13 @@ impl ServicioDePersonalizacion {
         .fetch_optional(pool)
         .await
         .map_err(de_sqlx)?
-        .ok_or_else(inesperado)?;
+        .ok_or_else(|| {
+            error(
+                ErrorCode::PaletteNotFound,
+                messages::PALETA_NO_DISPONIBLE,
+                None,
+            )
+        })?;
         let color = |columna: &str| -> Result<Hex, AppError> {
             Ok(Hex(fila
                 .try_get::<String, _>(columna)
@@ -911,6 +933,16 @@ pub mod reparacion;
 pub mod ultima_pantalla;
 mod widgets;
 
+/// `theme.not_found` (RD-86): el tema se eliminó en otro computador.
+fn tema_no_existe() -> AppError {
+    error(ErrorCode::ThemeNotFound, messages::TEMA_NO_EXISTE, None)
+}
+
+/// `widget.not_found` (RD-92): el widget se eliminó en otro computador.
+fn widget_no_existe() -> AppError {
+    error(ErrorCode::WidgetNotFound, messages::WIDGET_NO_EXISTE, None)
+}
+
 #[cfg(test)]
 mod pruebas_de_agregar_clima;
 #[cfg(test)]
@@ -929,6 +961,8 @@ mod pruebas_de_distribucion;
 mod pruebas_de_eliminar_tema;
 #[cfg(test)]
 mod pruebas_de_eliminar_widget;
+#[cfg(test)]
+mod pruebas_de_errores_visibles;
 #[cfg(test)]
 mod pruebas_de_escritorio;
 #[cfg(test)]

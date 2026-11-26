@@ -4,6 +4,7 @@
 import { fireEvent, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ThemeSummary } from '@/types';
+import textos from '@/types/messages.es.json';
 import { abrirPantalla, fijarHoy, llamadasA, screen, type NucleoDelPlanificador } from '../kanban/pruebas';
 import { Themes } from './Themes';
 
@@ -238,6 +239,38 @@ describe('HE-03-HU04 · Renombrar un tema', () => {
     return { n, ventana, campo: within(ventana).getByLabelText('Nombre') as HTMLInputElement };
   }
 
+  it('RD-91 · el único campo muestra su error', async () => {
+    const { n, ventana, campo } = await abrirRenombrar();
+    fireEvent.change(campo, { target: { value: 'a'.repeat(41) } });
+    expect(within(ventana).getByText('El nombre no puede superar los 40 caracteres.')).toBeTruthy();
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Guardar' }));
+    expect(ventana.querySelectorAll('.wg-campo__mensaje')).toHaveLength(1);
+    expect(llamadasA(n, 'theme_rename')).toEqual([]);
+  });
+
+  it('RD-106 · con el nombre cambiado, «×» muestra la confirmación de descarte', async () => {
+    const { ventana, campo } = await abrirRenombrar();
+    fireEvent.change(campo, { target: { value: 'Otoño' } });
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Cerrar' }));
+    expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Renombrar tema' })).toBeTruthy();
+  });
+
+  it('RD-106 · con el nombre cambiado, Esc muestra la confirmación de descarte', async () => {
+    const { campo } = await abrirRenombrar();
+    fireEvent.change(campo, { target: { value: 'Otoño' } });
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Renombrar tema' })).toBeTruthy();
+  });
+
+  it('RD-106 · sin cambios, «×» cierra sin confirmar', async () => {
+    const { ventana } = await abrirRenombrar();
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Cerrar' }));
+    expect(screen.queryByText(textos.SALIR_SIN_GUARDAR)).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Renombrar tema' })).toBeNull();
+  });
+
   it('HE-03-HU04-CA07 · Abrir la ventana Renombrar tema', async () => {
     const { ventana, campo } = await abrirRenombrar();
     expect(campo.value).toBe('Mi tema');
@@ -353,7 +386,10 @@ describe('HE-03-HU05 · Eliminar un tema', () => {
     fireEvent.click(within(fila(1)).getByRole('button', { name: /^Acciones de / }));
     const boton = screen.getByRole('menuitem', { name: 'Eliminar' }) as HTMLButtonElement;
     expect(boton.disabled).toBe(true);
-    expect(boton.title).toBe('No puedes eliminar el tema aplicado. Aplica otro tema primero.');
+    const motivo = 'No puedes eliminar el tema aplicado. Aplica otro tema primero.';
+    expect(document.getElementById(boton.getAttribute('aria-describedby') ?? '')?.textContent).toBe(motivo);
+    fireEvent.pointerEnter(boton);
+    expect((await screen.findByRole('tooltip')).textContent).toBe(motivo);
   });
 
   it('HE-03-HU05-CA03 · Cancelar la eliminación', async () => {
