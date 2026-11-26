@@ -124,6 +124,8 @@ function valoresDe(tarjeta: CardDetail): Valores {
   };
 }
 
+const CAMPOS_DE_TEXTO = ['title', 'due_date', 'description', 'block_date', 'block_hour'] as const;
+
 /** Las dos listas tienen las mismas etiquetas, sin importar el orden. */
 function mismasEtiquetas(unas: string[], otras: string[]): boolean {
   const conjunto = new Set(unas);
@@ -155,6 +157,13 @@ export function FormularioTarjeta({
   const [valores, setValores] = useState<Valores>(() =>
     tarjeta ? valoresDe(tarjeta) : { ...VACIO, due_date: fechaLimite ? fechaVisible(fechaLimite) : '' },
   );
+  // RD-106: lo que tenía al abrir; si lo escrito difiere, «×» y Esc piden «Salir sin guardar».
+  const [inicial] = useState(valores);
+  const hayCambios =
+    CAMPOS_DE_TEXTO.some((c) => valores[c] !== inicial[c]) ||
+    valores.type !== inicial.type ||
+    valores.priority !== inicial.priority ||
+    !mismasEtiquetas(valores.label_ids, inicial.label_ids);
   const [etiquetas, setEtiquetas] = useState<Label[]>([]);
   const [listaAbierta, setListaAbierta] = useState(false);
   const [creandoEtiqueta, setCreandoEtiqueta] = useState(false);
@@ -301,6 +310,7 @@ export function FormularioTarjeta({
     <VentanaEmergente
       titulo="Formulario de tarjeta"
       alSalir={alCancelar}
+      hayCambios={hayCambios}
       acciones={
         <>
           <Boton onClick={alCancelar}>Cancelar</Boton>

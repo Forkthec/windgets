@@ -4,6 +4,7 @@
 import { fireEvent, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ThemeSummary } from '@/types';
+import textos from '@/types/messages.es.json';
 import { abrirPantalla, fijarHoy, llamadasA, screen, type NucleoDelPlanificador } from '../kanban/pruebas';
 import { Themes } from './Themes';
 
@@ -245,6 +246,29 @@ describe('HE-03-HU04 · Renombrar un tema', () => {
     fireEvent.click(within(ventana).getByRole('button', { name: 'Guardar' }));
     expect(ventana.querySelectorAll('.wg-campo__mensaje')).toHaveLength(1);
     expect(llamadasA(n, 'theme_rename')).toEqual([]);
+  });
+
+  it('RD-106 · con el nombre cambiado, «×» muestra la confirmación de descarte', async () => {
+    const { ventana, campo } = await abrirRenombrar();
+    fireEvent.change(campo, { target: { value: 'Otoño' } });
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Cerrar' }));
+    expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Renombrar tema' })).toBeTruthy();
+  });
+
+  it('RD-106 · con el nombre cambiado, Esc muestra la confirmación de descarte', async () => {
+    const { campo } = await abrirRenombrar();
+    fireEvent.change(campo, { target: { value: 'Otoño' } });
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Renombrar tema' })).toBeTruthy();
+  });
+
+  it('RD-106 · sin cambios, «×» cierra sin confirmar', async () => {
+    const { ventana } = await abrirRenombrar();
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Cerrar' }));
+    expect(screen.queryByText(textos.SALIR_SIN_GUARDAR)).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Renombrar tema' })).toBeNull();
   });
 
   it('HE-03-HU04-CA07 · Abrir la ventana Renombrar tema', async () => {

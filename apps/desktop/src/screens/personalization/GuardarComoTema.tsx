@@ -25,6 +25,8 @@ export function GuardarComoTema({ alGuardar, alCancelar }: GuardarComoTemaProps)
   // CA07: el campo Nombre empieza vacío.
   const [nombre, setNombre] = useState('');
   const [mensaje, setMensaje] = useState('');
+  // RD-106: empieza vacío; si hay algo escrito, «×» y Esc piden «Salir sin guardar».
+  const hayCambios = nombre !== '';
   // ET10: con el nombre vacío o con solo espacios, «Guardar» deshabilitada y sin mensaje de campo.
   const vacio = nombre.trim() === '';
 
@@ -53,6 +55,7 @@ export function GuardarComoTema({ alGuardar, alCancelar }: GuardarComoTemaProps)
     <VentanaEmergente
       titulo="Guardar como tema"
       alSalir={alCancelar}
+      hayCambios={hayCambios}
       acciones={
         <>
           <Boton onClick={alCancelar}>Cancelar</Boton>

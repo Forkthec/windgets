@@ -987,6 +987,29 @@ describe('HE-03-HU02 · Guardar como tema', () => {
     expect(llamadasA(nucleo, 'theme_draft_save_as')).toEqual([]);
   });
 
+  it('RD-106 · con el nombre escrito, «×» muestra la confirmación de descarte', async () => {
+    const { ventana } = await abrirVentana();
+    diligenciarNombre(ventana, 'Otoño');
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Cerrar' }));
+    expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Guardar como tema' })).toBeTruthy();
+  });
+
+  it('RD-106 · con el nombre escrito, Esc muestra la confirmación de descarte', async () => {
+    const { ventana } = await abrirVentana();
+    diligenciarNombre(ventana, 'Otoño');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Guardar como tema' })).toBeTruthy();
+  });
+
+  it('RD-106 · sin cambios, «×» cierra sin confirmar', async () => {
+    const { ventana } = await abrirVentana();
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Cerrar' }));
+    expect(screen.queryByText(textos.SALIR_SIN_GUARDAR)).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Guardar como tema' })).toBeNull();
+  });
+
   it('HE-03-HU02-CA01 · Guardar como tema nuevo', async () => {
     const { nucleo, ventana } = await abrirVentana();
     nucleo.responder('theme_draft_save_as', ({ name }) => ({

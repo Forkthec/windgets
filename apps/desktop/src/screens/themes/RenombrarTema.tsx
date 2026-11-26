@@ -29,6 +29,9 @@ export function RenombrarTema({ tema, alGuardar, alCancelar, alDesaparecer }: Re
   // CA07: el campo Nombre con el nombre actual.
   const [nombre, setNombre] = useState(tema.name);
   const [mensaje, setMensaje] = useState('');
+  // RD-106: lo que tenía al abrir; si lo escrito difiere, «×» y Esc piden «Salir sin guardar».
+  const [nombreInicial] = useState(tema.name);
+  const hayCambios = nombre !== nombreInicial;
   // ET05: vacío o con solo espacios, «Guardar» deshabilitada.
   const vacio = nombre.trim() === '';
 
@@ -58,6 +61,7 @@ export function RenombrarTema({ tema, alGuardar, alCancelar, alDesaparecer }: Re
     <VentanaEmergente
       titulo="Renombrar tema"
       alSalir={alCancelar}
+      hayCambios={hayCambios}
       acciones={
         <>
           <Boton onClick={alCancelar}>Cancelar</Boton>

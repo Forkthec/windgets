@@ -49,6 +49,9 @@ export function FormularioColumna({ columna, alGuardar, alCancelar, alDesaparece
   // (HE-09-HU04-CA08).
   const [nombre, setNombre] = useState(columna?.name ?? '');
   const [color, setColor] = useState(columna?.color_id ?? COLOR_POR_DEFECTO);
+  // RD-106: lo que tenía al abrir; si lo escrito difiere, «×» y Esc piden «Salir sin guardar».
+  const [inicial] = useState({ name: nombre, color_id: color });
+  const hayCambios = nombre !== inicial.name || color !== inicial.color_id;
   // ET05: el color se elige del catálogo de colores (IPC-CAT-01).
   const { colores, recargar } = useColoresDelCatalogo(invocar);
   const campos = useMensajesDeCampo(CAMPOS, REGLAS);
@@ -76,6 +79,7 @@ export function FormularioColumna({ columna, alGuardar, alCancelar, alDesaparece
     <VentanaEmergente
       titulo={columna ? 'Editar columna' : 'Nueva columna'}
       alSalir={alCancelar}
+      hayCambios={hayCambios}
       acciones={
         <>
           <Boton onClick={alCancelar}>Cancelar</Boton>

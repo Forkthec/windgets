@@ -2,6 +2,7 @@
 // aceptación) en la vista; las reglas del Núcleo tienen su prueba ca_he_07_hu01_* en servicio_del_planificador.rs.
 import { act, fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import textos from '@/types/messages.es.json';
 import { Kanban } from '../kanban/Kanban';
 import { abrirPantalla, fijarHoy, llamadasA, type NucleoDelPlanificador } from '../kanban/pruebas';
 
@@ -328,5 +329,32 @@ describe('RD-91 · Todos los errores del Formulario de tarjeta a la vez', () => 
     await guardar();
     expect(textoDebajoDe('Título')).toBe('Este campo es obligatorio.');
     expect(textoDebajoDe('Fecha del bloque')).toBe('Este campo es obligatorio.');
+  });
+});
+
+describe('RD-106 · Tarjeta: «×» y Esc piden «Salir sin guardar» solo si hay datos', () => {
+  const dialogo = () => screen.getByRole('dialog', { name: 'Formulario de tarjeta' });
+
+  it('RD-106 · con datos escritos, «×» muestra la confirmación de descarte', async () => {
+    await abrirFormulario();
+    escribir('Título', 'Entregar informe');
+    fireEvent.click(within(dialogo()).getByRole('button', { name: 'Cerrar' }));
+    expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+    expect(dialogo()).toBeTruthy();
+  });
+
+  it('RD-106 · con datos escritos, Esc muestra la confirmación de descarte', async () => {
+    await abrirFormulario();
+    escribir('Título', 'Entregar informe');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+    expect(dialogo()).toBeTruthy();
+  });
+
+  it('RD-106 · sin cambios, «×» cierra sin confirmar', async () => {
+    await abrirFormulario();
+    fireEvent.click(within(dialogo()).getByRole('button', { name: 'Cerrar' }));
+    expect(screen.queryByText(textos.SALIR_SIN_GUARDAR)).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Formulario de tarjeta' })).toBeNull();
   });
 });

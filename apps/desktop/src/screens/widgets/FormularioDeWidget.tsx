@@ -37,6 +37,9 @@ export function FormularioDeWidget({
   const [valor, setValor] = useState(inicial);
   // HE-04-HU12 con HE-04-HU05-ET18 (P29): la ciudad nueva se elige de las sugerencias.
   const [lugar, setLugar] = useState<GeocodeResult | null>(null);
+  // RD-106: si el texto o la ciudad difieren de lo que tenía al abrir, «×» y Esc piden «Salir sin guardar».
+  // La ciudad elegida de las sugerencias parte de «ninguna» al abrir (`lugar` nulo): elegir una es un cambio.
+  const hayCambios = valor !== inicial || lugar !== null;
   const [mensaje, setMensaje] = useState('');
   const maximo = MAXIMO[esClima ? 'weather' : 'text'];
   const largo = [...valor.trim()].length;
@@ -80,6 +83,7 @@ export function FormularioDeWidget({
     <VentanaEmergente
       titulo="Configurar"
       alSalir={alCancelar}
+      hayCambios={hayCambios}
       acciones={
         <>
           <Boton onClick={alCancelar}>Cancelar</Boton>

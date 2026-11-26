@@ -52,6 +52,9 @@ export function FormularioEtiqueta({
     name: etiqueta?.name ?? '',
     color_id: etiqueta?.color_id ?? '',
   });
+  // RD-106: lo que tenía al abrir; si lo escrito difiere, «×» y Esc piden «Salir sin guardar».
+  const [inicial] = useState(valores);
+  const hayCambios = valores.name !== inicial.name || valores.color_id !== inicial.color_id;
   // ET05: el color se toma del catálogo de colores (IPC-CAT-01).
   const { colores, recargar } = useColoresDelCatalogo(invocar);
   const campos = useMensajesDeCampo(CAMPOS, REGLAS);
@@ -84,6 +87,7 @@ export function FormularioEtiqueta({
     <VentanaEmergente
       titulo={etiqueta ? 'Editar etiqueta' : 'Nueva etiqueta'}
       alSalir={alCancelar}
+      hayCambios={hayCambios}
       acciones={
         <>
           <Boton onClick={alCancelar}>Cancelar</Boton>

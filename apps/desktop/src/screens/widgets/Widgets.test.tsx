@@ -3,6 +3,7 @@
 import { act, fireEvent, render, screen as pantalla, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { Capa } from '@/capa/Capa';
+import textos from '@/types/messages.es.json';
 import type { Escuchar } from '@/ipc/eventos';
 import type {
   ErrorCode,
@@ -849,6 +850,71 @@ describe('HE-04-HU12 · Configurar un widget agregado', () => {
     await elegirCiudad(ventana, campo, 'Popayán', 'Popayán, Cauca, Colombia');
     fireEvent.click(within(ventana).getByRole('button', { name: 'Guardar' }));
     expect(await within(ventana).findByText(t)).toBeTruthy();
+  });
+
+  describe('RD-106 · «×» y Esc piden «Salir sin guardar» solo si hay datos', () => {
+    const cerrar = (ventana: HTMLElement) =>
+      fireEvent.click(within(ventana).getByRole('button', { name: 'Cerrar' }));
+    const abierta = () => screen.queryByRole('dialog', { name: 'Configurar' });
+
+    it('RD-106 · Texto con el texto cambiado: «×» muestra la confirmación de descarte', async () => {
+      const { ventana } = await configurar([...POR_DEFECTO, texto], 'w-texto');
+      fireEvent.change(within(ventana).getByLabelText('Texto'), { target: { value: 'Repasar' } });
+      cerrar(ventana);
+      expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+      expect(abierta()).toBeTruthy();
+    });
+
+    it('RD-106 · Texto con el texto cambiado: Esc muestra la confirmación de descarte', async () => {
+      const { ventana } = await configurar([...POR_DEFECTO, texto], 'w-texto');
+      fireEvent.change(within(ventana).getByLabelText('Texto'), { target: { value: 'Repasar' } });
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+      expect(abierta()).toBeTruthy();
+    });
+
+    it('RD-106 · Texto sin cambios: «×» cierra sin confirmar', async () => {
+      const { ventana } = await configurar([...POR_DEFECTO, texto], 'w-texto');
+      cerrar(ventana);
+      expect(screen.queryByText(textos.SALIR_SIN_GUARDAR)).toBeNull();
+      expect(abierta()).toBeNull();
+    });
+
+    it('RD-106 · Clima con la ciudad escrita: «×» y Esc muestran la confirmación de descarte', async () => {
+      const { ventana } = await configurar([...POR_DEFECTO, clima('Popayán')], 'w-clima', sugerir);
+      fireEvent.change(within(ventana).getByLabelText('Ciudad'), { target: { value: 'Cal' } });
+      cerrar(ventana);
+      expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Seguir editando' }));
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+      expect(abierta()).toBeTruthy();
+    });
+
+    it('RD-106 · Clima sin cambios: «×» cierra sin confirmar', async () => {
+      const { ventana } = await configurar([...POR_DEFECTO, clima('Popayán')], 'w-clima', sugerir);
+      cerrar(ventana);
+      expect(screen.queryByText(textos.SALIR_SIN_GUARDAR)).toBeNull();
+      expect(abierta()).toBeNull();
+    });
+
+    it('RD-106 · Clima con solo la ciudad elegida (el texto queda igual): «×» y Esc piden el descarte', async () => {
+      // El campo ya dice «Popayán, Cauca, Colombia»; elegir esa misma sugerencia no cambia el texto, pero sí la ciudad.
+      const { ventana } = await configurar(
+        [...POR_DEFECTO, clima('Popayán, Cauca, Colombia')],
+        'w-clima',
+        sugerir,
+      );
+      const campo = within(ventana).getByLabelText('Ciudad') as HTMLInputElement;
+      await elegirCiudad(ventana, campo, 'Pop', 'Popayán, Cauca, Colombia');
+      expect(campo.value).toBe('Popayán, Cauca, Colombia');
+      cerrar(ventana);
+      expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Seguir editando' }));
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
+      expect(abierta()).toBeTruthy();
+    });
   });
 });
 
