@@ -194,6 +194,7 @@ La **última fila manda**. Una fila por sesión: se abre al tomar la pieza (§7 
 |---|---|---|---|---|---|---|---|---|
 | 2026-11-27 (ejemplo de formato) | Ana, cuenta B | `paso-45-documentos-rediseno` @ `abc1234`, con push | F6-05, F6-01a | TK-01: falta la sección de Rosa en `tokens.css`; `tokens_cuatro_temas` en rojo | verde | 38 de 200 | fila nueva D-31 en `DECISIONES.md` | TK-01 |
 | 2026-11-27 | Documentos (fases 0-3) | `paso-45-documentos-rediseno` @ `0fd1427`, con push; PR #69 en borrador | Fases 0-3 (documentos) | Faltan `LEEME.md` y `PRUEBAS_Y_CIERRE.md` (F9-02); V-01..V-07 respondidas el 27-nov | — | — | — | F6-05 (primera de `COLA.md`) |
+| 2026-11-27 14:52 | JDiegoG12 (Claude Code, cuenta de Figma con asiento Full en equipo Education) | `paso-46-herramientas-prueba` | — | F6-05 en curso | — | — | — | — |
 
 ## §12. Decisiones del 27-nov que cambian la implementación
 
