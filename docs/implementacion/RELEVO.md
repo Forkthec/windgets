@@ -25,7 +25,7 @@ sin preguntarle nada a nadie.
   `docs/contratos.md` → `docs/rediseno_cambios_implementacion.md`. Lo que el Figma dibuja y ningún CA define se hace como
   está dibujado y se anota en `docs/DUDAS.md`.
 - **Quién decide:** las decisiones de producto (V-xx de `DECISIONES.md` §1 y las filas nuevas) las responde Paula. Todo
-  lo demás (implementar, revisar, verificar, fusionar) lo hace el equipo.
+  lo demás (implementar, revisar, verificar, ramas, PR y fusiones) lo decide el equipo.
 
 ## §2. Mapa de documentos (qué leer y para qué)
 
@@ -65,9 +65,9 @@ existan, este archivo hace de entrada.
    `/siguiente-paso` vienen en `.claude/skills/` del repo. Los agentes `implementador`, `verificador` y `revisor` no vienen en el
    repo; si tu perfil no los tiene, trabaja sin agentes y respeta igual «una pieza a la vez».
 4. **Conector de Figma** con tu propia cuenta (§4).
-5. **Las reglas del guardia valen aunque no tengas el guardia.** Algunos perfiles tienen un hook (`guardia_git.py`) que
-   impide push a `main`/`develop`, push con fuerza y PR que no sean borrador. Si el tuyo no lo tiene, **cumple esas
-   mismas reglas a mano** (§5).
+5. **Guardia:** algunos perfiles tienen un hook (`guardia_git.py`) que impide push a `main`/`develop`, push con fuerza y
+   PR que no sean borrador. Si el tuyo lo tiene, no lo esquives ni lo debilites: abre el PR en borrador y fusiona desde
+   GitHub. Ramas y PR, como el equipo prefiera (§5).
 6. **Secretos:** solo `.env.example` está en el repo, con valores vacíos. Tu `.env` real nunca se sube.
 
 ## §4. Figma: acceso, cupo y reglas
@@ -83,19 +83,13 @@ existan, este archivo hace de entrada.
   `apps/desktop/e2e/figma/`); el conector solo para comprobar: `get_design_context` en claro y **una** muestra de otro
   tema, y **una** `get_screenshot` al final de la pieza. No se repite por tema.
 
-## §5. Rama, push y PR (un solo PR para todo)
+## §5. Rama, push y PR
 
-Todo el rediseño (documentos e implementación) va en **una rama y un solo PR**:
-
-- **Rama:** `paso-45-documentos-rediseno`. Al empezar: `git fetch -q origin`, `git switch paso-45-documentos-rediseno` y
-  `git pull --rebase`.
-- **PR:** [#69](https://github.com/Forkthec/windgets/pull/69), en borrador hacia `main`. No se abre ningún otro PR ni otra
-  rama de trabajo.
-- **Una persona a la vez.** `git pull --rebase` antes de empezar y antes de cada push. Nunca push con fuerza
-  (`--force`, `--force-with-lease`) y nunca push directo a `main` ni a `develop`: a `main` se llega solo por el PR.
-- **Fusionar:** lo hace el equipo, cuando se cumple el criterio de salida de la fase 8 (cada fila de `TRAZABILIDAD.md` en
-  Verde o Manual) y la CI está en verde: se marca el PR como listo y se fusiona antes de la entrega (martes 1-dic,
-  4:00 p. m.). Si hace falta un punto estable antes, se acuerda en el grupo.
+- **Ramas y PR:** cada quien los organiza como quiera. Hoy los documentos están en la rama `paso-45-documentos-rediseno`
+  (PR [#69](https://github.com/Forkthec/windgets/pull/69)).
+- **Fusión:** cuando se vaya a hacer un traspaso (para que el siguiente relevo parta de lo último) o cuando el equipo lo
+  decida.
+- **Antes de empezar y antes de cada push:** `git pull --rebase`, para no pisar el trabajo del relevo anterior.
 
 ## §6. Reglas que no se negocian
 
@@ -128,7 +122,7 @@ Todo el rediseño (documentos e implementación) va en **una rama y un solo PR**
    `git fetch -q origin`, `git status --short --branch`, `git stash list`,
    `git log --oneline --decorate -10`,
    `gh pr list --state open --json number,title,headRefName,baseRefName,isDraft`,
-   `gh pr checks 69`. **Git gana** sobre cualquier apunte.
+   `gh pr checks <n>` de cada PR abierto. **Git gana** sobre cualquier apunte.
 4. **Concilia:**
    - Cambios sin commit en tu máquina: son tu pieza a medias; lee el diff y sigue desde ahí.
    - Un commit que `COLA.md` no marca: márcalo `[x]` si tiene prueba y CI en verde.
