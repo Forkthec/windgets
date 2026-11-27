@@ -66,6 +66,63 @@
   --wg-sombra: calc(var(--wg-unidad) * 0.31) calc(var(--wg-unidad) * 0.95) 0 var(--wg-borde);
 }
 
+/* TK-03 · Radios, trazos, sombras y anillo de foco del rediseño (docs/implementacion/TEMAS_Y_TOKENS.md §2 y §4).
+   Son las medidas del Figma en px (como RD-05): no siguen R-07, R-08 ni R-14. Cada pieza los aplica a sus controles;
+   aquí solo se definen. El radio, el trazo y la sombra de siempre (--wg-radio, --wg-borde-ancho, --wg-sombra) los
+   cambia TK-05 (§8.3). */
+:root {
+  /* §4.1 Radios */
+  --wg-radio-control: 9px;
+  --wg-radio-interruptor: 8px;
+  --wg-radio-perilla-interruptor: 5px;
+  --wg-radio-casilla: 4px;
+  --wg-radio-casilla-widget: 3px;
+  --wg-radio-paso: 12px;
+  --wg-radio-nombre-emergente: 6px;
+  --wg-radio-aviso: 21px;
+  --wg-radio-aviso-interno: 4px;
+  --wg-radio-windi-mensaje: 10px;
+  --wg-radio-windi-boton: 9px;
+  --wg-radio-windi-widget: 12px;
+  --wg-radio-panel: 12px;
+  --wg-radio-papel-dialogo: 10px;
+  --wg-pliegue-papel-dialogo: 22px;
+  --wg-radio-tarjeta: 8px;
+  --wg-radio-fila-widget: 6px;
+  --wg-radio-tarjeta-kanban: 5px;
+  --wg-radio-dia-actual: 5px;
+  --wg-radio-campo-error: 9px;
+  /* Variable FLOAT «Radio de widgets» (§2) y las tres formas del widget (R11). La forma elegida la aplica PW-11. */
+  --wg-radio-widgets-rectas: 0px;
+  --wg-radio-widgets-base: 9px;
+  --wg-radio-widgets-redondas: 22px;
+  --wg-radio-widgets: var(--wg-radio-widgets-base);
+
+  /* §4.2 Trazos */
+  --wg-trazo-control: 1.5px;
+  --wg-trazo-panel: 1px;
+  --wg-trazo-selector-lista: 1.5px;
+  --wg-trazo-selector-lista-color: var(--wg-borde-campo, var(--wg-borde));
+  --wg-trazo-seleccion: 2px;
+  --wg-trazo-error-campo: 2px;
+  --wg-trazo-error-campo-color: var(--wg-error, var(--wg-estado-vencida));
+  --wg-trazo-papel-dialogo: 1.5px;
+  --wg-trazo-papel-dialogo-color: var(--wg-borde);
+
+  /* §4.3 Sombras duras: el color es el de `sombra` (lo escribe aplicarTokens) o, sin él, `borde` */
+  --wg-sombra-boton: 3px 5px 0 0 var(--wg-sombra-color, var(--wg-borde));
+  --wg-sombra-windi-widget: 1px 3px 0 0 var(--wg-sombra-color, var(--wg-borde));
+  --wg-sombra-papel-dialogo: 3px 5px 0 0 var(--wg-borde);
+  --wg-sombra-arrastre: 0 4px 8px 0 #0000004d;
+
+  /* §4.4 Anillo de foco (D6): 2 px `tinta`, separado 3 px del control, radio del control + 3 */
+  --wg-trazo-foco: 2px;
+  --wg-trazo-foco-color: var(--wg-tinta);
+  --wg-separacion-foco: 3px;
+  --wg-radio-anillo-foco: calc(var(--wg-radio-control) + var(--wg-separacion-foco));
+  --wg-radio-anillo-foco-interruptor: calc(var(--wg-radio-interruptor) + var(--wg-separacion-foco));
+}
+
 body {
   margin: 0;
   background: var(--wg-marco);
