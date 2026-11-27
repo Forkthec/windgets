@@ -72,7 +72,7 @@ Ninguna pieza de esta fase depende de una de la fase 7 (`PLAN.md:123-137`). Las 
 |---|---|---|---|---|---|---|---|---|
 | [x] | TK-01 | 11 variables de color nuevas | M | `TEMAS_Y_TOKENS.md:411-470` (§8) | `tokens.css`, `tokens_por_defecto.ts` | SEED-01 | — | Pruebas del módulo |
 | [ ] | TK-01v | Prueba de tokens en verde (cierra F6-01a) | S | `TEMAS_Y_TOKENS.md:420`, `:538` | prueba de F6-01a | TK-01, TK-02, TK-05 | V-07 (contrastes) | La prueba de F6-01a pasa: 4 temas = tabla, contrastes, regla de morado y cian |
-| [ ] | TK-02 | Temas Rosa y Enfoque (32 colores por tema) | L | `TEMAS_Y_TOKENS.md` §8.1.1; `tokens_por_defecto.ts:42-82` | `apps/desktop/src/ui/tema/` | TK-01 | V-07 | Prueba de tokens (F6-01a) |
+| [ ] | TK-02 | Temas Rosa y Enfoque (32 colores por tema) | L | `TEMAS_Y_TOKENS.md` §8.1.1; `tokens_por_defecto.ts:42-82` | `apps/desktop/src/ui/tema/` | TK-01 | V-07, V-08 (abierta: cómo existen Rosa y Enfoque en el catálogo) | Prueba de tokens (F6-01a) |
 | [ ] | TK-03 | Radios, trazos, sombras y radio FLOAT de widgets | M | `TEMAS_Y_TOKENS.md` sección 4 | `tokens.css` | TK-01 | — | Prueba de tokens; geometría |
 | [ ] | TK-04 | Fuentes Quicksand y Space Grotesk; pesos Nunito 500/600/700 | S | `TEMAS_Y_TOKENS.md` §8 | `tokens.css`, fuentes | SEED-01 | — | Prueba de tokens |
 | [ ] | TK-05 | Nombres y valores distintos (Q1, P3, P4: base 14, radio 9, trazo 1,5, foco 2 px `tinta`, avisos D1) | M | `TEMAS_Y_TOKENS.md` §8.2 y §8.3 | `tokens.css`, usos de `relleno_*` y `sobre_accion` | TK-01 | V-07 (Q1-Q3), V-04 (avisos) | Prueba de tokens; módulos tocados |
