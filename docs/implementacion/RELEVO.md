@@ -24,7 +24,8 @@ sin preguntarle nada a nadie.
 - **Orden de autoridad** cuando dos fuentes chocan: Figma A3Z03 → `docs/rediseno.md` y sus RD → HU, CA, ET y
   `docs/contratos.md` → `docs/rediseno_cambios_implementacion.md`. Lo que el Figma dibuja y ningún CA define se hace como
   está dibujado y se anota en `docs/DUDAS.md`.
-- **Quién decide:** Paula es PO. Solo ella aprueba specs, responde las decisiones V-xx y fusiona a `main`.
+- **Quién decide:** las decisiones de producto (V-xx de `DECISIONES.md` §1 y las filas nuevas) las responde Paula. Todo
+  lo demás (implementar, revisar, verificar, fusionar) lo hace el equipo.
 
 ## §2. Mapa de documentos (qué leer y para qué)
 
@@ -61,12 +62,12 @@ existan, este archivo hace de entrada.
    en un contenedor; no hace falta Rust ni Node 22 instalados) y, para correr la app de verdad, Rust y Node como dice el
    `README` del repo.
 3. **Claude Code** abierto en la carpeta del repo. Las skills `/retomar`, `/verificar`, `/cerrar-paso` y
-   `/siguiente-paso` vienen en `.claude/skills/` del repo. Los agentes `implementador`, `verificador` y `revisor` están
-   en el perfil de Paula; si tu perfil no los tiene, trabaja sin agentes y respeta igual «una pieza a la vez».
+   `/siguiente-paso` vienen en `.claude/skills/` del repo. Los agentes `implementador`, `verificador` y `revisor` no vienen en el
+   repo; si tu perfil no los tiene, trabaja sin agentes y respeta igual «una pieza a la vez».
 4. **Conector de Figma** con tu propia cuenta (§4).
-5. **Las reglas del guardia valen aunque no tengas el guardia.** Paula tiene un hook (`guardia_git.py`) en su perfil que
-   impide push a `main`/`develop`, push con fuerza y PR que no sean borrador. Las otras tres personas no lo tienen:
-   **cumple esas mismas reglas a mano** (§6).
+5. **Las reglas del guardia valen aunque no tengas el guardia.** Algunos perfiles tienen un hook (`guardia_git.py`) que
+   impide push a `main`/`develop`, push con fuerza y PR que no sean borrador. Si el tuyo no lo tiene, **cumple esas
+   mismas reglas a mano** (§5).
 6. **Secretos:** solo `.env.example` está en el repo, con valores vacíos. Tu `.env` real nunca se sube.
 
 ## §4. Figma: acceso, cupo y reglas
@@ -82,22 +83,19 @@ existan, este archivo hace de entrada.
   `apps/desktop/e2e/figma/`); el conector solo para comprobar: `get_design_context` en claro y **una** muestra de otro
   tema, y **una** `get_screenshot` al final de la pieza. No se repite por tema.
 
-## §5. Rama, push y PR (cómo se sincroniza el equipo)
+## §5. Rama, push y PR (un solo PR para todo)
 
-`PLAN.md` regla 4 pedía trabajar todos sobre `main`. El guardia de Paula no deja hacer push a `main`, así que el equipo
-trabaja así (manda sobre `PLAN.md` regla 4 mientras Paula no diga otra cosa):
+Todo el rediseño (documentos e implementación) va en **una rama y un solo PR**:
 
-1. **Una sola rama de trabajo compartida:** `paso-46-rediseno-implementacion`, creada desde `main` cuando `main` ya
-   tenga los documentos (PR de `paso-45-documentos-rediseno` fusionado). Quien llegue primero la crea:
-   `git switch -c paso-46-rediseno-implementacion origin/main` y `git push -u origin paso-46-rediseno-implementacion`.
-   Si ya existe: `git switch paso-46-rediseno-implementacion`.
-2. **Un PR en borrador** de esa rama hacia `main`, título que termina en `[IA-ASISTIDO]`, cuerpo con la plantilla del repo
-   (`.github/pull_request_template.md`). Lo abre quien crea la rama; los demás solo hacen push a la rama.
-3. **Una persona a la vez.** Antes de empezar y antes de cada push: `git pull --rebase`. Nunca push con fuerza
-   (`--force`, `--force-with-lease`), nunca push a `main` ni a `develop`.
-4. **Paula fusiona** a `main` cuando quiera un punto estable (al menos antes de la fase 8). Nadie más fusiona.
-5. **Se parte en otra rama** solo si una pieza se despliega aparte o el equipo lo pide; entonces `paso-NN-<tema>` desde la
-   rama compartida, PR en borrador hacia ella.
+- **Rama:** `paso-45-documentos-rediseno`. Al empezar: `git fetch -q origin`, `git switch paso-45-documentos-rediseno` y
+  `git pull --rebase`.
+- **PR:** [#69](https://github.com/Forkthec/windgets/pull/69), en borrador hacia `main`. No se abre ningún otro PR ni otra
+  rama de trabajo.
+- **Una persona a la vez.** `git pull --rebase` antes de empezar y antes de cada push. Nunca push con fuerza
+  (`--force`, `--force-with-lease`) y nunca push directo a `main` ni a `develop`: a `main` se llega solo por el PR.
+- **Fusionar:** lo hace el equipo, cuando se cumple el criterio de salida de la fase 8 (cada fila de `TRAZABILIDAD.md` en
+  Verde o Manual) y la CI está en verde: se marca el PR como listo y se fusiona antes de la entrega (martes 1-dic,
+  4:00 p. m.). Si hace falta un punto estable antes, se acuerda en el grupo.
 
 ## §6. Reglas que no se negocian
 
@@ -130,7 +128,7 @@ trabaja así (manda sobre `PLAN.md` regla 4 mientras Paula no diga otra cosa):
    `git fetch -q origin`, `git status --short --branch`, `git stash list`,
    `git log --oneline --decorate -10`,
    `gh pr list --state open --json number,title,headRefName,baseRefName,isDraft`,
-   `gh pr checks <n>` del PR de la rama compartida. **Git gana** sobre cualquier apunte.
+   `gh pr checks 69`. **Git gana** sobre cualquier apunte.
 4. **Concilia:**
    - Cambios sin commit en tu máquina: son tu pieza a medias; lee el diff y sigue desde ahí.
    - Un commit que `COLA.md` no marca: márcalo `[x]` si tiene prueba y CI en verde.
@@ -188,7 +186,7 @@ Hazlo **antes** de que se acabe el límite: con menos de ~15 % de cupo, deja de 
   decide entre notificación sin botones o aviso en la app. EC-15r espera esa respuesta.
 - **Se acaba tu cupo de Figma:** para de abrir nodos y trabaja con las huellas JSON y las specs, que traen los valores
   medidos. Anótalo en tu fila.
-- **Un comando se bloquea por el guardia** (solo en la máquina de Paula): no lo esquives ni lo debilites. Deja el
+- **Un comando se bloquea por el guardia** (en los perfiles que lo tienen): no lo esquives ni lo debilites. Deja el
   comando exacto en tu fila para que lo corra una persona.
 - **La spec y el Figma no coinciden:** gana el Figma (§1, orden de autoridad); anótalo en `DUDAS.md` y, si cambia una
   regla, en `DECISIONES.md`.
@@ -200,5 +198,5 @@ La **última fila manda**. Una fila por relevo: se abre al tomar la pieza (§7 p
 
 | Fecha y hora (UTC-5) | Quién y cuenta | Rama y punta | Cerradas `[x]` | A medias (falta, archivos, pruebas en rojo) | CI | Cupo Figma | Decisiones para Paula | Siguiente |
 |---|---|---|---|---|---|---|---|---|
-| 2026-11-27 (ejemplo de formato) | Ana, cuenta B | `paso-46-rediseno-implementacion` @ `abc1234`, con push | F6-05, F6-01a | TK-01: falta la sección de Rosa en `tokens.css`; `tokens_cuatro_temas` en rojo | verde | 38 de 200 | fila nueva D-31 en `DECISIONES.md` | TK-01 |
-| 2026-11-27 | Paula (documentos) | `paso-45-documentos-rediseno`, PR en borrador a `main` | Fases 0-3 (documentos) | Faltan `LEEME.md` y `PRUEBAS_Y_CIERRE.md` (F9-02); V-01..V-07 sin respuesta | — | — | V-01..V-07 en `DECISIONES.md` §1 | Fusionar el PR de documentos; crear `paso-46-rediseno-implementacion`; F6-05 (primera de `COLA.md`) |
+| 2026-11-27 (ejemplo de formato) | Ana, cuenta B | `paso-45-documentos-rediseno` @ `abc1234`, con push | F6-05, F6-01a | TK-01: falta la sección de Rosa en `tokens.css`; `tokens_cuatro_temas` en rojo | verde | 38 de 200 | fila nueva D-31 en `DECISIONES.md` | TK-01 |
+| 2026-11-27 | Documentos (fases 0-3) | `paso-45-documentos-rediseno` @ `0fd1427`, con push; PR #69 en borrador | Fases 0-3 (documentos) | Faltan `LEEME.md` y `PRUEBAS_Y_CIERRE.md` (F9-02); V-01..V-07 sin respuesta | — | — | V-01..V-07 en `DECISIONES.md` §1 | F6-05 (primera de `COLA.md`) |
