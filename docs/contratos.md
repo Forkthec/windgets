@@ -947,3 +947,25 @@ Las historias de usuario cuyo contrato es solo una regla o una integración, sin
 | DP-18 | Noticias: GNews con edición `co` y `lang=es`. | El backlog no nombra proveedor ni edición. |
 | DP-19 | Códigos de salida del instalador (0 a 4). | Solo para pruebas automáticas. |
 | DP-20 | Sin hueco libre al agregar un widget, el widget queda en (0, 0). | Ningún CA define qué ocurre cuando el escritorio no tiene espacio; el usuario lo acomoda en «Editar escritorio». |
+
+## Catálogo · (i) Fase 7 del rediseño (SEED-01)
+
+Un bloque por área. Cada pieza escribe solo en el de su área (docs/implementacion/COLA.md §1, «Archivos compartidos»). Aquí van los contratos PROPUESTA de `docs/implementacion/DECISIONES.md` §8 (EV-31, EV-32, `planner_get_today`, IPC-DESK-12/13 con `app_density`, IPC-THEME-05 ampliado) cuando su pieza los construya; no se reordenan las secciones de arriba.
+
+### Marco y componentes base (MB, C3, L4, AN) · `docs/implementacion/SPEC_Marco_y_componentes_base.md`
+
+### Planificador (PL) · `docs/implementacion/SPEC_Planificador.md`
+
+### Personalización y widgets (PW, MG) · `docs/implementacion/SPEC_Personalizacion_y_widgets.md`
+
+### Configuración (CF) · `docs/implementacion/SPEC_Configuracion.md`
+
+### Windi (WI) · `docs/implementacion/SPEC_Windi.md`
+
+### Cuenta y acceso (AC) · `docs/implementacion/SPEC_Cuenta_y_Acceso.md`
+
+### Escritorio y capa (EC) · `docs/implementacion/SPEC_Escritorio_y_capa.md`
+
+### Instalador y web (IN, WE) · `docs/implementacion/SPEC_Instalador_y_web.md`
+
+### Errores y lecturas silenciosas (ER) · `docs/implementacion/ERRORES_Y_PRUEBAS.md`

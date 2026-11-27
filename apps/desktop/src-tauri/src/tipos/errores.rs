@@ -211,6 +211,17 @@ pub enum ErrorCode {
     /// HE-14-HU10-CA08 (P29): el color no está en el catálogo.
     #[serde(rename = "windi.color_not_found")]
     WindiColorNotFound,
+    // Fase 7 del rediseño (SEED-01): un bloque por área. Cada pieza escribe solo en el de su área (docs/implementacion/COLA.md §1, «Archivos compartidos»).
+    // Los 58 códigos PROPUESTA y su valor neutro: docs/implementacion/DECISIONES.md §8.
+    // ── Marco y componentes base (MB, C3, L4, AN) ──
+    // ── Planificador (PL) ──
+    // ── Personalización y widgets (PW, MG) ──
+    // ── Configuración (CF) ──
+    // ── Windi (WI) ──
+    // ── Cuenta y acceso (AC) ──
+    // ── Escritorio y capa (EC) ──
+    // ── Instalador y web (IN, WE) ──
+    // ── Errores y lecturas silenciosas (ER) ──
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]

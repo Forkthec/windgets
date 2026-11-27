@@ -524,6 +524,27 @@ pub const WINDI_FALTA_TITULO: &str = "Falta el título de una de las tarjetas. �
 pub const WINDI_FALTA_FECHA: &str =
     "A la tarjeta “<título>” le falta la fecha límite. ¿Para cuándo es?";
 
+// Fase 7 del rediseño (SEED-01): un bloque por área. Cada pieza escribe solo en el de su área (docs/implementacion/COLA.md §1, «Archivos compartidos»).
+// Cada constante nueva lleva también su fila en el bloque del mismo nombre de `TEXTOS`.
+
+// ── Marco y componentes base (MB, C3, L4, AN) ──
+
+// ── Planificador (PL) ──
+
+// ── Personalización y widgets (PW, MG) ──
+
+// ── Configuración (CF) ──
+
+// ── Windi (WI) ──
+
+// ── Cuenta y acceso (AC) ──
+
+// ── Escritorio y capa (EC) ──
+
+// ── Instalador y web (IN, WE) ──
+
+// ── Errores y lecturas silenciosas (ER) ──
+
 /// Todos los textos con el nombre de su constante: lo que se exporta a `messages.es.json`.
 pub const TEXTOS: &[(&str, &str)] = &[
     ("SERVICIO_NO_DISPONIBLE", SERVICIO_NO_DISPONIBLE),
@@ -765,6 +786,16 @@ pub const TEXTOS: &[(&str, &str)] = &[
     ("WINDI_TARJETAS_ACTUALIZADAS", WINDI_TARJETAS_ACTUALIZADAS),
     ("WINDI_TARJETAS_MOVIDAS", WINDI_TARJETAS_MOVIDAS),
     ("WINDI_FUERA_DE_ALCANCE", WINDI_FUERA_DE_ALCANCE),
+    // Fase 7 del rediseño (SEED-01): un bloque por área. Cada pieza escribe solo en el de su área (docs/implementacion/COLA.md §1, «Archivos compartidos»).
+    // ── Marco y componentes base (MB, C3, L4, AN) ──
+    // ── Planificador (PL) ──
+    // ── Personalización y widgets (PW, MG) ──
+    // ── Configuración (CF) ──
+    // ── Windi (WI) ──
+    // ── Cuenta y acceso (AC) ──
+    // ── Escritorio y capa (EC) ──
+    // ── Instalador y web (IN, WE) ──
+    // ── Errores y lecturas silenciosas (ER) ──
 ];
 
 #[cfg(test)]

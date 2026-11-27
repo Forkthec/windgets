@@ -434,3 +434,27 @@ Datos «NO DEFINIDO» y contradicciones encontradas al construir (AGENTS.md, «C
 - **P44 · IM-07, mensajes de error y ventana emergente** · IM-07 dice que los errores no se cierran solos y que el cuarto mensaje reemplaza al más antiguo, pero no dice qué pasa si el más antiguo es un error sin cerrar, ni cómo se llega a «×» con el teclado cuando una ventana emergente atrapa el foco. Opciones: (a) el cuarto reemplaza siempre al más antiguo, aunque sea un error, y con una ventana abierta el mensaje se alcanza con el puntero; (b) los errores no se reemplazan y el cuarto espera; (c) Tab llega al mensaje desde la ventana. Valor usado: (a). Destino: Paula.
 - **P44 · IM-08, espacio entre el título y los controles** · IM-08 no da la medida entre el título y la ranura `acciones`. Se usan 16 px en horizontal y 4 px entre líneas cuando bajan (`--wg-unidad` × 4 y × 1, `// IM-08` en `marco.css`). Opciones: (a) dejarlo; (b) tomar la medida del Figma en L9. Valor usado: (a). Destino: L9 (Figma).
 - **P44 · IM-08, indicador de sincronización sobre los controles** · El indicador queda en la esquina de arriba a la derecha y mide más que la miga cuando muestra los cambios pendientes (dos líneas), así que podría tapar el borde de los controles de la fila del título. La prueba lo comprueba solo con el estado «Sincronizado». IM-08 pide el indicador en la fila 1 y los controles en la fila 2, sin decir qué pasa si el indicador es más alto. Opciones: (a) dejarlo hasta el Figma; (b) reservar el alto del indicador en la fila 1 cuando haya `acciones`. Valor usado: (a). Destino: L9 (Figma), al conectar la primera pantalla.
+
+## P47 · Fase 7 del rediseño (SEED-01)
+
+Un bloque por área. Cada pieza escribe solo en el de su área (docs/implementacion/COLA.md §1, «Archivos compartidos»). Los códigos PROPUESTA se anotan con su valor neutro (`docs/implementacion/ERRORES_Y_PRUEBAS.md` §6).
+
+- **SEED-01 · colección Postman** · `COLA.md` (SEED-01 y §1) y `PLAN.md` (fase 8, Newman) piden sembrar una colección Postman, pero el repositorio no tiene ninguna ni una API HTTP propia: la aplicación habla con el Núcleo por IPC (D-188) y con Supabase desde Rust. No se crea; valor neutro: sin colección y sin Newman. Si se quiere probar la API de Supabase con Newman, hace falta decidir qué se prueba.
+
+### Marco y componentes base (MB, C3, L4, AN)
+
+### Planificador (PL)
+
+### Personalización y widgets (PW, MG)
+
+### Configuración (CF)
+
+### Windi (WI)
+
+### Cuenta y acceso (AC)
+
+### Escritorio y capa (EC)
+
+### Instalador y web (IN, WE)
+
+### Errores y lecturas silenciosas (ER)

@@ -590,3 +590,23 @@ body[data-sesion] .wg-formulario--tarjeta {
   min-height: 0;
   padding: 12px 16px 16px;
 }
+
+/* Fase 7 del rediseño (SEED-01): un bloque por área. Cada pieza escribe solo en el de su área (docs/implementacion/COLA.md §1, «Archivos compartidos»). */
+
+/* ── Marco y componentes base (MB, C3, L4, AN) ── */
+
+/* ── Planificador (PL) ── */
+
+/* ── Personalización y widgets (PW, MG) ── */
+
+/* ── Configuración (CF) ── */
+
+/* ── Windi (WI) ── */
+
+/* ── Cuenta y acceso (AC) ── */
+
+/* ── Escritorio y capa (EC) ── */
+
+/* ── Instalador y web (IN, WE) ── */
+
+/* ── Errores y lecturas silenciosas (ER) ── */
