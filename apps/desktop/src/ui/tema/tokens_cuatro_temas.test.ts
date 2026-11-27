@@ -200,29 +200,6 @@ function diferencias(): string[] {
 
 // Lo que falta en el código el 27-nov-2026 (TEMAS_Y_TOKENS.md §8.1 y §8.3). Lo cierran TK-01, TK-02 y TK-05.
 const PENDIENTES: string[] = [
-  // TK-01: las 11 variables de color nuevas en claro y oscuro (§8.1).
-  'claro.borde_campo: falta',
-  'claro.burbuja_propia: falta',
-  'claro.fondo: falta',
-  'claro.detalle: falta',
-  'claro.sobre_detalle: falta',
-  'claro.principal_legible: falta',
-  'claro.sobre_seleccion: falta',
-  'claro.perilla: falta',
-  'claro.informacion: falta',
-  'claro.seleccion: falta',
-  'claro.velo: falta',
-  'oscuro.borde_campo: falta',
-  'oscuro.burbuja_propia: falta',
-  'oscuro.fondo: falta',
-  'oscuro.detalle: falta',
-  'oscuro.sobre_detalle: falta',
-  'oscuro.principal_legible: falta',
-  'oscuro.sobre_seleccion: falta',
-  'oscuro.perilla: falta',
-  'oscuro.informacion: falta',
-  'oscuro.seleccion: falta',
-  'oscuro.velo: falta',
   // TK-05: P3 (texto sobre cian #0b2a2e) y Q1 (relleno_* como tabla fija), con los contrastes y la regla que dependen de ellos (§8.3).
   'claro.sobre_accion: código #17131d, tabla #0b2a2e',
   'claro.relleno_vencida: código #e47067, tabla #f4c2be',

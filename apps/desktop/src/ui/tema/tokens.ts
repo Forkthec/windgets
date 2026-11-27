@@ -24,9 +24,27 @@ export const NOMBRES_TOKEN = [
 
 /**
  * Tokens que solo definen «Windgets claro» y «Windgets oscuro» (docs/rediseno.md RD-94). `sombra` es la sombra
- * completa: en los demás temas queda la de `tokens.css`.
+ * completa: en los demás temas queda la de `tokens.css`. Las 11 variables de color de la colección 200:2 que el código
+ * no tenía (docs/implementacion/TEMAS_Y_TOKENS.md §1 y §8.1, TK-01) van aquí: la tabla 1 las da solo para los temas
+ * del Figma; un tema derivado no las define y la hoja de estilos usa su respaldo.
  */
-export const NOMBRES_TOKEN_DE_WINDGETS = ['principal', 'secundario', 'sombra', 'error'] as const;
+export const NOMBRES_TOKEN_DE_WINDGETS = [
+  'principal',
+  'secundario',
+  'sombra',
+  'error',
+  'seleccion',
+  'velo',
+  'borde_campo',
+  'burbuja_propia',
+  'fondo',
+  'detalle',
+  'sobre_detalle',
+  'principal_legible',
+  'sobre_seleccion',
+  'perilla',
+  'informacion',
+] as const;
 
 export type NombreToken = (typeof NOMBRES_TOKEN)[number];
 export type NombreTokenDeWindgets = (typeof NOMBRES_TOKEN_DE_WINDGETS)[number];

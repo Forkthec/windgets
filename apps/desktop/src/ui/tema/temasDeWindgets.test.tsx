@@ -92,6 +92,31 @@ describe('RD-94 · Tokens fijos de Windgets claro y Windgets oscuro', () => {
     }
   });
 
+  it('TK-01 · las 11 variables nuevas se escriben con su valor de la tabla y se quitan en un tema derivado', () => {
+    const NUEVAS = {
+      seleccion: ['#6604E6', '#00D9E2'],
+      velo: ['#17131D66', '#0000008C'],
+      borde_campo: ['#766B81', '#948B9E'],
+      burbuja_propia: ['#BFF5F8', '#0E4A4D'],
+      fondo: ['#FFFFFF', '#201B2B'],
+      detalle: ['#6604E6', '#D3B2FF'],
+      sobre_detalle: ['#17131D', '#17131D'],
+      principal_legible: ['#6604E6', '#00D9E2'],
+      sobre_seleccion: ['#FFFFFF', '#0B2A2E'],
+      perilla: ['#FFFFFF', '#FFFFFF'],
+      informacion: ['#00D9E2', '#00D9E2'],
+    } as const;
+    const raiz = document.createElement('div');
+    for (const [k, colores] of [CLARO, OSCURO].entries()) {
+      aplicarTokens(tokensDeLosColores({ ...colores, ...letra }), raiz);
+      for (const [nombre, valores] of Object.entries(NUEVAS))
+        expect(raiz.style.getPropertyValue(`--wg-${nombre.replace(/_/g, '-')}`), nombre).toBe(valores[k]);
+    }
+    aplicarTokens(tokensDeLosColores({ ...CLARO, primary: '#336699', ...letra }), raiz);
+    for (const nombre of Object.keys(NUEVAS))
+      expect(raiz.style.getPropertyValue(`--wg-${nombre.replace(/_/g, '-')}`), nombre).toBe('');
+  });
+
   it('la ventana principal y los widgets del escritorio toman la tabla del tema aplicado', async () => {
     const invocar = (async () => ({ ok: true, value: [] })) as unknown as Invoke;
     const tokens = await tokensDelTema(invocar, contenido(OSCURO));
