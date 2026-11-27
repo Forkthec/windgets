@@ -1,6 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import DOC from '../../../../../docs/implementacion/TEMAS_Y_TOKENS.md?raw';
 import { tokensDeLosColores } from './derivar';
 import { TEMAS_DE_WINDGETS } from './tokens_por_defecto';
 
@@ -14,11 +13,11 @@ import { TEMAS_DE_WINDGETS } from './tokens_por_defecto';
 
 type Tema = 'claro' | 'oscuro' | 'rosa' | 'enfoque';
 const TEMAS: Tema[] = ['claro', 'oscuro', 'rosa', 'enfoque'];
-// Vitest corre desde apps/desktop (pnpm --filter desktop test); con jsdom, import.meta.url no es file:.
-const DOC = readFileSync(resolve(process.cwd(), '../../docs/implementacion/TEMAS_Y_TOKENS.md'), 'utf-8');
 const HEX = /^#[0-9a-f]{6}([0-9a-f]{2})?$/;
 
-const seccion = (desde: string, hasta: string) => DOC.split(desde)[1].split(hasta)[0];
+const seccion = (desde: string, hasta: string) => (DOC.split(desde)[1] ?? '').split(hasta)[0] ?? '';
+/** Celda i de una fila ('' si no existe). */
+const en = (c: string[], i: number) => c[i] ?? '';
 const filas = (bloque: string) =>
   bloque
     .split(/\r?\n/)
@@ -33,8 +32,8 @@ const filas = (bloque: string) =>
 /** Tabla 1: variable → valor por tema. */
 const TABLA: Record<string, Record<Tema, string>> = Object.fromEntries(
   filas(seccion('\n## 1.', '\n## 2.'))
-    .filter((c) => c.length >= 6 && HEX.test(c[1]))
-    .map((c) => [c[0], { claro: c[1], oscuro: c[2], rosa: c[3], enfoque: c[4] }]),
+    .filter((c) => c.length >= 6 && HEX.test(en(c, 1)))
+    .map((c) => [en(c, 0), { claro: en(c, 1), oscuro: en(c, 2), rosa: en(c, 3), enfoque: en(c, 4) }]),
 );
 
 /** Normaliza un valor del código: hex en minúsculas; la sombra `3px 5px 0 #241C30` se compara por su color. */
@@ -58,8 +57,8 @@ const CODIGO = Object.fromEntries(TEMAS.map((t) => [t, tokensDelCodigo(t)])) as 
 // Contraste WCAG 2.x con la fórmula de TEMAS_Y_TOKENS.md §6.
 const lineal = (c: number) => (c / 255 <= 0.04045 ? c / 255 / 12.92 : ((c / 255 + 0.055) / 1.055) ** 2.4);
 const lum = (h: string) => {
-  const [r, g, b] = [1, 3, 5].map((i) => lineal(parseInt(h.slice(i, i + 2), 16)));
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  const canal = (i: number) => lineal(parseInt(h.slice(i, i + 2), 16));
+  return 0.2126 * canal(1) + 0.7152 * canal(3) + 0.0722 * canal(5);
 };
 const contraste = (a: string, b: string) => {
   const [x, y] = [lum(a), lum(b)];
@@ -68,16 +67,19 @@ const contraste = (a: string, b: string) => {
 
 /** Tabla 6.1: par → { umbral, primer plano, fondo, valor y FALLA por tema }. */
 const PARES = filas(seccion('#### 6.1', '#### 6.2'))
-  .filter((c) => c.length === 7 && /^\d/.test(c[2]))
+  .filter((c) => c.length === 7 && /^\d/.test(en(c, 2)))
   .map((c) => {
-    const [fg, bg] = c[0].split(' ')[0].split('/');
+    const [fg = '', bg = ''] = (en(c, 0).split(' ')[0] ?? '').split('/');
     return {
-      par: c[0],
+      par: en(c, 0),
       fg,
       bg,
-      umbral: Number(c[2]),
+      umbral: Number(en(c, 2)),
       tema: Object.fromEntries(
-        TEMAS.map((t, k) => [t, { valor: c[3 + k].split(' ')[0], falla: c[3 + k].includes('FALLA') }]),
+        TEMAS.map((t, k) => [
+          t,
+          { valor: en(c, 3 + k).split(' ')[0] ?? '', falla: en(c, 3 + k).includes('FALLA') },
+        ]),
       ) as Record<Tema, { valor: string; falla: boolean }>,
     };
   });
@@ -181,7 +183,7 @@ function diferencias(): string[] {
     }
     for (const [control, roles] of CONTROLES) {
       const valores = Object.entries(rolesDe(control, roles, tema)).map(
-        ([rol, v]) => [rol, codigo[v]] as const,
+        ([rol, v]) => [rol, codigo[v] ?? ''] as const,
       );
       if (valores.some(([, v]) => !v)) continue; // un rol sin token: ya cuenta como «falta»
       const cian = valores.some(([, v]) => CIAN[tema].includes(v.slice(0, 7)));
@@ -311,7 +313,7 @@ describe('F6-01a · los cuatro temas del código frente a TEMAS_Y_TOKENS.md', ()
     expect(PARES.length).toBeGreaterThanOrEqual(40);
     for (const p of PARES)
       for (const t of TEMAS) {
-        const c = contraste(TABLA[p.fg][t], TABLA[p.bg][t]);
+        const c = contraste(TABLA[p.fg]?.[t] ?? '', TABLA[p.bg]?.[t] ?? '');
         expect(c.toFixed(2), `${p.par} ${t}`).toBe(p.tema[t].valor);
         expect(c < p.umbral, `${p.par} ${t} FALLA`).toBe(p.tema[t].falla);
       }
