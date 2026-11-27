@@ -1,0 +1,8 @@
+{"id":"204:25989","nombre":"Overlay · M-11 · Tema Windgets claro","pagina":"79:6","tema":"claro","w":600,"h":256,"el":[
+{"n":"Nota de confirmación","ruta":"","t":"FRAME","x":88,"y":48,"w":424,"h":160,"nota":"contiene Papel con esquina doblada"},
+{"n":"Cerrar sesión","ruta":"Nota de confirmación","t":"TEXT","x":108,"y":66,"fill":"tinta","txt":"Cerrar sesión","font":"Nunito Bold 20"},
+{"n":"¿Deseas cerrar sesión?","ruta":"Nota de confirmación","t":"TEXT","x":108,"y":100,"fill":"tinta","txt":"¿Deseas cerrar sesión?","font":"Nunito Regular 14"},
+{"n":"Cerrar","ruta":"Nota de confirmación","t":"FRAME","x":460,"y":58,"w":32,"h":32,"rx":"ON_CLICK>CLOSE","comp":"Botón ícono:Tamaño=Fila"},
+{"n":"Cancelar","ruta":"Nota de confirmación","t":"FRAME","x":274,"y":158,"w":91,"h":36,"r":7,"rx":"ON_CLICK>CLOSE","comp":"Botón:Secundario","stroke":"borde","sw":1.5},
+{"n":"Cerrar sesión","ruta":"Nota de confirmación","t":"FRAME","x":373,"y":158,"w":119,"h":36,"r":7,"fill":"accion","sh":"3,5,0,0,#241c30","comp":"Botón:Nivel=Principal","rx":"ON_CLICK>URL https://www.figma.com/proto/A3Z03L20swFyo8qdP9jETF/Windgets--Copy-?node-id=66-4 (nueva pestaña)"},
+{"n":"Cerrar sesión (oculto)","ruta":"Nota de confirmación/Cerrar sesión","t":"TEXT","oculto":1,"fill":"#ffffff","txt":"Cerrar sesión","font":"Nunito Medium 13"}]}

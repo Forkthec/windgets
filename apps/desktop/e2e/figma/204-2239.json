@@ -1,0 +1,10 @@
+{"id":"204:2239","nombre":"Mover a · Tema Windgets claro","pagina":"79:3","tema":"claro","w":1093,"h":560,"fill":"fondo","base":"204:2047","nota":"Diff contra Nueva etiqueta: ventana más baja 420x198 en (337,181). Pantalla de origen Tablero Kanban. Sin catálogo de colores.","el":[
+{"n":"Ventana · Mover a","t":"F","x":337,"y":181,"w":420,"h":198},
+{"t":"T","x":361,"y":203,"w":73,"h":24,"txt":"Mover a","font":"Nunito M 20","fill":"tinta"},
+{"t":"T","x":361,"y":245,"w":53,"h":18,"txt":"Columna","font":"Nunito R 13","fill":"texto"},
+{"n":"Columna","t":"F","x":361,"y":265,"w":372,"h":34,"fill":"superficie","stroke":"borde_campo","sw":1.5,"r":9,"hijo":"texto «En progreso» (capa llamada «En revisión») Nunito R 14 en (371,273); Icono / Buscar 18x18 en (370,273) que se solapa con el texto; ▾ en x=717"},
+{"t":"T","x":361,"y":311,"w":32,"h":18,"txt":"Color","font":"Nunito R 13","fill":"texto","nota":"residuo de Editar columna: etiqueta «Color»"},
+{"n":"Color","t":"F","x":361,"y":331,"w":372,"h":34,"fill":"superficie","stroke":"borde_campo","sw":1.5,"r":9,"hijo":"texto «Catálogo de colores» Nunito R 14 tinta (residuo)"},
+{"n":"Ir · Guardar","t":"F","x":646,"y":319,"w":87,"h":36,"r":7},
+{"n":"Ir · Cancelar","t":"F","x":547,"y":319,"w":91,"h":36,"r":7}
+],"quitados":["Nombre (campo y etiqueta)","Catálogo de colores (9 chips)"],"rx":["Ir · Guardar | CLICK | NODE 204:704","Ir · Cancelar | CLICK | NODE 204:704","Ir · Cerrar | CLICK | NODE 204:704","Nav · Windi | CLICK | NODE 204:25611 OVERLAY"]}

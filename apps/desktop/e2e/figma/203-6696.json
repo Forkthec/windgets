@@ -1,0 +1,7 @@
+{"id":"203:6696","nombre":"Personalización · Agregar widget","tema":"claro","w":1093,"h":560,"base":"203-6362","el":[
+"+ migas T «Personalización  ›  Agregar widget»",
+"+ Panel · Agregar widget F @769,100 300x348 f=superficie s=linea/1 r10: grupos «Widgets externos» y «Widgets locales»",
+"+ filas con flecha: «Clima», «Noticias», «Animación», «Carrusel de imágenes», «Imagen estática», «Reproductor de música», «Texto», «Windi», cada una con su descripción literal"],
+"quitados":["Panel · 1 Tema"],
+"reacciones":["Clima → 2211:79096 «Agregar widget › Clima · Campo vacío» (variante no listada en docs)","Noticias → 203:7219; Animación → 203:7477; Carrusel → 203:7391; Imagen estática → 203:7305; Reproductor → 203:7649; Texto → 203:7563; Windi → 203:7735","M-02, Guardado, M-05, Windi como la base"],
+"colores_fijos":["#1b1721×1 Oscurecer imagen"]}

@@ -1,0 +1,8845 @@
+{
+ "fuente": "docs/implementacion/TRAZABILIDAD.md",
+ "resumen": {
+  "familias": 436,
+  "con_huella": 389,
+  "cubiertas_por_grupo_o_inventario": 47,
+  "sin_medida": 0,
+  "archivos_copiados": 445,
+  "huellas_por_formato": {
+   "medida": 57,
+   "diferencia-medida": 69,
+   "diferencia-texto": 286,
+   "texto": 28
+  },
+  "recodificadas_a_utf8": [
+   "204-32252.json",
+   "204-32300.json"
+  ],
+  "fuera_de_familias": [
+   "204-32300.json",
+   "84-1059-oscuro-diff.json"
+  ]
+ },
+ "familias": [
+  {
+   "pagina": "79:2",
+   "nombre": "Nota de Windi · Inicio de sesión",
+   "ids": {
+    "claro": "66:4",
+    "oscuro": "66:83",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "66-4.json",
+     "formato": "medida",
+     "medidos": 42,
+     "bases": []
+    },
+    "oscuro": {
+     "archivo": "66-83.json",
+     "formato": "medida",
+     "medidos": 39,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Saludo junto a la nota · Registro",
+   "ids": {
+    "claro": "66:162",
+    "oscuro": "66:246",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "66-162.json",
+     "formato": "medida",
+     "medidos": 50,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Verificar correo",
+   "ids": {
+    "claro": "84:2",
+    "oscuro": "84:12",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "84-2.json",
+     "formato": "medida",
+     "medidos": 15,
+     "bases": []
+    },
+    "oscuro": {
+     "archivo": "84-12.json",
+     "formato": "medida",
+     "medidos": 15,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Recuperar contraseña",
+   "ids": {
+    "claro": "84:22",
+    "oscuro": "84:32",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "84-22.json",
+     "formato": "medida",
+     "medidos": 14,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Diligenciar código",
+   "ids": {
+    "claro": "84:42",
+    "oscuro": "84:52",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "84-42.json",
+     "formato": "medida",
+     "medidos": 15,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Nueva contraseña",
+   "ids": {
+    "claro": "84:62",
+    "oscuro": "84:72",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "84-62.json",
+     "formato": "medida",
+     "medidos": 22,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Recuperar contraseña · Sin conexión",
+   "ids": {
+    "claro": "88:2",
+    "oscuro": "88:3",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "88-2.json",
+     "formato": "medida",
+     "medidos": 17,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Inicio de sesión · Campos obligatorios",
+   "ids": {
+    "claro": "2249:1353",
+    "oscuro": "2250:1618",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-1353.json",
+     "formato": "diferencia-medida",
+     "medidos": 11,
+     "bases": [
+      "66:4"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Inicio de sesión · Correo no válido",
+   "ids": {
+    "claro": "2249:1452",
+    "oscuro": "2250:1717",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-1452.json",
+     "formato": "diferencia-medida",
+     "medidos": 2,
+     "bases": [
+      "66:4"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Inicio de sesión · Correo muy largo",
+   "ids": {
+    "claro": "2249:1550",
+    "oscuro": "2250:1815",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-1550.json",
+     "formato": "diferencia-medida",
+     "medidos": 2,
+     "bases": [
+      "66:4"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Inicio de sesión · Credenciales incorrectas",
+   "ids": {
+    "claro": "2249:1648",
+    "oscuro": "2250:1913",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-1648.json",
+     "formato": "diferencia-medida",
+     "medidos": 1,
+     "bases": [
+      "66:4"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Inicio de sesión · Cuenta bloqueada",
+   "ids": {
+    "claro": "2249:1768",
+    "oscuro": "2250:2033",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-1768.json",
+     "formato": "diferencia-medida",
+     "medidos": 9,
+     "bases": [
+      "66:4"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Inicio de sesión · Demasiados intentos",
+   "ids": {
+    "claro": "2249:1867",
+    "oscuro": "2250:2132",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-1867.json",
+     "formato": "diferencia-medida",
+     "medidos": 9,
+     "bases": [
+      "66:4"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Inicio de sesión · Sesión vencida",
+   "ids": {
+    "claro": "2249:1966",
+    "oscuro": "2250:2231",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-1966.json",
+     "formato": "diferencia-medida",
+     "medidos": 9,
+     "bases": [
+      "66:4"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Inicio de sesión · Google cancelado",
+   "ids": {
+    "claro": "2249:2065",
+    "oscuro": "2250:2330",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-2065.json",
+     "formato": "diferencia-medida",
+     "medidos": 9,
+     "bases": [
+      "66:4"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Inicio de sesión · Google no disponible",
+   "ids": {
+    "claro": "2249:2164",
+    "oscuro": "2250:2429",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-2164.json",
+     "formato": "diferencia-medida",
+     "medidos": 9,
+     "bases": [
+      "66:4"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Inicio de sesión · Correo de Google muy largo",
+   "ids": {
+    "claro": "2249:2263",
+    "oscuro": "2250:2528",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-2263.json",
+     "formato": "diferencia-medida",
+     "medidos": 9,
+     "bases": [
+      "66:4"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Inicio de sesión · Navegador no abre",
+   "ids": {
+    "claro": "2249:2362",
+    "oscuro": "2250:2627",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-2362.json",
+     "formato": "diferencia-medida",
+     "medidos": 9,
+     "bases": [
+      "66:4"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Inicio de sesión · Sin conexión",
+   "ids": {
+    "claro": "2249:2461",
+    "oscuro": "2250:2726",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-2461.json",
+     "formato": "diferencia-medida",
+     "medidos": 12,
+     "bases": [
+      "66:4"
+     ]
+    },
+    "oscuro": {
+     "archivo": "2250-2726.json",
+     "formato": "medida",
+     "medidos": 40,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Inicio de sesión · Contraseña actualizada",
+   "ids": {
+    "claro": "2249:2560",
+    "oscuro": "2250:2825",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-2560.json",
+     "formato": "diferencia-medida",
+     "medidos": 1,
+     "bases": [
+      "66:4"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Inicio de sesión · Mostrar contraseña",
+   "ids": {
+    "claro": "2250:4627",
+    "oscuro": "2250:4829",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2250-4627.json",
+     "formato": "diferencia-medida",
+     "medidos": 1,
+     "bases": [
+      "66:4"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Inicio de sesión · Ocultar contraseña",
+   "ids": {
+    "claro": "2250:4728",
+    "oscuro": "2250:4930",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2250-4728.json",
+     "formato": "diferencia-medida",
+     "medidos": 2,
+     "bases": [
+      "66:4"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Inicio de sesión · Sesión cerrada",
+   "ids": {
+    "claro": "2251:9100",
+    "oscuro": "2251:9227",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2251-9100.json",
+     "formato": "diferencia-medida",
+     "medidos": 1,
+     "bases": [
+      "66:4"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Registro · Campos obligatorios",
+   "ids": {
+    "claro": "2249:2691",
+    "oscuro": "2250:2956",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-2691.json",
+     "formato": "diferencia-medida",
+     "medidos": 11,
+     "bases": [
+      "66:162"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Registro · Datos no válidos",
+   "ids": {
+    "claro": "2249:2803",
+    "oscuro": "2250:3068",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-2803.json",
+     "formato": "diferencia-medida",
+     "medidos": 11,
+     "bases": [
+      "66:162"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Registro · Correo muy largo",
+   "ids": {
+    "claro": "2249:2915",
+    "oscuro": "2250:3180",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-2915.json",
+     "formato": "diferencia-medida",
+     "medidos": 5,
+     "bases": [
+      "66:162"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Registro · Correo ya registrado",
+   "ids": {
+    "claro": "2249:3024",
+    "oscuro": "2250:3289",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-3024.json",
+     "formato": "diferencia-medida",
+     "medidos": 1,
+     "bases": [
+      "66:162"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Registro · Sin conexión",
+   "ids": {
+    "claro": "2249:3144",
+    "oscuro": "2250:3409",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-3144.json",
+     "formato": "diferencia-medida",
+     "medidos": 10,
+     "bases": [
+      "66:162"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Verificar correo · Código enviado",
+   "ids": {
+    "claro": "2249:3254",
+    "oscuro": "2250:3519",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-3254.json",
+     "formato": "diferencia-medida",
+     "medidos": 1,
+     "bases": [
+      "84:2"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Verificar correo · Campo obligatorio",
+   "ids": {
+    "claro": "2249:3321",
+    "oscuro": "2250:3586",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-3321.json",
+     "formato": "diferencia-medida",
+     "medidos": 2,
+     "bases": [
+      "84:2"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Verificar correo · Código incorrecto",
+   "ids": {
+    "claro": "2249:3366",
+    "oscuro": "2250:3631",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-3366.json",
+     "formato": "diferencia-medida",
+     "medidos": 2,
+     "bases": [
+      "84:2"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Verificar correo · Código vencido",
+   "ids": {
+    "claro": "2249:3411",
+    "oscuro": "2250:3676",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-3411.json",
+     "formato": "diferencia-medida",
+     "medidos": 2,
+     "bases": [
+      "84:2"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Verificar correo · Demasiados intentos",
+   "ids": {
+    "claro": "2249:3456",
+    "oscuro": "2250:3721",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-3456.json",
+     "formato": "diferencia-medida",
+     "medidos": 4,
+     "bases": [
+      "84:2"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Verificar correo · Código reenviado",
+   "ids": {
+    "claro": "2249:3502",
+    "oscuro": "2250:3767",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-3502.json",
+     "formato": "diferencia-medida",
+     "medidos": 1,
+     "bases": [
+      "84:2"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Verificar correo · Reenviar en espera",
+   "ids": {
+    "claro": "2249:3569",
+    "oscuro": "2250:3834",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-3569.json",
+     "formato": "diferencia-medida",
+     "medidos": 4,
+     "bases": [
+      "84:2"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Verificar correo · Sin conexión",
+   "ids": {
+    "claro": "2249:3614",
+    "oscuro": "2250:3879",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-3614.json",
+     "formato": "diferencia-medida",
+     "medidos": 7,
+     "bases": [
+      "84:2"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Diligenciar código · Campo obligatorio",
+   "ids": {
+    "claro": "2249:3662",
+    "oscuro": "2250:3927",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-3662.json",
+     "formato": "diferencia-medida",
+     "medidos": 2,
+     "bases": [
+      "84:42"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Diligenciar código · Código incorrecto",
+   "ids": {
+    "claro": "2249:3707",
+    "oscuro": "2250:3972",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-3707.json",
+     "formato": "diferencia-medida",
+     "medidos": 2,
+     "bases": [
+      "84:42"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Diligenciar código · Código vencido",
+   "ids": {
+    "claro": "2249:3752",
+    "oscuro": "2250:4017",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-3752.json",
+     "formato": "diferencia-medida",
+     "medidos": 2,
+     "bases": [
+      "84:42"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Diligenciar código · Demasiados intentos",
+   "ids": {
+    "claro": "2249:3797",
+    "oscuro": "2250:4062",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-3797.json",
+     "formato": "diferencia-medida",
+     "medidos": 4,
+     "bases": [
+      "84:42"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Diligenciar código · Código reenviado",
+   "ids": {
+    "claro": "2249:3843",
+    "oscuro": "2250:4108",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-3843.json",
+     "formato": "diferencia-medida",
+     "medidos": 1,
+     "bases": [
+      "84:42"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Diligenciar código · Reenviar en espera",
+   "ids": {
+    "claro": "2249:3910",
+    "oscuro": "2250:4175",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-3910.json",
+     "formato": "diferencia-medida",
+     "medidos": 4,
+     "bases": [
+      "84:42"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Diligenciar código · Sin conexión",
+   "ids": {
+    "claro": "2249:3955",
+    "oscuro": "2250:4220",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-3955.json",
+     "formato": "diferencia-medida",
+     "medidos": 7,
+     "bases": [
+      "84:42"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Recuperar contraseña · Campo obligatorio",
+   "ids": {
+    "claro": "2249:4003",
+    "oscuro": "2250:4268",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-4003.json",
+     "formato": "diferencia-medida",
+     "medidos": 2,
+     "bases": [
+      "84:22"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Recuperar contraseña · Correo no válido",
+   "ids": {
+    "claro": "2249:4048",
+    "oscuro": "2250:4313",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-4048.json",
+     "formato": "diferencia-medida",
+     "medidos": 2,
+     "bases": [
+      "84:22"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Recuperar contraseña · Correo muy largo",
+   "ids": {
+    "claro": "2249:4093",
+    "oscuro": "2250:4358",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-4093.json",
+     "formato": "diferencia-medida",
+     "medidos": 2,
+     "bases": [
+      "84:22"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Nueva contraseña · Campos obligatorios",
+   "ids": {
+    "claro": "2249:4138",
+    "oscuro": "2250:4403",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-4138.json",
+     "formato": "diferencia-medida",
+     "medidos": 6,
+     "bases": [
+      "84:62"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Nueva contraseña · Datos no válidos",
+   "ids": {
+    "claro": "2249:4193",
+    "oscuro": "2250:4458",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-4193.json",
+     "formato": "diferencia-medida",
+     "medidos": 6,
+     "bases": [
+      "84:62"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Nueva contraseña · Igual a la actual",
+   "ids": {
+    "claro": "2249:4248",
+    "oscuro": "2250:4513",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2249-4248.json",
+     "formato": "diferencia-medida",
+     "medidos": 4,
+     "bases": [
+      "84:62"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:2",
+   "nombre": "Nueva contraseña · Sin conexión",
+   "ids": {
+    "claro": "2250:1561",
+    "oscuro": "2250:4567",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2250-1561.json",
+     "formato": "diferencia-medida",
+     "medidos": 6,
+     "bases": [
+      "84:62"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Planificador diario",
+   "ids": {
+    "claro": "204:622",
+    "oscuro": "233:13970",
+    "rosa": "204:19460",
+    "enfoque": "204:19542"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-622.json",
+     "formato": "medida",
+     "medidos": 23,
+     "bases": []
+    },
+    "oscuro": {
+     "archivo": "233-13970.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:622"
+     ]
+    },
+    "rosa": {
+     "archivo": "204-19460.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:622"
+     ]
+    },
+    "enfoque": {
+     "archivo": "204-19542.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:622"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Tablero Kanban",
+   "ids": {
+    "claro": "204:704",
+    "oscuro": "233:14023",
+    "rosa": "204:19624",
+    "enfoque": "204:19725"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-704.json",
+     "formato": "medida",
+     "medidos": 12,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Calendario",
+   "ids": {
+    "claro": "204:805",
+    "oscuro": "233:14097",
+    "rosa": "204:19826",
+    "enfoque": "204:19937"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-805.json",
+     "formato": "medida",
+     "medidos": 13,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Agenda diaria",
+   "ids": {
+    "claro": "204:916",
+    "oscuro": "233:14203",
+    "rosa": "204:20048",
+    "enfoque": "204:20137"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-916.json",
+     "formato": "medida",
+     "medidos": 15,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Reportes",
+   "ids": {
+    "claro": "204:1005",
+    "oscuro": "233:14263",
+    "rosa": "204:20226",
+    "enfoque": "204:20299"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-1005.json",
+     "formato": "medida",
+     "medidos": 23,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Etiquetas",
+   "ids": {
+    "claro": "204:1078",
+    "oscuro": "233:14309",
+    "rosa": "204:20372",
+    "enfoque": "204:20433"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-1078.json",
+     "formato": "medida",
+     "medidos": 7,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Tablero Kanban · Expandida",
+   "ids": {
+    "claro": "204:1139",
+    "oscuro": "233:14340",
+    "rosa": "204:20494",
+    "enfoque": "204:20604"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-1139.json",
+     "formato": "medida",
+     "medidos": 11,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Calendario · Semana",
+   "ids": {
+    "claro": "204:1249",
+    "oscuro": "233:14423",
+    "rosa": "204:20714",
+    "enfoque": "204:20781"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-1249.json",
+     "formato": "medida",
+     "medidos": 10,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Panel del día",
+   "ids": {
+    "claro": "204:1316",
+    "oscuro": "233:14461",
+    "rosa": "204:20848",
+    "enfoque": "204:20974"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-1316.json",
+     "formato": "medida",
+     "medidos": 11,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Mes y año",
+   "ids": {
+    "claro": "204:1442",
+    "oscuro": "233:14583",
+    "rosa": "204:21100",
+    "enfoque": "204:21239"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-1442.json",
+     "formato": "medida",
+     "medidos": 14,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Más reportes",
+   "ids": {
+    "claro": "204:1581",
+    "oscuro": "233:14717",
+    "rosa": "204:21378",
+    "enfoque": "204:21480"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-1581.json",
+     "formato": "medida",
+     "medidos": 16,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Rango de fechas",
+   "ids": {
+    "claro": "204:1683",
+    "oscuro": "233:14789",
+    "rosa": "204:21582",
+    "enfoque": "204:21665"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-1683.json",
+     "formato": "medida",
+     "medidos": 16,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Filtrar etiquetas",
+   "ids": {
+    "claro": "204:1766",
+    "oscuro": "233:14845",
+    "rosa": "204:21748",
+    "enfoque": "204:21831"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-1766.json",
+     "formato": "diferencia-medida",
+     "medidos": 4,
+     "bases": [
+      "204:1683"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Detalle de tarjeta",
+   "ids": {
+    "claro": "204:1849",
+    "oscuro": "233:14908",
+    "rosa": "204:21914",
+    "enfoque": "204:21980"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-1849.json",
+     "formato": "medida",
+     "medidos": 8,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Nueva tarjeta",
+   "ids": {
+    "claro": "204:1915",
+    "oscuro": "233:14944",
+    "rosa": "204:22046",
+    "enfoque": "204:22112"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-1915.json",
+     "formato": "medida",
+     "medidos": 6,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Editar tarjeta",
+   "ids": {
+    "claro": "204:1981",
+    "oscuro": "233:14980",
+    "rosa": "204:22178",
+    "enfoque": "204:22244"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-1981.json",
+     "formato": "diferencia-medida",
+     "medidos": 1,
+     "bases": [
+      "204:1915"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Nueva etiqueta",
+   "ids": {
+    "claro": "204:2047",
+    "oscuro": "233:15016",
+    "rosa": "204:22310",
+    "enfoque": "204:22358"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-2047.json",
+     "formato": "medida",
+     "medidos": 10,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Editar etiqueta",
+   "ids": {
+    "claro": "204:2095",
+    "oscuro": "233:15034",
+    "rosa": "204:22406",
+    "enfoque": "204:22454"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-2095.json",
+     "formato": "diferencia-medida",
+     "medidos": 1,
+     "bases": [
+      "204:2047"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Nueva columna",
+   "ids": {
+    "claro": "204:2143",
+    "oscuro": "233:15052",
+    "rosa": "204:22502",
+    "enfoque": "204:22550"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-2143.json",
+     "formato": "diferencia-medida",
+     "medidos": 2,
+     "bases": [
+      "204:2047"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Editar columna",
+   "ids": {
+    "claro": "204:2191",
+    "oscuro": "233:15070",
+    "rosa": "204:22598",
+    "enfoque": "204:22646"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-2191.json",
+     "formato": "diferencia-medida",
+     "medidos": 1,
+     "bases": [
+      "204:2143",
+      "204:2047"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Mover a",
+   "ids": {
+    "claro": "204:2239",
+    "oscuro": "233:15088",
+    "rosa": "204:22694",
+    "enfoque": "204:22742"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-2239.json",
+     "formato": "diferencia-medida",
+     "medidos": 8,
+     "bases": [
+      "204:2047"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Overlay · M-08",
+   "ids": {
+    "claro": "204:25533",
+    "oscuro": "233:15106",
+    "rosa": "204:25685",
+    "enfoque": "204:25837"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25533.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Overlay · M-09",
+   "ids": {
+    "claro": "204:25546",
+    "oscuro": "233:15119",
+    "rosa": "204:25698",
+    "enfoque": "204:25850"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25546.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Overlay · M-10",
+   "ids": {
+    "claro": "204:25559",
+    "oscuro": "233:15132",
+    "rosa": "204:25711",
+    "enfoque": "204:25863"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25559.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Overlay · M-13",
+   "ids": {
+    "claro": "204:25572",
+    "oscuro": "233:15145",
+    "rosa": "204:25724",
+    "enfoque": "204:25876"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25572.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Overlay · M-14",
+   "ids": {
+    "claro": "204:25585",
+    "oscuro": "233:15158",
+    "rosa": "204:25737",
+    "enfoque": "204:25889"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25585.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Overlay · M-11",
+   "ids": {
+    "claro": "204:25598",
+    "oscuro": "233:15171",
+    "rosa": "204:25750",
+    "enfoque": "204:25902"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25598.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Overlay · Windi",
+   "ids": {
+    "claro": "204:25611",
+    "oscuro": "233:15184",
+    "rosa": "204:25763",
+    "enfoque": "204:25915"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25611.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Overlay · Windi · Propuesta",
+   "ids": {
+    "claro": "204:25622",
+    "oscuro": "233:15195",
+    "rosa": "204:25774",
+    "enfoque": "204:25926"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25622.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:25611"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Overlay · Windi · Escribiendo",
+   "ids": {
+    "claro": "204:25637",
+    "oscuro": "233:15210",
+    "rosa": "204:25789",
+    "enfoque": "204:25941"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25637.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:25611"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Overlay · Windi · Sin conexión",
+   "ids": {
+    "claro": "204:25648",
+    "oscuro": "233:15221",
+    "rosa": "204:25800",
+    "enfoque": "204:25952"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25648.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:25611"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Overlay · Windi · Error",
+   "ids": {
+    "claro": "204:25659",
+    "oscuro": "233:15232",
+    "rosa": "204:25811",
+    "enfoque": "204:25963"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25659.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:25611"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Overlay · Windi · Propuesta descartada",
+   "ids": {
+    "claro": "204:25670",
+    "oscuro": "233:15243",
+    "rosa": "204:25822",
+    "enfoque": "204:25974"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25670.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:25611"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Overlay · M-14 · Usada en 1 tarjeta",
+   "ids": {
+    "claro": "2144:29098",
+    "oscuro": "2144:29146",
+    "rosa": "2144:29114",
+    "enfoque": "2144:29130"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2144-29098.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Planificador diario · Vacío",
+   "ids": {
+    "claro": "217:10646",
+    "oscuro": "233:15258",
+    "rosa": "217:10750",
+    "enfoque": "217:10698"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-10646.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:622"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Planificador diario · Cargando",
+   "ids": {
+    "claro": "217:10802",
+    "oscuro": "233:15312",
+    "rosa": "217:10906",
+    "enfoque": "217:10854"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-10802.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:622"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Planificador diario · Sin conexión",
+   "ids": {
+    "claro": "217:10958",
+    "oscuro": "233:15370",
+    "rosa": "217:11062",
+    "enfoque": "217:11010"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-10958.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:622"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Planificador diario · Vencida",
+   "ids": {
+    "claro": "217:11114",
+    "oscuro": "233:15426",
+    "rosa": "217:11218",
+    "enfoque": "217:11166"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-11114.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:622"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Planificador diario · Recordatorio",
+   "ids": {
+    "claro": "217:11270",
+    "oscuro": "233:15479",
+    "rosa": "217:11374",
+    "enfoque": "217:11322"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-11270.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:622"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Planificador diario · Arrastre",
+   "ids": {
+    "claro": "217:11426",
+    "oscuro": "233:15535",
+    "rosa": "217:11530",
+    "enfoque": "217:11478"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-11426.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:622"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Planificador diario · Densidad cómoda",
+   "ids": {
+    "claro": "217:11582",
+    "oscuro": "233:15589",
+    "rosa": "217:11686",
+    "enfoque": "217:11634"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-11582.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:622"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Planificador diario · Todas completadas",
+   "ids": {
+    "claro": "2152:30309",
+    "oscuro": "2153:29846",
+    "rosa": "2153:29666",
+    "enfoque": "2153:29756"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2152-30309.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:622"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Planificador diario · Nombre emergente",
+   "ids": {
+    "claro": "2039:14528",
+    "oscuro": "2039:14605",
+    "rosa": "2039:14682",
+    "enfoque": "2039:14759"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2039-14528.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:622"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Planificador diario · Aviso · Tarjeta inexistente",
+   "ids": {
+    "claro": "2142:21514",
+    "oscuro": "2142:22784",
+    "rosa": "2142:24054",
+    "enfoque": "2142:25324"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2142-21514.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:622"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Planificador diario · Aviso · Tarjeta actualizada",
+   "ids": {
+    "claro": "2142:21674",
+    "oscuro": "2142:22944",
+    "rosa": "2142:24214",
+    "enfoque": "2142:25484"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2142-21674.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:622"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Planificador diario · Aviso · Bienvenida",
+   "ids": {
+    "claro": "2251:146090",
+    "oscuro": "2251:147017",
+    "rosa": "2251:146399",
+    "enfoque": "2251:146708"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2251-146090.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:622"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Planificador diario · Aviso · Tema no aplicado",
+   "ids": {
+    "claro": "2251:146250",
+    "oscuro": "2251:147177",
+    "rosa": "2251:146559",
+    "enfoque": "2251:146868"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2251-146250.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:622"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Tablero Kanban · Tablero vacío",
+   "ids": {
+    "claro": "217:12764",
+    "oscuro": "233:15642",
+    "rosa": "217:12906",
+    "enfoque": "217:12835"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-12764.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:704"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Tablero Kanban · Columna vacía",
+   "ids": {
+    "claro": "217:12977",
+    "oscuro": "233:15719",
+    "rosa": "217:13119",
+    "enfoque": "217:13048"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-12977.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:704"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Tablero Kanban · Muchas columnas",
+   "ids": {
+    "claro": "217:13190",
+    "oscuro": "233:15794",
+    "rosa": "217:13332",
+    "enfoque": "217:13261"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-13190.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:704"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Tablero Kanban · Menú de tarjeta",
+   "ids": {
+    "claro": "217:13403",
+    "oscuro": "233:15872",
+    "rosa": "217:13545",
+    "enfoque": "217:13474"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-13403.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:704"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Tablero Kanban · Menú de columna",
+   "ids": {
+    "claro": "217:13616",
+    "oscuro": "233:15951",
+    "rosa": "217:13758",
+    "enfoque": "217:13687"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-13616.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:704"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Tablero Kanban · Menú de columna · Columna predefinida",
+   "ids": {
+    "claro": "2152:30825",
+    "oscuro": "2153:31043",
+    "rosa": "2153:30683",
+    "enfoque": "2153:30863"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2152-30825.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:704"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Tablero Kanban · Arrastre de tarjeta",
+   "ids": {
+    "claro": "217:13829",
+    "oscuro": "233:16030",
+    "rosa": "217:13971",
+    "enfoque": "217:13900"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-13829.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:704"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Tablero Kanban · Arrastre de columna",
+   "ids": {
+    "claro": "217:14042",
+    "oscuro": "233:16105",
+    "rosa": "217:14184",
+    "enfoque": "217:14113"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-14042.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:704"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Tablero Kanban · Densidad cómoda",
+   "ids": {
+    "claro": "220:22023",
+    "oscuro": "233:16761",
+    "rosa": "220:22096",
+    "enfoque": "220:22169"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "220-22023.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:704"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Tablero Kanban · Sin tablero descargado",
+   "ids": {
+    "claro": "2152:30457",
+    "oscuro": "2153:30274",
+    "rosa": "2153:29936",
+    "enfoque": "2153:30105"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2152-30457.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:704"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Tablero Kanban · Nombre emergente",
+   "ids": {
+    "claro": "2039:14836",
+    "oscuro": "2039:15014",
+    "rosa": "2039:15192",
+    "enfoque": "2039:15370"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2039-14836.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:704"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Tablero Kanban · Nombre emergente · Nueva columna",
+   "ids": {
+    "claro": "2039:15548",
+    "oscuro": "2039:15796",
+    "rosa": "2039:16044",
+    "enfoque": "2039:16292"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2039-15548.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:704"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Tablero Kanban · Nombre emergente · Vista expandida",
+   "ids": {
+    "claro": "2257:50523",
+    "oscuro": "2257:51119",
+    "rosa": "2257:51715",
+    "enfoque": "2257:52311"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2257-50523.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:704"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Tablero Kanban · Nombre emergente · Vista compacta",
+   "ids": {
+    "claro": "2257:50712",
+    "oscuro": "2257:51308",
+    "rosa": "2257:51904",
+    "enfoque": "2257:52500"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2257-50712.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:704"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Tablero Kanban · Aviso · Máximo de columnas",
+   "ids": {
+    "claro": "2142:20870",
+    "oscuro": "2142:22140",
+    "rosa": "2142:23410",
+    "enfoque": "2142:24680"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2142-20870.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:704"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Tablero Kanban · Aviso · Columna inexistente",
+   "ids": {
+    "claro": "2142:21192",
+    "oscuro": "2142:22462",
+    "rosa": "2142:23732",
+    "enfoque": "2142:25002"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2142-21192.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:704"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Calendario · Día con el puntero encima",
+   "ids": {
+    "claro": "2155:32112",
+    "oscuro": "2156:3648",
+    "rosa": "2156:3300",
+    "enfoque": "2156:3474"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2155-32112.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:805"
+     ]
+    },
+    "oscuro": {
+     "archivo": "2156-3648.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2155:32112",
+      "204:805"
+     ]
+    },
+    "rosa": {
+     "archivo": "2156-3300.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2155:32112",
+      "204:805"
+     ]
+    },
+    "enfoque": {
+     "archivo": "2156-3474.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2155:32112",
+      "204:805"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Calendario · Aviso · Día pasado",
+   "ids": {
+    "claro": "2155:32612",
+    "oscuro": "2156:4796",
+    "rosa": "2156:4446",
+    "enfoque": "2156:4621"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2155-32612.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:805"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Calendario · Nombre emergente · Mes anterior",
+   "ids": {
+    "claro": "2155:31312",
+    "oscuro": "2156:1570",
+    "rosa": "2156:1212",
+    "enfoque": "2156:1391"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2155-31312.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:805"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Calendario · Nombre emergente · Mes siguiente",
+   "ids": {
+    "claro": "2155:31491",
+    "oscuro": "2156:2107",
+    "rosa": "2156:1749",
+    "enfoque": "2156:1928"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2155-31491.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:805"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Calendario · Semana · Nombre emergente · Semana anterior",
+   "ids": {
+    "claro": "2155:31722",
+    "oscuro": "2156:2624",
+    "rosa": "2156:2286",
+    "enfoque": "2156:2455"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2155-31722.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1249"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Calendario · Semana · Nombre emergente · Semana siguiente",
+   "ids": {
+    "claro": "2155:31891",
+    "oscuro": "2156:3131",
+    "rosa": "2156:2793",
+    "enfoque": "2156:2962"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2155-31891.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1249"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Panel del día · Vacío",
+   "ids": {
+    "claro": "2155:32348",
+    "oscuro": "2156:4238",
+    "rosa": "2156:3822",
+    "enfoque": "2156:4030"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2155-32348.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1316"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Mes y año · Escribir año",
+   "ids": {
+    "claro": "219:14757",
+    "oscuro": "233:16579",
+    "rosa": "219:14788",
+    "enfoque": "219:14819"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "219-14757.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1442"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Agenda diaria · Asignar bloque",
+   "ids": {
+    "claro": "217:15308",
+    "oscuro": "233:16180",
+    "rosa": "217:15426",
+    "enfoque": "217:15367"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-15308.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:916"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Agenda diaria · Quitar bloque",
+   "ids": {
+    "claro": "217:15485",
+    "oscuro": "233:16240",
+    "rosa": "217:15603",
+    "enfoque": "217:15544"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-15485.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:916"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Agenda diaria · Bloque pasado",
+   "ids": {
+    "claro": "217:15662",
+    "oscuro": "233:16302",
+    "rosa": "217:15780",
+    "enfoque": "217:15721"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-15662.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:916"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Agenda diaria · Sin tarjetas por programar",
+   "ids": {
+    "claro": "2152:30628",
+    "oscuro": "2153:30603",
+    "rosa": "2153:30443",
+    "enfoque": "2153:30523"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2152-30628.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:916"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Agenda diaria · Aviso al soltar · No puedes asignar tarjetas a un bloque h…",
+   "ids": {
+    "claro": "2152:31011",
+    "oscuro": "2153:31383",
+    "rosa": "2153:31223",
+    "enfoque": "2153:31303"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2152-31011.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:916"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Agenda diaria · Aviso al soltar · No puedes programar la tarjeta después d…",
+   "ids": {
+    "claro": "2152:31150",
+    "oscuro": "2153:31623",
+    "rosa": "2153:31463",
+    "enfoque": "2153:31543"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2152-31150.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:916"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Agenda diaria · Nombre emergente · Elegir un día",
+   "ids": {
+    "claro": "2152:31289",
+    "oscuro": "2153:31871",
+    "rosa": "2153:31703",
+    "enfoque": "2153:31787"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2152-31289.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:916"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Reportes · Vacío",
+   "ids": {
+    "claro": "217:16271",
+    "oscuro": "233:16363",
+    "rosa": "217:16357",
+    "enfoque": "217:16314"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-16271.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1005"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Reportes · Cargando",
+   "ids": {
+    "claro": "217:16400",
+    "oscuro": "233:16409",
+    "rosa": "217:16486",
+    "enfoque": "217:16443"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-16400.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1005"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Reportes · Error",
+   "ids": {
+    "claro": "217:16529",
+    "oscuro": "233:16455",
+    "rosa": "217:16615",
+    "enfoque": "217:16572"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-16529.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1005"
+     ]
+    },
+    "oscuro": {
+     "archivo": "233-16455.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "217:16529",
+      "204:1005"
+     ]
+    },
+    "rosa": {
+     "archivo": "217-16615.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "217:16529",
+      "204:1005"
+     ]
+    },
+    "enfoque": {
+     "archivo": "217-16572.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "217:16529",
+      "204:1005"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Reportes · Sin conexión",
+   "ids": {
+    "claro": "217:16658",
+    "oscuro": "233:16501",
+    "rosa": "217:16744",
+    "enfoque": "217:16701"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-16658.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1005"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Reportes · Sin tarjetas",
+   "ids": {
+    "claro": "2161:32852",
+    "oscuro": "2163:34272",
+    "rosa": "2163:34092",
+    "enfoque": "2163:34182"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2161-32852.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1005"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Reportes · Rango recortado",
+   "ids": {
+    "claro": "2161:32950",
+    "oscuro": "2163:34536",
+    "rosa": "2163:34362",
+    "enfoque": "2163:34449"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2161-32950.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1005"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Reportes · Rango personalizado",
+   "ids": {
+    "claro": "219:57179",
+    "oscuro": "233:16610",
+    "rosa": "219:57330",
+    "enfoque": "219:57481"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "219-57179.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1005"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Reportes · Elegir Desde",
+   "ids": {
+    "claro": "219:57192",
+    "oscuro": "233:16623",
+    "rosa": "219:57343",
+    "enfoque": "219:57494"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "219-57192.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "219:57179",
+      "204:1005"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Reportes · Elegir Hasta",
+   "ids": {
+    "claro": "219:57261",
+    "oscuro": "2129:51350",
+    "rosa": "2129:51002",
+    "enfoque": "2129:51176"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "219-57261.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "219:57192",
+      "219:57179",
+      "204:1005"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Reportes · Elegir Desde · debajo de su campo",
+   "ids": {
+    "claro": "2129:50723",
+    "oscuro": "2129:51245",
+    "rosa": "2129:50897",
+    "enfoque": "2129:51071"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2129-50723.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "219:57179",
+      "204:1005"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Reportes · Elegir Hasta · debajo de su campo",
+   "ids": {
+    "claro": "2129:50810",
+    "oscuro": "2129:51332",
+    "rosa": "2129:50984",
+    "enfoque": "2129:51158"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2129-50810.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "219:57179",
+      "204:1005"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Reportes · Rango · Fecha de inicio posterior",
+   "ids": {
+    "claro": "2129:50160",
+    "oscuro": "2129:50535",
+    "rosa": "2129:50285",
+    "enfoque": "2129:50410"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2129-50160.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "219:57179",
+      "204:1005"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Reportes · Rango · Campo obligatorio",
+   "ids": {
+    "claro": "2129:50191",
+    "oscuro": "2129:50566",
+    "rosa": "2129:50316",
+    "enfoque": "2129:50441"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2129-50191.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "219:57179",
+      "204:1005"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Reportes · Rango · Rango mayor de un año",
+   "ids": {
+    "claro": "2129:50222",
+    "oscuro": "2129:50597",
+    "rosa": "2129:50347",
+    "enfoque": "2129:50472"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2129-50222.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "219:57179",
+      "204:1005"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Reportes · Rango · Fecha no válida",
+   "ids": {
+    "claro": "2129:50253",
+    "oscuro": "2129:50628",
+    "rosa": "2129:50378",
+    "enfoque": "2129:50503"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2129-50253.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "219:57179",
+      "204:1005"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Reportes · Puntero encima de la gráfica",
+   "ids": {
+    "claro": "2160:1449",
+    "oscuro": "2163:33346",
+    "rosa": "2163:33162",
+    "enfoque": "2163:33254"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2160-1449.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1005"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Reportes · Estado elegido · Vencidas",
+   "ids": {
+    "claro": "2160:1603",
+    "oscuro": "2163:33678",
+    "rosa": "2163:33438",
+    "enfoque": "2163:33558"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2160-1603.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1005"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Reportes · Rango cambiado · Estado sin tarjetas",
+   "ids": {
+    "claro": "2160:1785",
+    "oscuro": "2163:33994",
+    "rosa": "2163:33798",
+    "enfoque": "2163:33896"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2160-1785.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1005"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Reportes · Filtro de etiquetas abierto",
+   "ids": {
+    "claro": "2161:33045",
+    "oscuro": "2163:34875",
+    "rosa": "2163:34623",
+    "enfoque": "2163:34749"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2161-33045.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1005"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Reportes · Filtro de etiquetas · Máximo",
+   "ids": {
+    "claro": "2161:33171",
+    "oscuro": "2163:35259",
+    "rosa": "2163:35001",
+    "enfoque": "2163:35130"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2161-33171.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1005"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Reportes · Filtro de etiquetas · Sin etiquetas",
+   "ids": {
+    "claro": "2161:33300",
+    "oscuro": "2163:35600",
+    "rosa": "2163:35388",
+    "enfoque": "2163:35494"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2161-33300.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1005"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Etiquetas · Vacío",
+   "ids": {
+    "claro": "217:17387",
+    "oscuro": "233:16547",
+    "rosa": "217:17449",
+    "enfoque": "217:17418"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-17387.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1078"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Etiquetas · Nombre emergente",
+   "ids": {
+    "claro": "2039:16540",
+    "oscuro": "2039:16603",
+    "rosa": "2039:16666",
+    "enfoque": "2039:16729"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2039-16540.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1078"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Etiquetas · Aviso · Máximo de etiquetas",
+   "ids": {
+    "claro": "2142:20564",
+    "oscuro": "2142:21834",
+    "rosa": "2142:23104",
+    "enfoque": "2142:24374"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2142-20564.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1078"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Etiquetas · Aviso · Etiqueta inexistente",
+   "ids": {
+    "claro": "2142:20717",
+    "oscuro": "2142:21987",
+    "rosa": "2142:23257",
+    "enfoque": "2142:24527"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2142-20717.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1078"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Nueva etiqueta · Error · Obligatorio",
+   "ids": {
+    "claro": "2143:22996",
+    "oscuro": "2144:24638",
+    "rosa": "2143:25240",
+    "enfoque": "2144:24514"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2143-22996.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:2047"
+     ]
+    },
+    "oscuro": {
+     "archivo": "2144-24638.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2143:22996",
+      "204:2047"
+     ]
+    },
+    "rosa": {
+     "archivo": "2143-25240.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2143:22996",
+      "204:2047"
+     ]
+    },
+    "enfoque": {
+     "archivo": "2144-24514.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2143:22996",
+      "204:2047"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Nueva etiqueta · Error · Nombre largo",
+   "ids": {
+    "claro": "2143:23192",
+    "oscuro": "2144:24886",
+    "rosa": "2143:25436",
+    "enfoque": "2144:24762"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2143-23192.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:2047"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Nueva etiqueta · Error · Nombre repetido",
+   "ids": {
+    "claro": "2143:23388",
+    "oscuro": "2144:25134",
+    "rosa": "2143:25632",
+    "enfoque": "2144:25010"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2143-23388.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:2047"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Editar etiqueta · Error · Color no disponible",
+   "ids": {
+    "claro": "2143:24679",
+    "oscuro": "2144:26786",
+    "rosa": "2143:26923",
+    "enfoque": "2144:26662"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2143-24679.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:2095",
+      "204:2047"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Nueva columna · Error · Obligatorio",
+   "ids": {
+    "claro": "2143:23584",
+    "oscuro": "2144:25492",
+    "rosa": "2143:25828",
+    "enfoque": "2144:25258"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2143-23584.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:2143",
+      "204:2047"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Nueva columna · Error · Nombre largo",
+   "ids": {
+    "claro": "2143:23949",
+    "oscuro": "2144:25960",
+    "rosa": "2143:26193",
+    "enfoque": "2144:25726"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2143-23949.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:2143",
+      "204:2047"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Nueva columna · Error · Nombre repetido",
+   "ids": {
+    "claro": "2143:24314",
+    "oscuro": "2144:26428",
+    "rosa": "2143:26558",
+    "enfoque": "2144:26194"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2143-24314.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:2143",
+      "204:2047"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Editar columna · Error · Color no disponible",
+   "ids": {
+    "claro": "2143:24875",
+    "oscuro": "2144:27144",
+    "rosa": "2143:27119",
+    "enfoque": "2144:26910"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2143-24875.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:2191",
+      "204:2143",
+      "204:2047"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Nueva tarjeta · Etiquetas abierta",
+   "ids": {
+    "claro": "2140:19720",
+    "oscuro": "2140:21665",
+    "rosa": "2140:20369",
+    "enfoque": "2140:21017"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2140-19720.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1915"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Nueva tarjeta · Etiquetas · Máximo",
+   "ids": {
+    "claro": "2140:19887",
+    "oscuro": "2140:21832",
+    "rosa": "2140:20536",
+    "enfoque": "2140:21184"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2140-19887.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1915"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Nueva tarjeta · Etiquetas · Sin etiquetas",
+   "ids": {
+    "claro": "2140:20059",
+    "oscuro": "2140:22004",
+    "rosa": "2140:20708",
+    "enfoque": "2140:21356"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2140-20059.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1915"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Nueva tarjeta · Etiquetas · Sin elegir",
+   "ids": {
+    "claro": "2140:20210",
+    "oscuro": "2140:22154",
+    "rosa": "2140:20858",
+    "enfoque": "2140:21506"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2140-20210.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1915"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Nueva tarjeta · Fecha límite abierta",
+   "ids": {
+    "claro": "2148:26258",
+    "oscuro": "2149:27218",
+    "rosa": "2149:26898",
+    "enfoque": "2149:27058"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2148-26258.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1915"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Nueva tarjeta · Fecha del bloque abierta",
+   "ids": {
+    "claro": "2148:26418",
+    "oscuro": "2149:27698",
+    "rosa": "2149:27378",
+    "enfoque": "2149:27538"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2148-26418.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1915"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Nueva tarjeta · Hora del bloque abierta",
+   "ids": {
+    "claro": "2148:26578",
+    "oscuro": "2149:28180",
+    "rosa": "2149:27858",
+    "enfoque": "2149:28019"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2148-26578.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1915"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Nueva tarjeta · Campos vacíos",
+   "ids": {
+    "claro": "2148:26739",
+    "oscuro": "2149:28641",
+    "rosa": "2149:28341",
+    "enfoque": "2149:28491"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2148-26739.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1915"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Nueva tarjeta · Error al guardar",
+   "ids": {
+    "claro": "2148:27220",
+    "oscuro": "2149:30035",
+    "rosa": "2149:29745",
+    "enfoque": "2149:29890"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2148-27220.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1915"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Nueva tarjeta · Errores · Obligatorio, fecha no válida y descripción larga",
+   "ids": {
+    "claro": "2148:27815",
+    "oscuro": "2149:30474",
+    "rosa": "2149:30180",
+    "enfoque": "2149:30327"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2148-27815.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1915"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Nueva tarjeta · Errores · Título largo, fecha pasada y bloque pasado",
+   "ids": {
+    "claro": "2148:27969",
+    "oscuro": "2149:30915",
+    "rosa": "2149:30621",
+    "enfoque": "2149:30768"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2148-27969.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1915"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Nueva tarjeta · Errores · Bloque después de la fecha límite",
+   "ids": {
+    "claro": "2148:28123",
+    "oscuro": "2149:31352",
+    "rosa": "2149:31062",
+    "enfoque": "2149:31207"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2148-28123.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1915"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Editar tarjeta · Etiquetas abierta",
+   "ids": {
+    "claro": "2148:27045",
+    "oscuro": "2149:29570",
+    "rosa": "2149:29220",
+    "enfoque": "2149:29395"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2148-27045.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1981",
+      "204:1915"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:3",
+   "nombre": "Detalle de tarjeta · Sin datos",
+   "ids": {
+    "claro": "2148:26896",
+    "oscuro": "2149:29077",
+    "rosa": "2149:28791",
+    "enfoque": "2149:28934"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2148-26896.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:1849"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:4",
+   "nombre": "Windi",
+   "ids": {
+    "claro": "204:2427",
+    "oscuro": "233:16835",
+    "rosa": "204:22790",
+    "enfoque": "204:22801"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-2427.json",
+     "formato": "medida",
+     "medidos": 11,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:4",
+   "nombre": "Windi · Propuesta",
+   "ids": {
+    "claro": "204:2516",
+    "oscuro": "233:16846",
+    "rosa": "204:22812",
+    "enfoque": "204:22827"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-2516.json",
+     "formato": "medida",
+     "medidos": 11,
+     "bases": []
+    },
+    "oscuro": {
+     "archivo": "233-16846.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:2516"
+     ]
+    },
+    "rosa": {
+     "archivo": "204-22812.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:2516"
+     ]
+    },
+    "enfoque": {
+     "archivo": "204-22827.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:2516"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:4",
+   "nombre": "Windi · Escribiendo",
+   "ids": {
+    "claro": "204:2609",
+    "oscuro": "233:16861",
+    "rosa": "204:22842",
+    "enfoque": "204:22853"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-2609.json",
+     "formato": "medida",
+     "medidos": 11,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:4",
+   "nombre": "Windi · Sin conexión",
+   "ids": {
+    "claro": "204:2698",
+    "oscuro": "233:16872",
+    "rosa": "204:22864",
+    "enfoque": "204:22875"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-2698.json",
+     "formato": "medida",
+     "medidos": 11,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:4",
+   "nombre": "Windi · No respondió",
+   "ids": {
+    "claro": "204:2787",
+    "oscuro": "233:16883",
+    "rosa": "204:22886",
+    "enfoque": "204:22897"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-2787.json",
+     "formato": "medida",
+     "medidos": 13,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:4",
+   "nombre": "Windi · Propuesta descartada",
+   "ids": {
+    "claro": "204:2876",
+    "oscuro": "233:16894",
+    "rosa": "204:22908",
+    "enfoque": "204:22923"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-2876.json",
+     "formato": "medida",
+     "medidos": 11,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:4",
+   "nombre": "Windi · Nombre emergente",
+   "ids": {
+    "claro": "2048:669",
+    "oscuro": "2048:783",
+    "rosa": "2048:707",
+    "enfoque": "2048:745"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2048-669.json",
+     "formato": "medida",
+     "medidos": 13,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:4",
+   "nombre": "Windi · Propuesta · Crear",
+   "ids": {
+    "claro": "2170:1994",
+    "oscuro": "2173:2195",
+    "rosa": "2173:2125",
+    "enfoque": "2173:2160"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2170-1994.json",
+     "formato": "medida",
+     "medidos": 25,
+     "bases": []
+    },
+    "oscuro": {
+     "archivo": "2173-2195.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2170:1994"
+     ]
+    },
+    "rosa": {
+     "archivo": "2173-2125.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2170:1994"
+     ]
+    },
+    "enfoque": {
+     "archivo": "2173-2160.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2170:1994"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:4",
+   "nombre": "Windi · Propuesta · Cambiar",
+   "ids": {
+    "claro": "2171:2002",
+    "oscuro": "2173:2296",
+    "rosa": "2173:2230",
+    "enfoque": "2173:2263"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2171-2002.json",
+     "formato": "diferencia-medida",
+     "medidos": 14,
+     "bases": [
+      "204:2427"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:4",
+   "nombre": "Windi · Propuesta · Cambiar · Tarjeta completada",
+   "ids": {
+    "claro": "2171:2042",
+    "oscuro": "2173:2395",
+    "rosa": "2173:2329",
+    "enfoque": "2173:2362"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2171-2042.json",
+     "formato": "diferencia-medida",
+     "medidos": 14,
+     "bases": [
+      "204:2427"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:4",
+   "nombre": "Windi · Propuesta · Mover",
+   "ids": {
+    "claro": "2171:2082",
+    "oscuro": "2173:2490",
+    "rosa": "2173:2428",
+    "enfoque": "2173:2459"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2171-2082.json",
+     "formato": "diferencia-medida",
+     "medidos": 12,
+     "bases": [
+      "204:2427"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:4",
+   "nombre": "Windi · Propuesta · Mover · Tarjeta completada",
+   "ids": {
+    "claro": "2171:2120",
+    "oscuro": "2173:2585",
+    "rosa": "2173:2521",
+    "enfoque": "2173:2553"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2171-2120.json",
+     "formato": "diferencia-medida",
+     "medidos": 13,
+     "bases": [
+      "204:2427"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:4",
+   "nombre": "Windi · Propuesta · Eliminar varias",
+   "ids": {
+    "claro": "2171:2159",
+    "oscuro": "2173:2685",
+    "rosa": "2173:2617",
+    "enfoque": "2173:2651"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2171-2159.json",
+     "formato": "diferencia-medida",
+     "medidos": 15,
+     "bases": [
+      "204:2427"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:4",
+   "nombre": "Windi · Propuesta · Crear etiqueta",
+   "ids": {
+    "claro": "2171:2200",
+    "oscuro": "2173:2785",
+    "rosa": "2173:2719",
+    "enfoque": "2173:2752"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2171-2200.json",
+     "formato": "diferencia-medida",
+     "medidos": 14,
+     "bases": [
+      "204:2427"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:4",
+   "nombre": "Windi · Propuesta · Descartada",
+   "ids": {
+    "claro": "2171:2240",
+    "oscuro": "2173:2886",
+    "rosa": "2173:2818",
+    "enfoque": "2173:2852"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2171-2240.json",
+     "formato": "diferencia-medida",
+     "medidos": 15,
+     "bases": [
+      "204:2427"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:4",
+   "nombre": "Windi · Propuesta · Sin conexión",
+   "ids": {
+    "claro": "2171:2281",
+    "oscuro": "2173:2984",
+    "rosa": "2173:2920",
+    "enfoque": "2173:2952"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2171-2281.json",
+     "formato": "diferencia-medida",
+     "medidos": 13,
+     "bases": [
+      "204:2427"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:4",
+   "nombre": "Windi · Mensaje muy largo",
+   "ids": {
+    "claro": "2172:2075",
+    "oscuro": "2173:3058",
+    "rosa": "2173:3016",
+    "enfoque": "2173:3037"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2172-2075.json",
+     "formato": "diferencia-medida",
+     "medidos": 1,
+     "bases": [
+      "204:2427"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:4",
+   "nombre": "Windi · Respuestas · Propuesta",
+   "ids": {
+    "claro": "2172:2106",
+    "oscuro": "2173:3131",
+    "rosa": "2173:3079",
+    "enfoque": "2173:3105"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2172-2106.json",
+     "formato": "diferencia-medida",
+     "medidos": 6,
+     "bases": [
+      "204:2427"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:4",
+   "nombre": "Windi · Respuestas · Saludo y datos que faltan",
+   "ids": {
+    "claro": "2172:2145",
+    "oscuro": "2173:3209",
+    "rosa": "2173:3157",
+    "enfoque": "2173:3183"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2172-2145.json",
+     "formato": "diferencia-medida",
+     "medidos": 6,
+     "bases": [
+      "204:2427"
+     ]
+    },
+    "oscuro": {
+     "archivo": "2173-3209.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2172:2145",
+      "204:2427"
+     ]
+    },
+    "rosa": {
+     "archivo": "2173-3157.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2172:2145",
+      "204:2427"
+     ]
+    },
+    "enfoque": {
+     "archivo": "2173-3183.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2172:2145",
+      "204:2427"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:4",
+   "nombre": "Windi · Respuestas · No encuentra y sin cambio",
+   "ids": {
+    "claro": "2172:2184",
+    "oscuro": "2173:3285",
+    "rosa": "2173:3235",
+    "enfoque": "2173:3260"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2172-2184.json",
+     "formato": "diferencia-medida",
+     "medidos": 5,
+     "bases": [
+      "204:2427"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:4",
+   "nombre": "Windi · Respuestas · Hecho y fuera de alcance",
+   "ids": {
+    "claro": "2172:2223",
+    "oscuro": "2173:3362",
+    "rosa": "2173:3310",
+    "enfoque": "2173:3336"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2172-2223.json",
+     "formato": "diferencia-medida",
+     "medidos": 6,
+     "bases": [
+      "204:2427"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 1 Tema",
+   "ids": {
+    "claro": "203:6362",
+    "oscuro": "233:18961",
+    "rosa": "204:9648",
+    "enfoque": "204:9726"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-6362.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 2 Fondo",
+   "ids": {
+    "claro": "203:6440",
+    "oscuro": "233:19054",
+    "rosa": "204:9804",
+    "enfoque": "204:9884"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-6440.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 3 Colores y tipografía",
+   "ids": {
+    "claro": "203:6520",
+    "oscuro": "233:19117",
+    "rosa": "204:9964",
+    "enfoque": "204:10051"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-6520.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 4 Widgets",
+   "ids": {
+    "claro": "203:6607",
+    "oscuro": "233:19187",
+    "rosa": "204:10138",
+    "enfoque": "204:10227"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-6607.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget",
+   "ids": {
+    "claro": "203:6696",
+    "oscuro": "233:19287",
+    "rosa": "204:10316",
+    "enfoque": "204:10409"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-6696.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget › Clima",
+   "ids": {
+    "claro": "203:7133",
+    "oscuro": "233:19639",
+    "rosa": "204:11190",
+    "enfoque": "204:11276"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-7133.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget › Noticias",
+   "ids": {
+    "claro": "203:7219",
+    "oscuro": "233:19708",
+    "rosa": "204:11362",
+    "enfoque": "204:11448"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-7219.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget › Imagen estática",
+   "ids": {
+    "claro": "203:7305",
+    "oscuro": "233:19777",
+    "rosa": "204:11534",
+    "enfoque": "204:11620"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-7305.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget › Carrusel de imágenes",
+   "ids": {
+    "claro": "203:7391",
+    "oscuro": "233:19846",
+    "rosa": "204:11706",
+    "enfoque": "204:11792"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-7391.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget › Animación",
+   "ids": {
+    "claro": "203:7477",
+    "oscuro": "233:19915",
+    "rosa": "204:11878",
+    "enfoque": "204:11964"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-7477.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget › Texto",
+   "ids": {
+    "claro": "203:7563",
+    "oscuro": "233:19984",
+    "rosa": "204:12050",
+    "enfoque": "204:12136"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-7563.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6696",
+      "203:6362"
+     ]
+    },
+    "oscuro": {
+     "archivo": "233-19984.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7563",
+      "203:6696",
+      "203:6362"
+     ]
+    },
+    "rosa": {
+     "archivo": "204-12050.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7563",
+      "203:6696",
+      "203:6362"
+     ]
+    },
+    "enfoque": {
+     "archivo": "204-12136.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7563",
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget › Reproductor de música",
+   "ids": {
+    "claro": "203:7649",
+    "oscuro": "233:20053",
+    "rosa": "204:12222",
+    "enfoque": "204:12308"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-7649.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget › Windi",
+   "ids": {
+    "claro": "203:7735",
+    "oscuro": "233:20122",
+    "rosa": "204:12394",
+    "enfoque": "204:12480"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-7735.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Configurar widget › Reloj",
+   "ids": {
+    "claro": "203:7821",
+    "oscuro": "233:20191",
+    "rosa": "204:12566",
+    "enfoque": "204:12649"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-7821.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Configurar widget › Calendario",
+   "ids": {
+    "claro": "203:7904",
+    "oscuro": "233:20257",
+    "rosa": "204:12732",
+    "enfoque": "204:12815"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-7904.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7821",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Configurar widget › Tareas del día",
+   "ids": {
+    "claro": "203:7987",
+    "oscuro": "233:20323",
+    "rosa": "204:12898",
+    "enfoque": "204:12981"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-7987.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7821",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Configurar widget › Kanban",
+   "ids": {
+    "claro": "203:8070",
+    "oscuro": "233:20389",
+    "rosa": "204:13064",
+    "enfoque": "204:13147"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-8070.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7821",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Configurar widget › Clima",
+   "ids": {
+    "claro": "203:8153",
+    "oscuro": "233:20455",
+    "rosa": "204:13230",
+    "enfoque": "204:13313"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-8153.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7821",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Configurar widget › Noticias",
+   "ids": {
+    "claro": "203:8236",
+    "oscuro": "233:20521",
+    "rosa": "204:13396",
+    "enfoque": "204:13479"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-8236.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7821",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Configurar widget › Imagen estática",
+   "ids": {
+    "claro": "203:8319",
+    "oscuro": "233:20587",
+    "rosa": "204:13562",
+    "enfoque": "204:13645"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-8319.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7821",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Configurar widget › Carrusel de imágenes",
+   "ids": {
+    "claro": "203:8402",
+    "oscuro": "233:20653",
+    "rosa": "204:13728",
+    "enfoque": "204:13811"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-8402.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7821",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Configurar widget › Animación",
+   "ids": {
+    "claro": "203:8485",
+    "oscuro": "233:20719",
+    "rosa": "204:13894",
+    "enfoque": "204:13977"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-8485.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7821",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Configurar widget › Texto",
+   "ids": {
+    "claro": "203:8568",
+    "oscuro": "233:20785",
+    "rosa": "204:14060",
+    "enfoque": "204:14143"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-8568.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7821",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Configurar widget › Reproductor de música",
+   "ids": {
+    "claro": "203:8651",
+    "oscuro": "233:20851",
+    "rosa": "204:14226",
+    "enfoque": "204:14309"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-8651.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7821",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Configurar widget › Windi",
+   "ids": {
+    "claro": "203:8734",
+    "oscuro": "233:20917",
+    "rosa": "204:14392",
+    "enfoque": "204:14475"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-8734.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7821",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Widgets · Clima agregado",
+   "ids": {
+    "claro": "203:9197",
+    "oscuro": "233:21435",
+    "rosa": "204:15318",
+    "enfoque": "204:15413"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-9197.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Widgets · Noticias agregado",
+   "ids": {
+    "claro": "203:9292",
+    "oscuro": "233:21548",
+    "rosa": "204:15508",
+    "enfoque": "204:15603"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-9292.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Widgets · Imagen estática agregado",
+   "ids": {
+    "claro": "203:9387",
+    "oscuro": "233:21661",
+    "rosa": "204:15698",
+    "enfoque": "204:15793"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-9387.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Widgets · Carrusel de imágenes agregado",
+   "ids": {
+    "claro": "203:9482",
+    "oscuro": "233:21774",
+    "rosa": "204:15888",
+    "enfoque": "204:15983"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-9482.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Widgets · Animación agregado",
+   "ids": {
+    "claro": "203:9577",
+    "oscuro": "233:21887",
+    "rosa": "204:16078",
+    "enfoque": "204:16173"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-9577.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Widgets · Texto agregado",
+   "ids": {
+    "claro": "203:9672",
+    "oscuro": "233:22000",
+    "rosa": "204:16268",
+    "enfoque": "204:16363"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-9672.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Widgets · Reproductor de música agregado",
+   "ids": {
+    "claro": "203:9767",
+    "oscuro": "233:22113",
+    "rosa": "204:16458",
+    "enfoque": "204:16553"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-9767.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Widgets · Windi agregado",
+   "ids": {
+    "claro": "203:9862",
+    "oscuro": "233:22226",
+    "rosa": "204:16648",
+    "enfoque": "204:16743"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-9862.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Organizar widgets",
+   "ids": {
+    "claro": "203:9957",
+    "oscuro": "233:22339",
+    "rosa": "204:16838",
+    "enfoque": "204:16866"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-9957.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Cambios sin guardar",
+   "ids": {
+    "claro": "203:9985",
+    "oscuro": "233:22368",
+    "rosa": "204:16894",
+    "enfoque": "204:16972"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-9985.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    },
+    "oscuro": {
+     "archivo": "233-22368.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:9985",
+      "203:6362"
+     ]
+    },
+    "rosa": {
+     "archivo": "204-16894.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:9985",
+      "203:6362"
+     ]
+    },
+    "enfoque": {
+     "archivo": "204-16972.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:9985",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Guardado",
+   "ids": {
+    "claro": "203:10056",
+    "oscuro": "233:22461",
+    "rosa": "204:17050",
+    "enfoque": "204:17128"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-10056.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:9985",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Aplicado",
+   "ids": {
+    "claro": "203:10127",
+    "oscuro": "233:22554",
+    "rosa": "204:17206",
+    "enfoque": "204:17284"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-10127.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:9985",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Catálogo de imágenes",
+   "ids": {
+    "claro": "203:10198",
+    "oscuro": "233:22647",
+    "rosa": "204:17362",
+    "enfoque": "204:17437"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-10198.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6440",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Subir imagen",
+   "ids": {
+    "claro": "203:10273",
+    "oscuro": "233:22708",
+    "rosa": "204:17512",
+    "enfoque": "204:17585"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-10273.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6440",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Sin imagen",
+   "ids": {
+    "claro": "203:10346",
+    "oscuro": "233:22764",
+    "rosa": "204:17658",
+    "enfoque": "204:17729"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-10346.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6440",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Ajustar imagen",
+   "ids": {
+    "claro": "203:10417",
+    "oscuro": "233:22818",
+    "rosa": "204:17800",
+    "enfoque": "204:17873"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-10417.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6440",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Paletas",
+   "ids": {
+    "claro": "203:10490",
+    "oscuro": "233:22894",
+    "rosa": "204:17946",
+    "enfoque": "204:18021"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-10490.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6520",
+      "203:6362"
+     ]
+    },
+    "oscuro": {
+     "archivo": "233-22894.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:10490",
+      "203:6520",
+      "203:6362"
+     ]
+    },
+    "rosa": {
+     "archivo": "204-17946.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:10490",
+      "203:6520",
+      "203:6362"
+     ]
+    },
+    "enfoque": {
+     "archivo": "204-18021.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:10490",
+      "203:6520",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Selector de color",
+   "ids": {
+    "claro": "203:10565",
+    "oscuro": "233:22952",
+    "rosa": "204:18096",
+    "enfoque": "204:18171"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-10565.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6520",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Tipografía",
+   "ids": {
+    "claro": "203:10640",
+    "oscuro": "233:23010",
+    "rosa": "204:18246",
+    "enfoque": "204:18323"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-10640.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6520",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Forma de los widgets",
+   "ids": {
+    "claro": "203:10717",
+    "oscuro": "233:23070",
+    "rosa": "204:18400",
+    "enfoque": "204:18477"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-10717.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Distribución predefinida",
+   "ids": {
+    "claro": "203:10794",
+    "oscuro": "233:23130",
+    "rosa": "204:18554",
+    "enfoque": "204:18629"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-10794.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Guardar como tema",
+   "ids": {
+    "claro": "203:10869",
+    "oscuro": "233:23188",
+    "rosa": "204:18704",
+    "enfoque": "204:18777"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-10869.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Restablecer",
+   "ids": {
+    "claro": "203:10942",
+    "oscuro": "233:23245",
+    "rosa": "204:18850",
+    "enfoque": "204:18921"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-10942.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Elegir Windgets claro",
+   "ids": {
+    "claro": "203:11013",
+    "oscuro": "2065:7715",
+    "rosa": "204:18992",
+    "enfoque": "204:19070"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-11013.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Elegir Windgets oscuro",
+   "ids": {
+    "claro": "2061:619",
+    "oscuro": "233:23299",
+    "rosa": "2067:7995",
+    "enfoque": "2067:15818"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2061-619.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Elegir Rosa pastel",
+   "ids": {
+    "claro": "203:11084",
+    "oscuro": "233:23392",
+    "rosa": "204:19148",
+    "enfoque": "204:19226"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-11084.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Elegir Enfoque rojo y negro",
+   "ids": {
+    "claro": "203:11155",
+    "oscuro": "233:23485",
+    "rosa": "204:19304",
+    "enfoque": "204:19382"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "203-11155.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Renombrar tema",
+   "ids": {
+    "claro": "217:24146",
+    "oscuro": "233:24456",
+    "rosa": "217:24164",
+    "enfoque": "217:24155"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-24146.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Overlay · M-02",
+   "ids": {
+    "claro": "204:25071",
+    "oscuro": "233:23578",
+    "rosa": "204:25225",
+    "enfoque": "204:25379"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25071.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Overlay · M-04",
+   "ids": {
+    "claro": "204:25084",
+    "oscuro": "233:23591",
+    "rosa": "204:25238",
+    "enfoque": "204:25392"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25084.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Overlay · M-05",
+   "ids": {
+    "claro": "204:25097",
+    "oscuro": "233:23604",
+    "rosa": "204:25251",
+    "enfoque": "204:25405"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25097.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Overlay · M-06",
+   "ids": {
+    "claro": "204:25110",
+    "oscuro": "233:23617",
+    "rosa": "204:25264",
+    "enfoque": "204:25418"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25110.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Overlay · M-07",
+   "ids": {
+    "claro": "204:25123",
+    "oscuro": "233:23630",
+    "rosa": "204:25277",
+    "enfoque": "204:25431"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25123.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Overlay · M-15",
+   "ids": {
+    "claro": "204:25136",
+    "oscuro": "233:23643",
+    "rosa": "204:25290",
+    "enfoque": "204:25444"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25136.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Overlay · Windi",
+   "ids": {
+    "claro": "204:25151",
+    "oscuro": "233:23658",
+    "rosa": "204:25305",
+    "enfoque": "204:25459"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25151.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Overlay · Windi · Propuesta",
+   "ids": {
+    "claro": "204:25162",
+    "oscuro": "233:23669",
+    "rosa": "204:25316",
+    "enfoque": "204:25470"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25162.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Overlay · Windi · Escribiendo",
+   "ids": {
+    "claro": "204:25177",
+    "oscuro": "233:23684",
+    "rosa": "204:25331",
+    "enfoque": "204:25485"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25177.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Overlay · Windi · Sin conexión",
+   "ids": {
+    "claro": "204:25188",
+    "oscuro": "233:23695",
+    "rosa": "204:25342",
+    "enfoque": "204:25496"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25188.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Overlay · Windi · Error",
+   "ids": {
+    "claro": "204:25199",
+    "oscuro": "233:23706",
+    "rosa": "204:25353",
+    "enfoque": "204:25507"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25199.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Overlay · Windi · Propuesta descartada",
+   "ids": {
+    "claro": "204:25210",
+    "oscuro": "233:23717",
+    "rosa": "204:25364",
+    "enfoque": "204:25518"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25210.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Selector · Apariencia",
+   "ids": {
+    "claro": "204:42141",
+    "oscuro": "233:23732",
+    "rosa": "204:42149",
+    "enfoque": "204:42157"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-42141.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Selector · Transparencia",
+   "ids": {
+    "claro": "204:42165",
+    "oscuro": "233:23740",
+    "rosa": "204:42177",
+    "enfoque": "204:42189"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-42165.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Selector · Tamaño de texto",
+   "ids": {
+    "claro": "204:42201",
+    "oscuro": "233:23752",
+    "rosa": "204:42211",
+    "enfoque": "204:42221"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-42201.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Selector · Formato Reloj",
+   "ids": {
+    "claro": "204:42231",
+    "oscuro": "233:23762",
+    "rosa": "204:42237",
+    "enfoque": "204:42243"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-42231.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Selector · Formato Calendario",
+   "ids": {
+    "claro": "204:42249",
+    "oscuro": "233:23768",
+    "rosa": "204:42255",
+    "enfoque": "204:42261"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-42249.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Selector · Datos Reproductor de música",
+   "ids": {
+    "claro": "204:42351",
+    "oscuro": "233:23802",
+    "rosa": "204:42357",
+    "enfoque": "204:42363"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-42351.json",
+     "formato": "texto",
+     "medidos": 0,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Organizar widgets · Arrastrando",
+   "ids": {
+    "claro": "217:17802",
+    "oscuro": "233:23814",
+    "rosa": "217:17850",
+    "enfoque": "217:17826"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-17802.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:9957",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Organizar widgets · Redimensionando",
+   "ids": {
+    "claro": "217:17874",
+    "oscuro": "233:23843",
+    "rosa": "217:17922",
+    "enfoque": "217:17898"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-17874.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:9957",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Organizar widgets · Colisión",
+   "ids": {
+    "claro": "217:17946",
+    "oscuro": "233:23873",
+    "rosa": "217:17994",
+    "enfoque": "217:17970"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-17946.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:9957",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Organizar widgets · Sin conexión",
+   "ids": {
+    "claro": "217:18018",
+    "oscuro": "233:23905",
+    "rosa": "217:18066",
+    "enfoque": "217:18042"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-18018.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:9957",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Organizar widgets · Widget eliminado",
+   "ids": {
+    "claro": "2221:84854",
+    "oscuro": "2221:86204",
+    "rosa": "2221:85301",
+    "enfoque": "2221:85752"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2221-84854.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:9957",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Organizar widgets · Personalización más reciente",
+   "ids": {
+    "claro": "2221:84930",
+    "oscuro": "2221:86280",
+    "rosa": "2221:85377",
+    "enfoque": "2221:85828"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2221-84930.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:9957",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Organizar widgets · Sin widgets activos",
+   "ids": {
+    "claro": "2221:85006",
+    "oscuro": "2221:86356",
+    "rosa": "2221:85453",
+    "enfoque": "2221:85904"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2221-85006.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:9957",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Organizar widgets · Reloj a la derecha",
+   "ids": {
+    "claro": "223:15783",
+    "oscuro": "233:24565",
+    "rosa": "223:16299",
+    "enfoque": "223:16041"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "223-15783.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:9957",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Organizar widgets · Kanban centrado",
+   "ids": {
+    "claro": "223:15912",
+    "oscuro": "233:24694",
+    "rosa": "223:16428",
+    "enfoque": "223:16170"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "223-15912.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:9957",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 4 Widgets · Error de carga",
+   "ids": {
+    "claro": "217:18219",
+    "oscuro": "233:23937",
+    "rosa": "217:18355",
+    "enfoque": "217:18287"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-18219.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 4 Widgets · Posición ajustada",
+   "ids": {
+    "claro": "217:22821",
+    "oscuro": "233:24256",
+    "rosa": "217:23205",
+    "enfoque": "217:23013"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-22821.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 4 Widgets · Tamaño ajustado",
+   "ids": {
+    "claro": "217:22917",
+    "oscuro": "233:24356",
+    "rosa": "217:23301",
+    "enfoque": "217:23109"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-22917.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 4 Widgets · Reloj a la derecha",
+   "ids": {
+    "claro": "223:15683",
+    "oscuro": "233:24465",
+    "rosa": "223:16199",
+    "enfoque": "223:15941"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "223-15683.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 4 Widgets · Kanban centrado",
+   "ids": {
+    "claro": "223:15812",
+    "oscuro": "233:24594",
+    "rosa": "223:16328",
+    "enfoque": "223:16070"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "223-15812.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 4 Widgets · Widget inactivo",
+   "ids": {
+    "claro": "2240:103574",
+    "oscuro": "2240:107600",
+    "rosa": "2240:104913",
+    "enfoque": "2240:106256"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2240-103574.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 4 Widgets · Eliminar no disponible",
+   "ids": {
+    "claro": "2240:103864",
+    "oscuro": "2240:107890",
+    "rosa": "2240:105207",
+    "enfoque": "2240:106551"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2240-103864.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 4 Widgets · Animación en pausa",
+   "ids": {
+    "claro": "2240:104066",
+    "oscuro": "2240:108092",
+    "rosa": "2240:105409",
+    "enfoque": "2240:106753"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2240-104066.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 4 Widgets · Aviso widget repetido",
+   "ids": {
+    "claro": "2240:104286",
+    "oscuro": "2240:108312",
+    "rosa": "2240:105629",
+    "enfoque": "2240:106973"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2240-104286.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 4 Widgets · Aviso widget no existe",
+   "ids": {
+    "claro": "2240:104495",
+    "oscuro": "2240:108521",
+    "rosa": "2240:105838",
+    "enfoque": "2240:107182"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2240-104495.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 4 Widgets · Aviso error de operación",
+   "ids": {
+    "claro": "2240:104704",
+    "oscuro": "2240:108730",
+    "rosa": "2240:106047",
+    "enfoque": "2240:107391"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2240-104704.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Widgets · No se guardaron cambios",
+   "ids": {
+    "claro": "2221:85076",
+    "oscuro": "2221:86426",
+    "rosa": "2221:85527",
+    "enfoque": "2221:85979"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2221-85076.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget › Clima · Ciudad no encontrada",
+   "ids": {
+    "claro": "217:18564",
+    "oscuro": "233:24040",
+    "rosa": "217:18694",
+    "enfoque": "217:18629"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-18564.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7133",
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget › Clima · Ciudad duplicada",
+   "ids": {
+    "claro": "217:18759",
+    "oscuro": "233:24112",
+    "rosa": "217:18889",
+    "enfoque": "217:18824"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-18759.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7133",
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget › Clima · Sin conexión",
+   "ids": {
+    "claro": "217:18954",
+    "oscuro": "233:24184",
+    "rosa": "217:19084",
+    "enfoque": "217:19019"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-18954.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7133",
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget › Clima · Campo vacío",
+   "ids": {
+    "claro": "2211:79096",
+    "oscuro": "2213:82878",
+    "rosa": "2213:79911",
+    "enfoque": "2213:81393"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2211-79096.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7133",
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget › Clima · Sugerencias de ciudad",
+   "ids": {
+    "claro": "2211:79211",
+    "oscuro": "2213:82993",
+    "rosa": "2213:80026",
+    "enfoque": "2213:81508"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2211-79211.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7133",
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget › Clima · Sin conexión al buscar",
+   "ids": {
+    "claro": "2211:79326",
+    "oscuro": "2213:83108",
+    "rosa": "2213:80141",
+    "enfoque": "2213:81623"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2211-79326.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7133",
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget › Clima · Ciudad demasiado larga",
+   "ids": {
+    "claro": "2211:79441",
+    "oscuro": "2213:83223",
+    "rosa": "2213:80256",
+    "enfoque": "2213:81738"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2211-79441.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7133",
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget › Clima · Servicio no disponible",
+   "ids": {
+    "claro": "2211:79556",
+    "oscuro": "2213:83338",
+    "rosa": "2213:80371",
+    "enfoque": "2213:81853"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2211-79556.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7133",
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget › Carrusel de imágenes · Error de mínimo",
+   "ids": {
+    "claro": "2240:94040",
+    "oscuro": "2240:96509",
+    "rosa": "2240:94863",
+    "enfoque": "2240:95686"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2240-94040.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7391",
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget › Carrusel de imágenes · Error de máximo",
+   "ids": {
+    "claro": "2240:94171",
+    "oscuro": "2240:96640",
+    "rosa": "2240:94994",
+    "enfoque": "2240:95817"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2240-94171.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7391",
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget › Carrusel de imágenes · Error de intervalo",
+   "ids": {
+    "claro": "2240:94332",
+    "oscuro": "2240:96801",
+    "rosa": "2240:95155",
+    "enfoque": "2240:95978"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2240-94332.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7391",
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget › Texto · Texto demasiado largo",
+   "ids": {
+    "claro": "2240:94470",
+    "oscuro": "2240:96939",
+    "rosa": "2240:95293",
+    "enfoque": "2240:96116"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2240-94470.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7563",
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget › Imagen estática · Imagen propia",
+   "ids": {
+    "claro": "2240:94596",
+    "oscuro": "2240:97065",
+    "rosa": "2240:95419",
+    "enfoque": "2240:96242"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2240-94596.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7305",
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget · Widgets ya agregados",
+   "ids": {
+    "claro": "2240:94722",
+    "oscuro": "2240:97191",
+    "rosa": "2240:95545",
+    "enfoque": "2240:96368"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2240-94722.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Otra paleta › Reloj",
+   "ids": {
+    "claro": "2222:86308",
+    "oscuro": "2222:88369",
+    "rosa": "2222:86983",
+    "enfoque": "2222:87674"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2222-86308.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7821",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Colores libres › Reloj",
+   "ids": {
+    "claro": "2222:86415",
+    "oscuro": "2222:88476",
+    "rosa": "2222:87090",
+    "enfoque": "2222:87781"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2222-86415.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7821",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Colores libres · Contraste bajo › Reloj",
+   "ids": {
+    "claro": "2222:86522",
+    "oscuro": "2222:88583",
+    "rosa": "2222:87197",
+    "enfoque": "2222:87888"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2222-86522.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7821",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Apariencia propia › Reloj",
+   "ids": {
+    "claro": "2222:86629",
+    "oscuro": "2222:88690",
+    "rosa": "2222:87304",
+    "enfoque": "2222:87995"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2222-86629.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7821",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Forma de los widgets · Rectas",
+   "ids": {
+    "claro": "2213:85246",
+    "oscuro": "2213:86647",
+    "rosa": "2213:85704",
+    "enfoque": "2213:86174"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2213-85246.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Forma de los widgets · Redondas",
+   "ids": {
+    "claro": "2213:85346",
+    "oscuro": "2213:86747",
+    "rosa": "2213:85804",
+    "enfoque": "2213:86274"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2213-85346.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Forma de los widgets · Con sombra",
+   "ids": {
+    "claro": "2213:85446",
+    "oscuro": "2213:86847",
+    "rosa": "2213:85904",
+    "enfoque": "2213:86374"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2213-85446.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 1 Tema · Barra expandida",
+   "ids": {
+    "claro": "2068:667",
+    "oscuro": "2068:3890",
+    "rosa": "2068:7117",
+    "enfoque": "2068:10421"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2068-667.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 2 Fondo · Barra expandida",
+   "ids": {
+    "claro": "2068:966",
+    "oscuro": "2068:4189",
+    "rosa": "2068:7420",
+    "enfoque": "2068:10725"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2068-966.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6440",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 3 Colores y tipografía · Barra expandida",
+   "ids": {
+    "claro": "2068:1233",
+    "oscuro": "2068:4456",
+    "rosa": "2068:7691",
+    "enfoque": "2068:10997"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2068-1233.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6520",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 4 Widgets · Barra expandida",
+   "ids": {
+    "claro": "2068:1522",
+    "oscuro": "2068:4745",
+    "rosa": "2068:7984",
+    "enfoque": "2068:11291"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2068-1522.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Agregar widget · Barra expandida",
+   "ids": {
+    "claro": "2068:1830",
+    "oscuro": "2068:5053",
+    "rosa": "2068:8296",
+    "enfoque": "2068:11604"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2068-1830.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6696",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Configurar widget › Reloj · Barra expandida",
+   "ids": {
+    "claro": "2068:2103",
+    "oscuro": "2068:5326",
+    "rosa": "2068:8573",
+    "enfoque": "2068:11882"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2068-2103.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:7821",
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Cambios sin guardar · Barra expandida",
+   "ids": {
+    "claro": "2068:2476",
+    "oscuro": "2068:5699",
+    "rosa": "2068:8958",
+    "enfoque": "2068:12270"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2068-2476.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:9985",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 4 Widgets · Nombre emergente",
+   "ids": {
+    "claro": "2068:3018",
+    "oscuro": "2068:6241",
+    "rosa": "2068:9528",
+    "enfoque": "2068:12847"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2068-3018.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 4 Widgets · Nombre emergente · Papelera deshabilitada",
+   "ids": {
+    "claro": "2257:160470",
+    "oscuro": "2257:160672",
+    "rosa": "2257:160874",
+    "enfoque": "2257:161076"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2257-160470.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6607",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 1 Tema · Nombre emergente",
+   "ids": {
+    "claro": "2068:3197",
+    "oscuro": "2068:6420",
+    "rosa": "2068:9711",
+    "enfoque": "2068:13031"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2068-3197.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Barra contraída · Nombre emergente",
+   "ids": {
+    "claro": "2068:3367",
+    "oscuro": "2068:6590",
+    "rosa": "2068:9885",
+    "enfoque": "2068:13206"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2068-3367.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Subpantalla · Nombre emergente",
+   "ids": {
+    "claro": "2068:3662",
+    "oscuro": "2068:6885",
+    "rosa": "2068:10188",
+    "enfoque": "2068:13511"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2068-3662.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 1 Tema · Cambios sin aplicar",
+   "ids": {
+    "claro": "2177:32079",
+    "oscuro": "2185:42871",
+    "rosa": "2184:34296",
+    "enfoque": "2185:36505"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2177-32079.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 1 Tema · Cambios sin guardar",
+   "ids": {
+    "claro": "2177:32246",
+    "oscuro": "2185:43090",
+    "rosa": "2184:34550",
+    "enfoque": "2185:36759"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2177-32246.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 1 Tema · Eliminar deshabilitado",
+   "ids": {
+    "claro": "2177:32413",
+    "oscuro": "2185:43309",
+    "rosa": "2184:34804",
+    "enfoque": "2185:37013"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2177-32413.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 1 Tema · Aplicar deshabilitado",
+   "ids": {
+    "claro": "2177:32591",
+    "oscuro": "2185:43539",
+    "rosa": "2184:35069",
+    "enfoque": "2185:37278"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2177-32591.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 1 Tema · Guardar deshabilitado",
+   "ids": {
+    "claro": "2177:32768",
+    "oscuro": "2185:43762",
+    "rosa": "2184:35327",
+    "enfoque": "2185:37536"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2177-32768.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 1 Tema · Un solo tema",
+   "ids": {
+    "claro": "2177:32943",
+    "oscuro": "2185:43985",
+    "rosa": "2184:35585",
+    "enfoque": "2185:37794"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2177-32943.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 1 Tema · Aviso · Máximo de temas",
+   "ids": {
+    "claro": "2178:32802",
+    "oscuro": "2185:44548",
+    "rosa": "2184:36253",
+    "enfoque": "2185:38462"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2178-32802.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    },
+    "oscuro": {
+     "archivo": "2185-44548.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2178:32802",
+      "203:6362"
+     ]
+    },
+    "rosa": {
+     "archivo": "2184-36253.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2178:32802",
+      "203:6362"
+     ]
+    },
+    "enfoque": {
+     "archivo": "2185-38462.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2178:32802",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 1 Tema · Aviso · Tema con las mismas propiedades",
+   "ids": {
+    "claro": "2178:32988",
+    "oscuro": "2185:44777",
+    "rosa": "2184:36517",
+    "enfoque": "2185:38726"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2178-32988.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 1 Tema · Aviso · Tema que ya no existe",
+   "ids": {
+    "claro": "2178:33174",
+    "oscuro": "2185:45006",
+    "rosa": "2184:36781",
+    "enfoque": "2185:38990"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2178-33174.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 1 Tema · Aviso · Personalización más reciente",
+   "ids": {
+    "claro": "2178:33360",
+    "oscuro": "2185:45235",
+    "rosa": "2184:37045",
+    "enfoque": "2185:39254"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2178-33360.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Guardar como tema · Nombre muy largo",
+   "ids": {
+    "claro": "2178:32554",
+    "oscuro": "2185:44204",
+    "rosa": "2184:35839",
+    "enfoque": "2185:38048"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2178-32554.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:10869",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Guardar como tema · Nombre repetido",
+   "ids": {
+    "claro": "2178:32678",
+    "oscuro": "2185:44376",
+    "rosa": "2184:36046",
+    "enfoque": "2185:38255"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2178-32678.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:10869",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 2 Fondo · Ajuste por monitor",
+   "ids": {
+    "claro": "2180:33062",
+    "oscuro": "2185:45464",
+    "rosa": "2184:37309",
+    "enfoque": "2185:39518"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2180-33062.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6440",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 2 Fondo · Ajuste por monitor · Varios monitores",
+   "ids": {
+    "claro": "2180:33209",
+    "oscuro": "2185:45661",
+    "rosa": "2184:37541",
+    "enfoque": "2185:39750"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2180-33209.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6440",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 2 Fondo · Aviso · Más de 6 monitores",
+   "ids": {
+    "claro": "2180:33358",
+    "oscuro": "2185:45860",
+    "rosa": "2184:37775",
+    "enfoque": "2185:39984"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2180-33358.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6440",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 2 Fondo · Aviso · Monitor desconectado",
+   "ids": {
+    "claro": "2180:33569",
+    "oscuro": "2185:46070",
+    "rosa": "2184:38020",
+    "enfoque": "2185:40229"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2180-33569.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6440",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 2 Fondo · Aviso · Imagen del tema no encontrada",
+   "ids": {
+    "claro": "2180:33780",
+    "oscuro": "2185:46280",
+    "rosa": "2184:38265",
+    "enfoque": "2185:40474"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2180-33780.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6440",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 2 Fondo · Aviso · Fondo por defecto",
+   "ids": {
+    "claro": "2180:36230",
+    "oscuro": "2185:47345",
+    "rosa": "2184:39540",
+    "enfoque": "2185:41749"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2180-36230.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6440",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Subir imagen · Imagen propia",
+   "ids": {
+    "claro": "2180:34602",
+    "oscuro": "2185:46477",
+    "rosa": "2184:38497",
+    "enfoque": "2185:40706"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2180-34602.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:10273",
+      "203:6440",
+      "203:6362"
+     ]
+    },
+    "oscuro": {
+     "archivo": "2185-46477.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2180:34602",
+      "203:10273",
+      "203:6440",
+      "203:6362"
+     ]
+    },
+    "rosa": {
+     "archivo": "2184-38497.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2180:34602",
+      "203:10273",
+      "203:6440",
+      "203:6362"
+     ]
+    },
+    "enfoque": {
+     "archivo": "2185-40706.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2180:34602",
+      "203:10273",
+      "203:6440",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Subir imagen · Error · Formato no permitido",
+   "ids": {
+    "claro": "2180:34732",
+    "oscuro": "2185:46655",
+    "rosa": "2184:38710",
+    "enfoque": "2185:40919"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2180-34732.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:10273",
+      "203:6440",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Subir imagen · Error · Imagen muy pesada",
+   "ids": {
+    "claro": "2180:34852",
+    "oscuro": "2185:46827",
+    "rosa": "2184:38917",
+    "enfoque": "2185:41126"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2180-34852.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:10273",
+      "203:6440",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Subir imagen · Error · Imagen dañada",
+   "ids": {
+    "claro": "2180:34972",
+    "oscuro": "2185:46999",
+    "rosa": "2184:39124",
+    "enfoque": "2185:41333"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2180-34972.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:10273",
+      "203:6440",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Catálogo de imágenes · Vacío",
+   "ids": {
+    "claro": "2180:35092",
+    "oscuro": "2185:47171",
+    "rosa": "2184:39331",
+    "enfoque": "2185:41540"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2180-35092.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:10198",
+      "203:6440",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Selector de color · Error · Color no válido",
+   "ids": {
+    "claro": "2182:33981",
+    "oscuro": "2185:47542",
+    "rosa": "2184:39772",
+    "enfoque": "2185:41981"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2182-33981.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:10565",
+      "203:6520",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · Selector de color · Aviso · Contraste bajo",
+   "ids": {
+    "claro": "2182:34106",
+    "oscuro": "2185:47715",
+    "rosa": "2184:39980",
+    "enfoque": "2185:42189"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2182-34106.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:10565",
+      "203:6520",
+      "203:6362"
+     ]
+    },
+    "oscuro": {
+     "archivo": "2185-47715.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2182:34106",
+      "203:10565",
+      "203:6520",
+      "203:6362"
+     ]
+    },
+    "rosa": {
+     "archivo": "2184-39980.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2182:34106",
+      "203:10565",
+      "203:6520",
+      "203:6362"
+     ]
+    },
+    "enfoque": {
+     "archivo": "2185-42189.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2182:34106",
+      "203:10565",
+      "203:6520",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 3 Colores y tipografía · Paleta personalizada",
+   "ids": {
+    "claro": "2182:34290",
+    "oscuro": "2185:47898",
+    "rosa": "2184:40198",
+    "enfoque": "2185:42407"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2182-34290.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6520",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:5",
+   "nombre": "Personalización · 3 Colores y tipografía · Aviso · Paleta no disponible",
+   "ids": {
+    "claro": "2182:34430",
+    "oscuro": "2185:48090",
+    "rosa": "2184:40425",
+    "enfoque": "2185:42634"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2182-34430.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "203:6520",
+      "203:6362"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:6",
+   "nombre": "Configuración",
+   "ids": {
+    "claro": "204:3109",
+    "oscuro": "233:24723",
+    "rosa": "204:23428",
+    "enfoque": "204:23478"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-3109.json",
+     "formato": "medida",
+     "medidos": 13,
+     "bases": []
+    },
+    "oscuro": {
+     "archivo": "233-24723.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:3109"
+     ]
+    },
+    "rosa": {
+     "archivo": "204-23428.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:3109"
+     ]
+    },
+    "enfoque": {
+     "archivo": "204-23478.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:3109"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:6",
+   "nombre": "Configuración · Cómoda",
+   "ids": {
+    "claro": "204:3159",
+    "oscuro": "233:24743",
+    "rosa": "204:23528",
+    "enfoque": "204:23578"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-3159.json",
+     "formato": "diferencia-medida",
+     "medidos": 1,
+     "bases": [
+      "204:3109"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:6",
+   "nombre": "Overlay · M-11",
+   "ids": {
+    "claro": "204:25989",
+    "oscuro": "233:24763",
+    "rosa": "204:26089",
+    "enfoque": "204:26189"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-25989.json",
+     "formato": "medida",
+     "medidos": 4,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:6",
+   "nombre": "Overlay · M-12",
+   "ids": {
+    "claro": "204:26002",
+    "oscuro": "233:24776",
+    "rosa": "204:26102",
+    "enfoque": "204:26202"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-26002.json",
+     "formato": "diferencia-medida",
+     "medidos": 1,
+     "bases": [
+      "204:25989"
+     ]
+    },
+    "oscuro": {
+     "archivo": "233-24776.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:26002",
+      "204:25989"
+     ]
+    },
+    "rosa": {
+     "archivo": "204-26102.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:26002",
+      "204:25989"
+     ]
+    },
+    "enfoque": {
+     "archivo": "204-26202.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:26002",
+      "204:25989"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:6",
+   "nombre": "Overlay · Windi",
+   "ids": {
+    "claro": "204:26015",
+    "oscuro": "233:24789",
+    "rosa": "204:26115",
+    "enfoque": "204:26215"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-26015.json",
+     "formato": "medida",
+     "medidos": 3,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "79:6",
+   "nombre": "Overlay · Windi · Propuesta",
+   "ids": {
+    "claro": "204:26026",
+    "oscuro": "233:24800",
+    "rosa": "204:26126",
+    "enfoque": "204:26226"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-26026.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:26015"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:6",
+   "nombre": "Overlay · Windi · Escribiendo",
+   "ids": {
+    "claro": "204:26041",
+    "oscuro": "233:24815",
+    "rosa": "204:26141",
+    "enfoque": "204:26241"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-26041.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:26015"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:6",
+   "nombre": "Overlay · Windi · Sin conexión",
+   "ids": {
+    "claro": "204:26052",
+    "oscuro": "233:24826",
+    "rosa": "204:26152",
+    "enfoque": "204:26252"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-26052.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:26015"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:6",
+   "nombre": "Overlay · Windi · Error",
+   "ids": {
+    "claro": "204:26063",
+    "oscuro": "233:24837",
+    "rosa": "204:26163",
+    "enfoque": "204:26263"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-26063.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:26015"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:6",
+   "nombre": "Overlay · Windi · Propuesta descartada",
+   "ids": {
+    "claro": "204:26074",
+    "oscuro": "233:24848",
+    "rosa": "204:26174",
+    "enfoque": "204:26274"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-26074.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:26015"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:6",
+   "nombre": "Configuración · Sincronizando",
+   "ids": {
+    "claro": "217:20340",
+    "oscuro": "233:24863",
+    "rosa": "217:20380",
+    "enfoque": "217:20360"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-20340.json",
+     "formato": "diferencia-medida",
+     "medidos": 1,
+     "bases": [
+      "204:3109"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:6",
+   "nombre": "Configuración · Sin conexión",
+   "ids": {
+    "claro": "217:20400",
+    "oscuro": "233:24883",
+    "rosa": "217:20440",
+    "enfoque": "217:20420"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-20400.json",
+     "formato": "diferencia-medida",
+     "medidos": 1,
+     "bases": [
+      "204:3109"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:6",
+   "nombre": "Configuración · Error de sincronización",
+   "ids": {
+    "claro": "217:20460",
+    "oscuro": "233:24903",
+    "rosa": "217:20500",
+    "enfoque": "217:20480"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "217-20460.json",
+     "formato": "diferencia-medida",
+     "medidos": 1,
+     "bases": [
+      "204:3109"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:6",
+   "nombre": "Configuración · Aviso · Inicio automático desactivado",
+   "ids": {
+    "claro": "2251:4979",
+    "oscuro": "2251:6827",
+    "rosa": "2251:5595",
+    "enfoque": "2251:6211"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2251-4979.json",
+     "formato": "diferencia-medida",
+     "medidos": 1,
+     "bases": [
+      "204:3109"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:6",
+   "nombre": "Configuración · Aviso · Error de inicio automático",
+   "ids": {
+    "claro": "2251:5080",
+    "oscuro": "2251:6928",
+    "rosa": "2251:5696",
+    "enfoque": "2251:6312"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2251-5080.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:3109"
+     ]
+    },
+    "oscuro": {
+     "archivo": "2251-6928.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2251:5080",
+      "204:3109"
+     ]
+    },
+    "rosa": {
+     "archivo": "2251-5696.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2251:5080",
+      "204:3109"
+     ]
+    },
+    "enfoque": {
+     "archivo": "2251-6312.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "2251:5080",
+      "204:3109"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:6",
+   "nombre": "Configuración · Aviso · Error al cerrar sesión",
+   "ids": {
+    "claro": "2251:5185",
+    "oscuro": "2251:7033",
+    "rosa": "2251:5801",
+    "enfoque": "2251:6417"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2251-5185.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:3109"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:6",
+   "nombre": "Configuración · Aviso · Sin conexión",
+   "ids": {
+    "claro": "2251:5290",
+    "oscuro": "2251:7138",
+    "rosa": "2251:5906",
+    "enfoque": "2251:6522"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2251-5290.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:3109"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:6",
+   "nombre": "Configuración · Aviso · Cambios sincronizados",
+   "ids": {
+    "claro": "2251:5396",
+    "oscuro": "2251:7244",
+    "rosa": "2251:6012",
+    "enfoque": "2251:6628"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2251-5396.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:3109"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "79:6",
+   "nombre": "Configuración · Aviso · Cambios de otro computador",
+   "ids": {
+    "claro": "2251:5490",
+    "oscuro": "2251:7338",
+    "rosa": "2251:6106",
+    "enfoque": "2251:6722"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2251-5490.json",
+     "formato": "diferencia-texto",
+     "medidos": 0,
+     "bases": [
+      "204:3109"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Escritorio de Windows",
+   "ids": {
+    "claro": "204:22938",
+    "oscuro": "233:25409",
+    "rosa": "204:23628",
+    "enfoque": "204:23654"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F6.md"
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Widget · Reloj",
+   "ids": {
+    "claro": "204:22964",
+    "oscuro": "233:25430",
+    "rosa": "204:23680",
+    "enfoque": "204:23710"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-22964.json",
+     "formato": "medida",
+     "medidos": 4,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Widget · Calendario",
+   "ids": {
+    "claro": "204:22994",
+    "oscuro": "233:25455",
+    "rosa": "204:23740",
+    "enfoque": "204:23770"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-22994.json",
+     "formato": "medida",
+     "medidos": 4,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Widget · Tareas del día",
+   "ids": {
+    "claro": "204:23024",
+    "oscuro": "233:25480",
+    "rosa": "204:23800",
+    "enfoque": "204:23830"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-23024.json",
+     "formato": "medida",
+     "medidos": 5,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Widget · Kanban",
+   "ids": {
+    "claro": "204:23054",
+    "oscuro": "233:25505",
+    "rosa": "204:23860",
+    "enfoque": "204:23890"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-23054.json",
+     "formato": "medida",
+     "medidos": 5,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Widget · Clima",
+   "ids": {
+    "claro": "204:23084",
+    "oscuro": "233:25530",
+    "rosa": "204:23920",
+    "enfoque": "204:23950"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-23084.json",
+     "formato": "medida",
+     "medidos": 4,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Widget · Noticias",
+   "ids": {
+    "claro": "204:23114",
+    "oscuro": "233:25555",
+    "rosa": "204:23980",
+    "enfoque": "204:24010"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-23114.json",
+     "formato": "medida",
+     "medidos": 4,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Widget · Imagen estática",
+   "ids": {
+    "claro": "204:23144",
+    "oscuro": "233:25580",
+    "rosa": "204:24040",
+    "enfoque": "204:24076"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-23144.json",
+     "formato": "medida",
+     "medidos": 1,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Widget · Carrusel de imágenes",
+   "ids": {
+    "claro": "204:23180",
+    "oscuro": "233:25606",
+    "rosa": "204:24112",
+    "enfoque": "204:24148"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-23180.json",
+     "formato": "medida",
+     "medidos": 2,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Widget · Animación",
+   "ids": {
+    "claro": "204:23216",
+    "oscuro": "233:25632",
+    "rosa": "204:24184",
+    "enfoque": "204:24214"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-23216.json",
+     "formato": "medida",
+     "medidos": 1,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Widget · Texto",
+   "ids": {
+    "claro": "204:23246",
+    "oscuro": "233:25657",
+    "rosa": "204:24244",
+    "enfoque": "204:24274"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-23246.json",
+     "formato": "medida",
+     "medidos": 2,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Widget · Reproductor de música",
+   "ids": {
+    "claro": "204:23276",
+    "oscuro": "233:25682",
+    "rosa": "204:24304",
+    "enfoque": "204:24334"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-23276.json",
+     "formato": "medida",
+     "medidos": 4,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Widget · Windi",
+   "ids": {
+    "claro": "204:23306",
+    "oscuro": "233:25707",
+    "rosa": "204:24364",
+    "enfoque": "204:24394"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-23306.json",
+     "formato": "medida",
+     "medidos": 5,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Notificación de Windows",
+   "ids": {
+    "claro": "204:23336",
+    "oscuro": "233:25732",
+    "rosa": "204:24424",
+    "enfoque": "204:24458"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-23336.json",
+     "formato": "medida",
+     "medidos": 8,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Área de notificación",
+   "ids": {
+    "claro": "204:23370",
+    "oscuro": "233:25761",
+    "rosa": "204:24492",
+    "enfoque": "204:24523"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-23370.json",
+     "formato": "medida",
+     "medidos": 3,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Escritorio · Fondo oscurecido",
+   "ids": {
+    "claro": "204:23401",
+    "oscuro": "233:25787",
+    "rosa": "204:24554",
+    "enfoque": "204:24581"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "204-23401.json",
+     "formato": "medida",
+     "medidos": 1,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Escritorio · Widget seleccionado",
+   "ids": {
+    "claro": "2233:8031",
+    "oscuro": "2234:18413",
+    "rosa": "2234:9546",
+    "enfoque": "2234:12655"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F6.md"
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Escritorio · Tareas del día · Sin tareas",
+   "ids": {
+    "claro": "2233:8114",
+    "oscuro": "2234:18496",
+    "rosa": "2234:9633",
+    "enfoque": "2234:12743"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F6.md"
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Escritorio · Tareas del día · Tarea vencida",
+   "ids": {
+    "claro": "2233:8225",
+    "oscuro": "2234:18607",
+    "rosa": "2234:9748",
+    "enfoque": "2234:12859"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F6.md"
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Escritorio · Kanban · Sin tarjetas",
+   "ids": {
+    "claro": "2233:8333",
+    "oscuro": "2234:18715",
+    "rosa": "2234:9860",
+    "enfoque": "2234:12972"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F6.md"
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Escritorio · Kanban · Arrastrando una tarjeta",
+   "ids": {
+    "claro": "2233:8465",
+    "oscuro": "2234:18847",
+    "rosa": "2234:9996",
+    "enfoque": "2234:13109"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F6.md"
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Escritorio · Kanban · Cinco tarjetas por columna",
+   "ids": {
+    "claro": "2233:8585",
+    "oscuro": "2234:18967",
+    "rosa": "2234:10120",
+    "enfoque": "2234:13234"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F6.md"
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Escritorio · Calendario · Puntero encima",
+   "ids": {
+    "claro": "2233:8749",
+    "oscuro": "2234:19131",
+    "rosa": "2234:10288",
+    "enfoque": "2234:13403"
+   },
+   "huellas": {},
+   "cubierta_por": "83-2-diff-temas.json"
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Escritorio · Calendario · Semana desde domingo",
+   "ids": {
+    "claro": "2233:8883",
+    "oscuro": "2234:19265",
+    "rosa": "2234:10426",
+    "enfoque": "2234:13542"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F6.md"
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Escritorio · Reloj · 12 horas",
+   "ids": {
+    "claro": "2233:9055",
+    "oscuro": "2234:19437",
+    "rosa": "2234:10602",
+    "enfoque": "2234:13719"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F6.md"
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Escritorio · Clima · Sin conexión",
+   "ids": {
+    "claro": "2233:9144",
+    "oscuro": "2234:19526",
+    "rosa": "2234:10695",
+    "enfoque": "2234:13813"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F6.md"
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Escritorio · Noticias · Sin conexión",
+   "ids": {
+    "claro": "2233:9249",
+    "oscuro": "2234:19631",
+    "rosa": "2234:10804",
+    "enfoque": "2234:13923"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F6.md"
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Escritorio · Noticias · Error",
+   "ids": {
+    "claro": "2233:9358",
+    "oscuro": "2234:19740",
+    "rosa": "2234:10917",
+    "enfoque": "2234:14037"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F6.md"
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Escritorio · Noticias · Puntero encima",
+   "ids": {
+    "claro": "2233:9467",
+    "oscuro": "2234:19849",
+    "rosa": "2234:11030",
+    "enfoque": "2234:14151"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F6.md"
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Escritorio · Reproductor de música · Sin música",
+   "ids": {
+    "claro": "2233:9574",
+    "oscuro": "2234:19956",
+    "rosa": "2234:11141",
+    "enfoque": "2234:14263"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F6.md"
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Escritorio · Animación · En pausa",
+   "ids": {
+    "claro": "2233:9681",
+    "oscuro": "2234:20063",
+    "rosa": "2234:11252",
+    "enfoque": "2234:14375"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F6.md"
+  },
+  {
+   "pagina": "83:2",
+   "nombre": "Escritorio · Aviso de wallpaper",
+   "ids": {
+    "claro": "2233:9789",
+    "oscuro": "2234:20171",
+    "rosa": "2234:11364",
+    "enfoque": "2234:14488"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F6.md"
+  },
+  {
+   "pagina": "83:3",
+   "nombre": "Windgets para Windows",
+   "ids": {
+    "claro": "84:1050",
+    "oscuro": "84:1059",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "84-1050.json",
+     "formato": "medida",
+     "medidos": 9,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "83:3",
+   "nombre": "Opciones de instalación",
+   "ids": {
+    "claro": "84:1068",
+    "oscuro": "84:1080",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "84-1068.json",
+     "formato": "medida",
+     "medidos": 12,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "83:3",
+   "nombre": "Instalación en curso",
+   "ids": {
+    "claro": "84:1092",
+    "oscuro": "84:1102",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "84-1092.json",
+     "formato": "medida",
+     "medidos": 8,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "83:3",
+   "nombre": "Instalación completada",
+   "ids": {
+    "claro": "84:1112",
+    "oscuro": "84:1120",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "84-1112.json",
+     "formato": "medida",
+     "medidos": 6,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "83:3",
+   "nombre": "Opciones de instalación · Sin espacio",
+   "ids": {
+    "claro": "2264:134733",
+    "oscuro": "2264:134759",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "2264-134733.json",
+     "formato": "diferencia-medida",
+     "medidos": 3,
+     "bases": [
+      "84:1068"
+     ]
+    }
+   }
+  },
+  {
+   "pagina": "83:4",
+   "nombre": "Cancelar instalación · M-01",
+   "ids": {
+    "claro": "85:2",
+    "oscuro": "85:8",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "85-2.json",
+     "formato": "medida",
+     "medidos": 15,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "83:4",
+   "nombre": "Salir sin guardar · M-02",
+   "ids": {
+    "claro": "85:14",
+    "oscuro": "233:25809",
+    "rosa": "198:38",
+    "enfoque": "85:20"
+   },
+   "huellas": {},
+   "cubierta_por": "83-4-diff-familias.json"
+  },
+  {
+   "pagina": "83:4",
+   "nombre": "Guardar antes de salir · M-03",
+   "ids": {
+    "claro": "85:26",
+    "oscuro": "233:25822",
+    "rosa": "198:77",
+    "enfoque": "85:34"
+   },
+   "huellas": {},
+   "cubierta_por": "83-4-diff-familias.json"
+  },
+  {
+   "pagina": "83:4",
+   "nombre": "Cambiar de tema · M-04",
+   "ids": {
+    "claro": "85:42",
+    "oscuro": "233:25837",
+    "rosa": "198:118",
+    "enfoque": "85:48"
+   },
+   "huellas": {},
+   "cubierta_por": "83-4-diff-familias.json"
+  },
+  {
+   "pagina": "83:4",
+   "nombre": "Aplicar tema · M-05",
+   "ids": {
+    "claro": "85:54",
+    "oscuro": "233:25850",
+    "rosa": "198:155",
+    "enfoque": "85:60"
+   },
+   "huellas": {},
+   "cubierta_por": "83-4-diff-familias.json"
+  },
+  {
+   "pagina": "83:4",
+   "nombre": "Eliminar tema · M-06",
+   "ids": {
+    "claro": "85:66",
+    "oscuro": "233:25863",
+    "rosa": "198:192",
+    "enfoque": "85:72"
+   },
+   "huellas": {
+    "claro": {
+     "archivo": "85-66.json",
+     "formato": "medida",
+     "medidos": 10,
+     "bases": []
+    }
+   }
+  },
+  {
+   "pagina": "83:4",
+   "nombre": "Eliminar widget · M-07",
+   "ids": {
+    "claro": "85:78",
+    "oscuro": "233:25876",
+    "rosa": "198:229",
+    "enfoque": "85:84"
+   },
+   "huellas": {},
+   "cubierta_por": "83-4-diff-familias.json"
+  },
+  {
+   "pagina": "83:4",
+   "nombre": "Eliminar tarjeta · M-08",
+   "ids": {
+    "claro": "85:90",
+    "oscuro": "233:25889",
+    "rosa": "198:266",
+    "enfoque": "85:96"
+   },
+   "huellas": {},
+   "cubierta_por": "83-4-diff-familias.json"
+  },
+  {
+   "pagina": "83:4",
+   "nombre": "Eliminar columna · M-09",
+   "ids": {
+    "claro": "85:102",
+    "oscuro": "233:25902",
+    "rosa": "198:303",
+    "enfoque": "85:108"
+   },
+   "huellas": {},
+   "cubierta_por": "83-4-diff-familias.json"
+  },
+  {
+   "pagina": "83:4",
+   "nombre": "Eliminar etiqueta · M-10",
+   "ids": {
+    "claro": "85:114",
+    "oscuro": "233:25915",
+    "rosa": "198:340",
+    "enfoque": "85:120"
+   },
+   "huellas": {},
+   "cubierta_por": "83-4-diff-familias.json"
+  },
+  {
+   "pagina": "83:4",
+   "nombre": "Cerrar sesión · M-11",
+   "ids": {
+    "claro": "85:126",
+    "oscuro": "233:25928",
+    "rosa": "198:377",
+    "enfoque": "85:132"
+   },
+   "huellas": {},
+   "cubierta_por": "83-4-diff-familias.json"
+  },
+  {
+   "pagina": "83:4",
+   "nombre": "Cerrar sesión · M-12",
+   "ids": {
+    "claro": "85:138",
+    "oscuro": "233:25941",
+    "rosa": "198:414",
+    "enfoque": "85:144"
+   },
+   "huellas": {},
+   "cubierta_por": "83-4-diff-familias.json"
+  },
+  {
+   "pagina": "83:4",
+   "nombre": "Eliminar columna · M-13",
+   "ids": {
+    "claro": "85:150",
+    "oscuro": "233:25954",
+    "rosa": "198:451",
+    "enfoque": "85:156"
+   },
+   "huellas": {},
+   "cubierta_por": "83-4-diff-familias.json"
+  },
+  {
+   "pagina": "83:4",
+   "nombre": "Eliminar etiqueta · M-14",
+   "ids": {
+    "claro": "85:162",
+    "oscuro": "233:25967",
+    "rosa": "198:488",
+    "enfoque": "85:168"
+   },
+   "huellas": {},
+   "cubierta_por": "83-4-diff-familias.json"
+  },
+  {
+   "pagina": "83:4",
+   "nombre": "Aplicar cambios · M-15",
+   "ids": {
+    "claro": "85:174",
+    "oscuro": "233:25980",
+    "rosa": "198:527",
+    "enfoque": "85:182"
+   },
+   "huellas": {},
+   "cubierta_por": "83-4-diff-familias.json"
+  },
+  {
+   "pagina": "83:4",
+   "nombre": "Reinstalar Windgets · M-16",
+   "ids": {
+    "claro": "85:190",
+    "oscuro": "85:196",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {},
+   "cubierta_por": "83-4-diff-familias.json"
+  },
+  {
+   "pagina": "83:4",
+   "nombre": "Reparar instalación · M-17",
+   "ids": {
+    "claro": "85:202",
+    "oscuro": "85:206",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {},
+   "cubierta_por": "83-4-diff-familias.json"
+  },
+  {
+   "pagina": "83:4",
+   "nombre": "Eliminar etiqueta · M-10 · Resultado · Mensaje emergente",
+   "ids": {
+    "claro": "2150:65511",
+    "oscuro": "2150:65973",
+    "rosa": "2150:65665",
+    "enfoque": "2150:65819"
+   },
+   "huellas": {},
+   "cubierta_por": "83-4-diff-familias.json"
+  },
+  {
+   "pagina": "83:4",
+   "nombre": "Equipo no compatible · M-18",
+   "ids": {
+    "claro": "2264:134573",
+    "oscuro": "2264:134590",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {},
+   "cubierta_por": "83-4-diff-familias.json"
+  },
+  {
+   "pagina": "83:4",
+   "nombre": "Instalador dañado · M-19",
+   "ids": {
+    "claro": "2264:134607",
+    "oscuro": "2264:134624",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {},
+   "cubierta_por": "83-4-diff-familias.json"
+  },
+  {
+   "pagina": "83:4",
+   "nombre": "Falla de instalación · M-20",
+   "ids": {
+    "claro": "2264:134641",
+    "oscuro": "2264:134662",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {},
+   "cubierta_por": "83-4-diff-familias.json"
+  },
+  {
+   "pagina": "83:4",
+   "nombre": "Instalación cancelada · M-21",
+   "ids": {
+    "claro": "2264:134683",
+    "oscuro": "2264:134700",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {},
+   "cubierta_por": "83-4-diff-familias.json"
+  },
+  {
+   "pagina": "0:1",
+   "nombre": "Mensajes emergentes",
+   "ids": {
+    "claro": "217:17700",
+    "oscuro": "233:13948",
+    "rosa": "217:17734",
+    "enfoque": "217:17768"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F0.md"
+  },
+  {
+   "pagina": "0:1",
+   "nombre": "Aviso",
+   "ids": {
+    "claro": "217:17727",
+    "oscuro": "233:13955",
+    "rosa": "217:17761",
+    "enfoque": "217:17795"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F0.md"
+  },
+  {
+   "pagina": "0:1",
+   "nombre": "Mensajes emergentes · Apilados",
+   "ids": {
+    "claro": "220:22383",
+    "oscuro": "233:13962",
+    "rosa": "220:22406",
+    "enfoque": "220:22429"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F0.md"
+  },
+  {
+   "pagina": "0:1",
+   "nombre": "Imagen de fondo · Windgets",
+   "ids": {
+    "claro": "213:9342",
+    "oscuro": "-",
+    "rosa": "213:9367",
+    "enfoque": "213:9355"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F0.md"
+  },
+  {
+   "pagina": "0:1",
+   "nombre": "Navegación · Barra lateral del tema (conjunto de componentes)",
+   "ids": {
+    "claro": "204:32251",
+    "oscuro": "-",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "otros": [
+    "204:32252",
+    "204:32336",
+    "204:32420"
+   ],
+   "huellas": {},
+   "variantes": [
+    {
+     "id": "204:32252",
+     "archivo": "204-32252.json",
+     "formato": "medida",
+     "medidos": 15,
+     "bases": []
+    }
+   ],
+   "cubierta_por": ".trabajo/figma/F0.md"
+  },
+  {
+   "pagina": "0:1",
+   "nombre": "Mensaje emergente / Éxito",
+   "ids": {
+    "claro": "217:17624",
+    "oscuro": "-",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F0.md"
+  },
+  {
+   "pagina": "0:1",
+   "nombre": "Mensaje emergente / Información",
+   "ids": {
+    "claro": "217:17638",
+    "oscuro": "-",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F0.md"
+  },
+  {
+   "pagina": "0:1",
+   "nombre": "Mensaje emergente / Advertencia",
+   "ids": {
+    "claro": "217:17652",
+    "oscuro": "-",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F0.md"
+  },
+  {
+   "pagina": "0:1",
+   "nombre": "Mensaje emergente / Error",
+   "ids": {
+    "claro": "217:17666",
+    "oscuro": "-",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F0.md"
+  },
+  {
+   "pagina": "0:1",
+   "nombre": "Windi · estados en los cuatro temas",
+   "ids": {
+    "claro": "236:142",
+    "oscuro": "-",
+    "rosa": "-",
+    "enfoque": "-"
+   },
+   "huellas": {},
+   "cubierta_por": ".trabajo/figma/F0.md"
+  }
+ ]
+}

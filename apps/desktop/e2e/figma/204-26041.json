@@ -1,0 +1,5 @@
+{"id":"204:26041","nombre":"Overlay · Windi · Escribiendo","pagina":"79:6","tema":"claro","w":1093,"h":560,"base":"204:26015","el":[
+{"n":"Persona","ruta":"Panel lateral de Windi","t":"TEXT","txt":"Pasa «Enviar la presentación» a Por hacer."},
+{"n":"Escribiendo","ruta":"Panel lateral de Windi","t":"TEXT","w":102,"h":38,"txt":"Escribiendo…"},
+{"n":"campo","ruta":"Panel lateral de Windi","t":"FRAME","nota":"pierde su reacción"},
+{"n":"envío","ruta":"Panel lateral de Windi","t":"FRAME","rx":"ON_CLICK>NODE:204:26026/SWAP"}],"nota":"el texto de Persona se infiere del patrón de Propuesta; verificar"}

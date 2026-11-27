@@ -7,3 +7,4 @@ installer/
 supabase/
 **/dist/
 **/*.md
+apps/desktop/e2e/figma/
