@@ -44,7 +44,7 @@ Ninguna pieza de esta fase depende de una de la fase 7 (`PLAN.md:123-137`). Las 
 | [x] | F6-01a | Arnés de la prueba de tokens (cerrada = falla por lo esperado) | M | `TEMAS_Y_TOKENS.md:420`, `:538` (guion §9); `PLAN.md:123-137` | `apps/desktop/src/ui/tema/` (prueba nueva) | — | — | Compara los 4 temas con la tabla, calcula contrastes y comprueba la regla de morado y cian; **falla solo por lo que falta** (Rosa, Enfoque, variables nuevas), y esa lista queda escrita |
 | [ ] | F6-02 | Arnés de geometría Playwright | L | `PLAN.md:185-199`; tabla `data-testid` de cada spec | `apps/desktop/e2e/` (arnés nuevo) | F6-05 | — | Mide `data-testid` contra la huella JSON con ±2 px, en 1200×800 y 960×600 |
 | [ ] | F6-03 | Guion de comparación con el Figma (solo aviso) | M | `PLAN.md:185-199` | guion nuevo; salida en `.trabajo/comparacion/` | F6-02, F6-05 | — | Compara contra las huellas JSON (sin capturas); deja evidencia en `.trabajo/comparacion/`; no rompe la CI |
-| [ ] | F6-04a | Arnés de la prueba de animaciones (cerrada = falla por lo esperado) | M | `ANIMACIONES.md` §7 | `apps/desktop/src/ui/tema/movimiento.test.ts`, `apps/desktop/e2e/ANIMACIONES.spec.ts` (nuevos) | — | — | Ninguna `transition: all`; ninguna pasa el tope de duración; reduced-motion las apaga; falla solo por lo que falta (tokens `--dur-*`) |
+| [x] | F6-04a | Arnés de la prueba de animaciones (cerrada = falla por lo esperado) | M | `ANIMACIONES.md` §7 | `apps/desktop/src/ui/tema/movimiento.test.ts`, `apps/desktop/e2e/ANIMACIONES.spec.ts` (nuevos) | — | — | Ninguna `transition: all`; ninguna pasa el tope de duración; reduced-motion las apaga; falla solo por lo que falta (tokens `--dur-*`) |
 
 ## §3. La cola (orden de `PLAN.md` fase 7)
 
