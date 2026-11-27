@@ -278,28 +278,20 @@ Rutas de `ERRORES_Y_PRUEBAS.md:144-196`. **Cada ruta R está en una sola pieza**
 
 ## §4. Capacidad
 
-Suma de tallas con los % de `PLAN.md:107-113`: S 0,10; M 0,25; L 0,45 de un relevo (un límite de 5 h de una persona). Incluye las fases 6, 7 (con 3.0), 8 y 9.
+**Objetivo: todo.** Se implementa en el orden de la cola hasta donde se pueda antes de la entrega; no hay recorte acordado
+(decisión del 27-nov). La carga es la suma de tallas con los % de `PLAN.md:107-113` (S 0,10; M 0,25; L 0,45 de un límite
+de 5 h) y sirve solo para orientarse.
 
-| Fase | Piezas | S | M | L | Relevos |
+| Fase | Piezas | S | M | L | Carga (límites de 5 h) |
 |---|---|---|---|---|---|
 | Fase 6 | 5 | 1 | 3 | 1 | 1,30 |
 | Fase 7 (con 3.0) | 146 | 57 | 74 | 15 | 30,95 |
 | Fases 8 y 9 | 4 | 0 | 2 | 2 | 1,40 |
 | **Total** | **155** | **58** | **79** | **18** | **33,65** |
 
-`PLAN.md` no dice cuántos relevos tiene cada persona hasta el 1-dic. Escenarios (4 personas; un relevo = una ventana de 5 h):
-
-| Relevos por persona | Relevos del equipo | Hacen falta | Déficit |
-|---|---|---|---|
-| 4 | 16 | 33,65 | 17,65 |
-| 6 | 24 | 33,65 | 9,65 |
-| 7 | 28 | 33,65 | 5,65 |
-| 8 | 32 | 33,65 | 1,65 |
-
-Hacen falta al menos 9 relevos por persona para todo lo de la tabla. **No se decide aquí el recorte**; es de Paula. Para decidir, orden de recorte **propuesto** (de lo primero que cabe sacar a lo último): HU v13 (3.9) y L4-13; animaciones AN-01..AN-08, TK-06 y TK-06v; PL-DENS; PL-10, PL-12, PL-14 y PL-15; WE-01b e IN-04. No conviene sacar SEED-01, MG-00, F6-01a, F6-02, F6-03 ni F6-05.
-
-
 ## §5. Bloqueos (V-xx de `DECISIONES.md` §1, `:36-46`)
+
+**Todas respondidas el 27-nov** (columna «Paula cambia a:» de `DECISIONES.md` §1). Las piezas de la tabla ya no están bloqueadas: se construyen con la respuesta.
 
 Se compara cada V con el comando que la pieza llama de verdad.
 
@@ -313,17 +305,19 @@ Se compara cada V con el comando que la pieza llama de verdad.
 | V-06 | D15 (ventana) y D17 (placeholders) | AC-01 a AC-04, AN-04 |
 | V-07 | Contrastes, Q1-Q3, textos sin Figma | TK-01v, TK-02, TK-05, PW-09 |
 
-Una pieza bloqueada se salta, no se inventa la respuesta. El valor neutro provisional va a `docs/DUDAS.md`.
+Si aparece una V nueva, la pieza bloqueada se salta; no se inventa la respuesta. El valor neutro provisional va a `docs/DUDAS.md`.
 
 ## Cierre
 
-Piezas: 155 (S 58, M 79, L 18); 33,65 relevos. Fase 6: 5; fase 7: 146; fases 8 y 9: 4.
+Piezas: 155 (S 58, M 79, L 18); carga 33,65 límites de 5 h. Fase 6: 5; fase 7: 146; fases 8 y 9: 4.
 Piezas nuevas de esta ronda: F6-05, F6-01a (parte de F6-01), SEED-01, PL-01, PW-13, PW-06c, MG-00 (antes MG-01 y la migración repartida); partidas Rust/TS: PL-01ar, PL-01br, PL-EV32r, EC-08r, MG-07r, WI-08r, WI-10r, CF-04r.
 
-Pendiente de Paula:
-1. Cuántos relevos tiene cada persona hasta el 1-dic, 4:00 p. m. (`PLAN.md` no lo dice), y qué se recorta si hay déficit (§4; no está decidido).
-2. Aprobar las tallas S/M/L, que son PROPUESTA de esta cola, y la estimación de las fases 8 y 9.
-3. Resolver V-01 a V-07 (§5), sobre todo V-04, V-02 y V-03 (esta última solo para EC-15).
-4. Confirmar que Configuración (CF) va en L6, que PL-DENS es pieza propia y que R12, R27-R29 y R11 van en la pieza dueña indicada en §3.10 (el mapa se hizo por archivo).
-5. Las tallas de PL-11, PL-14, PL-15, PW-12 a PW-15, WI-10, WI-11 y EC-03 a EC-13 no traen marca S/M/L en su parte 9; son estimación de esta cola.
-6. Los tres archivos con cambios locales de `paso-44-componentes-base` (`MensajeResultado.tsx`, su prueba y `VentanaEmergente.tsx`) los cubre C3-01; hoy no se pudo consultar git.
+Decidido el 27-nov:
+1. Objetivo: todo; sin recorte (§4).
+2. Tallas S/M/L y estimación de las fases 8 y 9: aprobadas como están, incluidas las de PL-11, PL-14, PL-15, PW-12 a PW-15, WI-10, WI-11 y EC-03 a EC-13.
+3. V-01 a V-07: respondidas (§5 y `DECISIONES.md` §1).
+4. Configuración (CF) va en L6 con Personalización; PL-DENS es pieza propia; R11 en PW-11, R12 en AC-01 y R27-R29 en la pieza del instalador (§3.10).
+5. Windi estados `236:142` va en MB-27; Componentes `2003:266` es referencia (cada MB compara su control con ella, sin fila propia).
+6. Barra lateral MB-02: quien la implementa comprueba en el Figma el tema de cada una de las 3 versiones y lo anota en la spec.
+
+Pendiente: los tres archivos con cambios locales de `paso-44-componentes-base` (`MensajeResultado.tsx`, su prueba y `VentanaEmergente.tsx`) no se subieron; los cubre C3-01, que con V-04 (D7) rehace `MensajeResultado`.

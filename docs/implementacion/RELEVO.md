@@ -1,10 +1,11 @@
-# RELEVO: cómo tomar, seguir y dejar el trabajo de la fase 7
+# RELEVO: cómo tomar, seguir y traspasar las tareas de la fase 7
 
 Última actualización: viernes 27-nov-2026 (hora colombiana, UTC-5). Entrega: **martes 1-dic-2026, 4:00 p. m. (UTC-5)**.
 
-Este es el primer archivo que lee quien llega sin contexto y el último que actualiza al irse. Un **relevo** es una sesión
-de Claude Code (una cuenta o un chat nuevo de cualquiera de las 4 personas) que trabaja hasta que se le acaba el límite
-de uso (≈ 5 h) y deja el punto de retoma escrito para el siguiente. Si sigues este archivo de arriba abajo, puedes empezar
+Este es el primer archivo que lee quien llega sin contexto y el último que actualiza al irse. Cada **sesión** de Claude Code
+(una cuenta o un chat nuevo de cualquiera de las 4 personas) toma tareas (piezas) de `COLA.md` y, al terminar o al
+quedarse sin límite de uso (≈ 5 h), deja el **traspaso** escrito para la siguiente. **El objetivo es todo `COLA.md`**:
+se implementa hasta donde se pueda antes de la entrega, en el orden de la cola. Si sigues este archivo de arriba abajo, puedes empezar
 sin preguntarle nada a nadie.
 
 > **Cómo pedírselo a Claude.** En un chat nuevo, en la carpeta del repo, escribe:
@@ -19,7 +20,7 @@ sin preguntarle nada a nadie.
   a los prototipos del Figma **A3Z03L20swFyo8qdP9jETF** («Windgets (Copy)») en los **cuatro temas** (claro, oscuro, Rosa y
   Enfoque). Todas las funciones nuevas que dibujan los prototipos se implementan.
 - **Fases** (`PLAN.md`): 0-3 documentos (hechas), 4 auditoría, 5 subir los documentos (este PR), 6 herramientas de prueba
-  (son las primeras piezas de la cola), **7 implementación por relevos**, 8 pruebas finales contra los prototipos,
+  (son las primeras piezas de la cola), **7 implementación por tareas**, 8 pruebas finales contra los prototipos,
   9 documentación final y entrega.
 - **Orden de autoridad** cuando dos fuentes chocan: Figma A3Z03 → `docs/rediseno.md` y sus RD → HU, CA, ET y
   `docs/contratos.md` → `docs/rediseno_cambios_implementacion.md`. Lo que el Figma dibuja y ningún CA define se hace como
@@ -33,7 +34,7 @@ Todo está en `docs/implementacion/`, salvo donde se dice otra cosa.
 
 | Archivo | Para qué sirve | Cuándo lo lees |
 |---|---|---|
-| `RELEVO.md` (este) | Arranque, ciclo de trabajo, salida y bitácora de relevos | Siempre, primero |
+| `RELEVO.md` (este) | Arranque, ciclo de trabajo, salida y bitácora de traspasos | Siempre, primero |
 | `COLA.md` | Las 155 piezas en orden, con talla, archivos, dependencias, bloqueos y pruebas. Se marca `[x]` al cerrar | Siempre, para elegir pieza |
 | `SPEC_*.md` (8) | Qué construir en cada área: medidas, tokens, textos literales, ids de nodo del Figma, tabla «capa → `data-testid`» y parte 9 con las piezas | Solo la de tu pieza |
 | `DECISIONES.md` | Todas las decisiones vigentes. **§1 (V-01..V-07)** espera respuesta explícita de Paula; en el resto, la columna «Paula cambia a:» vacía significa aprobada | Si tu pieza tiene bloqueo V-xx o dudas de un valor |
@@ -87,9 +88,9 @@ existan, este archivo hace de entrada.
 
 - **Ramas y PR:** cada quien los organiza como quiera. Hoy los documentos están en la rama `paso-45-documentos-rediseno`
   (PR [#69](https://github.com/Forkthec/windgets/pull/69)).
-- **Fusión:** cuando se vaya a hacer un traspaso (para que el siguiente relevo parta de lo último) o cuando el equipo lo
+- **Fusión:** cuando se vaya a hacer un traspaso (para que la siguiente sesión parta de lo último) o cuando el equipo lo
   decida.
-- **Antes de empezar y antes de cada push:** `git pull --rebase`, para no pisar el trabajo del relevo anterior.
+- **Antes de empezar y antes de cada push:** `git pull --rebase`, para no pisar el trabajo de la sesión anterior.
 
 ## §6. Reglas que no se negocian
 
@@ -114,7 +115,7 @@ existan, este archivo hace de entrada.
 9. **Hora:** siempre Colombia (UTC-5). En PowerShell `Get-Date`; Git Bash muestra UTC. Las horas de `gh` terminan en `Z`:
    réstales 5 h.
 
-## §7. Arranque de cada relevo (10 pasos)
+## §7. Arranque de cada sesión (10 pasos)
 
 1. **Hora** con `Get-Date` (PowerShell).
 2. **Lee la última fila de §11** (la bitácora): ahí está la pieza a medias y la siguiente.
@@ -127,14 +128,14 @@ existan, este archivo hace de entrada.
    - Cambios sin commit en tu máquina: son tu pieza a medias; lee el diff y sigue desde ahí.
    - Un commit que `COLA.md` no marca: márcalo `[x]` si tiene prueba y CI en verde.
    - Un commit sin push: `git pull --rebase` y push normal.
-5. **CI en rojo** en la rama compartida o en `main`: arreglarlo es la siguiente pieza, antes que cualquier otra.
+5. **CI en rojo** en tu rama de trabajo o en `main`: arreglarlo es la siguiente pieza, antes que cualquier otra.
 6. **Figma:** `whoami` (plan y asiento) y `get_design_context` de `79:5` para confirmar los ids (§4).
 7. **Mira las V-xx.** En `DECISIONES.md` §1, una V-xx está **resuelta** solo si la columna «Paula cambia a:» tiene
    texto o hay un commit/mensaje de Paula que la responde. Si está vacía, sigue abierta y sus piezas no se tocan.
 8. **Elige pieza:** la primera `[ ]` de `COLA.md` cuyo «Depende de» esté todo en `[x]` y cuyo «Bloqueada por» esté vacío o
    resuelto. Las primeras, en el orden de `COLA.md`, son las de la fase 6: F6-05, F6-01a…F6-04a, SEED-01, S10-SP, TK-*, MG-00.
 9. **Reserva la pieza:** agrega en §11 una fila con hora, tu nombre y cuenta, y la pieza «en curso»; commit
-   `infra: tomar <ID> en el relevo` y push. Así nadie toma la misma.
+   `infra: tomar <ID>` y push. Así nadie toma la misma.
 10. **Lee la spec de la pieza** (sección y parte 9) antes de escribir código.
 
 ## §8. Ciclo de una pieza (`PLAN.md` fase 7, «Cada pieza»)
@@ -161,23 +162,22 @@ Hazlo **antes** de que se acabe el límite: con menos de ~15 % de cupo, deja de 
 
 1. **Deja un commit que compile.** Si la pieza está a medias y no hay un punto que compile, no la subas a medias:
    guárdala con `git stash push -m "<ID> a medias"` en tu máquina, o súbela en una rama aparte
-   `paso-NN-<ID>-a-medias` (nunca a la compartida) y nómbrala en tu fila.
+   `paso-NN-<ID>-a-medias` (nunca a una rama que otros usan) y nómbrala en tu fila.
 2. **Llena tu fila** en la bitácora de abajo (reemplaza «en curso» por lo real):
    fecha y hora (UTC-5), quién y cuenta, rama y punta (`git rev-parse --short HEAD`) con o sin push, piezas cerradas `[x]`,
    pieza a medias (qué falta, archivos, pruebas en rojo con su mensaje), estado de la CI, cupo de Figma gastado,
    decisiones nuevas para Paula (ID de la fila en `DECISIONES.md`) y siguiente pieza.
-3. **Commit** `infra: dejar el relevo de <nombre>` y push.
+3. **Commit** `infra: dejar el traspaso de <nombre>` y push.
 
 ## §10. Qué hacer si…
 
-- **`main` o la rama compartida están en rojo:** la siguiente pieza es arreglarlo. No sigas la cola con la CI rota.
-- **Tu pieza depende de una V-xx abierta:** no la construyas ni inventes el valor. Salta a la siguiente pieza libre y
-  anota la pregunta en tu fila. Hoy las 7 (V-01..V-07) siguen abiertas; V-04 (posición y ancho de los avisos) frena 50
-  filas de `TRAZABILIDAD.md`.
+- **`main` o la rama de trabajo están en rojo:** la siguiente pieza es arreglarlo. No sigas la cola con la CI rota.
+- **Tu pieza depende de una decisión abierta:** no la construyas ni inventes el valor. Salta a la siguiente pieza libre
+  y anota la pregunta en tu fila. Las V-01..V-07 se respondieron el 27-nov (§12); si aparece una nueva, va así.
 - **`git pull --rebase` da conflicto en un archivo compartido:** conserva los dos bloques (cada pieza tiene el suyo);
   si no es obvio, para y pregunta en el grupo. Nunca resuelvas con push con fuerza.
-- **El spike S10 (notificación de Windows con botones) falla:** escribe el resultado en `DECISIONES.md` (V-03); Paula
-  decide entre notificación sin botones o aviso en la app. EC-15r espera esa respuesta.
+- **El spike S10 (notificación de Windows con botones) falla:** ya está decidido (V-03): solo aviso en la app. Escribe el
+  resultado del spike en `DECISIONES.md` y sigue con EC-15r/EC-15 con esa decisión.
 - **Se acaba tu cupo de Figma:** para de abrir nodos y trabaja con las huellas JSON y las specs, que traen los valores
   medidos. Anótalo en tu fila.
 - **Un comando se bloquea por el guardia** (en los perfiles que lo tienen): no lo esquives ni lo debilites. Deja el
@@ -186,11 +186,29 @@ Hazlo **antes** de que se acabe el límite: con menos de ~15 % de cupo, deja de 
   regla, en `DECISIONES.md`.
 - **No sabes si algo está en el alcance:** si no está en un CA, ET, contrato, modelo o el Figma, no se hace.
 
-## §11. Bitácora de relevos
+## §11. Bitácora de traspasos
 
-La **última fila manda**. Una fila por relevo: se abre al tomar la pieza (§7 paso 9) y se completa al irse (§9).
+La **última fila manda**. Una fila por sesión: se abre al tomar la pieza (§7 paso 9) y se completa al irse (§9).
 
 | Fecha y hora (UTC-5) | Quién y cuenta | Rama y punta | Cerradas `[x]` | A medias (falta, archivos, pruebas en rojo) | CI | Cupo Figma | Decisiones para Paula | Siguiente |
 |---|---|---|---|---|---|---|---|---|
 | 2026-11-27 (ejemplo de formato) | Ana, cuenta B | `paso-45-documentos-rediseno` @ `abc1234`, con push | F6-05, F6-01a | TK-01: falta la sección de Rosa en `tokens.css`; `tokens_cuatro_temas` en rojo | verde | 38 de 200 | fila nueva D-31 en `DECISIONES.md` | TK-01 |
-| 2026-11-27 | Documentos (fases 0-3) | `paso-45-documentos-rediseno` @ `0fd1427`, con push; PR #69 en borrador | Fases 0-3 (documentos) | Faltan `LEEME.md` y `PRUEBAS_Y_CIERRE.md` (F9-02); V-01..V-07 sin respuesta | — | — | V-01..V-07 en `DECISIONES.md` §1 | F6-05 (primera de `COLA.md`) |
+| 2026-11-27 | Documentos (fases 0-3) | `paso-45-documentos-rediseno` @ `0fd1427`, con push; PR #69 en borrador | Fases 0-3 (documentos) | Faltan `LEEME.md` y `PRUEBAS_Y_CIERRE.md` (F9-02); V-01..V-07 respondidas el 27-nov | — | — | — | F6-05 (primera de `COLA.md`) |
+
+## §12. Decisiones del 27-nov que cambian la implementación
+
+Detalle en `DECISIONES.md` §1 (columna «Paula cambia a:»), `COLA.md` «Cierre» y `TRAZABILIDAD.md` «Decidido el 27-nov».
+
+| Tema | Decisión | Qué cambia |
+|---|---|---|
+| V-04 avisos | **D7**: franja superior (y=4), un aviso visible, ancho máx. min(480, 966 − miga − 16). El Error se queda hasta cerrarlo | Se rehacen `MensajeResultado` y `tokens.css` (C3-01 y piezas de V-04) y se ajustan las specs que cita la fila V-04 |
+| V-02 errores | Se aplican C-13, C-17, C-18, C-19 y C-20 | C-19: el literal del Figma «Error de sincronización · N pendientes» reemplaza el de HE-01-HU01-CA05 |
+| V-03 recordatorio | Si el spike no logra botones: solo aviso en la app | Sin notificación de Windows en ese caso |
+| V-01 segundo plano | Todo visible: código estable y aviso | ER-04 |
+| V-05 P43 | Se corrigen los 8 previsibles | PW-10, PL-02, PL-13 |
+| V-06 | D15 ventana maximizada; D17 ejemplos de formato | AC-01..AC-04, ventana principal |
+| V-07 | Contrastes: ajustar la variable lo mínimo; Q1-Q3 y textos propuestos, aprobados | TK-*, catálogo |
+| Alcance | Objetivo todo; tallas aprobadas; CF en L6; PL-DENS aparte; R11→PW-11, R12→AC-01, R27-R29→instalador | — |
+| Marcos | `236:142` → MB-27; `2003:266` referencia; MB-02: comprobar el tema de cada versión en el Figma | — |
+| Pruebas | Manual: escritorio, instalador, escala, bandeja, notificaciones. HE-06-HU04-CA04 se retira (CA06). Los 13 de Escritorio llevan prueba | — |
+| Specs | Aprobadas para empezar; se revisan después y pueden cambiar | — |
