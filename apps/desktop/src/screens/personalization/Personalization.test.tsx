@@ -664,11 +664,11 @@ describe('HE-02-HU06 · Tipografía del tema', () => {
     await screen.findByRole('list', { name: 'Catálogo de tipografías' });
     const tamano = (nombre: string) =>
       within(within(seccion()).getByRole('group', { name: 'Tamaño' })).getByRole('button', { name: nombre });
-    // ET04: «Mediano» por defecto. ET05: 16 px.
+    // ET04: «Mediano» por defecto. ET05 con P4 (RD-107): 14 px; «Grande» 18 px.
     expect(tamano('Mediano').getAttribute('aria-pressed')).toBe('true');
-    expect(vistaPrevia().style.fontSize).toBe('16px');
+    expect(vistaPrevia().style.fontSize).toBe('14px');
     fireEvent.click(tamano('Grande'));
-    await waitFor(() => expect(vistaPrevia().style.fontSize).toBe('20px'));
+    await waitFor(() => expect(vistaPrevia().style.fontSize).toBe('18px'));
     expect(llamadasA(nucleo, 'theme_draft_update')).toEqual([{ patch: { font_size: 'large' } }]);
   });
 });
@@ -762,12 +762,12 @@ describe('HE-02-HU08 · Restablecer los colores y la tipografía', () => {
     const catalogo = await screen.findByRole('list', { name: 'Catálogo de tipografías' });
     fireEvent.click(within(catalogo).getByRole('button', { name: 'Inter' }));
     fireEvent.click(within(tipografia()).getByRole('button', { name: 'Grande' }));
-    await waitFor(() => expect(vistaPrevia().style.fontSize).toBe('20px'));
+    await waitFor(() => expect(vistaPrevia().style.fontSize).toBe('18px'));
     restablecerEnElNucleo(nucleo);
     // ET03: la opción está en la sección «Tipografía».
     fireEvent.click(within(tipografia()).getByRole('button', { name: 'Restablecer tipografía' }));
     // ET02: la fuente de la plantilla y el tamaño «Mediano».
-    await waitFor(() => expect(vistaPrevia().style.fontSize).toBe('16px'));
+    await waitFor(() => expect(vistaPrevia().style.fontSize).toBe('14px'));
     expect(vistaPrevia().style.fontFamily).toContain('Nunito');
     expect(within(tipografia()).getByRole('button', { name: 'Mediano' }).getAttribute('aria-pressed')).toBe(
       'true',

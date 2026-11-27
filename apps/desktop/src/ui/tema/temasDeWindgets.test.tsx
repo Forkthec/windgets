@@ -21,7 +21,7 @@ const TABLA = [
   ['tinta', '#17131D', '#F8F5FF'],
   ['texto', '#554F5E', '#CEC7D6'],
   ['accion', '#00D9E2', '#00D9E2'],
-  ['sobre_accion', '#17131D', '#17131D'],
+  ['sobre_accion', '#0B2A2E', '#0B2A2E'], // TK-05, P3
   ['borde', '#241C30', '#AFA1C0'],
   ['sombra', '3px 5px 0 #241C30', '3px 5px 0 #100D15'],
   ['error', '#B3261E', '#FF8A80'],
@@ -52,6 +52,20 @@ describe('RD-94 · Tokens fijos de Windgets claro y Windgets oscuro', () => {
     expect(tokens.fuente).toBe('x');
     expect(tokens.tamano_fuente).toBe('16px');
   });
+
+  it.each(TEMAS)(
+    'TK-05 · %s: los rellenos de estado son los de la tabla 1, sin fórmula (Q1)',
+    (_, colores, columna) => {
+      const t = tokensDeLosColores({ ...colores, ...letra });
+      const tabla = {
+        relleno_vencida: ['#F4C2BE', '#5F2930'],
+        relleno_pendiente: ['#E8DDBC', '#5F4E30'],
+        relleno_completada: ['#BBE5C9', '#2A5B42'],
+      } as const;
+      for (const [nombre, valores] of Object.entries(tabla))
+        expect(t[nombre as keyof typeof tabla], nombre).toBe(valores[columna - 1]);
+    },
+  );
 
   it('reconoce el tema aunque los colores lleguen en minúsculas', () => {
     const tokens = tokensDeLosColores({

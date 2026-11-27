@@ -12,11 +12,13 @@ const TEMAS = {
     superficie_baja: 'rgb(237, 227, 255)',
     tinta: 'rgb(23, 19, 29)',
     accion: 'rgb(0, 217, 226)',
-    sobre_accion: 'rgb(23, 19, 29)',
+    sobre_accion: 'rgb(11, 42, 46)', // TK-05, P3
     borde: 'rgb(36, 28, 48)',
     sombra: 'rgb(36, 28, 48) 3px 5px 0px 0px',
     error: 'rgb(179, 38, 30)',
     secundario: 'rgb(102, 4, 230)',
+    seleccion: 'rgb(102, 4, 230)',
+    sobre_seleccion: 'rgb(255, 255, 255)',
   },
   oscuro: {
     colores: { primary: '#201B2B', secondary: '#5D566B', text: '#F8F5FF' },
@@ -24,11 +26,13 @@ const TEMAS = {
     superficie_baja: 'rgb(67, 50, 88)',
     tinta: 'rgb(248, 245, 255)',
     accion: 'rgb(0, 217, 226)',
-    sobre_accion: 'rgb(23, 19, 29)',
+    sobre_accion: 'rgb(11, 42, 46)', // TK-05, P3
     borde: 'rgb(175, 161, 192)',
     sombra: 'rgb(16, 13, 21) 3px 5px 0px 0px',
     error: 'rgb(255, 138, 128)',
     secundario: 'rgb(211, 178, 255)',
+    seleccion: 'rgb(0, 217, 226)',
+    sobre_seleccion: 'rgb(11, 42, 46)',
   },
 } as const;
 
@@ -173,8 +177,9 @@ for (const [nombre, tema] of Object.entries(TEMAS)) {
     expect(await estilo(destructivo, 'border-top-color')).toBe(tema.error);
 
     expect(await estilo(page.locator('#grupo'), 'border-top-color')).toBe(tema.borde);
-    expect(await estilo(page.locator('#elegida'), 'background-color')).toBe(tema.secundario);
-    expect(await estilo(page.locator('#elegida'), 'color')).toBe(tema.superficie);
+    // RD-107 (TK-05): la opción elegida va en `seleccion` y `sobre_seleccion`.
+    expect(await estilo(page.locator('#elegida'), 'background-color')).toBe(tema.seleccion);
+    expect(await estilo(page.locator('#elegida'), 'color')).toBe(tema.sobre_seleccion);
     expect(await estilo(page.locator('#otra'), 'background-color')).toBe('rgba(0, 0, 0, 0)');
   });
 
@@ -268,7 +273,7 @@ test('RD-99 · En las pantallas, Mes y Semana usan «secundario» y la tira de l
   await menu.getByRole('button', { name: 'Calendario', exact: true }).click();
   await expect(elegida('.wg-segmentado__opcion')).toBeVisible();
   await pintar(page, TEMAS.claro.colores);
-  expect(await estilo(elegida('.wg-segmentado__opcion'), 'background-color')).toBe(TEMAS.claro.secundario);
+  expect(await estilo(elegida('.wg-segmentado__opcion'), 'background-color')).toBe(TEMAS.claro.seleccion);
   await menu.getByRole('button', { name: 'Agenda diaria', exact: true }).click();
   await expect(elegida('.wg-agenda__dia-de-la-tira')).toBeVisible();
   await pintar(page, TEMAS.claro.colores);

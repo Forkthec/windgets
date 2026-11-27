@@ -25,7 +25,7 @@ export const TOKENS_POR_DEFECTO: Tokens = {
   relleno_pendiente: '#B67C2B',
   relleno_completada: '#389B55',
   fuente: "'Rubik', 'Segoe UI', sans-serif",
-  tamano_fuente: '16px', // «Mediano»: el valor en píxeles no está definido (HE-02, tabla de tipografía)
+  tamano_fuente: '14px', // «Mediano» = 14 px (TK-05, P4; docs/rediseno.md RD-107)
 };
 
 // docs/rediseno.md RD-94 (IM-01): «Windgets claro» y «Windgets oscuro» no derivan sus colores; usan esta tabla.
@@ -37,6 +37,8 @@ export interface TemaDeWindgets {
   /** Los tres colores de la plantilla y de la paleta del mismo nombre (0007, 0008). */
   colores: { primary: string; secondary: string; text: string };
   tokens: Record<NombreFijo, string>;
+  /** TK-05, Q1: los rellenos de estado son los de la tabla 1 de TEMAS_Y_TOKENS.md, sin fórmula. */
+  rellenos: Record<`relleno_${'vencida' | 'pendiente' | 'completada'}`, string>;
 }
 
 export const TEMAS_DE_WINDGETS: Record<'claro' | 'oscuro', TemaDeWindgets> = {
@@ -54,7 +56,7 @@ export const TEMAS_DE_WINDGETS: Record<'claro' | 'oscuro', TemaDeWindgets> = {
       tinta: '#17131D',
       texto: '#554F5E',
       accion: '#00D9E2',
-      sobre_accion: '#17131D',
+      sobre_accion: '#0B2A2E', // TK-05, P3: texto sobre relleno cian
       borde: '#241C30',
       sombra: '3px 5px 0 #241C30',
       error: '#B3261E',
@@ -71,6 +73,7 @@ export const TEMAS_DE_WINDGETS: Record<'claro' | 'oscuro', TemaDeWindgets> = {
       perilla: '#FFFFFF',
       informacion: '#00D9E2',
     },
+    rellenos: { relleno_vencida: '#F4C2BE', relleno_pendiente: '#E8DDBC', relleno_completada: '#BBE5C9' },
   },
   oscuro: {
     colores: { primary: '#201B2B', secondary: '#5D566B', text: '#F8F5FF' },
@@ -86,7 +89,7 @@ export const TEMAS_DE_WINDGETS: Record<'claro' | 'oscuro', TemaDeWindgets> = {
       tinta: '#F8F5FF',
       texto: '#CEC7D6',
       accion: '#00D9E2',
-      sobre_accion: '#17131D',
+      sobre_accion: '#0B2A2E', // TK-05, P3: texto sobre relleno cian
       borde: '#AFA1C0',
       sombra: '3px 5px 0 #100D15',
       error: '#FF8A80',
@@ -103,6 +106,7 @@ export const TEMAS_DE_WINDGETS: Record<'claro' | 'oscuro', TemaDeWindgets> = {
       perilla: '#FFFFFF',
       informacion: '#00D9E2',
     },
+    rellenos: { relleno_vencida: '#5F2930', relleno_pendiente: '#5F4E30', relleno_completada: '#2A5B42' },
   },
 };
 
