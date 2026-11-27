@@ -52,7 +52,7 @@ Ninguna pieza de esta fase depende de una de la fase 7 (`PLAN.md:123-137`). Las 
 
 | | ID | Título | Talla | Spec y piezas (IDs) | Archivos principales | Depende de | Bloqueada por | Pruebas que deben pasar |
 |---|---|---|---|---|---|---|---|---|
-| [ ] | SEED-01 | Pieza semilla: catálogo de errores, `tokens.css`, `marco.css`, Postman, `contratos.md`, `DUDAS.md` con sus puntos de extensión | M | `ERRORES_Y_PRUEBAS.md:256-266` (58 códigos PROPUESTA por grupo); `DECISIONES.md` PC-G1..PC-NUEVOS, S19; tabla de §1 | `errores.rs`, `messages.es.json`, `messages.rs`, `tokens.css`, `marco.css`, colección Postman | F6-01a | — | `cargo test`; prueba que compara largos de columna con los del dominio; no cambia comportamiento. «Huérfanas»: ninguna ruta R queda sin pieza dueña (ver §3.10); si al cerrar la cola alguna quedara, va a ER-04 |
+| [x] | SEED-01 | Pieza semilla: catálogo de errores, `tokens.css`, `marco.css`, Postman, `contratos.md`, `DUDAS.md` con sus puntos de extensión | M | `ERRORES_Y_PRUEBAS.md:256-266` (58 códigos PROPUESTA por grupo); `DECISIONES.md` PC-G1..PC-NUEVOS, S19; tabla de §1 | `errores.rs`, `messages.es.json`, `messages.rs`, `tokens.css`, `marco.css`, colección Postman | F6-01a | — | `cargo test`; prueba que compara largos de columna con los del dominio; no cambia comportamiento. «Huérfanas»: ninguna ruta R queda sin pieza dueña (ver §3.10); si al cerrar la cola alguna quedara, va a ER-04 |
 | [ ] | S10-SP | Spike S10: notificación de Windows con botones, y plan B | L | `DECISIONES.md` S10, PR-S10; `SPEC_Planificador.md:160-166` | prueba de concepto; resultado en `DECISIONES.md` | — | — | Resultado escrito. Si el spike no logra botones, Paula decide entre notificación sin botones o aviso en la app |
 
 ### 3.1 Cierre de L3

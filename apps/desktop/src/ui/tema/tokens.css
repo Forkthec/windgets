@@ -1631,3 +1631,23 @@ body[data-sesion] .wg-boton.wg-boton--texto-peligro:not(:disabled) {
 .wg-campo__ojo:focus-visible {
   color: var(--wg-tinta);
 }
+
+/* Fase 7 del rediseño (SEED-01): un bloque por área. Cada pieza escribe solo en el de su área (docs/implementacion/COLA.md §1, «Archivos compartidos»). Los colores y valores de los temas los escriben TK-01, TK-03 y TK-05; el movimiento, TK-06 (arriba, en :root). */
+
+/* ── Marco y componentes base (MB, C3, L4, AN) ── */
+
+/* ── Planificador (PL) ── */
+
+/* ── Personalización y widgets (PW, MG) ── */
+
+/* ── Configuración (CF) ── */
+
+/* ── Windi (WI) ── */
+
+/* ── Cuenta y acceso (AC) ── */
+
+/* ── Escritorio y capa (EC) ── */
+
+/* ── Instalador y web (IN, WE) ── */
+
+/* ── Errores y lecturas silenciosas (ER) ── */
