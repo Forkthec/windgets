@@ -1,0 +1,6 @@
+{"id":"204:26026","nombre":"Overlay · Windi · Propuesta","pagina":"79:6","tema":"claro","w":1093,"h":560,"base":"204:26015","el":[
+{"n":"Persona","ruta":"Panel lateral de Windi","t":"TEXT","w":266,"h":56,"txt":"Pasa «Enviar la presentación» a Por hacer."},
+{"n":"Nuevo · Propuesta","ruta":"Panel lateral de Windi","t":"INSTANCE","w":203,"h":77,"comp":"Windi · Propuesta:Estado=Pendiente","ptxt":["¿Muevo la tarjeta a Por hacer?","Confirmar","Rechazar"],"nota":"botones visibles sin reacción"},
+{"n":"Ir · Windi","ruta":"Panel lateral de Windi","t":"FRAME","oculto":1,"rx":"ON_CLICK>NODE:204:26015"},
+{"n":"Ir · Windi · Propuesta descartada","ruta":"Panel lateral de Windi","t":"FRAME","oculto":1,"rx":"ON_CLICK>NODE:204:26074"},
+{"n":"envío","ruta":"Panel lateral de Windi","t":"FRAME","nota":"pierde su reacción"}],"quitados":["mensaje ¿Qué organizamos hoy? visible"]}

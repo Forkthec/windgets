@@ -1,0 +1,3 @@
+{"id":"204:26002","nombre":"Overlay · M-12 · Tema Windgets claro","pagina":"79:6","tema":"claro","w":600,"h":256,"base":"204:25989","el":[
+{"n":"cuerpo","ruta":"Nota de confirmación","t":"TEXT","x":108,"y":100,"w":382,"h":38,"fill":"tinta","txt":"Tienes cambios sin sincronizar. Si cierras sesión ahora, se perderán. ¿Deseas cerrar sesión?","font":"Nunito Regular 14"},
+{"n":"Cerrar sesión","ruta":"Nota de confirmación","t":"FRAME","comp":"Botón:Nivel=Destructivo","fill":"superficie","stroke":"error","sw":1.5,"ptxt":["Cerrar sesión|texto #b3261e"]}],"quitados":["¿Deseas cerrar sesión? (solo)"],"nota":"ninguna pantalla abre M-12"}

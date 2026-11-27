@@ -1,0 +1,17 @@
+{"id":"84:1068","nombre":"Opciones de instalación · Claro","pagina":"83:3","tema":"claro","w":1280,"h":790,"fill":"marco","clip":true,"el":[
+{"n":"windgets","t":"TEXT","x":91,"y":34,"w":121,"h":31,"fill":"tinta","font":"Rubik Bold 26"},
+{"n":"Nuevo · símbolo","t":"FRAME","x":50,"y":34,"w":34,"h":31},
+{"n":"Opciones de instalación","t":"TEXT","x":285,"y":106,"w":473,"h":47,"fill":"tinta","font":"Rubik Bold 40"},
+{"n":"Contenido","t":"FRAME","x":285,"y":186,"w":710,"h":348,"fill":"superficie","r":16},
+{"n":"Carpeta de instalación","ruta":"Contenido","t":"FRAME","x":28,"y":25,"w":654,"h":57,"fill":"superficie_baja","r":8},
+{"n":"Carpeta de instalación","ruta":"Contenido/Carpeta","t":"TEXT","x":15,"y":8,"w":177,"h":20,"fill":"tinta","font":"Rubik Regular 17"},
+{"n":"Nuevo · ruta","ruta":"Contenido/Carpeta","t":"TEXT","x":15,"y":32,"w":263,"h":17,"fill":"texto","txt":"%LOCALAPPDATA%\\Programs\\Windgets","font":"Rubik Regular 14"},
+{"n":"Nuevo · botón Cambiar","ruta":"Contenido/Carpeta","oculto":1},
+{"n":"Inicio automático","ruta":"Contenido","t":"FRAME","x":28,"y":97,"w":654,"h":57,"fill":"superficie_baja","r":8},
+{"n":"Inicio automático","ruta":"Contenido/Inicio","t":"TEXT","x":15,"y":19,"w":284,"h":20,"fill":"tinta","txt":"Abrir la aplicación al iniciar Windows","font":"Rubik Regular 17"},
+{"n":"Nuevo · Interruptor Inicio automático","ruta":"Contenido/Inicio","t":"INSTANCE","x":595,"y":17,"w":44,"h":24,"fill":"principal_legible","stroke":"principal_legible","sw":1.5,"r":8,"comp":"Interruptor:Estado=Encendido, Interacción=Normal"},
+{"n":"Instalar","ruta":"Contenido","t":"FRAME","x":28,"y":273,"w":83,"h":36,"r":9,"rx":"ON_CLICK NODE NAVIGATE 84:1092"},
+{"n":"Botón","ruta":"Contenido/Instalar","t":"INSTANCE","w":83,"h":36,"fill":"accion","stroke":"borde","sw":1.5,"r":9,"sh":"3,5,0,0,#241c30","comp":"Botón:Principal/Normal/Normal","txt":"Instalar"},
+{"n":"Cancelar","ruta":"Contenido","t":"FRAME","x":125,"y":273,"w":91,"h":36,"r":9,"rx":"ON_CLICK URL https://www.figma.com/proto/A3Z03L20swFyo8qdP9jETF/Windgets--Copy-?node-id=85-2"},
+{"n":"Botón","ruta":"Contenido/Cancelar","t":"INSTANCE","w":91,"h":36,"fill":"superficie","stroke":"borde","sw":1.5,"r":9,"comp":"Botón:Secundario/Normal/Normal","txt":"Cancelar"}
+]}

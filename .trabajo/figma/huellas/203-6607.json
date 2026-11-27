@@ -1,0 +1,12 @@
+{"id":"203:6607","nombre":"Personalización · 4 Widgets","tema":"claro","w":1093,"h":560,"base":"203-6362","el":[
+"+ migas T «Personalización  ›  4 Widgets»",
+"+ /Panel · 4 Widgets F @769,100 300x348 f=superficie s=linea/1 r10",
+"+ P/«Widgets del tema» T @781,110 tinta Medium 17",
+"+ P/Ir · catalog F @1021,104 36x36 r7 > Botón ícono; P/Ir · Organizar widgets F @981,104 36x36 r7 > Botón ícono",
+"+ P/Ir · cfg/{Reloj|Calendario|Tareas del día|Kanban} F 276x40 f=superficie s=linea/1 r9 @781,144/186/228/270: T nombre tinta Medium 13; T «Widget por defecto» texto 11; Ícono 20x20; Interruptor 44x24 Encendido (f=principal_legible r8); Configurar 32x32 r9; «Eliminar X · deshabilitado» 32x32 r5",
+"+ P/Ir · Forma de los widgets F @781,316 276x36 s=linea/undefined (sin relleno ni radio): T «Forma de los widgets»; T «Suaves  ›» tinta Regular 15",
+"+ P/Ir · Distribución predefinida F @781,354 276x36 igual: T «Distribución predefinida»; T «Original  ›»",
+"~ step4 Actual, step1 Otro"],
+"quitados":["migas y Panel · 1 Tema"],
+"reacciones":["Ir · step1/2/3 → 203:6362/6440/6520","Ir · catalog → 203:6696","Ir · cfg/Reloj → 203:7821; Calendario → 203:7904; Tareas del día → 203:7987; Kanban → 203:8070","Activar o desactivar X ×4 → CONDITIONAL + SET_VARIABLE 211:6096='Cambios sin guardar'","Ir · Forma de los widgets → 203:10717","Ir · Distribución predefinida → 203:10794","Ir · Organizar widgets → 203:9957","M-02, Guardado, M-05, Windi como la base (sin transición)"],
+"colores_fijos":["#1b1721×1 Oscurecer imagen"]}

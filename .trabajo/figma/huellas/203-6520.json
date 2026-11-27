@@ -1,0 +1,14 @@
+{"id":"203:6520","nombre":"Personalización · 3 Colores y tipografía","tema":"claro","w":1093,"h":560,"base":"203-6362","el":[
+"+ migas T «Personalización  ›  3 Colores y tipografía»",
+"+ /Panel · 3 Colores y tipografía F @769,100 300x348 f=superficie s=linea/1 r10",
+"+ P/«Paletas» T @781,110 tinta Medium 17",
+"+ P/Ir · Paletas ×4 F 134x36 f=superficie_baja r7 sin trazo @781,144 «✓ Windgets claro» | @923,144 «Windgets oscuro» | @781,188 «Rosa pastel» | @923,188 «Enfoque rojo y negro» (Nunito Medium 12)",
+"+ P/Ir · Selector de color F @781,234 276x36 f=superficie s=borde_campo/1.5 r9: T «Colores del tema»; T «3 colores»; T «›»",
+"+ P/muestras R 16x16 r4 f=principal «Principal» @786,280; secundario «Secundario» @889,280; tinta «Texto» @992,280 (nodo 'tinta', texto 'Texto')",
+"+ P/Ir · Tipografía F @781,312 276x36 igual a Selector: T «Tipografía»; T «Rubik · Mediano»; T «›»",
+"+ P/Ir · Restablecer colores F @781,356 159x36 r7 > Botón Secundario",
+"+ P/Ir · Restablecer tipografía F @781,400 175x36 r7 > Botón Secundario",
+"~ step3 Actual, step1 Otro; pasos movidos 2 px a la izquierda respecto de la base"],
+"quitados":["migas y Panel · 1 Tema"],
+"reacciones":["Ir · step1 → 203:6362; step2 → 203:6440; step4 → 203:6607","Ir · Paletas ×4 → 203:10490 «Paletas»","Ir · Selector de color → 203:10565","Ir · Tipografía → 203:10640","Ir · Restablecer colores y Restablecer tipografía → 203:10942","M-02, Guardado, M-05, Windi como la base (sin transición)"],
+"colores_fijos":["#1b1721×1 Oscurecer imagen"]}

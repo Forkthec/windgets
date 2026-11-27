@@ -1,0 +1,1 @@
+{"id": "217:17802", "nombre": "Organizar widgets · Arrastrando", "tema": "claro", "w": 1093, "h": 560, "base": "203-9957", "el": ["~ widget Reloj 190.5x106 en (200,130) f:superficie s:borde r13 (movido)"], "quitados": [], "reacciones": ["Reloj ON_DRAG→217:17946 SMART_ANIMATE 0,2 s EASE_OUT", "Ir·Cambios sin guardar→217:22821 NAVIGATE"], "colores_fijos": []}

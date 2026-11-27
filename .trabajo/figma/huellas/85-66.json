@@ -1,0 +1,13 @@
+{"id":"85:66","nombre":"Eliminar tema · M-06 · Tema Windgets claro","pagina":"83:4","tema":"claro","w":600,"h":256,"fill":"fondo=#ffffff","r":8,"el":[
+{"n":"Velo","t":"RECTANGLE","x":0,"y":0,"w":600,"h":256,"fill":"velo=#17131d@0.4"},
+{"n":"Papel","t":"VECTOR","x":88,"y":48,"w":424,"h":160,"fill":"superficie_alta=#fffbea","stroke":"borde=#241c30","sw":1.5,"sh":"3,5,0,0,#241c30","path":"esquinas r=10 (izq. y abajo-der.), pliegue 22 arriba-der."},
+{"n":"Eliminar tema","t":"TEXT","x":108,"y":66,"w":129,"h":27,"fill":"tinta=#17131d","txt":"Eliminar tema","font":"Nunito Bold 20"},
+{"n":"Cuerpo","t":"TEXT","x":108,"y":100,"w":382,"h":38,"fill":"tinta","txt":"¿Deseas eliminar el tema “Rosa pastel”? Esta acción no se puede deshacer.","font":"Nunito Regular 14"},
+{"n":"Cerrar","t":"FRAME","x":460,"y":58,"w":32,"h":32,"rx":"URL node-id=203-6362"},
+{"n":"Botón ícono","ruta":"Cerrar","t":"INSTANCE","x":460,"y":58,"w":32,"h":32,"r":9,"comp":"Botón ícono:Tamaño=Fila, Estado=Normal"},
+{"n":"Eliminar tema (envoltorio)","t":"FRAME","x":369,"y":158,"w":123,"h":36,"rx":"URL node-id=203-6362"},
+{"n":"Eliminar tema (texto oculto)","t":"TEXT","oculto":1,"txt":"Eliminar tema"},
+{"n":"Botón","ruta":"Eliminar tema","t":"INSTANCE","x":369,"y":158,"w":123,"h":36,"fill":"superficie=#ffffff","stroke":"error=#b3261e","sw":1.5,"r":9,"comp":"Botón:Nivel=Destructivo, Tamaño=Normal, Estado=Normal","txt":"Eliminar tema","txtfill":"error=#b3261e","font":"Medium 14"},
+{"n":"Cancelar (envoltorio)","t":"FRAME","x":270,"y":158,"w":91,"h":36,"rx":"URL node-id=203-6362"},
+{"n":"Botón","ruta":"Cancelar","t":"INSTANCE","x":270,"y":158,"w":91,"h":36,"fill":"superficie=#ffffff","stroke":"borde=#241c30","sw":1.5,"r":9,"comp":"Botón:Nivel=Secundario, Tamaño=Normal, Estado=Normal","txt":"Cancelar","txtfill":"tinta","font":"Medium 14"}
+],"notas":"Base del diálogo estándar de 424x160 (M-02,04,05,06,07,08,09,10,11,12,13,14,16,17,18-21 solo cambian textos, botones y destinos). Variante ancha 512x160 (x=44) con 3 botones: M-03 y M-15. Diffs de las demás en 83-4-diff-familias.json."}

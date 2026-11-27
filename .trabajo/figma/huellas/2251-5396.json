@@ -1,0 +1,1 @@
+{"id":"2251:5396","nombre":"Aviso · Cambios sincronizados","pagina":"79:6","tema":"claro","w":1093,"h":560,"base":"204:3109","el":[{"n":"Aviso","t":"INSTANCE","w":245,"h":42,"r":21,"comp":"Mensaje emergente / Éxito:Estado=Visible","ptxt":["Tus cambios se sincronizaron.|Nunito Regular 13"],"rx":["AFTER_TIMEOUT 4 s>CHANGE_TO 217:17637","MOUSE_ENTER>CHANGE_TO 217:17631"]}]}

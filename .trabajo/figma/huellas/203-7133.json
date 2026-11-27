@@ -1,0 +1,5 @@
+{"id":"203:7133","nombre":"Personalización · Agregar widget › Clima","tema":"claro","base":"203-6696","el":[
+"~ panel de configuración: campo «Ciudad»; selectores Apariencia, Transparencia, Tamaño de texto; botón Ir · added/Clima"],
+"quitados":["lista de widgets"],
+"reacciones":["Apariencia → OVERLAY 204:42141; Transparencia → OVERLAY 204:42165; Tamaño de texto → OVERLAY 204:42201","Ir · added/Clima → 203:9197"],
+"colores_fijos":["#1b1721×1"]}

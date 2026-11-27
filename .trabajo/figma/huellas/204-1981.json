@@ -1,0 +1,4 @@
+{"id":"204:1981","nombre":"Editar tarjeta · Tema Windgets claro","pagina":"79:3","tema":"claro","w":1093,"h":560,"fill":"fondo","base":"204:1915","nota":"Diff contra Nueva tarjeta: mismo marco 560x414 en (267,73), mismas posiciones y medidas.","el":[
+{"t":"T","x":291,"y":95,"w":117,"h":24,"txt":"Editar tarjeta","font":"Nunito M 20","fill":"tinta","nota":"cambia el título (ancho 122 a 117)"},
+{"nota":"valores precargados distintos: Fecha límite «24/11/2026» (la capa se llama 27/11/2026); Prioridad «Alta» (elegida Alta 46x22 x=653, Media sin elegir); Descripción «Revisar con el equipo los bocetos de la entrega.» 228x38; Hora del bloque «08:00»; Columna «Hecho»"}
+],"quitados":[],"rx":["Ir · Guardar | CLICK | NODE 204:622","Ir · Cancelar | CLICK | NODE 204:622","Ir · Cerrar | CLICK | NODE 204:622","Nav · Windi | CLICK | NODE 204:25611 OVERLAY"]}

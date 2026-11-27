@@ -1,0 +1,3 @@
+{"id":"204:26063","nombre":"Overlay · Windi · Error","pagina":"79:6","tema":"claro","w":1093,"h":560,"base":"204:26015","el":[
+{"n":"mensaje","ruta":"Panel lateral de Windi","t":"TEXT","w":189,"h":38,"txt":"Ocurrió un error inesperado."},
+{"n":"Windi · Completo","ruta":"Panel lateral de Windi","t":"INSTANCE","comp":"Windi · Completo:Estado=Sin conexión o error"}],"nota":"sin botón Reintentar; texto genérico"}
