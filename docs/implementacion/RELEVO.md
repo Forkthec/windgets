@@ -1,0 +1,204 @@
+# RELEVO: cómo tomar, seguir y dejar el trabajo de la fase 7
+
+Última actualización: viernes 27-nov-2026 (hora colombiana, UTC-5). Entrega: **martes 1-dic-2026, 4:00 p. m. (UTC-5)**.
+
+Este es el primer archivo que lee quien llega sin contexto y el último que actualiza al irse. Un **relevo** es una sesión
+de Claude Code (una cuenta o un chat nuevo de cualquiera de las 4 personas) que trabaja hasta que se le acaba el límite
+de uso (≈ 5 h) y deja el punto de retoma escrito para el siguiente. Si sigues este archivo de arriba abajo, puedes empezar
+sin preguntarle nada a nadie.
+
+> **Cómo pedírselo a Claude.** En un chat nuevo, en la carpeta del repo, escribe:
+> «Lee `docs/implementacion/RELEVO.md` completo y síguelo: arranca, toma la siguiente pieza de `COLA.md` y al irte deja tu
+> fila en §11».
+
+---
+
+## §1. Qué estamos haciendo
+
+- **Objetivo:** que la app de escritorio Windgets (`apps/desktop`, Tauri: Rust + React/TypeScript) funcione y quede igual
+  a los prototipos del Figma **A3Z03L20swFyo8qdP9jETF** («Windgets (Copy)») en los **cuatro temas** (claro, oscuro, Rosa y
+  Enfoque). Todas las funciones nuevas que dibujan los prototipos se implementan.
+- **Fases** (`PLAN.md`): 0-3 documentos (hechas), 4 auditoría, 5 subir los documentos (este PR), 6 herramientas de prueba
+  (son las primeras piezas de la cola), **7 implementación por relevos**, 8 pruebas finales contra los prototipos,
+  9 documentación final y entrega.
+- **Orden de autoridad** cuando dos fuentes chocan: Figma A3Z03 → `docs/rediseno.md` y sus RD → HU, CA, ET y
+  `docs/contratos.md` → `docs/rediseno_cambios_implementacion.md`. Lo que el Figma dibuja y ningún CA define se hace como
+  está dibujado y se anota en `docs/DUDAS.md`.
+- **Quién decide:** Paula es PO. Solo ella aprueba specs, responde las decisiones V-xx y fusiona a `main`.
+
+## §2. Mapa de documentos (qué leer y para qué)
+
+Todo está en `docs/implementacion/`, salvo donde se dice otra cosa.
+
+| Archivo | Para qué sirve | Cuándo lo lees |
+|---|---|---|
+| `RELEVO.md` (este) | Arranque, ciclo de trabajo, salida y bitácora de relevos | Siempre, primero |
+| `COLA.md` | Las 155 piezas en orden, con talla, archivos, dependencias, bloqueos y pruebas. Se marca `[x]` al cerrar | Siempre, para elegir pieza |
+| `SPEC_*.md` (8) | Qué construir en cada área: medidas, tokens, textos literales, ids de nodo del Figma, tabla «capa → `data-testid`» y parte 9 con las piezas | Solo la de tu pieza |
+| `DECISIONES.md` | Todas las decisiones vigentes. **§1 (V-01..V-07)** espera respuesta explícita de Paula; en el resto, la columna «Paula cambia a:» vacía significa aprobada | Si tu pieza tiene bloqueo V-xx o dudas de un valor |
+| `TRAZABILIDAD.md` | Cada marco del Figma × 4 temas → pieza y prueba. Estados: Pendiente / Verde / Manual | Al cerrar una pieza (marcas sus filas) y en la fase 8 |
+| `ERRORES_Y_PRUEBAS.md` | Catálogo de errores (códigos, mensajes, conflictos C-xx) y qué prueba cubre cada uno | Si tu pieza toca errores o mensajes |
+| `TEMAS_Y_TOKENS.md` | Los cuatro temas: cada variable con su valor y contrastes | Piezas TK-* y todo lo visual |
+| `ANIMACIONES.md` | Transiciones, duraciones y `prefers-reduced-motion` | Piezas con movimiento |
+| `CONSISTENCIA.md` | Reglas que cruzan áreas (alias de códigos §6, D1-D17) | Si una spec parece contradecir a otra |
+| `PLAN.md` | El plan completo y sus reglas | Si una regla de aquí no te alcanza |
+| `PROMPT_CONTINUAR.md`, `TRASPASO_NOCHE.md` | Historia de cómo se escribieron los documentos | Casi nunca |
+| `.trabajo/figma/F*.md` y `.trabajo/figma/huellas/*.json` | Inventario medido del Figma (445 huellas JSON) que citan las specs | Cuando la spec cita `F*.md`, y en las piezas F6-* |
+| `.trabajo/DECISIONES_PAULA_26nov.md` | Las decisiones de Paula del 26-nov; las specs lo citan como **DP** | Cuando una fila cita `DP:nn` |
+| `docs/rediseno*.md` | Spec del rediseño (RD-01..RD-106) y sus documentos de apoyo | Cuando la spec cita un RD |
+
+`.trabajo/` está en `.gitignore`: en git solo entraron (a la fuerza) `figma/`, `DECISIONES_PAULA_26nov.md` y los tres
+archivos que citan los documentos. Lo demás de `.trabajo/` (por ejemplo `ESTADO.md` y `bitacora.md`) es un apunte local
+de cada máquina y **no** es fuente de verdad: la fuente es git, los PR y este archivo.
+
+**Aún no existen** `LEEME.md` ni `PRUEBAS_Y_CIERRE.md` (los pide la fase 3; la pieza F9-02 los completa). Mientras no
+existan, este archivo hace de entrada.
+
+## §3. Preparar tu máquina (una vez por persona)
+
+1. **Repo:** `git clone` del repo de Windgets y `git checkout` de la rama de trabajo (§5).
+2. **Herramientas:** Git, `gh` con sesión iniciada (`gh auth status`), Docker Desktop (la skill `/verificar` corre la CI
+   en un contenedor; no hace falta Rust ni Node 22 instalados) y, para correr la app de verdad, Rust y Node como dice el
+   `README` del repo.
+3. **Claude Code** abierto en la carpeta del repo. Las skills `/retomar`, `/verificar`, `/cerrar-paso` y
+   `/siguiente-paso` vienen en `.claude/skills/` del repo. Los agentes `implementador`, `verificador` y `revisor` están
+   en el perfil de Paula; si tu perfil no los tiene, trabaja sin agentes y respeta igual «una pieza a la vez».
+4. **Conector de Figma** con tu propia cuenta (§4).
+5. **Las reglas del guardia valen aunque no tengas el guardia.** Paula tiene un hook (`guardia_git.py`) en su perfil que
+   impide push a `main`/`develop`, push con fuerza y PR que no sean borrador. Las otras tres personas no lo tienen:
+   **cumple esas mismas reglas a mano** (§6).
+6. **Secretos:** solo `.env.example` está en el repo, con valores vacíos. Tu `.env` real nunca se sube.
+
+## §4. Figma: acceso, cupo y reglas
+
+- **Solo lectura.** Con `use_figma` nada se crea, mueve, renombra ni borra. Nunca `get_metadata` de páginas enteras.
+  Si un prototipo parece mal, se anota en `DECISIONES.md`; el Figma no se toca.
+- **Cupo por cuenta:** Education o Professional con asiento Full/Dev: **≈ 200 llamadas al día y 10 por minuto**. Starter o
+  asientos View/Collab: 20 **al mes** (no sirve). Al empezar, `whoami` para ver plan y asiento. Si tu cuenta no alcanza,
+  pide acceso con asiento Full o que lea alguien con cupo; anótalo en tu fila de §7.
+- **Comprueba los ids:** los ids de los documentos se escribieron sobre el A3Z03. Haz `get_design_context` de `79:5` y
+  confirma que es el mismo marco. Si trabajas en una copia y no coincide, lee el original con permiso de vista.
+- **Ahorra llamadas:** primero la spec y las huellas JSON (`.trabajo/figma/huellas/<id>.json`, y desde F6-05 en
+  `apps/desktop/e2e/figma/`); el conector solo para comprobar: `get_design_context` en claro y **una** muestra de otro
+  tema, y **una** `get_screenshot` al final de la pieza. No se repite por tema.
+
+## §5. Rama, push y PR (cómo se sincroniza el equipo)
+
+`PLAN.md` regla 4 pedía trabajar todos sobre `main`. El guardia de Paula no deja hacer push a `main`, así que el equipo
+trabaja así (manda sobre `PLAN.md` regla 4 mientras Paula no diga otra cosa):
+
+1. **Una sola rama de trabajo compartida:** `paso-46-rediseno-implementacion`, creada desde `main` cuando `main` ya
+   tenga los documentos (PR de `paso-45-documentos-rediseno` fusionado). Quien llegue primero la crea:
+   `git switch -c paso-46-rediseno-implementacion origin/main` y `git push -u origin paso-46-rediseno-implementacion`.
+   Si ya existe: `git switch paso-46-rediseno-implementacion`.
+2. **Un PR en borrador** de esa rama hacia `main`, título que termina en `[IA-ASISTIDO]`, cuerpo con la plantilla del repo
+   (`.github/pull_request_template.md`). Lo abre quien crea la rama; los demás solo hacen push a la rama.
+3. **Una persona a la vez.** Antes de empezar y antes de cada push: `git pull --rebase`. Nunca push con fuerza
+   (`--force`, `--force-with-lease`), nunca push a `main` ni a `develop`.
+4. **Paula fusiona** a `main` cuando quiera un punto estable (al menos antes de la fase 8). Nadie más fusiona.
+5. **Se parte en otra rama** solo si una pieza se despliega aparte o el equipo lo pide; entonces `paso-NN-<tema>` desde la
+   rama compartida, PR en borrador hacia ella.
+
+## §6. Reglas que no se negocian
+
+1. **No inventes funciones.** Lo que no está en un CA, una ET, un contrato, un modelo de `docs/` o el Figma no se construye.
+2. **Commit por pieza** (un commit por capacidad si la pieza es grande), y **cada commit compila**. Títulos:
+   `rediseno: <verbo y objeto>`, `HE-nn-HUnn: <verbo y objeto>`, `RT-nn: <tema>` o `infra: <tema>`. **Sin
+   `[IA-ASISTIDO]`** en el título ni en el cuerpo; el commit termina con el trailer
+   `Co-Authored-By: <modelo> <noreply@anthropic.com>`. La marca `[IA-ASISTIDO]` va solo en el título del PR.
+3. **Pruebas:** una prueba por CA, ejecutada y en verde. Mientras construyes, solo las del módulo tocado y la geometría de
+   sus pantallas. La verificación completa (`/verificar` con todos los pasos) una vez, sobre la punta, al cerrar un bloque.
+   No se borra ninguna prueba ni se baja ninguna regla.
+4. **Errores visibles:** todo fallo previsible tiene su código estable y un mensaje claro en el campo que corresponde;
+   nunca termina en el genérico (`INTERNAL_ERROR`, 500, «Ocurrió un error»). Los errores de un formulario se devuelven
+   todos a la vez. Compruébalo con una petición real, no solo leyendo.
+5. **Migraciones:** una aplicada no se edita; se crea una nueva en `supabase/migrations/` y su equivalente en
+   `docs/local/`. La única migración nueva prevista es la `0013` de la pieza **MG-00**.
+6. **Lo «NO DEFINIDO»** va a `docs/DUDAS.md` con el valor neutro usado. Nunca inventes el valor de una V-xx abierta.
+7. **Nada generado con IA se sube** al Drive ni a otro sitio compartido sin el sí de Paula para ese archivo (el código y
+   los documentos de este repo en la rama de trabajo ya están autorizados). Nada se borra para siempre: solo papelera.
+8. **Archivos compartidos:** catálogo de errores, `tokens.css`/`marco.css`, Postman, `contratos.md`, `DUDAS.md` y
+   migraciones tienen una pieza dueña (tabla de `COLA.md` §1). Cada pieza escribe solo en su bloque sembrado por SEED-01.
+9. **Hora:** siempre Colombia (UTC-5). En PowerShell `Get-Date`; Git Bash muestra UTC. Las horas de `gh` terminan en `Z`:
+   réstales 5 h.
+
+## §7. Arranque de cada relevo (10 pasos)
+
+1. **Hora** con `Get-Date` (PowerShell).
+2. **Lee la última fila de §11** (la bitácora): ahí está la pieza a medias y la siguiente.
+3. **Git y CI:**
+   `git fetch -q origin`, `git status --short --branch`, `git stash list`,
+   `git log --oneline --decorate -10`,
+   `gh pr list --state open --json number,title,headRefName,baseRefName,isDraft`,
+   `gh pr checks <n>` del PR de la rama compartida. **Git gana** sobre cualquier apunte.
+4. **Concilia:**
+   - Cambios sin commit en tu máquina: son tu pieza a medias; lee el diff y sigue desde ahí.
+   - Un commit que `COLA.md` no marca: márcalo `[x]` si tiene prueba y CI en verde.
+   - Un commit sin push: `git pull --rebase` y push normal.
+5. **CI en rojo** en la rama compartida o en `main`: arreglarlo es la siguiente pieza, antes que cualquier otra.
+6. **Figma:** `whoami` (plan y asiento) y `get_design_context` de `79:5` para confirmar los ids (§4).
+7. **Mira las V-xx.** En `DECISIONES.md` §1, una V-xx está **resuelta** solo si la columna «Paula cambia a:» tiene
+   texto o hay un commit/mensaje de Paula que la responde. Si está vacía, sigue abierta y sus piezas no se tocan.
+8. **Elige pieza:** la primera `[ ]` de `COLA.md` cuyo «Depende de» esté todo en `[x]` y cuyo «Bloqueada por» esté vacío o
+   resuelto. Las primeras, en el orden de `COLA.md`, son las de la fase 6: F6-05, F6-01a…F6-04a, SEED-01, S10-SP, TK-*, MG-00.
+9. **Reserva la pieza:** agrega en §11 una fila con hora, tu nombre y cuenta, y la pieza «en curso»; commit
+   `infra: tomar <ID> en el relevo` y push. Así nadie toma la misma.
+10. **Lee la spec de la pieza** (sección y parte 9) antes de escribir código.
+
+## §8. Ciclo de una pieza (`PLAN.md` fase 7, «Cada pieza»)
+
+1. **Lee su spec**: medidas, tokens, textos literales, ids de nodo y la tabla «capa → `data-testid`».
+2. **Comprueba con el conector** los nodos de la pieza: `get_design_context` en claro y una muestra de otro tema.
+3. **Implementa.** Pon cada `data-testid` que pide la spec. Colores solo por token (`tokens.css`), nunca hex sueltos.
+   Morado y cian nunca en el mismo control; donde el Figma los junte, tinta `#0F2A33`; el cian solo como relleno, con
+   texto `#0B2A2E`.
+4. **Pruebas del módulo** (Vitest/`cargo test`) y la **geometría** de sus pantallas (Playwright contra la huella JSON:
+   ±2 px en cajas, color exacto por token, misma fuente, mismo texto; 1200×800 y 960×600).
+5. **Una comparación** con `get_screenshot` del nodo frente a la app. Si hay diferencias, corrígelas dentro de la pieza:
+   **máximo dos vueltas**. Lo que siga distinto va a `DECISIONES.md` (fila nueva, «Paula cambia a:» vacía) o a una pieza
+   nueva al final de `COLA.md`.
+6. **Commit** (§6 regla 2), `git pull --rebase`, push, y marca `[x]` en `COLA.md` y «Verde» en sus filas de
+   `TRAZABILIDAD.md` cuando la CI quede en verde. Lo que no se puede automatizar se marca «Manual».
+
+**Tallas** (`PLAN.md`): S ≈ 10 % del límite de 5 h, M ≈ 25 %, L ≈ 45 %. Si una L no te cabe en lo que te queda, no la
+empieces: toma una S o una M.
+
+## §9. Al irte (o cuando te quede poco cupo)
+
+Hazlo **antes** de que se acabe el límite: con menos de ~15 % de cupo, deja de construir y cierra.
+
+1. **Deja un commit que compile.** Si la pieza está a medias y no hay un punto que compile, no la subas a medias:
+   guárdala con `git stash push -m "<ID> a medias"` en tu máquina, o súbela en una rama aparte
+   `paso-NN-<ID>-a-medias` (nunca a la compartida) y nómbrala en tu fila.
+2. **Llena tu fila** en la bitácora de abajo (reemplaza «en curso» por lo real):
+   fecha y hora (UTC-5), quién y cuenta, rama y punta (`git rev-parse --short HEAD`) con o sin push, piezas cerradas `[x]`,
+   pieza a medias (qué falta, archivos, pruebas en rojo con su mensaje), estado de la CI, cupo de Figma gastado,
+   decisiones nuevas para Paula (ID de la fila en `DECISIONES.md`) y siguiente pieza.
+3. **Commit** `infra: dejar el relevo de <nombre>` y push.
+
+## §10. Qué hacer si…
+
+- **`main` o la rama compartida están en rojo:** la siguiente pieza es arreglarlo. No sigas la cola con la CI rota.
+- **Tu pieza depende de una V-xx abierta:** no la construyas ni inventes el valor. Salta a la siguiente pieza libre y
+  anota la pregunta en tu fila. Hoy las 7 (V-01..V-07) siguen abiertas; V-04 (posición y ancho de los avisos) frena 50
+  filas de `TRAZABILIDAD.md`.
+- **`git pull --rebase` da conflicto en un archivo compartido:** conserva los dos bloques (cada pieza tiene el suyo);
+  si no es obvio, para y pregunta en el grupo. Nunca resuelvas con push con fuerza.
+- **El spike S10 (notificación de Windows con botones) falla:** escribe el resultado en `DECISIONES.md` (V-03); Paula
+  decide entre notificación sin botones o aviso en la app. EC-15r espera esa respuesta.
+- **Se acaba tu cupo de Figma:** para de abrir nodos y trabaja con las huellas JSON y las specs, que traen los valores
+  medidos. Anótalo en tu fila.
+- **Un comando se bloquea por el guardia** (solo en la máquina de Paula): no lo esquives ni lo debilites. Deja el
+  comando exacto en tu fila para que lo corra una persona.
+- **La spec y el Figma no coinciden:** gana el Figma (§1, orden de autoridad); anótalo en `DUDAS.md` y, si cambia una
+  regla, en `DECISIONES.md`.
+- **No sabes si algo está en el alcance:** si no está en un CA, ET, contrato, modelo o el Figma, no se hace.
+
+## §11. Bitácora de relevos
+
+La **última fila manda**. Una fila por relevo: se abre al tomar la pieza (§7 paso 9) y se completa al irse (§9).
+
+| Fecha y hora (UTC-5) | Quién y cuenta | Rama y punta | Cerradas `[x]` | A medias (falta, archivos, pruebas en rojo) | CI | Cupo Figma | Decisiones para Paula | Siguiente |
+|---|---|---|---|---|---|---|---|---|
+| 2026-11-27 (ejemplo de formato) | Ana, cuenta B | `paso-46-rediseno-implementacion` @ `abc1234`, con push | F6-05, F6-01a | TK-01: falta la sección de Rosa en `tokens.css`; `tokens_cuatro_temas` en rojo | verde | 38 de 200 | fila nueva D-31 en `DECISIONES.md` | TK-01 |
+| 2026-11-27 | Paula (documentos) | `paso-45-documentos-rediseno`, PR en borrador a `main` | Fases 0-3 (documentos) | Faltan `LEEME.md` y `PRUEBAS_Y_CIERRE.md` (F9-02); V-01..V-07 sin respuesta | — | — | V-01..V-07 en `DECISIONES.md` §1 | Fusionar el PR de documentos; crear `paso-46-rediseno-implementacion`; F6-05 (primera de `COLA.md`) |

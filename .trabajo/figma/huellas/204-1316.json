@@ -1,0 +1,20 @@
+{"id":"204:1316","nombre":"Panel del día · Tema Windgets claro","pagina":"79:3","tema":"claro","w":1093,"h":560,"fill":"fondo","nota":"Compacta. Mismo mes que 204:805 pero con el día 24 seleccionado y un panel lateral 325x388 en (741,104). El panel hace que la cuadrícula del mes deje de ajustarse (las celdas siguen midiendo 125 pero el panel se solapa con las columnas Vie-Dom, x>741). Capa del título del panel 'Martes, 24 de noviembre' con texto 'Día seleccionado' y capa '24' con texto del día (texto sin variable de fecha).","rx":["Ir · Mes y año | CLICK | NODE 204:1442 NAVIGATE","Ir · Calendario (selector Mes) | CLICK | NODE 204:805 NAVIGATE","Ir · Calendario · Semana | CLICK | NODE 204:1249 NAVIGATE","Día del mes (x42) | CLICK | CONDITIONAL","Ir · Calendario (panel) | CLICK | NODE 204:805 NAVIGATE","Ir · Nueva tarjeta (panel) | CLICK | NODE 204:1915 NAVIGATE","Ir · Detalle de tarjeta (x8 filas del panel) | CLICK | NODE 204:1849 NAVIGATE","Nav · Windi | CLICK | NODE 204:25611 OVERLAY"],"el":[
+{"t":"T","x":200,"y":19,"w":241,"h":18,"txt":"Planificador  ›  Calendario  ›  Panel del día","font":"Nunito R 13","fill":"texto"},
+{"t":"T","x":200,"y":49,"w":157,"h":35,"txt":"Panel del día","font":"Nunito B 26","fill":"tinta"},
+{"n":"Ir · Mes y año / Selector Mes-Semana (Elegida=Primera) / Navegación del calendario (Ir · Mes anterior, Hoy, Ir · Mes siguiente)","t":"F","x":592,"y":48,"w":477,"h":36,"hijo":"idéntico a 204:805"},
+{"n":"Cabecera","t":"T","y":104,"h":18,"txt":"Lun | Mar | Mié | Jue | Vie | Sáb | Dom","font":"Nunito R 13","fill":"texto"},
+{"n":"Día del mes","t":"F","w":125,"h":"44/46/66/105","fill":"superficie / relleno_completada / relleno_vencida (22, 23) / relleno_pendiente (24-29)","stroke":"linea / estado_*","sw":1,"rep":42,"pos":"filas y=126,170,214,260,326,431"},
+{"n":"Número y tarjetas del mes","t":"T","font":"Nunito M 13 / R 11","fill":"tinta/texto","txt":"26..31, 1..30, 1..6 (como 204:805) + tarjetas de texto idénticas a 204:805 (Estudiar para el parcial, Llamar a mamá, Entregar taller 3, 10:00 Cita médica, Leer capítulo 4, Pagar el arriendo, Comprar mercado, 07:00 Correr 5 km, Pagar el gimnasio, 15:00 Reunión de equipo, Actualizar el backlog, Responder correo del profesor, 08:00 Revisar los bocetos, 09:00 Preparar la entrega, 10:00 Compartir el prototipo, +5 más, 10:00 Exposición de GPI, 18:00 Clase de yoga, 09:00 Revisar pull requests, Cumpleaños de Ana, 11:00 Entrega final del proyecto, 10:00 Lavar la ropa, 19:00 Planear la semana) y '1 vencida' en 22 y 23"},
+{"n":"Hoy","t":"E","x":328,"y":328,"w":20,"h":20,"fill":"detalle"},
+{"n":"Panel del día","t":"F","x":741,"y":104,"w":325,"h":388,"fill":"superficie","stroke":"linea","sw":1,"r":8},
+{"t":"T","x":757,"y":121,"w":130,"h":23,"txt":"Día seleccionado","font":"Nunito M 17","fill":"tinta"},
+{"t":"T","x":757,"y":142,"w":16,"h":18,"txt":"24","font":"Nunito R 13","fill":"texto"},
+{"n":"Ir · Nueva tarjeta","t":"F","x":970,"y":111,"w":36,"h":36,"r":7,"hijo":"Botón ícono Normal 36 r9"},
+{"n":"Ir · Calendario","t":"F","x":1018,"y":113,"w":32,"h":32,"r":7,"hijo":"Botón ícono Fila 32 r9"},
+{"n":"Ir · Detalle de tarjeta","t":"F","x":757,"w":293,"h":34,"fill":"superficie","stroke":"linea","sw":1,"r":9,"rep":8,"pos":"y=184+38k"},
+{"n":"Título de fila","t":"T","x":769,"h":16,"font":"Nunito M 13","fill":"tinta","txt":"Revisar los bocetos | Preparar la entrega | Compartir el prototipo | Entregar ensayo | Validar el contraste | Enviar la presentación | Caminar 30 minutos | Revisar calendario"},
+{"n":"Subtítulo","t":"T","x":769,"h":14,"font":"Nunito R 11","fill":"texto","txt":"08:00 · Proyecto | 09:00 · Proyecto | 10:00 · Proyecto | 12:00 · Universidad | 14:00 · Proyecto | 16:00 · Proyecto | 17:00 · Salud | Sin hora · Personal"},
+{"n":"Estado","t":"I","x":1028,"w":14,"h":14,"comp":"Icono / Estado / Completada (2 primeras) / Pendiente (6)","pos":"y=194+38k"},
+{"n":"Nav · Windi","t":"F","x":1029,"y":496,"w":48,"h":48,"r":14},
+{"n":"Menú lateral compartido","t":"I","x":0,"y":0,"w":176,"h":560,"fill":"marco","comp":"Navegación · Barra lateral del tema:Tema=Windgets, Menú=Ampliado"}
+]}

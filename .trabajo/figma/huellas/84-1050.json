@@ -1,0 +1,11 @@
+{"id":"84:1050","nombre":"Windgets para Windows · Claro","pagina":"83:3","tema":"claro","w":1280,"h":790,"fill":"marco","clip":true,"el":[
+{"n":"windgets","ruta":"","t":"TEXT","x":91,"y":34,"w":121,"h":31,"fill":"tinta","txt":"windgets","font":"Rubik Bold 26"},
+{"n":"Nuevo · símbolo","ruta":"","t":"FRAME","x":50,"y":34,"w":34,"h":31,"nota":"4 vectores con trazo fijo #00d9e2 #dc026c #dcba04 #6604e6, sw 6,07"},
+{"n":"Windgets para Windows","ruta":"","t":"TEXT","x":56,"y":106,"w":467,"h":47,"fill":"tinta","txt":"Windgets para Windows","font":"Rubik Bold 40"},
+{"n":"Contenido","ruta":"","t":"FRAME","x":54,"y":186,"w":1172,"h":550,"fill":"superficie","r":16},
+{"n":"Planifica tus tareas y personaliza tu escritorio.","ruta":"Contenido","t":"TEXT","x":34,"y":77,"w":688,"h":37,"fill":"tinta","txt":"Planifica tus tareas y personaliza tu escritorio.","font":"Rubik Medium 31"},
+{"n":"Tareas del día","ruta":"Contenido","t":"TEXT","x":54,"y":208,"w":163,"h":28,"fill":"seleccion","txt":"Tareas del día","font":"Rubik Bold 24"},
+{"n":"Preparar la entrega","ruta":"Contenido","t":"TEXT","x":54,"y":263,"w":197,"h":26,"fill":"tinta","txt":"Preparar la entrega","font":"Rubik Regular 22"},
+{"n":"Descargar para Windows","ruta":"Contenido","t":"FRAME","x":34,"y":465,"w":197,"h":36,"r":9,"rx":"ON_CLICK NODE NAVIGATE 84:1068 sin transición"},
+{"n":"Botón","ruta":"Contenido/Descargar para Windows","t":"INSTANCE","x":0,"y":0,"w":197,"h":36,"fill":"accion","stroke":"borde","sw":1.5,"r":9,"sh":"3,5,0,0,#241c30","comp":"Botón:Nivel=Principal, Tamaño=Normal, Estado=Normal","txt":"Descargar para Windows","layout":"H g8 p0/16/0/16"}
+]}

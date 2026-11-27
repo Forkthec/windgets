@@ -1,0 +1,17 @@
+{"id":"85:2","nombre":"Cancelar instalación · M-01 · Claro","pagina":"83:4","tema":"claro","w":600,"h":256,"fill":"fondo","r":8,"el":[
+{"n":"Velo","t":"RECTANGLE","x":0,"y":0,"w":600,"h":256,"fill":"velo@0.4"},
+{"n":"Nota de confirmación","t":"FRAME","x":88,"y":48,"w":424,"h":160},
+{"n":"Vector (papel)","ruta":"Nota de confirmación/Papel con esquina doblada","t":"VECTOR","x":88,"y":48,"w":424,"h":160,"fill":"superficie_alta","stroke":"borde","sw":1.5,"sh":"3,5,0,0,#241c30"},
+{"n":"Vector (pliegue)","ruta":"Nota de confirmación/Papel con esquina doblada","t":"VECTOR","x":490,"y":48,"w":22,"h":22,"fill":"superficie_baja","stroke":"borde","sw":1.5},
+{"n":"Cancelar instalación","ruta":"Nota de confirmación","t":"TEXT","x":108,"y":66,"w":196,"h":24,"fill":"tinta","txt":"Cancelar instalación","font":"Rubik Medium 20"},
+{"n":"¿Deseas cancelar la instalación?","ruta":"Nota de confirmación","t":"TEXT","x":108,"y":100,"w":382,"h":17,"fill":"tinta","txt":"¿Deseas cancelar la instalación?","font":"Rubik Regular 14"},
+{"n":"Cerrar","ruta":"Nota de confirmación","t":"FRAME","x":460,"y":58,"w":32,"h":32,"rx":"ON_CLICK URL node-id=84-1068"},
+{"n":"Vector oculto","ruta":"Nota de confirmación/Cerrar","t":"VECTOR","x":470,"y":68,"w":8,"h":8,"stroke":"#251f34 (fijo)","sw":1.6,"oculto":1},
+{"n":"Botón ícono","ruta":"Nota de confirmación/Cerrar","t":"INSTANCE","x":460,"y":58,"w":32,"h":32,"r":9,"comp":"Botón ícono:Tamaño=Fila, Estado=Normal"},
+{"n":"Cancelar instalación (envoltorio)","ruta":"Nota de confirmación","t":"FRAME","x":319,"y":158,"w":173,"h":36,"r":7,"rx":"ON_CLICK URL node-id=84-1050"},
+{"n":"Cancelar instalación (texto oculto)","ruta":"Nota de confirmación/Cancelar instalación","t":"TEXT","x":340,"y":166.5,"w":128,"h":15,"fill":"#ffffff (fijo)","txt":"Cancelar instalación","font":"Rubik Medium 13","oculto":1},
+{"n":"Botón","ruta":"Nota de confirmación/Cancelar instalación","t":"INSTANCE","x":319,"y":158,"w":173,"h":36,"fill":"accion","stroke":"borde","sw":1.5,"r":9,"sh":"3,5,0,0,#241c30","comp":"Botón:Nivel=Principal, Tamaño=Normal, Estado=Normal","layout":"H 8 pad 0 16 0 16"},
+{"n":"Seguir instalando (envoltorio)","ruta":"Nota de confirmación","t":"FRAME","x":158,"y":158,"w":153,"h":36,"r":7,"rx":"ON_CLICK URL node-id=84-1068"},
+{"n":"Seguir instalando (texto oculto)","ruta":"Nota de confirmación/Seguir instalando","t":"TEXT","x":177.5,"y":166.5,"w":110,"h":15,"fill":"tinta","txt":"Seguir instalando","font":"Rubik Medium 13","oculto":1},
+{"n":"Botón","ruta":"Nota de confirmación/Seguir instalando","t":"INSTANCE","x":158,"y":158,"w":153,"h":36,"fill":"superficie","stroke":"borde","sw":1.5,"r":9,"comp":"Botón:Nivel=Secundario, Tamaño=Normal, Estado=Normal","layout":"H 8 pad 0 16 0 16"}
+],"notas":"Todas las reacciones son URL https://www.figma.com/proto/A3Z03L20swFyo8qdP9jETF/Windgets--Copy-?node-id=<destino>. Oscuro 85:8: igual con velo@0.55, sombra #100d15, destinos 84-1080/84-1059, texto oculto #291d21."}

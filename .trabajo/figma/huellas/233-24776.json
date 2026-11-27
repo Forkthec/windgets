@@ -1,0 +1,1 @@
+{"id":"233:24776","nombre":"Overlay · M-12 · oscuro","pagina":"79:6","tema":"oscuro","base":"204:26002","vars":{"fondo":"#201b2b","tinta":"#f8f5ff","superficie":"#2b2534","borde":"#afa1c0","accion":"#00d9e2"},"comp":"botón pasa de Nivel=Destructivo a Nivel=Principal (relleno accion, borde borde, sombra); se pierde el rojo error","fijos":["texto oculto «Cerrar sesión» #ffffff"]}

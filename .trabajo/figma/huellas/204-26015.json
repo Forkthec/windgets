@@ -1,0 +1,12 @@
+{"id":"204:26015","nombre":"Overlay · Windi · Tema Windgets claro","pagina":"79:6","tema":"claro","w":1093,"h":560,"el":[
+{"n":"Pantalla de origen","ruta":"","t":"FRAME","x":0,"y":0,"w":1093,"h":560,"nota":"copia de Configuración"},
+{"n":"Velo","ruta":"","t":"FRAME","x":0,"y":0,"w":1093,"h":560,"fill":"velo"},
+{"n":"Descartado · panel anterior","ruta":"","t":"FRAME","oculto":1,"nota":"copias antiguas con reacciones inertes"},
+{"n":"Panel lateral de Windi","ruta":"","t":"FRAME","x":737,"y":4,"w":351,"h":551,"r":12,"stroke":"borde","sw":1.5,"sh":"1,3,0,0"},
+{"n":"Windi","ruta":"Panel lateral de Windi","t":"TEXT","txt":"Windi"},
+{"n":"Ir · Planificador diario","ruta":"Panel lateral de Windi","t":"FRAME","rx":"ON_CLICK>CLOSE"},
+{"n":"campo","ruta":"Panel lateral de Windi","t":"FRAME","txt":"Escribe un mensaje","font":"Nunito Regular 14 #554f5e","rx":"ON_CLICK>NODE:204:26041/SWAP"},
+{"n":"envío","ruta":"Panel lateral de Windi","t":"FRAME","rx":"ON_CLICK>NODE:204:26026/SWAP"},
+{"n":"contador","ruta":"Panel lateral de Windi","t":"TEXT","txt":"0 / 2000"},
+{"n":"Windi · Completo","ruta":"Panel lateral de Windi","t":"INSTANCE","comp":"Windi · Completo:Estado=Normal","ptxt":["¿Qué organizamos hoy?"]},
+{"n":"saludo oculto","ruta":"Panel lateral de Windi","t":"TEXT","oculto":1,"txt":"¿Qué organizamos hoy?","font":"Regular 15"}]}

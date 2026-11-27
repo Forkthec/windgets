@@ -1,0 +1,11 @@
+{"id":"84:1092","nombre":"Instalación en curso · Claro","pagina":"83:3","tema":"claro","w":1280,"h":790,"fill":"marco","clip":true,"rx":"AFTER_TIMEOUT 2 s NODE NAVIGATE 84:1112 sin transición","el":[
+{"n":"windgets","t":"TEXT","x":91,"y":34,"w":121,"h":31,"fill":"tinta","font":"Rubik Bold 26"},
+{"n":"Instalación en curso","t":"TEXT","x":285,"y":106,"w":404,"h":47,"fill":"tinta","font":"Rubik Bold 40"},
+{"n":"Contenido","t":"FRAME","x":285,"y":186,"w":710,"h":348,"fill":"superficie","r":16},
+{"n":"Instalando Windgets","ruta":"Contenido","t":"FRAME","x":28,"y":25,"w":654,"h":57,"fill":"superficie_baja","r":8},
+{"n":"Instalando Windgets","ruta":"Contenido/Instalando","t":"TEXT","x":15,"y":11,"w":161,"h":20,"fill":"tinta","font":"Rubik Regular 17"},
+{"n":"Total","ruta":"Contenido","t":"FRAME","x":46,"y":180,"w":618,"h":12,"fill":"superficie_baja","r":6},
+{"n":"Progreso","ruta":"Contenido","t":"FRAME","x":46,"y":180,"w":640,"h":12,"fill":"secundario","r":6,"nota":"640 > 618 de Total: rebasa la pista"},
+{"n":"Cancelar","ruta":"Contenido","t":"FRAME","x":28,"y":273,"w":91,"h":36,"r":9,"rx":"ON_CLICK URL ...node-id=85-2"},
+{"n":"Botón","ruta":"Contenido/Cancelar","t":"INSTANCE","w":91,"h":36,"fill":"superficie","stroke":"borde","sw":1.5,"r":9,"comp":"Botón:Secundario/Normal/Normal","txt":"Cancelar"}
+]}

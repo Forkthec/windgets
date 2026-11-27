@@ -1,0 +1,5 @@
+{"id":"204:26052","nombre":"Overlay · Windi · Sin conexión","pagina":"79:6","tema":"claro","w":1093,"h":560,"base":"204:26015","el":[
+{"n":"mensaje","ruta":"Panel lateral de Windi","t":"TEXT","w":100,"h":38,"txt":"Sin conexión"},
+{"n":"Windi · Completo","ruta":"Panel lateral de Windi","t":"INSTANCE","comp":"Windi · Completo:Estado=Sin conexión o error"},
+{"n":"campo","ruta":"Panel lateral de Windi","t":"FRAME","nota":"opacidad 0,5 (deshabilitado)"},
+{"n":"envío","ruta":"Panel lateral de Windi","t":"FRAME","nota":"opacidad 0,4 (deshabilitado)"}]}

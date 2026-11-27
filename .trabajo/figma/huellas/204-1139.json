@@ -1,0 +1,23 @@
+{"id":"204:1139","nombre":"Tablero Kanban · Expandida · Tema Windgets claro","pagina":"79:3","tema":"claro","w":1093,"h":560,"fill":"fondo","nota":"Compacta. Las columnas miden 380 de alto pero las tarjetas expandidas desbordan: la 4.ª y 5.ª de Por hacer llegan a y=~590 y las de Hecho a y=~661 (más allá del marco 560 y de la columna). Capas con nombres viejos ('Revisar los bocetos' con texto 'Pagar el gimnasio'). Tarjetas con alto variable 85/107/125/143/103 (V g4 p10).","rx":["Ir · Vista compacta | CLICK | NODE 204:704 NAVIGATE","Columna Por hacer | DRAG | NODE 217:14042 NAVIGATE SMART_ANIMATE 0.2 EASE_OUT","Ir · Editar columna (x3) | CLICK | NODE 217:13616 NAVIGATE","Ir · Nueva tarjeta | CLICK | NODE 204:1915 NAVIGATE","Ir · Detalle de tarjeta (x15) | CLICK | NODE 204:1849 NAVIGATE","Ir · Detalle de tarjeta (Por hacer 1.ª) | DRAG | NODE 217:13829 NAVIGATE SMART_ANIMATE 0.2 EASE_OUT","Menú de tarjeta | CLICK | NODE 217:13403 NAVIGATE","Ir · Nueva columna | CLICK | NODE 204:2143 NAVIGATE","Nav · Windi | CLICK | NODE 204:25611 OVERLAY"],"el":[
+{"t":"T","x":200,"y":19,"w":357,"h":18,"txt":"Planificador  ›  Tablero Kanban  ›  Tablero Kanban · Expandida","font":"Nunito R 13","fill":"texto"},
+{"t":"T","x":200,"y":49,"w":338,"h":35,"txt":"Tablero Kanban · Expandida","font":"Nunito B 26","fill":"tinta"},
+{"t":"T","x":1000,"y":20,"w":69,"h":16,"txt":"Sincronizado","font":"Nunito R 12","fill":"texto"},
+{"n":"Vista del Kanban","t":"F","x":994,"y":48,"w":75,"h":36,"fill":"superficie","stroke":"borde","sw":1.5,"r":9,"hijo":"Ir · Vista compacta 36x33 en 995.5 (Icono / Compactar 20x20); Vista expandida (actual) 36x33 en 1031.5 fill seleccion (Icono / Expandir)"},
+{"n":"Columnas del tablero","t":"F","x":195,"y":104,"w":879,"h":384},
+{"n":"Por hacer / En progreso / Hecho","t":"F","w":259,"h":380,"fill":"superficie","stroke":"linea","sw":1,"r":12,"pos":"200,104 471,104 742,104"},
+{"n":"Título columna","t":"T","y":117,"h":22,"txt":"Por hacer | En progreso | Hecho","font":"Nunito M 16","fill":"tinta"},
+{"n":"Cantidad","t":"T","y":119,"h":18,"txt":"10 | 5 | 12","font":"Nunito R 13","fill":"texto"},
+{"n":"Ir · Editar columna","t":"F","w":32,"h":32,"r":7,"rep":3,"pos":"414,112 685,112 956,112"},
+{"n":"Ir · Nueva tarjeta","t":"F","x":378,"y":112,"w":32,"h":32,"r":7},
+{"n":"Ir · Detalle de tarjeta","t":"F","w":241,"fill":"superficie_alta","stroke":"linea","sw":1,"r":6,"layout":"V g4 p10/10/10/10","rep":15,"h":"85-143 (según contenido)","pos":"x=209/480/751; Por hacer y=152,245,360,475 ...; En progreso y=152,285,378,471; Hecho y=152,303,414,547"},
+{"n":"Etiquetas","t":"F","h":19,"layout":"H g4 p0","rep":"1-2 por tarjeta","hijo":"Chip · <nombre> r9 stroke linea 1, H g4 p1/6/1/6, punto 8x8 (colores fijos #b04f7d Proyecto, #2b7a8c Universidad, #b8692a Personal, #2e8b57 Salud) y texto Nunito R 11 tinta"},
+{"n":"Título de tarjeta","t":"T","w":221,"h":20,"font":"Nunito M 15","fill":"tinta","txt":"Por hacer: Pagar el gimnasio | Validar el contraste | Exposición de GPI | Cumpleaños de Ana (+1). En progreso: Compartir el prototipo | Entregar ensayo | Enviar la presentación | Revisar pull requests. Hecho: Revisar los bocetos | Preparar la entrega | Reunión de equipo | Cita médica"},
+{"n":"Descripción","t":"T","w":221,"h":"18-36","font":"Nunito R 13","fill":"texto","txt":"Revisar 4,5:1 en los cuatro temas. | Sala 204. | Comprar el regalo. | Enviar el enlace del Figma al profesor. | Revisar con el equipo los bocetos de la entrega. | Repartir las tareas del sprint. | Llevar los exámenes."},
+{"n":"Datos de la tarjeta","t":"F","h":16,"layout":"H g6","hijo":"Dato: ícono 12x12 (Icono / Tipo / Recordatorio|Tarea|Evento, Estado / Pendiente|Completada, Prioridad, Calendario, Alerta) + texto Nunito R 12 texto (error en 'Vencida')","txt":"Recordatorio | Vencida | Media | Tarea | Vence hoy | 14:00 | Evento | 25 nov | Alta | 10:00 | 26 nov | 09:00 | Completada el 24 nov | Completada el 23 nov | Completada el 18 nov | 27 nov | Baja | 15:00 | 12:00 | 16:00 | 08:00"},
+{"n":"Menú de tarjeta","t":"F","w":32,"h":32,"r":4,"rep":15,"hijo":"Botón ícono Fila 32x32 r9"},
+{"n":"Barra · vencida","t":"R","x":209,"y":152,"w":4,"h":85,"fill":"estado_vencida","r":"mix"},
+{"n":"Ir · Nueva columna","t":"F","x":1013,"y":104,"w":56,"h":380,"stroke":"#c9c2d3 (fijo)","sw":1.5,"r":12,"hijo":"Icono / Agregar 20x20 (1031,285)"},
+{"n":"Nav · Windi","t":"F","x":1029,"y":496,"w":48,"h":48,"r":14},
+{"n":"Menú lateral compartido","t":"I","x":0,"y":0,"w":176,"h":560,"fill":"marco","comp":"Navegación · Barra lateral del tema:Tema=Windgets, Menú=Ampliado"},
+{"n":"Ícono · Sincronizado","t":"I","x":978,"y":20,"w":16,"h":16,"comp":"Icono / Sincronizado"}
+]}
