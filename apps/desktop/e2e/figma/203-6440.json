@@ -1,0 +1,13 @@
+{"id":"203:6440","nombre":"Personalización · 2 Fondo","tema":"claro","w":1093,"h":560,"base":"203-6362","el":[
+"+ migas T @76,20 «Personalización  ›  2 Fondo»",
+"+ /Panel · 2 Fondo F @769,100 300x348 f=superficie s=linea/1 r10",
+"+ P/«Imagen de fondo» T @781,110 tinta Medium 17",
+"+ P/Ir · Catálogo de imágenes F @781,144 276x36 f=superficie s=borde_campo/1.5 r9: T «Catálogo de imágenes» tinta Medium 13; T «Atardecer» @994,154 texto 12",
+"+ P/Ir · Subir imagen F @781,188 119x36 r6 > Botón Secundario",
+"+ P/Ir · Sin imagen F @781,232 106x36 r6 > Botón Secundario",
+"+ P/Ir · Ajustar imagen F @781,284 276x36: T «Oscurecer»; T «0 %»; Deslizador 136x16 (riel 136x4 f=linea r2; perilla E 16x16 f=superficie s=borde/1.5)",
+"+ P/Ir · Ajustar imagen (2.ª) F @781,328 276x36: T «Desenfocar»; T «0 px» (nodo llamado '0 %'); Deslizador igual",
+"~ pasos: step1 Actual→Otro, step2 Otro→Actual (x−1)"],
+"quitados":["migas y Panel · 1 Tema completo"],
+"reacciones":["Ir · step1 → 203:6362; step3 → 203:6520; step4 → 203:6607","Ir · Catálogo de imágenes → 203:10198","Ir · Subir imagen → 203:10273","Ir · Sin imagen → 203:10346","Ir · Ajustar imagen ×2 → 203:10417 (toda la fila)","M-02, Guardado, M-05, Windi como la base (sin transición)"],
+"colores_fijos":["#1b1721×1 Oscurecer imagen"]}

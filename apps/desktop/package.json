@@ -9,6 +9,7 @@
     "tauri": "tauri",
     "test": "vitest run",
     "test:e2e": "playwright test --pass-with-no-tests",
+    "comparar": "playwright test -c playwright.comparar.config.ts",
     "assets": "node scripts/generar_activos.mjs",
     "types:check": "node scripts/verificar_tipos.mjs"
   },

@@ -299,6 +299,7 @@ Regla común: se unifica al valor de la variable o del componente de F0 (DP:8; C
 | FC-C20 | C-20 | Ver V-02 | ERR:299 | `messages.es.json` | — |
 | FC-C1 a C12, C14 a C16 | Conflictos resueltos | C-1, C-3, C-4, C-8, C-9, C-10, C-11 por S19 (ERR:288 incluye C-9); C-2, C-5, C-6, C-7, C-12, C-15, C-16 resueltos; C-14 es la errata de RG-ERRATA | ERR:280-295 | Catálogo de errores | |
 | FC-HU | HU frente a Figma | Navegación por la HU, no por las URL a «Windgets--Copy-» | CONS:300 | Navegación | |
+| FC-HUELLAS | Formato de las huellas (F6-05) | `PLAN.md:185-199` pide que cada huella traiga caja, relleno, borde, radio, sombra, fuente y texto por elemento, pero de las 440 huellas de las familias vigentes solo 57 son completas y medidas; 69 son una base con elementos medidos, 286 describen la diferencia con su base en texto y 28 vienen en texto compacto. Además, 47 familias no tienen huella propia: 16 de Escritorio están en las tablas de `F6.md`, 21 en archivos de grupo (`83-4-diff-familias.json` y `83-2-diff-temas.json`) y 10 de Fundamentos en `F0.md`. Se copian tal cual, en UTF-8, y `apps/desktop/e2e/figma/indice.json` dice el formato y la base de cada una. El arnés de geometría (F6-02) mide con la huella cuando trae caja (propia o de su base); si no la trae, mide con las medidas de la spec. No se vuelve a leer el Figma para completarlas | `apps/desktop/e2e/figma/indice.json` («resumen»); `.trabajo/figma/ENCARGO_PAGINA.md:25` | F6-02, F6-03 y fase 8 | |
 | FC-0009 | Numeración de migraciones | RD-94 cita 0009 y 0010; ambas existen (`0009_widget_windi.sql`, `0010_temas_windgets.sql`) | RED:194 | `supabase/migrations/` | |
 
 ---
@@ -363,7 +364,7 @@ Conteo de filas por sección:
 | 4 | S | 19 |
 | 5 | RD (filas que cubren RD-01 a RD-106) | 70 |
 | 6 | DUDAS | 65 |
-| 7 | Contradicciones Figma-documento | 18 |
+| 7 | Contradicciones Figma-documento | 19 |
 | 8 | Contratos y migraciones PROPUESTA (6 contratos y migraciones, 8 grupos de códigos) | 14 |
 | 9 | Rutas genéricas | 11 |
 

@@ -1,0 +1,5 @@
+{"id":"204:3159","nombre":"Configuración · Cómoda · Tema Windgets claro","pagina":"79:6","tema":"claro","w":1093,"h":560,"base":"204:3109","el":[
+{"n":"Configuración · Cómoda","ruta":"","t":"TEXT","x":200,"y":49,"w":287,"h":35,"fill":"tinta","txt":"Configuración · Cómoda","font":"Nunito Bold 26"},
+{"n":"Selector segmentado · Compacta / Cómoda","ruta":"Preferencias de la cuenta","t":"INSTANCE","comp":"Selector segmentado:Elegida=Segunda","ptxt":["Compacta|Nunito Medium 14 #17131d","Cómoda|Nunito Medium 14 #ffffff"]},
+{"n":"Ir · Configuración","ruta":"Preferencias de la cuenta","t":"FRAME","rx":"ON_CLICK>NODE:204:3109/NAVIGATE"},
+{"n":"Ir · Configuración · Cómoda","ruta":"Preferencias de la cuenta","t":"FRAME","nota":"sin reacción"}],"quitados":[],"nota":"el espaciado de filas no cambia respecto de Compacta"}

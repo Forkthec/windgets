@@ -1,0 +1,5 @@
+{"id":"2264:134733","nombre":"Opciones de instalación · Sin espacio · Claro","pagina":"83:3","tema":"claro","w":1280,"h":790,"base":"84:1068","quitados":[],"el":[
+{"n":"Instalar","t":"FRAME","x":28,"y":273,"w":83,"h":36,"r":9,"op":0.4,"rx":"ninguna (el original lleva NAVIGATE 84:1092)"},
+{"n":"Inicio automático (texto 1)","ruta":"Contenido","t":"TEXT","x":28,"y":172,"w":441,"h":20,"fill":"tinta","txt":"Espacio disponible: 320 MB · Espacio requerido: 500 MB","font":"Rubik Regular 17"},
+{"n":"Inicio automático (texto 2)","ruta":"Contenido","t":"TEXT","x":28,"y":204,"w":624,"h":20,"fill":"error","txt":"No hay suficiente espacio en disco. Libera al menos 500 MB e intenta de nuevo.","font":"Rubik Regular 17"}
+],"nota":"resto igual a 84:1068; Cancelar misma URL 85-2"}

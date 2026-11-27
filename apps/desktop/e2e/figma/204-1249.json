@@ -1,0 +1,19 @@
+{"id":"204:1249","nombre":"Calendario · Semana · Tema Windgets claro","pagina":"79:3","tema":"claro","w":1093,"h":560,"fill":"fondo","nota":"Compacta. Cuadrícula semanal: 7 columnas de 115 (x=260+115,5k), horas 07:00 a 20:00 a paso 24 (fila 'Todo el día' y=139). Tarjetas 111x23 con fondo = color de etiqueta fijo al 0,2 y barra 3 px; las de día completo 111x19. Selector Mes/Semana en la variante 'Elegida=Segunda' y campo 'Ir · Mes y año' 179 de ancho, pero la instancia del campo mide 185 (6 px más que su envoltorio).","rx":["Ir · Mes y año | CLICK | NODE 204:1442 NAVIGATE","Ir · Calendario | CLICK | NODE 204:805 NAVIGATE","Ir · Panel del día (x7 columnas de día) | CLICK | NODE 204:1316 NAVIGATE","Nav · Windi | CLICK | NODE 204:25611 OVERLAY"],"el":[
+{"t":"T","x":200,"y":19,"w":286,"h":18,"txt":"Planificador  ›  Calendario  ›  Calendario · Semana","font":"Nunito R 13","fill":"texto"},
+{"t":"T","x":200,"y":49,"w":249,"h":35,"txt":"Calendario · Semana","font":"Nunito B 26","fill":"tinta"},
+{"n":"Ir · Mes y año","t":"F","x":736,"y":48,"w":179,"h":36,"r":7,"hijo":"Campo editable 185x36"},
+{"n":"Selector segmentado","t":"I","x":923,"y":48,"w":146,"h":36,"fill":"superficie","stroke":"borde","sw":1.5,"r":9,"comp":"Selector segmentado:Elegida=Segunda","hijo":"«Mes» 59x33; «Semana» 84x33 fill seleccion, sobre_seleccion"},
+{"n":"Navegación del calendario","t":"F","x":592,"y":48,"w":136,"h":36,"hijo":"Ir · Semana anterior 36, Ir · Hoy 56 «Hoy» Nunito M 14, Ir · Semana siguiente 36 (superficie, borde_campo 1.5, r9)"},
+{"n":"Cabecera","t":"T","y":104,"h":18,"txt":"Lun 23 | Mar 24 | Mié 25 | Jue 26 | Vie 27 | Sáb 28 | Dom 29","font":"Nunito R 13","fill":"texto (Mar 24 sobre_detalle)"},
+{"n":"Hoy","t":"R","x":402.5,"y":102,"w":62,"h":22,"fill":"detalle","r":11},
+{"n":"Vencida","t":"E","x":342.5,"y":110,"w":6,"h":6,"fill":"error"},
+{"n":"Cuadrícula de la semana","t":"R","x":260,"y":126,"w":809,"h":356,"fill":"superficie","stroke":"linea","sw":1},
+{"n":"Línea de hora","t":"R","x":260,"w":809,"h":1,"fill":"linea","rep":13,"pos":"y=170+24k"},
+{"n":"Línea de día","t":"R","y":126,"w":1,"h":356,"fill":"linea","rep":6,"pos":"x=376,491,607,722,838,953"},
+{"n":"Ir · Panel del día","t":"F","y":126,"w":116,"h":356,"r":5,"rep":7,"pos":"x=260,376,491,607,722,838,953"},
+{"n":"Eje · Todo el día / Hora","t":"T","x":223,"h":15,"txt":"Todo el día | 07:00 | 08:00 | 09:00 | 10:00 | 11:00 | 12:00 | 13:00 | 14:00 | 15:00 | 16:00 | 17:00 | 18:00 | 19:00 | 20:00","font":"Nunito R 11","fill":"texto","pos":"y=139,163+24k"},
+{"n":"Tarjeta (todo el día)","t":"F","w":111,"h":19,"r":4,"fill":"color de etiqueta fijo @0.2","txt":"Actualizar el backlog | Responder correo del profesor (punto error 6x6) | Revisar calendario | Cumpleaños de Ana","font":"Nunito R 11"},
+{"n":"Tarjeta (con hora)","t":"F","w":111,"h":23,"r":4,"fill":"#b04f7d/#2b7a8c/#b8692a/#2e8b57 @0.2 (fijos)","txt":"Reunión de equipo 15:00 | Revisar los bocetos 08:00 | Preparar la entrega 09:00 | Compartir el prototipo 10:00 | Entregar ensayo 12:00 | Validar el contraste 14:00 | Enviar la presentación 16:00 | Caminar 30 minutos 17:00 | Exposición de GPI 10:00 | Clase de yoga 18:00 | Revisar pull requests 09:00 | Entrega final del proyecto 11:00 | Lavar la ropa 10:00 | Planear la semana 19:00","font":"Nunito R 12 título / R 10 hora; barra 3 px"},
+{"n":"Nav · Windi","t":"F","x":1029,"y":496,"w":48,"h":48,"r":14},
+{"n":"Menú lateral compartido","t":"I","x":0,"y":0,"w":176,"h":560,"fill":"marco","comp":"Navegación · Barra lateral del tema:Tema=Windgets, Menú=Ampliado"}
+]}

@@ -1,0 +1,22 @@
+{"id":"204:916","nombre":"Agenda diaria · Tema Windgets claro","pagina":"79:3","tema":"claro","w":1093,"h":560,"fill":"fondo","nota":"Compacta. Nombres de capa de los bloques desfasados del texto (capa '9:00 Preparar la entrega' etc.; fila 6 con capa '13:00 Revisar calendario' y texto 'Enviar la presentación').","rx":["Ir · Mes y año | CLICK | NODE 204:1442 NAVIGATE","Ir · Detalle de tarjeta (x7 bloques) | CLICK | NODE 204:1849 NAVIGATE","Ir · Detalle de tarjeta (sin horario) | CLICK NODE 204:1849 ; DRAG NODE 217:15308 NAVIGATE SMART_ANIMATE 0.2 EASE_OUT","Nav · Windi | CLICK | NODE 204:25611 OVERLAY"],"el":[
+{"t":"T","x":200,"y":19,"w":167,"h":18,"txt":"Planificador  ›  Agenda diaria","font":"Nunito R 13","fill":"texto"},
+{"t":"T","x":200,"y":49,"w":169,"h":35,"txt":"Agenda diaria","font":"Nunito B 26","fill":"tinta"},
+{"t":"T","x":1000,"y":20,"w":69,"h":16,"txt":"Sincronizado","font":"Nunito R 12","fill":"texto"},
+{"n":"Ir · Mes y año","t":"F","x":839,"y":48,"w":230,"h":36,"r":7,"hijo":"Campo editable:Estado=Normal 230x36 r9 fill superficie stroke borde_campo 1.5 H g8 p0/12/0/12; Icono / Calendario 20x20; «Martes, 24 de noviembre» Nunito R 14 texto"},
+{"n":"Navegación del día","t":"F","x":695,"y":48,"w":136,"h":36,"hijo":"Ir · Día anterior 36x36 (695); Ir · Hoy 56x36 (735) «Hoy» Nunito M 14 tinta; Ir · Día siguiente 36x36 (795); todos fill superficie stroke borde_campo 1.5 r9"},
+{"n":"Ir · Agenda diaria (día)","t":"F","w":74,"h":32,"fill":"superficie","stroke":"linea","sw":1,"r":9,"rep":6,"pos":"x=200,360,440,520,600,680 y=104","txt":"L 23 | X 25 | J 26 | V 27 | S 28 | D 29","font":"Nunito M 13","fill_txt":"tinta"},
+{"n":"Ir · Agenda diaria (día actual)","t":"F","x":280,"y":104,"w":74,"h":32,"fill":"detalle","r":9,"txt":"M 24","font":"Nunito M 13","fill_txt":"sobre_detalle"},
+{"n":"Bloques horarios","t":"F","x":200,"y":151,"w":535,"h":360},
+{"n":"Ir · Detalle de tarjeta","ruta":"Bloques horarios","t":"F","x":200,"w":535,"h":48,"fill":"superficie","stroke":"linea","sw":1,"r":9,"rep":7,"pos":"y=151+52k"},
+{"n":"Hora","t":"T","x":212,"w":37,"h":19,"txt":"08:00 | 09:00 | 10:00 | 12:00 | 14:00 | 16:00 | 17:00","font":"Nunito M 14","fill":"texto (2 primeras) / tinta"},
+{"n":"Título del bloque","t":"T","x":268,"h":19,"txt":"Revisar los bocetos | Preparar la entrega | Compartir el prototipo | Entregar ensayo | Validar el contraste | Enviar la presentación | Caminar 30 minutos","font":"Nunito M 14","fill":"texto (2 primeras) / tinta"},
+{"n":"Bloque horario","t":"T","x":268,"h":16,"txt":"Proyecto · Alta | Proyecto · Alta | Proyecto · Universidad · Media | Universidad · Alta | Proyecto · Media | Proyecto · Alta | Salud · Baja","font":"Nunito R 12","fill":"texto"},
+{"n":"Tarjetas sin horario","t":"F","x":754,"y":151,"w":315,"h":114,"fill":"superficie","stroke":"linea","sw":1,"r":12},
+{"t":"T","x":770,"y":167,"w":138,"h":22,"txt":"Tarjetas sin horario","font":"Nunito M 16","fill":"tinta"},
+{"n":"Ir · Detalle de tarjeta","ruta":"Tarjetas sin horario","t":"F","x":770,"y":201,"w":283,"h":48,"fill":"superficie","stroke":"linea","sw":1,"r":9},
+{"t":"T","x":782,"y":207,"w":116,"h":19,"txt":"Revisar calendario","font":"Nunito M 14","fill":"tinta"},
+{"t":"T","x":782,"y":228,"w":94,"h":16,"txt":"Personal · 24 nov","font":"Nunito R 12","fill":"texto"},
+{"n":"Nav · Windi","t":"F","x":1029,"y":496,"w":48,"h":48,"r":14,"hijo":"Windi · Botón flotante:Estado=Normal"},
+{"n":"Menú lateral compartido","t":"I","x":0,"y":0,"w":176,"h":560,"fill":"marco","comp":"Navegación · Barra lateral del tema:Tema=Windgets, Menú=Ampliado"},
+{"n":"Ícono · Sincronizado","t":"I","x":978,"y":20,"w":16,"h":16,"comp":"Icono / Sincronizado"}
+]}

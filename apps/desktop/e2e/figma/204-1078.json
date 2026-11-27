@@ -1,0 +1,14 @@
+{"id":"204:1078","nombre":"Etiquetas · Tema Windgets claro","pagina":"79:3","tema":"claro","w":1093,"h":560,"fill":"fondo","nota":"Compacta. 8 filas de etiqueta 869x44 con paso 48; el árbol de capas va en orden no visual (Lectura, Finanzas, Hogar, Trabajo invertidas).","rx":["Ir · Nueva etiqueta | CLICK | NODE 204:2047 NAVIGATE","Ir · Editar etiqueta (Proyecto, Universidad, Personal) | CLICK | NODE 204:2095 NAVIGATE","Ir · M-10 (Proyecto, Universidad, Personal) | CLICK | NODE 204:25559 OVERLAY","Ir · Editar etiqueta / Ir · M-10 de Salud, Lectura, Finanzas, Hogar y Trabajo | sin reacción"],"el":[
+{"t":"T","x":200,"y":19,"w":141,"h":18,"txt":"Planificador  ›  Etiquetas","font":"Nunito R 13","fill":"texto"},
+{"t":"T","x":200,"y":49,"w":114,"h":35,"txt":"Etiquetas","font":"Nunito B 26","fill":"tinta"},
+{"t":"T","x":1000,"y":20,"w":69,"h":16,"txt":"Sincronizado","font":"Nunito R 12","fill":"texto"},
+{"n":"Ir · Nueva etiqueta","t":"F","x":1033,"y":48,"w":36,"h":36,"r":7,"hijo":"Botón ícono:Tamaño=Normal, Estado=Normal 36x36 r9"},
+{"n":"Fila de etiqueta","t":"F","x":200,"w":869,"h":44,"fill":"superficie","stroke":"linea","sw":1,"r":9,"rep":8,"pos":"y=104 Proyecto, 152 Universidad, 200 Personal, 248 Salud, 296 Trabajo, 344 Hogar, 392 Finanzas, 440 Lectura"},
+{"n":"Muestra de color","t":"R","x":212,"w":15,"h":15,"r":7,"fill":"#b04f7d, #2b7a8c, #b8692a, #2e8b57, #3e63dd, #f76b15, #dcba04, #6604e6 (fijos)"},
+{"n":"Nombre","t":"T","x":242,"h":20,"txt":"Proyecto | Universidad | Personal | Salud | Trabajo | Hogar | Finanzas | Lectura","font":"Nunito M 15","fill":"tinta"},
+{"n":"Ir · Editar etiqueta","t":"F","x":981,"w":32,"h":32,"r":7,"rep":8,"hijo":"Botón ícono:Tamaño=Fila 32x32 r9"},
+{"n":"Ir · M-10","t":"F","x":1021,"w":32,"h":32,"r":7,"rep":8,"hijo":"Botón ícono Fila 32x32 r9"},
+{"n":"Nav · Windi","t":"F","x":1029,"y":496,"w":48,"h":48,"r":14},
+{"n":"Menú lateral compartido","t":"I","x":0,"y":0,"w":176,"h":560,"fill":"marco","comp":"Navegación · Barra lateral del tema:Tema=Windgets, Menú=Ampliado"},
+{"n":"Ícono · Sincronizado","t":"I","x":978,"y":20,"w":16,"h":16,"comp":"Icono / Sincronizado"}
+]}
