@@ -441,6 +441,9 @@ Un bloque por área. Cada pieza escribe solo en el de su área (docs/implementac
 
 - **SEED-01 · colección Postman** · `COLA.md` (SEED-01 y §1) y `PLAN.md` (fase 8, Newman) piden sembrar una colección Postman, pero el repositorio no tiene ninguna ni una API HTTP propia: la aplicación habla con el Núcleo por IPC (D-188) y con Supabase desde Rust. No se crea; valor neutro: sin colección y sin Newman. Si se quiere probar la API de Supabase con Newman, hace falta decidir qué se prueba.
 
+- **TK-05 · relleno de estado en los temas derivados** · Q1 fija los `relleno_*` de la tabla 1 para los temas del Figma. Para los temas derivados de tres colores no hay tabla, y `derivar.ts` sigue mezclando 70 % estado y 30 % superficie (Q1 dice que la fórmula del Figma es la inversa, 30 % estado). Valor neutro: sin cambio en los temas derivados. Destino: Paula.
+- **TK-05 · fuente del tema por defecto** · `TEMAS_Y_TOKENS.md` §8.3 da Nunito como fuente por defecto, pero `TOKENS_POR_DEFECTO` usa Rubik por la decisión P29 y el tema sin sesión sigue NO DEFINIDO (P43b-395). Valor neutro: Rubik, sin cambio. Destino: TK-04 o Paula.
+
 ### Marco y componentes base (MB, C3, L4, AN)
 
 ### Planificador (PL)

@@ -16,8 +16,11 @@ export type ModoDelTema = 'claro' | 'oscuro';
 export const modoDeLosTokens = (tokens: Tokens): ModoDelTema =>
   contraste('#121216', tokens.marco) >= contraste('#FFFFFF', tokens.marco) ? 'claro' : 'oscuro';
 
-/** HE-02-HU06-ET05: 14 px en «Pequeño», 16 px en «Mediano» y 20 px en «Grande». */
-export const PIXELES_DEL_TAMANO: Record<FontSize, string> = { small: '14px', medium: '16px', large: '20px' };
+/**
+ * HE-02-HU06-ET05 con P4 (TK-05, docs/rediseno.md RD-107): «Mediano» es 14 px, el FLOAT «Tipografía del tema» del
+ * Figma; «Pequeño» 12 px y «Grande» 18 px escalan como antes (0,875 y 1,25) y se redondean.
+ */
+export const PIXELES_DEL_TAMANO: Record<FontSize, string> = { small: '12px', medium: '14px', large: '18px' };
 
 /** La familia CSS de una fuente del catálogo (declarada en `ui/tema/tokens.css`). */
 export const familia = (nombre: string): string => `'${nombre}', 'Segoe UI', sans-serif`;

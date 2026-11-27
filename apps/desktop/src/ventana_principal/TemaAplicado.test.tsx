@@ -73,7 +73,7 @@ describe('HE-03-HU06 · La aplicación con el tema aplicado', () => {
     expect(token('tinta')).toBe('#F5F5F5');
     expect(token('accion')).toBe('#4FA2AB');
     expect(token('fuente')).toContain('Inter');
-    expect(token('tamano-fuente')).toBe('16px');
+    expect(token('tamano-fuente')).toBe('14px');
   });
 
   it('HE-03-HU06-CA02 · Aplicar colores del tema', async () => {
@@ -88,8 +88,8 @@ describe('HE-03-HU06 · La aplicación con el tema aplicado', () => {
 
   it('HE-03-HU06-CA03 · Tipografía de tamaño grande', async () => {
     await abrir(() => aplicado({ font: { id: 'inter', size: 'large' } }));
-    // ET05: el tamaño del texto de toda la aplicación es el «Grande» del tema (20 px).
-    await waitFor(() => expect(token('tamano-fuente')).toBe('20px'));
+    // ET05: el tamaño del texto de toda la aplicación es el «Grande» del tema (18 px, P4 y RD-107).
+    await waitFor(() => expect(token('tamano-fuente')).toBe('18px'));
   });
 
   it('HE-03-HU06-CA04 · Cambios guardados o sin aplicar no afectan la aplicación', async () => {
@@ -111,7 +111,7 @@ describe('HE-03-HU06 · La aplicación con el tema aplicado', () => {
     tema = { ...aplicado({ font: { id: 'nunito', size: 'small' } }), theme_id: 't2', name: 'Verano' };
     nucleo.emitir('applied_theme_changed', { theme_id: 't2', origin: 'local', has_unsaved_draft: false });
     await waitFor(() => expect(token('fuente')).toContain('Nunito'));
-    expect(token('tamano-fuente')).toBe('14px');
+    expect(token('tamano-fuente')).toBe('12px');
   });
 
   it('HE-03-HU06-CA06 · Colores de etiquetas y columnas', async () => {

@@ -122,11 +122,13 @@ export function derivarTokens({ primary: P, secondary: S, text: X, fuente, taman
 
 /**
  * Los tokens con los que se pinta un tema: la tabla fija si es «Windgets claro» u «oscuro» (docs/rediseno.md RD-94)
- * y, en cualquier otro, los derivados. Los estados no están en la tabla: salen con la misma fórmula sobre la
- * superficie fija.
+ * y, en cualquier otro, los derivados. Los `estado_*` no están en la tabla: salen con la misma fórmula sobre la
+ * superficie fija. Los `relleno_*` sí (TK-05, Q1).
  */
 export function tokensDeLosColores(tema: TemaParaTokens): Tokens {
   const derivados = derivarTokens(tema);
   const fijo = temaDeWindgets(tema);
-  return fijo ? { ...derivados, ...fijo.tokens, ...estadosSobre(fijo.tokens.superficie) } : derivados;
+  return fijo
+    ? { ...derivados, ...fijo.tokens, ...estadosSobre(fijo.tokens.superficie), ...fijo.rellenos }
+    : derivados;
 }

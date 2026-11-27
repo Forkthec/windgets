@@ -61,15 +61,17 @@
 :root {
   --wg-unidad: 4px; /* DUDA: P00 unidad base no definida (docs/DUDAS.md) */
   --wg-grosor-control: calc(var(--wg-unidad) * 10);
-  --wg-radio: min(calc(var(--wg-grosor-control) / 3), calc(var(--wg-unidad) * 3));
-  --wg-borde-ancho: calc(var(--wg-unidad) / 4);
-  --wg-sombra: calc(var(--wg-unidad) * 0.31) calc(var(--wg-unidad) * 0.95) 0 var(--wg-borde);
+  /* TK-05 (TEMAS_Y_TOKENS.md §8.3, docs/rediseno.md RD-107): radio 9 y trazo 1,5 de los controles del Figma, y la
+     sombra dura 3,5 con `borde` en los temas que no definen `sombra`. Los valores están en el bloque TK-03. */
+  --wg-radio: var(--wg-radio-control);
+  --wg-borde-ancho: var(--wg-trazo-control);
+  --wg-sombra: 3px 5px 0 var(--wg-borde);
 }
 
 /* TK-03 · Radios, trazos, sombras y anillo de foco del rediseño (docs/implementacion/TEMAS_Y_TOKENS.md §2 y §4).
    Son las medidas del Figma en px (como RD-05): no siguen R-07, R-08 ni R-14. Cada pieza los aplica a sus controles;
-   aquí solo se definen. El radio, el trazo y la sombra de siempre (--wg-radio, --wg-borde-ancho, --wg-sombra) los
-   cambia TK-05 (§8.3). */
+   aquí solo se definen. El radio, el trazo y la sombra de siempre (--wg-radio, --wg-borde-ancho, --wg-sombra) toman
+   de aquí sus valores (TK-05, §8.3). */
 :root {
   /* §4.1 Radios */
   --wg-radio-control: 9px;
@@ -203,13 +205,13 @@ body {
   background: transparent;
 }
 .wg-boton:focus-visible {
-  outline: 2px solid var(--wg-tinta);
-  outline-offset: 2px;
+  outline: var(--wg-trazo-foco) solid var(--wg-trazo-foco-color);
+  outline-offset: var(--wg-separacion-foco);
 }
 .wg-campo__entrada:focus-visible,
 .wg-interruptor:focus-visible {
-  outline: var(--wg-borde-ancho) solid var(--wg-accion);
-  outline-offset: calc(var(--wg-unidad) / 2);
+  outline: var(--wg-trazo-foco) solid var(--wg-trazo-foco-color); /* D6 (TK-05) */
+  outline-offset: var(--wg-separacion-foco);
 }
 .wg-motivo {
   color: var(--wg-texto);
@@ -266,7 +268,7 @@ body {
 }
 .wg-campo__entrada[aria-invalid='true'] {
   border-color: var(--wg-estado-vencida);
-  border-width: calc(var(--wg-borde-ancho) * 2);
+  border-width: var(--wg-trazo-error-campo);
 }
 .wg-campo__mensaje {
   color: var(--wg-tinta);
@@ -392,10 +394,9 @@ body {
 
 /* Mensajes emergentes (rediseno_final_prototipos.md §3.5, RD-63): cola en la esquina inferior derecha, encima de
    todo, sin bloquear los clics de la pantalla. Colores fijos por tipo con fondo sólido y borde izquierdo de 4 px. */
-/* Colores fijos de los mensajes, iguales en todos los temas (§3.5). */
+/* Relleno rojo de la acción destructiva principal (RD-72), igual en todos los temas. Los avisos ya no lo usan: van
+   con las variables de estado del tema (D1, TK-05). */
 :root {
-  --wg-mensaje-exito: #1e7d3c;
-  --wg-mensaje-advertencia: #b07d00;
   --wg-mensaje-error: #c62828;
   --wg-sobre-mensaje: #ffffff;
 }
@@ -412,7 +413,8 @@ body {
 }
 
 .wg-resultado {
-  --wg-resultado-color: var(--wg-mensaje-exito);
+  /* D1 y P2 (TK-05): el color del tipo solo en el borde y el ícono; el texto en `texto`. */
+  --wg-resultado-color: var(--wg-estado-completada);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -424,7 +426,7 @@ body {
   border-left: 4px solid var(--wg-resultado-color);
   border-radius: 8px;
   background: var(--wg-superficie-alta);
-  color: var(--wg-tinta);
+  color: var(--wg-texto);
   font-size: 13px;
   box-shadow: var(--wg-sombra);
   pointer-events: auto;
@@ -432,15 +434,15 @@ body {
 }
 
 .wg-resultado--info {
-  --wg-resultado-color: var(--wg-accion);
+  --wg-resultado-color: var(--wg-informacion, var(--wg-accion));
 }
 
 .wg-resultado--advertencia {
-  --wg-resultado-color: var(--wg-mensaje-advertencia);
+  --wg-resultado-color: var(--wg-estado-pendiente);
 }
 
 .wg-resultado--error {
-  --wg-resultado-color: var(--wg-mensaje-error);
+  --wg-resultado-color: var(--wg-error, var(--wg-estado-vencida));
 }
 
 .wg-resultado__icono {
@@ -523,8 +525,8 @@ body {
   cursor: pointer;
 }
 .wg-miga__nivel:focus-visible {
-  outline: var(--wg-borde-ancho) solid var(--wg-accion);
-  outline-offset: calc(var(--wg-unidad) / 2);
+  outline: var(--wg-trazo-foco) solid var(--wg-trazo-foco-color); /* D6 (TK-05) */
+  outline-offset: var(--wg-separacion-foco);
 }
 
 /* RT-03: miga de pan y «Regresar» en la parte superior de la pantalla, subpantalla o paso. */
@@ -629,8 +631,8 @@ body {
   cursor: default;
 }
 .wg-enlace:focus-visible {
-  outline: var(--wg-borde-ancho) solid var(--wg-accion);
-  outline-offset: calc(var(--wg-unidad) / 2);
+  outline: var(--wg-trazo-foco) solid var(--wg-trazo-foco-color); /* D6 (TK-05) */
+  outline-offset: var(--wg-separacion-foco);
 }
 
 /* Tablero Kanban (P-KAN-01, HE-09-HU01): columnas una al lado de otra, con desplazamiento horizontal. Su alto es
@@ -694,8 +696,9 @@ body {
 }
 .wg-calendario-widget__hoy {
   border-radius: 50%;
-  background: var(--wg-accion);
-  color: var(--wg-sobre-accion);
+  /* §8.2 (TK-05): el día actual va en `detalle`; en los temas que no lo definen, en la acción. */
+  background: var(--wg-detalle, var(--wg-accion));
+  color: var(--wg-sobre-detalle, var(--wg-sobre-accion));
   font-weight: 700;
 }
 .wg-columna__tarjetas {
@@ -756,8 +759,8 @@ button.wg-tarjeta__titulo {
   cursor: pointer;
 }
 button.wg-tarjeta__titulo:focus-visible {
-  outline: var(--wg-borde-ancho) solid var(--wg-accion);
-  outline-offset: calc(var(--wg-unidad) / 2);
+  outline: var(--wg-trazo-foco) solid var(--wg-trazo-foco-color); /* D6 (TK-05) */
+  outline-offset: var(--wg-separacion-foco);
 }
 
 /* Detalle de tarjeta (P-TAR-01): el nombre de cada dato sobre su valor. */
@@ -789,7 +792,7 @@ button.wg-tarjeta__titulo:focus-visible {
 }
 .wg-tarjeta--destino,
 .wg-columna--destino {
-  outline: calc(var(--wg-borde-ancho) * 2) solid var(--wg-accion);
+  outline: var(--wg-trazo-seleccion) solid var(--wg-accion);
 }
 
 /* Nombre emergente de los botones (docs/rediseno.md RD-100; `ui/NombreEmergente`): relleno `tinta`, texto `marco`,
@@ -908,7 +911,7 @@ button.wg-tarjeta__titulo:focus-visible {
 }
 /* El bloque de la hora actual se marca con un borde más grueso, no solo con color (interfaz.md). */
 .wg-agenda__bloque--actual {
-  border-top-width: calc(var(--wg-borde-ancho) * 4);
+  border-top-width: calc(var(--wg-trazo-seleccion) * 2);
 }
 .wg-agenda__hora {
   margin: 0 0 var(--wg-unidad);
@@ -1046,7 +1049,7 @@ button.wg-tarjeta__titulo:focus-visible {
   padding: var(--wg-unidad);
   background: var(--wg-superficie);
   color: var(--wg-tinta);
-  border: calc(var(--wg-borde-ancho) * 2) dashed var(--wg-accion);
+  border: var(--wg-trazo-seleccion) dashed var(--wg-accion);
   border-radius: var(--wg-radio);
   cursor: move;
   touch-action: none;
@@ -1140,8 +1143,8 @@ button.wg-tarjeta__titulo:focus-visible {
   vertical-align: top;
 }
 .wg-calendario__dia--hoy {
-  outline: calc(var(--wg-borde-ancho) * 2) solid var(--wg-accion);
-  outline-offset: calc(var(--wg-borde-ancho) * -2);
+  outline: var(--wg-trazo-seleccion) solid var(--wg-detalle, var(--wg-accion)); /* §8.2 (TK-05) */
+  outline-offset: calc(var(--wg-trazo-seleccion) * -1);
 }
 .wg-calendario__dia--hoy .wg-calendario__numero {
   font-weight: 700;
@@ -1189,12 +1192,12 @@ button.wg-tarjeta__titulo:focus-visible {
 .wg-calendario .wg-calendario__dia--vencida,
 .wg-calendario-semana .wg-calendario__dia--vencida {
   background: var(--wg-relleno-vencida);
-  border: calc(var(--wg-borde-ancho) * 2) solid var(--wg-estado-vencida);
+  border: var(--wg-trazo-seleccion) solid var(--wg-estado-vencida);
 }
 .wg-calendario .wg-calendario__dia--pendiente,
 .wg-calendario-semana .wg-calendario__dia--pendiente {
   background: var(--wg-relleno-pendiente);
-  border: calc(var(--wg-borde-ancho) * 2) solid var(--wg-estado-pendiente);
+  border: var(--wg-trazo-seleccion) solid var(--wg-estado-pendiente);
 }
 .wg-calendario__encabezado,
 .wg-calendario__vencidas {
@@ -1496,10 +1499,11 @@ body[data-sesion] .wg-boton.wg-boton--texto-peligro:not(:disabled) {
   font-size: 13px;
   cursor: pointer;
 }
-/* RD-99: la opción elegida va en `secundario`; en los temas que no lo definen, en la acción. */
+/* RD-99 con §8.2 (TK-05, RD-107): la opción elegida va en `seleccion` y `sobre_seleccion`; en los temas que no los
+   definen, en la acción. */
 .wg-segmentado__opcion[aria-pressed='true'] {
-  background: var(--wg-secundario, var(--wg-accion));
-  color: var(--wg-sobre-secundario, var(--wg-sobre-accion));
+  background: var(--wg-seleccion, var(--wg-accion));
+  color: var(--wg-sobre-seleccion, var(--wg-sobre-accion));
 }
 .wg-segmentado__opcion:disabled {
   cursor: not-allowed;

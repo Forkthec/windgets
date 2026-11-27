@@ -198,21 +198,8 @@ function diferencias(): string[] {
   return salida;
 }
 
-// Lo que falta en el código el 27-nov-2026 (TEMAS_Y_TOKENS.md §8.1 y §8.3). Lo cierran TK-01, TK-02 y TK-05.
+// Lo que falta en el código el 27-nov-2026 (TEMAS_Y_TOKENS.md §8.1 y §8.3). TK-01 y TK-05 ya cerraron las suyas; queda TK-02.
 const PENDIENTES: string[] = [
-  // TK-05: P3 (texto sobre cian #0b2a2e) y Q1 (relleno_* como tabla fija), con los contrastes y la regla que dependen de ellos (§8.3).
-  'claro.sobre_accion: código #17131d, tabla #0b2a2e',
-  'claro.relleno_vencida: código #e47067, tabla #f4c2be',
-  'claro.relleno_pendiente: código #c9af62, tabla #e8ddbc',
-  'claro.relleno_completada: código #62c382, tabla #bbe5c9',
-  'claro texto sobre cian: Boton Principal (4.1) usa #17131d',
-  'oscuro.sobre_accion: código #17131d, tabla #0b2a2e',
-  'oscuro.relleno_vencida: código #a52e2a, tabla #5f2930',
-  'oscuro.relleno_pendiente: código #a5842a, tabla #5f4e30',
-  'oscuro.relleno_completada: código #28a354, tabla #2a5b42',
-  'oscuro contraste tinta/relleno_pendiente: 3.29 < 4.5',
-  'oscuro contraste tinta/relleno_completada: 3.02 < 4.5',
-  'oscuro texto sobre cian: Boton Principal (4.1) usa #17131d',
   // TK-02: los temas Rosa y Enfoque, 32 colores cada uno (§8.1.1).
   'rosa.principal: falta',
   'rosa.secundario: falta',
