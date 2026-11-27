@@ -65,4 +65,9 @@ export function aplicarTokens(tokens: Tokens, raiz: HTMLElement = document.docum
   // pareja de la acción.
   if (tokens.secundario) raiz.style.setProperty('--wg-sobre-secundario', tokens.superficie);
   else raiz.style.removeProperty('--wg-sobre-secundario');
+  // TK-03: las sombras de TEMAS_Y_TOKENS.md §4.3 llevan su propio desplazamiento y solo toman el color de `sombra`.
+  // Sin `sombra`, la hoja de estilos usa `borde` (en Rosa y Enfoque `sombra` es alias de `borde`).
+  const colorSombra = tokens.sombra?.match(/#[0-9a-fA-F]{6,8}\b/)?.[0];
+  if (colorSombra) raiz.style.setProperty('--wg-sombra-color', colorSombra);
+  else raiz.style.removeProperty('--wg-sombra-color');
 }
