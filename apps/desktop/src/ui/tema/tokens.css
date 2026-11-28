@@ -203,10 +203,13 @@ body {
 .wg-boton--fila {
   min-height: 32px;
 }
+/* MB-10 (L4-02): la sombra 3,5 es solo del Principal (R8). Con el puntero encima no cambia el relleno: se le superpone
+   la «Capa de puntero» `tinta` al 14 % (F0b), dibujada como sombra interior para que se anime con la sombra (A-25). */
 .wg-boton--principal {
+  --wg-capa-puntero: color-mix(in srgb, var(--wg-tinta) 14%, transparent);
   background: var(--wg-accion);
   color: var(--wg-sobre-accion);
-  box-shadow: var(--wg-sombra);
+  box-shadow: var(--wg-sombra-boton);
 }
 /* `--wg-error` solo existe en «Windgets claro» y «oscuro»: en los demás temas el texto es la tinta y el borde, el color
    de vencida, que llega a 3:1 con la superficie. */
@@ -1901,8 +1904,17 @@ body[data-sesion] .wg-boton.wg-boton--texto-peligro:not(:disabled) {
 .wg-boton:where(:hover:not(:disabled, .wg-boton--principal)) {
   background: var(--wg-superficie-baja);
 }
+.wg-boton.wg-boton--principal:hover:not(:disabled) {
+  box-shadow:
+    var(--wg-sombra-boton),
+    inset 0 0 0 100vmax var(--wg-capa-puntero);
+}
 .wg-boton.wg-boton--principal:active:not(:disabled) {
   box-shadow: none;
+}
+/* Pulsado con el puntero encima: sin sombra (E1) y con la capa. */
+.wg-boton.wg-boton--principal:active:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 100vmax var(--wg-capa-puntero);
 }
 /* A-27: el campo con el puntero encima, borde `tinta` (F0:331); el error conserva su color. El mensaje del campo
    entra con fundido de `--dur-medio`. */

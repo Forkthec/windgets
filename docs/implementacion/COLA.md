@@ -94,7 +94,7 @@ Ninguna pieza de esta fase depende de una de la fase 7 (`PLAN.md:123-137`). Las 
 | | ID | Título | Talla | Spec y piezas (IDs) | Archivos principales | Depende de | Bloqueada por | Pruebas que deben pasar |
 |---|---|---|---|---|---|---|---|---|
 | [ ] | L4-01 | Área de avisos y los cuatro avisos (conflicto D7) | M (L si gana D7) | MB-06 (`:292`); `CONSISTENCIA.md:245-264` | `ui/Aviso`, `tokens.css` | C3-04, TK-05 | V-04 | Módulo; geometría |
-| [ ] | L4-02 | Botón | M | MB-10 (`:407`) | `ui/Boton/Boton.tsx` | TK-01 | — | Módulo; geometría |
+| [x] | L4-02 | Botón | M | MB-10 (`:407`) | `ui/Boton/Boton.tsx` | TK-01 | — | Módulo; geometría |
 | [ ] | L4-03 | CampoTexto | M | MB-11 (`:448`) | `ui/CampoTexto` | TK-01 | — | Módulo; geometría |
 | [ ] | L4-04 | Interruptor | S | MB-13 (`:495`) | `ui/Interruptor` | TK-01 | — | Módulo; geometría |
 | [ ] | L4-05 | SelectorFecha (3 defectos) | M | MB-16 (`:540`) | `ui/SelectorFecha` | TK-01 | — | Una prueba por defecto |

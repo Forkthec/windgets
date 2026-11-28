@@ -296,3 +296,84 @@ test('RD-99 · Excepción: en las pantallas de cuenta el botón principal sigue 
   expect(caja?.width).toBeCloseTo(formulario?.width ?? 0, 0);
   expect(caja?.height).toBe(47);
 });
+
+// MB-10 (L4-02): hover del Principal con la capa de puntero, deshabilitado sin opacidad, radio 9 y anillo con
+// separación de 3 px, en los temas que hoy tienen sus colores (Rosa y Enfoque esperan V-08).
+const deshabilitados = (page: Page) =>
+  page.evaluate(() => {
+    const caja = document.getElementById('muestra') as HTMLElement;
+    for (const nivel of ['principal', 'secundario', 'destructivo']) {
+      caja.insertAdjacentHTML(
+        'beforeend',
+        `<button type="button" id="${nivel}-apagado" class="wg-boton wg-boton--${nivel}" disabled>Guardar</button>`,
+      );
+    }
+  });
+
+/** El color calculado de una expresión CSS, leído con un elemento de prueba. */
+const colorDe = (page: Page, valor: string) =>
+  page.evaluate((v) => {
+    const prueba = document.createElement('span');
+    prueba.style.color = v;
+    document.body.append(prueba);
+    const color = getComputedStyle(prueba).color;
+    prueba.remove();
+    return color;
+  }, valor);
+
+for (const [nombre, tema] of Object.entries(TEMAS)) {
+  test(`MB-10 · Windgets ${nombre}: con el puntero encima el Principal conserva el relleno y lleva la capa`, async ({
+    page,
+  }) => {
+    await entrar(page);
+    await pintar(page, tema.colores);
+    await muestra(page);
+    const principal = page.locator('#principal');
+    await principal.hover();
+    expect(await estilo(principal, 'background-color')).toBe(tema.accion);
+    const sombra = await estilo(principal, 'box-shadow');
+    const capa = await colorDe(page, 'color-mix(in srgb, var(--wg-tinta) 14%, transparent)');
+    expect(sombra).toContain(tema.sombra);
+    expect(sombra).toContain(capa);
+    expect(sombra).toContain('inset');
+    // Secundario y Destructivo pasan a `superficie_baja` (E1).
+    for (const id of ['secundario', 'destructivo']) {
+      const boton = page.locator(`#${id}`);
+      await boton.hover();
+      expect(await estilo(boton, 'background-color'), id).toBe(tema.superficie_baja);
+    }
+  });
+
+  test(`MB-10 · Windgets ${nombre}: deshabilitado en superficie con texto y borde «borde», sin opacidad`, async ({
+    page,
+  }) => {
+    await entrar(page);
+    await pintar(page, tema.colores);
+    await muestra(page);
+    await deshabilitados(page);
+    for (const nivel of ['principal', 'secundario', 'destructivo']) {
+      const boton = page.locator(`#${nivel}-apagado`);
+      expect(await estilo(boton, 'opacity'), nivel).toBe('1');
+      expect(await estilo(boton, 'background-color'), nivel).toBe(tema.superficie);
+      expect(await estilo(boton, 'color'), nivel).toBe(tema.borde);
+      expect(await estilo(boton, 'border-top-color'), nivel).toBe(tema.borde);
+      expect(await estilo(boton, 'box-shadow'), nivel).toBe('none');
+    }
+  });
+}
+
+test('MB-10 · Radio 9, borde de 1,5 y anillo de foco de 2 px separado 3 px', async ({ page }) => {
+  await entrar(page);
+  await pintar(page, TEMAS.claro.colores);
+  await muestra(page);
+  for (const id of ['principal', 'secundario', 'destructivo', 'icono', 'fila', 'icono-fila']) {
+    expect(await estilo(page.locator(`#${id}`), 'border-top-left-radius'), id).toBe('9px');
+  }
+  await page.locator('#antes').focus();
+  await page.keyboard.press('Tab');
+  const principal = page.locator('#principal');
+  await expect(principal).toBeFocused();
+  expect(await estilo(principal, 'outline-width')).toBe('2px');
+  expect(await estilo(principal, 'outline-offset')).toBe('3px');
+  expect(await estilo(principal, 'outline-color')).toBe(TEMAS.claro.tinta);
+});

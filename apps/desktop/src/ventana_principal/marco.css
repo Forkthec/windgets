@@ -281,15 +281,7 @@ body[data-sesion] .wg-boton:where(:not(.wg-boton--icono)) {
   font-size: 14px;
   font-weight: 500;
 }
-body[data-sesion] .wg-boton:disabled {
-  border-color: transparent;
-  background: var(--wgm-deshabilitado);
-  color: var(--wgm-deshabilitado-texto);
-}
-body[data-sesion] .wg-boton.wg-boton--icono:disabled {
-  background: transparent;
-}
-body[data-sesion] .wg-boton:focus-visible,
+/* MB-10 (L4-02): el deshabilitado y el anillo de foco del botón son los de `tokens.css` (E3, D6); aquí no se pisan. */
 body[data-sesion] .wg-interruptor:focus-visible,
 body[data-sesion] .wg-campo__entrada:focus-visible,
 .wg-menu__opcion:focus-visible,
