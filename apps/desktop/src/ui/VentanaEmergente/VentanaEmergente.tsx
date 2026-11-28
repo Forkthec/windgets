@@ -1,9 +1,23 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { createPortal } from 'react-dom';
 import textos from '@/types/messages.es.json';
 import { Confirmacion } from '../Confirmacion/Confirmacion';
 import { ATRIBUTO_SIN_INERTE } from '../MensajeResultado/MensajeResultado';
 import { NombreEmergente } from '../NombreEmergente/NombreEmergente';
+import {
+  ATRIBUTO_DE_SALIDA,
+  cancelarSalidas,
+  salirConCopia,
+  useEntradaAnimada,
+} from '../movimiento/useSalidaAnimada';
 
 export interface VentanaEmergenteProps {
   titulo: string;
@@ -35,7 +49,8 @@ function volverInerte(excepto: Element): Element[] {
   const tocados: Element[] = [];
   for (const el of Array.from(document.body.children)) {
     // RD-104: los mensajes emergentes quedan operables encima del velo.
-    if (el === excepto || el.hasAttribute(ATRIBUTO_SIN_INERTE)) continue;
+    if (el === excepto || el.hasAttribute(ATRIBUTO_SIN_INERTE) || el.hasAttribute(ATRIBUTO_DE_SALIDA))
+      continue;
     const registro = inertes.get(el);
     if (registro) registro.cuenta += 1;
     else {
@@ -72,6 +87,9 @@ function enfocables(raiz: HTMLElement): HTMLElement[] {
 // sus acciones abajo a la derecha, la principal a la derecha; si el contenido no cabe (85 % del alto), solo el cuerpo
 // se desplaza. La capa recibe la selección: la pantalla de fondo y el menú no responden (ET08). Se dibuja fuera de la
 // pantalla para que el bloqueo no la alcance.
+// AN-01 (ANIMACIONES.md A-01, A-02, A-02b): entra con fundido y sube `--mov-corto` en 200 ms (clase `--abierta` en el
+// fotograma siguiente); al cerrar, quien la abre la desmonta en el acto y una copia inerte sale en 150 ms. Una ventana
+// encima de otra pinta su velo transparente: el de abajo ya oscurece el fondo.
 export function VentanaEmergente({
   titulo,
   children,
@@ -92,6 +110,27 @@ export function VentanaEmergente({
     quienAbrio.current = typeof document === 'undefined' ? null : document.activeElement;
   const empezoDentro = useRef(false);
   const bloquear = useContext(ContextoDeBloqueo);
+  // A-02b: si ya hay otra abierta debajo, esta es la apilada.
+  const apilada = useRef<boolean | undefined>(undefined);
+  if (apilada.current === undefined) apilada.current = abiertas.length > 0;
+  const abierta = useEntradaAnimada(ventana);
+  // A-02: antes de que React la quite, su copia empieza a salir.
+  useLayoutEffect(() => {
+    const velo = fondo.current;
+    return () =>
+      salirConCopia(
+        velo,
+        [
+          {
+            selector: '.wg-fondo-emergente',
+            abierta: 'wg-fondo-emergente--abierta',
+            saliendo: 'wg-fondo-emergente--saliendo',
+          },
+          { selector: '.wg-emergente', abierta: 'wg-emergente--abierta', saliendo: 'wg-emergente--saliendo' },
+        ],
+        '.wg-emergente',
+      );
+  }, []);
   useEffect(() => {
     salir.current = alSalir;
     conCambios.current = hayCambios;
@@ -108,6 +147,8 @@ export function VentanaEmergente({
   useEffect(() => {
     const raiz = ventana.current;
     const propia = Symbol('ventana');
+    // A-02: si se vuelve a abrir mientras otra sale, la salida se cancela.
+    cancelarSalidas();
     abiertas.push(propia);
     const tocados = fondo.current ? volverInerte(fondo.current) : [];
     // RD-103: el foco inicial va al primer campo; sin campos, a «×».
@@ -151,7 +192,13 @@ export function VentanaEmergente({
   return createPortal(
     <div
       ref={fondo}
-      className="wg-fondo-emergente"
+      className={[
+        'wg-fondo-emergente',
+        apilada.current && 'wg-fondo-emergente--apilado',
+        abierta && 'wg-fondo-emergente--abierta',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       onMouseDown={(e) => {
         empezoDentro.current = e.target !== e.currentTarget;
       }}
@@ -164,7 +211,7 @@ export function VentanaEmergente({
     >
       <div
         ref={ventana}
-        className={clase ? `wg-emergente ${clase}` : 'wg-emergente'}
+        className={['wg-emergente', abierta && 'wg-emergente--abierta', clase].filter(Boolean).join(' ')}
         role="dialog"
         aria-modal="true"
         aria-label={titulo}

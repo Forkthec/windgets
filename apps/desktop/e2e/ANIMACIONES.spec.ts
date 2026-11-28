@@ -165,3 +165,44 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
     await expect(mensaje).toHaveCSS('opacity', '1');
   });
 }
+
+// AN-01 · A-01, A-02 (ventana emergente) y A-03, A-04 (menú ⋮).
+for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+  const medio = reducedMotion === 'reduce' ? '0.1s' : '0.2s';
+  const corto = reducedMotion === 'reduce' ? '0.1s' : '0.15s';
+
+  test(`AN-01 · A-01 la ventana entra en 200 ms y A-02 sale y se quita (${reducedMotion})`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1200, height: 800 });
+    await page.emulateMedia({ reducedMotion });
+    await entrar(page);
+    await abrirDelMenu(page, 'Etiquetas');
+    await page.getByRole('button', { name: 'Nueva etiqueta', exact: true }).click();
+    const ventana = page.getByRole('dialog', { name: 'Nueva etiqueta' });
+    await expect(ventana).toHaveClass(/wg-emergente--abierta/);
+    await expect(ventana).toHaveCSS('transition-property', 'opacity, transform');
+    await expect(ventana).toHaveCSS('transition-duration', `${medio}, ${medio}`);
+    await expect(ventana).toHaveCSS('opacity', '1');
+    await expect(ventana).toHaveCSS('transform', 'none');
+    await page.keyboard.press('Escape');
+    await expect(ventana).toHaveCount(0);
+    // La copia que sale se quita sola y no tapa la pantalla.
+    await expect(page.locator('[data-saliendo]')).toHaveCount(0);
+  });
+
+  test(`AN-01 · A-03 el menú abre en 150 ms y A-04 cierra (${reducedMotion})`, async ({ page }) => {
+    await page.setViewportSize({ width: 1200, height: 800 });
+    await page.emulateMedia({ reducedMotion });
+    await entrar(page);
+    await abrirDelMenu(page, 'Tablero Kanban');
+    await page.getByRole('button', { name: 'Acciones de Por hacer', exact: true }).click();
+    const menu = page.getByRole('menu');
+    await expect(menu).toHaveClass(/wg-menu-acciones__lista--abierta/);
+    await expect(menu).toHaveCSS('transition-property', 'opacity, transform');
+    await expect(menu).toHaveCSS('transition-duration', `${corto}, ${corto}`);
+    await page.keyboard.press('Escape');
+    await expect(menu).toHaveCount(0);
+    await expect(page.locator('.wg-menu-acciones__lista')).toHaveCount(0);
+  });
+}

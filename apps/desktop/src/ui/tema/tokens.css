@@ -1743,6 +1743,59 @@ body[data-sesion] .wg-boton.wg-boton--texto-peligro:not(:disabled) {
 
 /* ── Marco y componentes base (MB, C3, L4, AN) ── */
 
+/* AN-01 · Ventana emergente (ANIMACIONES.md A-01, A-02, A-02b). Entra con la clase `--abierta` en el fotograma
+   siguiente: el velo funde y la ventana funde y sube `--mov-corto` en `--dur-medio`. Sale (una copia inerte) en
+   `--dur-corto` con la misma curva. La ventana apilada encima de otra pinta su velo transparente. */
+.wg-fondo-emergente {
+  opacity: 0;
+  transition: opacity var(--dur-medio) var(--ease-salida);
+}
+.wg-fondo-emergente--abierta {
+  opacity: 1;
+}
+.wg-fondo-emergente--apilado {
+  background: transparent;
+}
+.wg-emergente {
+  opacity: 0;
+  transform: translateY(var(--mov-corto));
+  transition:
+    opacity var(--dur-medio) var(--ease-salida),
+    transform var(--dur-medio) var(--ease-salida);
+}
+.wg-emergente--abierta {
+  opacity: 1;
+  transform: none;
+}
+.wg-fondo-emergente--saliendo {
+  pointer-events: none;
+  transition-duration: var(--dur-corto);
+}
+.wg-emergente--saliendo {
+  transition-duration: var(--dur-corto), var(--dur-corto);
+}
+
+/* AN-01 · Menú ⋮ y selector de fecha flotante (A-03, A-04): abren con fundido y bajan `--mov-corto` en `--dur-corto`;
+   cierran por el mismo camino en `--dur-instante`, sin recibir el puntero. */
+.wg-menu-acciones__lista,
+.wg-selector-fecha__flotante {
+  opacity: 0;
+  transform: translateY(calc(var(--mov-corto) * -1));
+  transition:
+    opacity var(--dur-corto) var(--ease-salida),
+    transform var(--dur-corto) var(--ease-salida);
+}
+.wg-menu-acciones__lista--abierta,
+.wg-selector-fecha__flotante--abierta {
+  opacity: 1;
+  transform: none;
+}
+.wg-menu-acciones__lista--saliendo,
+.wg-selector-fecha__flotante--saliendo {
+  pointer-events: none;
+  transition-duration: var(--dur-instante), var(--dur-instante);
+}
+
 /* AN-06 · Esqueleto de carga (ANIMACIONES.md A-32; Figma Reportes · Cargando 217:16400): cinco barras `linea` de 16 de
    alto, paso vertical de 54 y radio 6, sin brillo ni pulso. Entra con un fundido de opacidad; el retraso de 200 ms y la
    permanencia de 300 ms los cuenta `useEsqueleto` (ui/Esqueleto). */

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSalidaAnimada } from '../movimiento/useSalidaAnimada';
 import { DayPicker, type Matcher } from 'react-day-picker';
 import { es } from 'react-day-picker/locale';
 import 'react-day-picker/style.css';
@@ -32,6 +33,9 @@ export function SelectorFecha({
 }: SelectorFechaProps) {
   const [abierto, setAbierto] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
+  // AN-01 (ANIMACIONES.md A-03, A-04): el calendario flotante abre y cierra como el menú ⋮.
+  const flotanteRef = useRef<HTMLDivElement>(null);
+  const { montado, estado } = useSalidaAnimada(abierto, flotanteRef);
   useEffect(() => {
     if (!abierto) return;
     const fuera = (e: MouseEvent) => {
@@ -91,7 +95,21 @@ export function SelectorFecha({
           </svg>
         </button>
       </NombreEmergente>
-      {abierto && <div className="wg-selector-fecha__flotante">{calendario}</div>}
+      {montado && (
+        <div
+          ref={flotanteRef}
+          className={[
+            'wg-selector-fecha__flotante',
+            estado === 'abierta' && 'wg-selector-fecha__flotante--abierta',
+            estado === 'saliendo' && 'wg-selector-fecha__flotante--saliendo',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          aria-hidden={estado === 'saliendo' || undefined}
+        >
+          {calendario}
+        </div>
+      )}
     </div>
   );
 }

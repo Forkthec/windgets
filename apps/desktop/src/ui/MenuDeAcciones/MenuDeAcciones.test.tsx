@@ -1,6 +1,6 @@
 // RT-02 · Ventanas emergentes y menús de acciones. Prueba del menú común «⋮» (RT-02-CA10; ET10 a ET12). La
 // pantalla Etiquetas lo prueba con sus datos en screens/labels/Labels.test.tsx (HE-08-HU01-CA01).
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { MenuDeAcciones, posicionDelMenu } from './MenuDeAcciones';
 
@@ -171,5 +171,42 @@ describe('RT-02 · Menú de acciones', () => {
     fireEvent.click(boton);
     fireEvent.pointerDown(screen.getByRole('menuitem', { name: 'Editar' }));
     expect(alPresionar).not.toHaveBeenCalled();
+  });
+});
+
+// AN-01 · Abrir y cerrar el menú (docs/implementacion/ANIMACIONES.md A-03, A-04; regla 13; §7).
+describe('AN-01 · A-03 y A-04 menú de acciones', () => {
+  it('A-03: tras abrir recibe la clase `--abierta`', async () => {
+    fireEvent.click(menuDeTrabajo());
+    const menu = screen.getByRole('menu');
+    await waitFor(() => expect(menu.classList.contains('wg-menu-acciones__lista--abierta')).toBe(true));
+  });
+
+  it('A-04: la acción y el foco no esperan a la salida; el menú sale inerte y luego se desmonta', async () => {
+    const alEditar = vi.fn();
+    const boton = menuDeTrabajo(alEditar);
+    fireEvent.click(boton);
+    const lista = screen.getByRole('menu');
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Editar' }));
+    // Antes de que termine la salida: la acción ya corrió y el foco ya volvió.
+    expect(alEditar).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(boton);
+    expect(lista.isConnected).toBe(true);
+    expect(lista.classList.contains('wg-menu-acciones__lista--saliendo')).toBe(true);
+    expect(lista.hasAttribute('inert')).toBe(true);
+    expect(screen.queryByRole('menu')).toBeNull();
+    await waitFor(() => expect(lista.isConnected).toBe(false));
+  });
+
+  it('A-04: si se vuelve a abrir mientras sale, cancela la salida', () => {
+    const boton = menuDeTrabajo();
+    fireEvent.click(boton);
+    const lista = screen.getByRole('menu');
+    fireEvent.click(boton);
+    expect(lista.classList.contains('wg-menu-acciones__lista--saliendo')).toBe(true);
+    fireEvent.click(boton);
+    expect(screen.getByRole('menu')).toBe(lista);
+    expect(lista.classList.contains('wg-menu-acciones__lista--abierta')).toBe(true);
+    expect(lista.hasAttribute('inert')).toBe(false);
   });
 });
