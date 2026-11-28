@@ -1139,6 +1139,16 @@ button.wg-tarjeta__titulo:focus-visible {
   padding: calc(var(--wg-unidad) * 3);
   border-radius: var(--wg-radio);
   border: var(--wg-borde-ancho) solid var(--wg-borde);
+  /* A-24 (AN-07): el mensaje nuevo entra con fundido y sube `--mov-corto`; con «reducir movimiento», solo el fundido. */
+  transition:
+    opacity var(--dur-corto) var(--ease-salida),
+    transform var(--dur-corto) var(--ease-salida);
+}
+@starting-style {
+  .wg-windi__mensaje {
+    opacity: 0;
+    transform: translateY(var(--mov-corto));
+  }
 }
 .wg-windi__mensaje p {
   margin: 0;
@@ -1434,7 +1444,7 @@ button.wg-tarjeta__titulo:focus-visible {
   transform-origin: center;
 }
 .wg-ojos-de-windi--parpadeando .wg-ojos-de-windi__ojo {
-  animation: wg-parpadeo 1.2s ease-in-out infinite;
+  animation: wg-parpadeo var(--dur-parpadeo) var(--ease-parpadeo) infinite;
 }
 @keyframes wg-parpadeo {
   0%,

@@ -233,8 +233,6 @@ function hallazgos(): string[] {
 const PENDIENTES: string[] = [
   // AN-02: el aviso entra con `transition`, no con @keyframes (regla 8; hoy 200ms ease-out).
   '3 literal: ui/tema/tokens.css «.wg-resultado»',
-  // AN-07: el parpadeo de los ojos con --dur-parpadeo y --ease-parpadeo (hoy 1.2s ease-in-out).
-  '3 literal: ui/tema/tokens.css «.wg-ojos-de-windi--parpadeando .wg-ojos-de-windi__ojo»',
 ];
 
 describe('F6-04a · movimiento en los CSS (ANIMACIONES.md §7, prueba global)', () => {

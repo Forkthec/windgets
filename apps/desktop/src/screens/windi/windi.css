@@ -128,6 +128,8 @@ body[data-sesion] .wg-windi__propuesta-acciones .wg-boton:not(.wg-boton--princip
   outline-offset: 2px;
 }
 .wg-windi .wg-windi__escribir textarea {
+  /* A-37 (AN-07): sin conexión, la opacidad del campo cambia con fundido (el valor de «Sin conexión» lo pone WI-04). */
+  transition: opacity var(--dur-corto) var(--ease-salida);
   min-height: 20px;
   max-height: 120px;
   padding: 0;

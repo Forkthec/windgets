@@ -101,3 +101,67 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const)
     // Termina el fundido y el texto queda del todo visible.
     await expect(texto).toHaveCSS('opacity', '1');
   });
+
+// AN-07 · A-20, A-21 (Calendario) y A-24, A-37 (Windi).
+const abrirDelMenu = (page: Page, opcion: string) =>
+  page
+    .getByRole('navigation', { name: 'Menú principal' })
+    .getByRole('button', { name: opcion, exact: true })
+    .click();
+
+/** El color calculado de una variable de color del tema. */
+const colorDe = (page: Page, variable: string) =>
+  page.evaluate((v) => {
+    const sonda = document.createElement('div');
+    sonda.style.backgroundColor = `var(${v})`;
+    document.body.append(sonda);
+    const color = getComputedStyle(sonda).backgroundColor;
+    sonda.remove();
+    return color;
+  }, variable);
+
+for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+  const fundido = reducedMotion === 'reduce' ? '0.1s' : '0.15s';
+
+  test(`AN-07 · A-20 el día se resalta al pasar el puntero; A-21 el mes cambia sin transición (${reducedMotion})`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1200, height: 800 });
+    await page.emulateMedia({ reducedMotion });
+    await entrar(page);
+    await abrirDelMenu(page, 'Calendario');
+    const dia = page
+      .locator(
+        'td.wg-calendario__celda:not(.wg-calendario__dia--pendiente):not(.wg-calendario__dia--vencida)',
+      )
+      .first();
+    await expect(dia).toHaveCSS('transition-property', 'background-color');
+    await expect(dia).toHaveCSS('transition-duration', fundido);
+    await dia.hover();
+    await expect(dia).toHaveCSS('background-color', await colorDe(page, '--wg-superficie-baja'));
+    // A-21: la rejilla no anima el cambio de mes.
+    const rejilla = page.locator('.wg-calendario').first();
+    await expect(rejilla).toHaveCSS('transition-duration', '0s');
+    await expect(rejilla).toHaveCSS('animation-name', 'none');
+  });
+
+  test(`AN-07 · A-24 el mensaje nuevo entra con fundido; A-37 el campo cambia de opacidad con fundido (${reducedMotion})`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1200, height: 800 });
+    await page.emulateMedia({ reducedMotion });
+    await entrar(page);
+    await page.getByRole('button', { name: 'Windi', exact: true }).click();
+    const campo = page.getByPlaceholder('Escribe un mensaje');
+    await expect(campo).toHaveCSS('transition-property', 'opacity');
+    await expect(campo).toHaveCSS('transition-duration', fundido);
+    await campo.fill('Hola, Windi');
+    await campo.press('Enter');
+    const mensaje = page
+      .getByRole('list', { name: 'Conversación' })
+      .locator('.wg-windi__mensaje', { hasText: 'Hola, Windi' });
+    await expect(mensaje).toHaveCSS('transition-property', 'opacity, transform');
+    await expect(mensaje).toHaveCSS('transition-duration', `${fundido}, ${fundido}`);
+    await expect(mensaje).toHaveCSS('opacity', '1');
+  });
+}
