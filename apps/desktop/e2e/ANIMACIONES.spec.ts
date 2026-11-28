@@ -206,3 +206,76 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
     await expect(page.locator('.wg-menu-acciones__lista')).toHaveCount(0);
   });
 }
+
+// AN-03 · A-26 (anillo de foco) y A-28 (perilla del interruptor).
+test('AN-03 · A-26 el anillo existe siempre y aparece con el teclado en 100 ms', async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 800 });
+  await entrar(page);
+  const opcion = page.getByRole('navigation', { name: 'Menú principal' }).getByRole('button', {
+    name: 'Tablero Kanban',
+    exact: true,
+  });
+  await expect(opcion).toHaveCSS('outline-style', 'solid');
+  await expect(opcion).toHaveCSS('outline-color', 'rgba(0, 0, 0, 0)');
+  const duraciones = await opcion.evaluate((e) => {
+    const s = getComputedStyle(e);
+    const propiedades = s.transitionProperty.split(',').map((p) => p.trim());
+    const tiempos = s.transitionDuration.split(',').map((t) => t.trim());
+    return Object.fromEntries(propiedades.map((p, i) => [p, tiempos[i]]));
+  });
+  expect(duraciones).toEqual({
+    'background-color': '0.15s',
+    'border-color': '0.15s',
+    color: '0.15s',
+    'box-shadow': '0.15s',
+    'outline-color': '0.1s',
+  });
+  await opcion.focus();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  await expect(opcion).toBeFocused();
+  await expect(opcion).not.toHaveCSS('outline-color', 'rgba(0, 0, 0, 0)');
+});
+
+for (const reducedMotion of ['no-preference', 'reduce'] as const)
+  test(`AN-03 · A-28 la perilla del interruptor se mueve con transform, no con left (${reducedMotion})`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1200, height: 800 });
+    await page.emulateMedia({ reducedMotion });
+    await entrar(page);
+    await abrirDelMenu(page, 'Configuración');
+    const interruptor = page.locator('.wg-interruptor').first();
+    await expect(interruptor).toBeVisible();
+    const perilla = await interruptor.evaluate((e) => {
+      const s = getComputedStyle(e, '::after');
+      return { propiedad: s.transitionProperty, duracion: s.transitionDuration };
+    });
+    expect(perilla).toEqual(
+      reducedMotion === 'reduce'
+        ? { propiedad: 'none', duracion: '0s' }
+        : { propiedad: 'transform', duracion: '0.15s' },
+    );
+  });
+
+// Regla 10 d: con «reducir movimiento», los lazos quedan quietos aunque su regla vaya después del bloque único (la
+// cascada real, que Vitest no ve; AN-03 encontró que el bloque de TK-06 perdía contra ellas).
+for (const reducedMotion of ['no-preference', 'reduce'] as const)
+  test(`Regla 10 · los lazos con «reducir movimiento» (${reducedMotion})`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion });
+    await entrar(page);
+    const nombres = await page.evaluate(() => {
+      const caja = document.createElement('div');
+      caja.innerHTML =
+        '<span class="wg-icono--girando"></span>' +
+        '<svg class="wg-ojos-de-windi wg-ojos-de-windi--parpadeando"><ellipse class="wg-ojos-de-windi__ojo"></ellipse></svg>';
+      document.body.append(caja);
+      const leidos = [
+        getComputedStyle(caja.querySelector('.wg-icono--girando') as Element).animationName,
+        getComputedStyle(caja.querySelector('.wg-ojos-de-windi__ojo') as Element).animationName,
+      ];
+      caja.remove();
+      return leidos;
+    });
+    expect(nombres).toEqual(reducedMotion === 'reduce' ? ['none', 'none'] : ['wg-girar', 'wg-parpadeo']);
+  });

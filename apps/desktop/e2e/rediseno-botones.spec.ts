@@ -86,8 +86,13 @@ async function muestra(page: Page) {
   });
 }
 
+/** El valor calculado al terminar las transiciones del elemento (AN-03: hover, foco y tema se animan). */
 const estilo = (l: Locator, propiedad: string) =>
-  l.evaluate((e, p) => getComputedStyle(e).getPropertyValue(p), propiedad);
+  l.evaluate(async (e, p) => {
+    const transiciones = e.getAnimations().filter((a) => a instanceof CSSTransition);
+    await Promise.all(transiciones.map((a) => a.finished.catch(() => undefined)));
+    return getComputedStyle(e).getPropertyValue(p);
+  }, propiedad);
 
 /** Distancias entre el borde del botón y su contenido: izquierda, derecha, arriba y abajo. */
 const margenes = (l: Locator) =>

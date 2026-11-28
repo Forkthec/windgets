@@ -38,6 +38,7 @@ body[data-sesion] .wg-configuracion {
 }
 /* 81:201 «Interruptor activo»: 58 × 30, control de 22 px. */
 body[data-sesion] .wg-configuracion__inicio .wg-interruptor {
+  --wg-recorrido-perilla: 28px; /* A-28: de 2,5 a 30,5 */
   width: 58px;
   height: 30px;
   border-radius: 15px;
@@ -48,9 +49,6 @@ body[data-sesion] .wg-configuracion__inicio .wg-interruptor::after {
   width: 22px;
   height: 22px;
   border-radius: 11px;
-}
-body[data-sesion] .wg-configuracion__inicio .wg-interruptor[aria-checked='true']::after {
-  left: 30.5px;
 }
 /* 81:205 «Cerrar sesión» empieza en y = 176 y 81:204 «Sesión» en 189 (sin centrar entre sí). El ancho de 164 px no
  * tiene regla: mide su texto (RD-33). */

@@ -111,8 +111,13 @@
 .wg-kanban .wg-tarjeta.wg-kanban__tarjeta--proxima {
   border-left-color: var(--wg-estado-pendiente);
 }
+/* A-25 (AN-03): el contorno del hover aparece con fundido de color; el arrastre (AN-05) suma su propiedad aquí. */
+.wg-kanban__tarjeta {
+  outline: 1px solid transparent;
+  transition: outline-color var(--dur-corto) var(--ease-salida);
+}
 .wg-kanban__tarjeta:hover {
-  outline: 1px solid var(--wg-linea);
+  outline-color: var(--wg-linea);
 }
 /* D-11: una barra por etiqueta, hasta 3. */
 .wg-kanban__barras {

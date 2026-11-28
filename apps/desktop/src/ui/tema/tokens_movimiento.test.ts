@@ -67,10 +67,11 @@ describe('TK-06 · «reducir movimiento» (ANIMACIONES.md §4, regla 10)', () =>
 
   it('deja quietos los lazos (giro y parpadeo) y el aviso que entra', () => {
     const quietos = reducido.match(/([^{}]+)\{\s*animation: none;\s*\}/)?.[1] ?? '';
+    // Con `:root` delante, gana a la regla que anima aunque esta vaya después en el archivo (AN-03).
     expect(quietos.split(',').map((s) => s.trim())).toEqual([
-      '.wg-resultado',
-      '.wg-icono--girando',
-      '.wg-ojos-de-windi--parpadeando .wg-ojos-de-windi__ojo',
+      ':root .wg-resultado',
+      ':root .wg-icono--girando',
+      ':root .wg-ojos-de-windi--parpadeando .wg-ojos-de-windi__ojo',
     ]);
   });
 });
