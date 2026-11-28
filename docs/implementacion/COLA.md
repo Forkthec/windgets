@@ -106,7 +106,7 @@ Ninguna pieza de esta fase depende de una de la fase 7 (`PLAN.md:123-137`). Las 
 | [ ] | L4-11 | Casilla, Segmentado, Selector, NavegacionDeFecha | M | MB-12 (`:480`), MB-14 (`:510`), MB-15 (`:525`), MB-17 (`:560`) | `ui/` | TK-01 | — | Módulo |
 | [ ] | L4-12 | Menús, miga, nombre emergente, EstadoVacio | M | MB-18 (`:575`), MB-19 (`:590`), MB-20 (`:596`), MB-21 (`:611`), MB-25 (`:724`) | `ui/` | TK-01 | — | Módulo |
 | [ ] | L4-13 | Revisar «No se construye» y la tabla de geometría | S | `SPEC_Marco…:791`, `:803` | solo lectura; anota en `DECISIONES.md` | F6-02 | — | Confirma que no se construye nada fuera de CA/ET/RD/Figma |
-| [ ] | AN-01 | Hook `useSalidaAnimada`, ventanas y menús | M | `ANIMACIONES.md` A-01..A-04, regla 13 | `ui/movimiento/useSalidaAnimada.ts` (nuevo) | TK-06 | V-04 | F6-04a; pruebas ajustadas de VentanaEmergente, MenuDeAcciones, Confirmacion |
+| [x] | AN-01 | Hook `useSalidaAnimada`, ventanas y menús | M | `ANIMACIONES.md` A-01..A-04, regla 13 | `ui/movimiento/useSalidaAnimada.ts` (nuevo) | TK-06 | V-04 | F6-04a; pruebas ajustadas de VentanaEmergente, MenuDeAcciones, Confirmacion |
 | [ ] | AN-02 | Avisos: entra, sale, pausa | M | A-05..A-07 | `ui/MensajeResultado` | AN-01, C3-04 | V-04 | F6-04a; MensajeResultado |
 | [ ] | AN-03 | Hover, foco y pulsado de controles | M | A-05b, A-05c, A-23, A-25..A-29 | `tokens.css`, `marco.css`, `kanban.css` | TK-06 | — | F6-04a |
 | [ ] | AN-04 | Pantallas, panel de Windi, barra lateral | M | A-08..A-12 | `ventana_principal/` | AN-01 | V-06 | F6-04a; geometría |
