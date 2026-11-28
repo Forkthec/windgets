@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import type { KeyboardEvent as EventoDeTeclado, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { NombreEmergente } from '../NombreEmergente/NombreEmergente';
+import { useSalidaAnimada } from '../movimiento/useSalidaAnimada';
 
 // Botón de acciones «⋮» y su menú (RT-02-ET10 a ET12, RT-02-CA10). Agrupa las acciones de un elemento de una
 // lista; el menú no es una ventana emergente: no bloquea el fondo (RT-02, regla). Se cierra con Esc, al elegir
@@ -9,6 +10,8 @@ import { NombreEmergente } from '../NombreEmergente/NombreEmergente';
 // Una opción deshabilitada se ve en gris y muestra su motivo al pasar el mouse (RT-04, en el nombre emergente de
 // RD-100). El menú se dibuja con
 // `position: fixed` fuera del contenedor, así que ningún contenedor lo recorta ni le agrega barra (ET12).
+// AN-01 (ANIMACIONES.md A-03, A-04): abre con fundido y baja `--mov-corto` en 150 ms; al cerrar sale en 100 ms y sigue
+// montado hasta terminar (regla 13), inerte y fuera del árbol accesible. La acción elegida y el foco no esperan.
 
 export interface OpcionDeMenu {
   /** Texto literal de la opción, por ejemplo «Editar». */
@@ -75,11 +78,17 @@ export function MenuDeAcciones({
   const refMenu = useRef<HTMLUListElement>(null);
   const nombreAccesible = etiqueta ?? `Acciones de ${nombre}`;
   const visibles = submenu?.submenu ?? opciones;
+  const { montado, estado } = useSalidaAnimada(abierto, refMenu);
+
+  // La posición y el submenú se quedan mientras sale; se olvidan al desmontar.
+  useEffect(() => {
+    if (montado) return;
+    setSubmenu(null);
+    setPosicion(null);
+  }, [montado]);
 
   const cerrar = useCallback((devolverFoco: boolean) => {
     setAbierto(false);
-    setSubmenu(null);
-    setPosicion(null);
     if (devolverFoco) refBoton.current?.focus();
   }, []);
 
@@ -159,13 +168,22 @@ export function MenuDeAcciones({
     opcion.alElegir?.();
   };
 
-  const lista = abierto && (
+  const saliendo = estado === 'saliendo';
+  const lista = montado && (
     <ul
       ref={refMenu}
-      id={idMenu}
+      id={saliendo ? undefined : idMenu}
       role="menu"
       aria-label={submenu ? submenu.etiqueta : nombreAccesible}
-      className={`wg-menu-acciones__lista${enLugar ? ' wg-menu-acciones__lista--en-lugar' : ''}`}
+      aria-hidden={saliendo || undefined}
+      className={[
+        'wg-menu-acciones__lista',
+        enLugar && 'wg-menu-acciones__lista--en-lugar',
+        estado === 'abierta' && 'wg-menu-acciones__lista--abierta',
+        saliendo && 'wg-menu-acciones__lista--saliendo',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       style={
         enLugar ? undefined : posicion ? { top: posicion.top, left: posicion.left } : { visibility: 'hidden' }
       }

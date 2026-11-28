@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import textos from '@/types/messages.es.json';
 import { MenuDeAcciones } from '@/ui/MenuDeAcciones/MenuDeAcciones';
@@ -162,14 +162,16 @@ describe('RD-103 · Ventana emergente: foco, fondo y descarte', () => {
     ['«×»', () => fireEvent.click(screen.getByRole('button', { name: 'Cerrar' }))],
     ['Esc', () => fireEvent.keyDown(document, { key: 'Escape' })],
     ['el velo', () => fireEvent.click(screen.getByRole('dialog').parentElement as HTMLElement)],
-  ])('con cambios, %s pide el descarte y «Seguir editando» no cierra', (_nombre, cerrar) => {
+  ])('con cambios, %s pide el descarte y «Seguir editando» no cierra', async (_nombre, cerrar) => {
     const alSalir = vi.fn();
     render(formulario({ alSalir, hayCambios: true }));
     cerrar();
     expect(alSalir).not.toHaveBeenCalled();
     expect(screen.getByText(textos.SALIR_SIN_GUARDAR)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Seguir editando' }));
-    expect(screen.queryByText(textos.SALIR_SIN_GUARDAR)).toBeNull();
+    // AN-01 (A-02): el mensaje sale del árbol accesible en el acto y su copia se quita al terminar la salida.
+    expect(screen.queryByRole('dialog', { name: 'Salir' })).toBeNull();
+    await waitFor(() => expect(screen.queryByText(textos.SALIR_SIN_GUARDAR)).toBeNull());
     expect(alSalir).not.toHaveBeenCalled();
     expect(screen.getByRole('dialog', { name: 'Ventana' })).toBeTruthy();
   });
@@ -182,13 +184,14 @@ describe('RD-103 · Ventana emergente: foco, fondo y descarte', () => {
     expect(alSalir).toHaveBeenCalledTimes(1);
   });
 
-  it('con el descarte abierto, Esc cierra solo el mensaje', () => {
+  it('con el descarte abierto, Esc cierra solo el mensaje', async () => {
     const alSalir = vi.fn();
     render(formulario({ alSalir, hayCambios: true }));
     fireEvent.keyDown(document, { key: 'Escape' });
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(alSalir).not.toHaveBeenCalled();
-    expect(screen.queryByText(textos.SALIR_SIN_GUARDAR)).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Salir' })).toBeNull();
+    await waitFor(() => expect(screen.queryByText(textos.SALIR_SIN_GUARDAR)).toBeNull());
   });
 });
 
@@ -235,5 +238,77 @@ describe('RD-103 · Ventana emergente con un menú de acciones dentro', () => {
     expect(alElegir).toHaveBeenCalledTimes(1);
     expect(alSalir).not.toHaveBeenCalled();
     expect(screen.getByRole('dialog', { name: 'Ventana' })).toBeTruthy();
+  });
+});
+
+// AN-01 · Entrada y salida de la ventana emergente (docs/implementacion/ANIMACIONES.md A-01, A-02, A-02b; §7).
+describe('AN-01 · A-01, A-02 y A-02b ventana emergente', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('A-01: tras montar recibe la clase `--abierta` (la ventana y el velo); el foco no espera', async () => {
+    render(
+      <VentanaEmergente titulo="Ventana" alSalir={vi.fn()}>
+        <input aria-label="Nombre" />
+      </VentanaEmergente>,
+    );
+    const ventana = screen.getByRole('dialog', { name: 'Ventana' });
+    expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Nombre' }));
+    await waitFor(() => expect(ventana.classList.contains('wg-emergente--abierta')).toBe(true));
+    expect(ventana.parentElement?.classList.contains('wg-fondo-emergente--abierta')).toBe(true);
+  });
+
+  it('A-02: al desmontarla, una copia inerte sale con `--saliendo` y se quita a +200 ms (150 + 50)', () => {
+    vi.useFakeTimers();
+    const boton = document.createElement('button');
+    document.body.append(boton);
+    boton.focus();
+    const { unmount } = render(
+      <VentanaEmergente titulo="Ventana" alSalir={vi.fn()}>
+        contenido
+      </VentanaEmergente>,
+    );
+    unmount();
+    // El foco vuelve al empezar la salida; la copia no está en el árbol accesible.
+    expect(document.activeElement).toBe(boton);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    const copia = document.querySelector('[data-saliendo]');
+    expect(copia?.getAttribute('aria-hidden')).toBe('true');
+    expect(copia?.hasAttribute('inert')).toBe(true);
+    expect(copia?.classList.contains('wg-fondo-emergente--saliendo')).toBe(true);
+    expect(copia?.querySelector('.wg-emergente')?.classList.contains('wg-emergente--saliendo')).toBe(true);
+    expect(copia?.querySelector('[id]')).toBeNull();
+    // En jsdom no hay transitionend: corre el seguro (duración calculada + 50 ms; aquí la hoja no está cargada).
+    vi.advanceTimersByTime(200);
+    expect(document.querySelector('[data-saliendo]')).toBeNull();
+    boton.remove();
+  });
+
+  it('A-02: si se vuelve a abrir mientras sale, la salida se cancela', () => {
+    const { unmount } = render(
+      <VentanaEmergente titulo="Ventana" alSalir={vi.fn()}>
+        contenido
+      </VentanaEmergente>,
+    );
+    unmount();
+    expect(document.querySelector('[data-saliendo]')).not.toBeNull();
+    render(
+      <VentanaEmergente titulo="Otra" alSalir={vi.fn()}>
+        contenido
+      </VentanaEmergente>,
+    );
+    expect(document.querySelector('[data-saliendo]')).toBeNull();
+  });
+
+  it('A-02b: la ventana apilada pinta su velo transparente; la de abajo no cambia', () => {
+    render(
+      <VentanaEmergente titulo="Ventana" alSalir={vi.fn()} hayCambios>
+        contenido
+      </VentanaEmergente>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Cerrar' }));
+    const abajo = screen.getByRole('dialog', { name: 'Ventana' }).parentElement;
+    const encima = screen.getByRole('dialog', { name: 'Salir' }).parentElement;
+    expect(abajo?.classList.contains('wg-fondo-emergente--apilado')).toBe(false);
+    expect(encima?.classList.contains('wg-fondo-emergente--apilado')).toBe(true);
   });
 });
