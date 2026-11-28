@@ -158,7 +158,6 @@
     --dur-medio: 100ms;
   }
   .wg-resultado,
-  .wg-cargando,
   .wg-icono--girando,
   .wg-ojos-de-windi--parpadeando .wg-ojos-de-windi__ojo {
     animation: none;
@@ -624,6 +623,15 @@ body {
   max-width: calc(var(--wg-unidad) * 56);
   color: var(--wg-texto);
 }
+/* A-36 (AN-06): al cambiar de estado, el texto nuevo entra con un fundido de opacidad; sin giro ni pulso. */
+.wg-indicador-sincronizacion__estado {
+  transition: opacity var(--dur-corto) var(--ease-salida);
+}
+@starting-style {
+  .wg-indicador-sincronizacion__estado {
+    opacity: 0;
+  }
+}
 .wg-ventana-principal__pantalla {
   min-height: 0;
   overflow: auto;
@@ -1042,14 +1050,8 @@ button.wg-tarjeta__titulo:focus-visible {
   font-weight: 600;
   margin: 0;
 }
-.wg-cargando {
-  width: calc(var(--wg-unidad) * 4);
-  height: calc(var(--wg-unidad) * 4);
-  border: var(--wg-borde-ancho) solid var(--wg-borde);
-  border-top-color: var(--wg-accion);
-  border-radius: 50%;
-  animation: wg-girar 1s linear infinite;
-}
+/* El giro de los lazos (A-31): hoy solo lo usa «Sincronizando…» (`.wg-icono--girando`). El indicador de carga de las
+   secciones (`.wg-cargando`) se reemplazó por el esqueleto (A-32, AN-06). */
 @keyframes wg-girar {
   to {
     transform: rotate(360deg);
@@ -1244,7 +1246,7 @@ button.wg-tarjeta__titulo:focus-visible {
 }
 /* «Sincronizando…» (MB-28, A-31): el ícono gira en 1 s, lineal; con «reducir movimiento», quieto. */
 .wg-icono--girando {
-  animation: wg-girar 1s linear infinite;
+  animation: wg-girar var(--dur-giro) var(--ease-lineal) infinite;
 }
 /* Configuración (HE-16): las opciones en columna, separadas, sin estirarse al ancho de la pantalla. */
 .wg-configuracion {
@@ -1730,6 +1732,43 @@ body[data-sesion] .wg-boton.wg-boton--texto-peligro:not(:disabled) {
 /* Fase 7 del rediseño (SEED-01): un bloque por área. Cada pieza escribe solo en el de su área (docs/implementacion/COLA.md §1, «Archivos compartidos»). Los colores y valores de los temas los escriben TK-01, TK-03 y TK-05; el movimiento, TK-06 (arriba, en :root). */
 
 /* ── Marco y componentes base (MB, C3, L4, AN) ── */
+
+/* AN-06 · Esqueleto de carga (ANIMACIONES.md A-32; Figma Reportes · Cargando 217:16400): cinco barras `linea` de 16 de
+   alto, paso vertical de 54 y radio 6, sin brillo ni pulso. Entra con un fundido de opacidad; el retraso de 200 ms y la
+   permanencia de 300 ms los cuenta `useEsqueleto` (ui/Esqueleto). */
+.wg-esqueleto {
+  display: flex;
+  flex-direction: column;
+  gap: 38px;
+  transition: opacity var(--dur-corto) var(--ease-salida);
+}
+@starting-style {
+  .wg-esqueleto {
+    opacity: 0;
+  }
+}
+.wg-esqueleto__barra {
+  display: block;
+  max-width: 100%;
+  height: 16px;
+  border-radius: 6px;
+  background: var(--wg-linea);
+}
+.wg-esqueleto__barra:nth-child(1) {
+  width: 324px;
+}
+.wg-esqueleto__barra:nth-child(2) {
+  width: 300px;
+}
+.wg-esqueleto__barra:nth-child(3) {
+  width: 276px;
+}
+.wg-esqueleto__barra:nth-child(4) {
+  width: 252px;
+}
+.wg-esqueleto__barra:nth-child(5) {
+  width: 228px;
+}
 
 /* ── Planificador (PL) ── */
 

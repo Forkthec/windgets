@@ -77,7 +77,7 @@ export function IconoSinConexion({ nombre }: IconoProps) {
 /**
  * Ícono giratorio de «Sincronizando…» (MB-28, A-31): gira en 1 s, lineal; con «reducir movimiento» queda quieto.
  * DUDA: C3-06 el Figma no dibuja este ícono (incoherencia 5). Valor usado: un arco de tres cuartos, como el
- * indicador de carga (`.wg-cargando`) (docs/DUDAS.md).
+ * indicador de carga que tenían las secciones del reporte hasta AN-06 (docs/DUDAS.md).
  */
 export function IconoSincronizando({ nombre }: IconoProps) {
   return (

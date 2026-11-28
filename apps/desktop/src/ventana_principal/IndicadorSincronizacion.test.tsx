@@ -2,6 +2,7 @@
 // ca_he_15_hu02_* en motor_de_sincronizacion.rs.
 import { act, render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import estilos from '@/ui/tema/tokens.css?raw';
 import type { Escuchar } from '@/ipc/eventos';
 import type { AuthSessionState, Invoke, Result, SyncStatus } from '@/types';
 import { VentanaPrincipal } from './VentanaPrincipal';
@@ -187,5 +188,25 @@ describe('HE-16-HU01 · Indicador de sincronización en Configuración', () => {
     expect(
       within(indicador).getByText('Error de sincronización. Reintentaremos automáticamente.'),
     ).toBeTruthy();
+  });
+});
+
+// AN-06 · A-36 (docs/implementacion/ANIMACIONES.md): el texto nuevo entra con un fundido de opacidad de 150 ms.
+describe('AN-06 · A-36 fundido del indicador', () => {
+  it('al cambiar de estado, el texto es un elemento nuevo con la clase del fundido', async () => {
+    const { indicador, emitir } = await abrir(CON_SESION, estado('synced'));
+    const antes = within(indicador).getByText('Sincronizado');
+    expect(antes.className).toBe('wg-indicador-sincronizacion__estado');
+    emitir('sync_status_changed', estado('syncing'));
+    const despues = within(indicador).getByText('Sincronizando…');
+    expect(despues.className).toBe('wg-indicador-sincronizacion__estado');
+    expect(despues).not.toBe(antes);
+  });
+
+  it('el fundido es de opacidad con `--dur-corto` y `--ease-salida`, desde 0', () => {
+    expect(estilos).toMatch(
+      /\.wg-indicador-sincronizacion__estado \{\s*transition: opacity var\(--dur-corto\) var\(--ease-salida\);/,
+    );
+    expect(estilos).toMatch(/@starting-style \{\s*\.wg-indicador-sincronizacion__estado \{\s*opacity: 0;/);
   });
 });
