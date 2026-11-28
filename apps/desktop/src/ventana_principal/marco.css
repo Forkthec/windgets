@@ -300,6 +300,7 @@ body[data-sesion] .wg-campo__entrada:focus-visible,
   outline-offset: 2px;
 }
 body[data-sesion] .wg-interruptor {
+  --wg-recorrido-perilla: 22px; /* A-28: de 1,5 a 23,5 */
   width: 48px;
   height: 25px;
   border: var(--wgm-borde-control) solid var(--wg-borde);
@@ -319,7 +320,6 @@ body[data-sesion] .wg-interruptor[aria-checked='true'] {
   background: var(--wgm-interruptor);
 }
 body[data-sesion] .wg-interruptor[aria-checked='true']::after {
-  left: 23.5px;
   background: #ffffff;
 }
 /* Una acción que el Figma escribe como texto («Eliminar», 81:119). */

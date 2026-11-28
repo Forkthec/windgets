@@ -40,8 +40,13 @@ const sinScrollDePagina = (page: Page) =>
       document.documentElement.scrollWidth <= window.innerWidth,
   );
 
+/** El valor calculado al terminar las transiciones del elemento (AN-03: hover, foco y tema se animan). */
 const estilo = (l: Locator, propiedad: string) =>
-  l.evaluate((e, p) => getComputedStyle(e).getPropertyValue(p), propiedad);
+  l.evaluate(async (e, p) => {
+    const transiciones = e.getAnimations().filter((a) => a instanceof CSSTransition);
+    await Promise.all(transiciones.map((a) => a.finished.catch(() => undefined)));
+    return getComputedStyle(e).getPropertyValue(p);
+  }, propiedad);
 
 test('RD-62 · Con sesión no hay selector Claro/Oscuro y la opción actual usa la acción del tema', async ({
   page,

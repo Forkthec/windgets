@@ -148,7 +148,8 @@
 
 /* TK-06 · «Reducir movimiento» (ANIMACIONES.md §4, regla 10): el único bloque de la aplicación, sin excepciones por
    componente. Sin desplazamiento, toda transición en fundido de 100 ms y los lazos quietos. Quitar `transform` de los
-   FLIP, la perilla y el progreso lo hace la pieza de cada uno (AN-*), aquí mismo. */
+   FLIP, la perilla y el progreso lo hace la pieza de cada uno (AN-*), aquí mismo. Cada regla lleva `:root` delante: el
+   bloque va arriba del archivo y, con la misma especificidad, ganaría la regla que anima, que va después (AN-03). */
 @media (prefers-reduced-motion: reduce) {
   :root {
     --mov-corto: 0px;
@@ -157,10 +158,14 @@
     --dur-corto: 100ms;
     --dur-medio: 100ms;
   }
-  .wg-resultado,
-  .wg-icono--girando,
-  .wg-ojos-de-windi--parpadeando .wg-ojos-de-windi__ojo {
+  :root .wg-resultado,
+  :root .wg-icono--girando,
+  :root .wg-ojos-de-windi--parpadeando .wg-ojos-de-windi__ojo {
     animation: none;
+  }
+  /* AN-03 (regla 10 c): la perilla del interruptor salta. */
+  :root .wg-interruptor::after {
+    transition: none;
   }
 }
 
@@ -354,7 +359,6 @@ body {
   border-color: var(--wg-accion);
 }
 .wg-interruptor[aria-checked='true']::after {
-  left: calc(var(--wg-unidad) * 5.5);
   background: var(--wg-sobre-accion);
 }
 
@@ -1831,6 +1835,98 @@ body[data-sesion] .wg-boton.wg-boton--texto-peligro:not(:disabled) {
 }
 .wg-esqueleto__barra:nth-child(5) {
   width: 228px;
+}
+
+/* AN-03 · Hover, foco y pulsado de los controles (ANIMACIONES.md §4, reglas 1 a 3; A-05b, A-05c, A-23, A-25 a A-29).
+   Una sola `transition` por control con sus propiedades enumeradas: el resalte en `--dur-corto` y el anillo de foco
+   en `--dur-instante`. Al pulsar responde en `--dur-instante` y al soltar vuelve en `--dur-corto`. */
+.wg-boton,
+.wg-campo__entrada,
+.wg-interruptor,
+.wg-enlace,
+.wg-miga__nivel,
+.wg-menu-acciones__opcion,
+.wg-menu__ocultar,
+.wg-emergente__cerrar,
+.wg-resultado__cerrar,
+.wg-panel-windi__cerrar,
+.wg-windi-flotante,
+.wg-ciudad__opcion,
+.wg-widget-noticias__titular,
+.wg-icono-boton,
+.wg-boton-titulo,
+.wg-columna-fantasma,
+.wg-campo__ojo {
+  transition:
+    background-color var(--dur-corto) var(--ease-salida),
+    border-color var(--dur-corto) var(--ease-salida),
+    color var(--dur-corto) var(--ease-salida),
+    box-shadow var(--dur-corto) var(--ease-salida),
+    outline-color var(--dur-instante) var(--ease-salida);
+}
+:is(
+  .wg-boton,
+  .wg-campo__entrada,
+  .wg-interruptor,
+  .wg-enlace,
+  .wg-miga__nivel,
+  .wg-menu-acciones__opcion,
+  .wg-menu__ocultar,
+  .wg-emergente__cerrar,
+  .wg-resultado__cerrar,
+  .wg-panel-windi__cerrar,
+  .wg-windi-flotante,
+  .wg-ciudad__opcion,
+  .wg-widget-noticias__titular,
+  .wg-icono-boton,
+  .wg-boton-titulo,
+  .wg-columna-fantasma,
+  .wg-campo__ojo
+):active {
+  transition-duration:
+    var(--dur-instante), var(--dur-instante), var(--dur-instante), var(--dur-instante), var(--dur-instante);
+}
+/* Regla 3: el anillo existe siempre, transparente, y al enfocar con el teclado solo cambia de color. */
+.wg-boton,
+.wg-campo__entrada,
+.wg-interruptor,
+.wg-enlace,
+.wg-miga__nivel,
+.wg-windi-flotante {
+  outline: var(--wg-trazo-foco) solid transparent;
+  outline-offset: var(--wg-separacion-foco);
+}
+/* E1 (CONSISTENCIA): el botón con el puntero encima, `superficie_baja`; pulsado, la sombra desplazada de Principal
+   vuelve a 0 (PROPUESTA). Con `:where`, cualquier variante con su propio fondo lo conserva. */
+.wg-boton:where(:hover:not(:disabled, .wg-boton--principal)) {
+  background: var(--wg-superficie-baja);
+}
+.wg-boton.wg-boton--principal:active:not(:disabled) {
+  box-shadow: none;
+}
+/* A-27: el campo con el puntero encima, borde `tinta` (F0:331); el error conserva su color. El mensaje del campo
+   entra con fundido de `--dur-medio`. */
+.wg-campo__entrada:where(:hover:not(:disabled, :focus-visible, [aria-invalid='true'])) {
+  border-color: var(--wg-tinta);
+}
+.wg-campo__mensaje {
+  transition: opacity var(--dur-medio) var(--ease-salida);
+}
+@starting-style {
+  .wg-campo__mensaje {
+    opacity: 0;
+  }
+}
+/* A-28: la perilla del interruptor se desliza con `transform` (antes cambiaba `left`) en `--dur-corto` con
+   `--ease-estandar`; cada tamaño de interruptor fija su recorrido. Con «reducir movimiento», salta. */
+.wg-interruptor {
+  --wg-recorrido-perilla: calc(var(--wg-unidad) * 5);
+}
+.wg-interruptor::after {
+  transition: transform var(--dur-corto) var(--ease-estandar);
+}
+.wg-interruptor[aria-checked='true']::after {
+  transform: translateX(var(--wg-recorrido-perilla));
 }
 
 /* ── Planificador (PL) ── */

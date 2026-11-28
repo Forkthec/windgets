@@ -24,8 +24,13 @@ async function caja(l: Locator) {
 const cerca = (medido: number, esperado: number) =>
   expect(Math.abs(medido - esperado), `${medido} ≠ ${esperado}`).toBeLessThanOrEqual(TOLERANCIA);
 
+/** El valor calculado al terminar las transiciones del elemento (AN-03: hover, foco y tema se animan). */
 const estilo = (l: Locator, propiedad: string) =>
-  l.evaluate((e, p) => getComputedStyle(e).getPropertyValue(p), propiedad);
+  l.evaluate(async (e, p) => {
+    const transiciones = e.getAnimations().filter((a) => a instanceof CSSTransition);
+    await Promise.all(transiciones.map((a) => a.finished.catch(() => undefined)));
+    return getComputedStyle(e).getPropertyValue(p);
+  }, propiedad);
 
 /** El color en `rgb()` de una variable del tema (RD-62: ya no hay colores fijos por modo). */
 const colorDe = (page: Page, variable: string) =>
