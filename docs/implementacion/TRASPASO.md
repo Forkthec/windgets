@@ -7,10 +7,9 @@ eso: **git gana sobre cualquier apunte**.
 
 ## 1. Estado al cerrar
 
-- `main` en `6afd937` (P57, AN-03). **No hay PR abiertos, ni cambios sin commit, ni stash.** La CI de `main` está en
-  verde.
-- Rama local `paso-58-siguiente` creada desde ese `main`, sin commits propios: renómbrala al tomar tu pieza
-  (`git branch -m paso-58-<tema>`) o bórrala.
+- `main` en el commit «P58: traspaso» (este archivo), justo después de `6afd937` (P57, AN-03). **No quedan PR
+  abiertos, ni cambios sin commit, ni stash.** La CI de `main` está en verde.
+- No queda ninguna rama de trabajo a medias: empieza la tuya desde `main` actualizado.
 - La última fila de `RELEVO.md` §11 es la de AN-03.
 - Piezas cerradas en esta sesión, una por PR (todos fusionados con squash):
 
@@ -74,7 +73,7 @@ grep -n "Tests \| passed\| failed\| FAIL " .trabajo/ultima.log
 
 La usuaria autorizó: **«abre el PR de cada bloque de piezas y fusiónalo tú cuando todos sus checks estén en verde»**.
 
-1. Rama `paso-NN-<tema>` desde `main` actualizado (el siguiente número es **58**).
+1. Rama `paso-NN-<tema>` desde `main` actualizado (el siguiente número es **59**).
 2. Reserva: fila en `RELEVO.md` §11 con la hora y «<ID> en curso»; commit `infra: tomar <ID>` y push
    (`git push -u origin <rama>`). Hazlo **antes** de escribir código (en AN-01 se olvidó).
 3. Lee la spec de la pieza (`COLA.md` da sección y líneas) e implementa solo lo que dice un CA, una ET, un contrato,
@@ -89,10 +88,10 @@ La usuaria autorizó: **«abre el PR de cada bloque de piezas y fusiónalo tú c
 8. PR en borrador con la plantilla `.github/pull_request_template.md`, título `PNN: <tema> (<ID>) [IA-ASISTIDO]`, cuerpo
    terminado en `🤖 Generated with [Claude Code](https://claude.com/claude-code)`:
    ```bash
-   gh pr create --draft --base main --title "P58: … (<ID>) [IA-ASISTIDO]" --body-file <archivo>
+   gh pr create --draft --base main --title "P59: … (<ID>) [IA-ASISTIDO]" --body-file <archivo>
    gh pr checks <n> --watch --interval 30
    gh pr ready <n> && gh pr merge <n> --squash
-   git checkout main && git pull && git checkout -b paso-59-siguiente
+   git checkout main && git pull && git checkout -b paso-60-<tema>
    ```
    Si un check falla, lee el log (`gh run view <id> --log-failed`), corrige en la misma rama y vuelve a esperar.
 
