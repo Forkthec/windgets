@@ -111,7 +111,7 @@ Ninguna pieza de esta fase depende de una de la fase 7 (`PLAN.md:123-137`). Las 
 | [ ] | AN-03 | Hover, foco y pulsado de controles | M | A-05b, A-05c, A-23, A-25..A-29 | `tokens.css`, `marco.css`, `kanban.css` | TK-06 | — | F6-04a |
 | [ ] | AN-04 | Pantallas, panel de Windi, barra lateral | M | A-08..A-12 | `ventana_principal/` | AN-01 | V-06 | F6-04a; geometría |
 | [ ] | AN-05 | Arrastre y asentamiento (widgets y tarjetas) | M | A-13..A-19 | `edicion/`, `screens/kanban/` | TK-06 | V-05 (`card_move`) | F6-04a |
-| [ ] | AN-06 | Carga, esqueleto y estado vacío | S | A-31..A-33, A-36 | `screens/reports/Seccion.tsx`, `ui/EstadoVacio` | TK-06 | — | F6-04a |
+| [x] | AN-06 | Carga, esqueleto y estado vacío | S | A-31..A-33, A-36 | `screens/reports/Seccion.tsx`, `ui/EstadoVacio` | TK-06 | — | F6-04a |
 | [ ] | AN-07 | Calendario y Windi | S | A-20..A-22, A-24, A-37 | calendario, `Windi.tsx` | TK-06 | — | F6-04a |
 | [ ] | AN-08 | Instalador A-34 y A-35 (I-13) | S | A-34, A-35; `ANIMACIONES.md` §8 | instalador | IN-01 | V-04 | F6-04a |
 
