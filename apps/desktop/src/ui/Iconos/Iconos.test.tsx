@@ -143,8 +143,8 @@ describe('C3-06 · Íconos de estado (MB-28)', () => {
     expect(svg.getAttribute('class')).toBe('wg-icono wg-icono--girando');
     expect(dibujo(render(<IconoSincronizado />).container).getAttribute('class')).toBe('wg-icono');
     expect(estilos).toMatch(/\.wg-icono--girando \{\s*animation: wg-girar 1s linear infinite;/);
-    expect(estilos).toMatch(
-      /@media \(prefers-reduced-motion: reduce\) \{\s*\.wg-icono--girando \{\s*animation: none;/,
-    );
+    // El bloque único de «reducir movimiento» (TK-06, regla 10) lo deja quieto.
+    const reducido = estilos.split('@media (prefers-reduced-motion: reduce)')[1]?.split('\n}')[0] ?? '';
+    expect(reducido).toMatch(/\.wg-icono--girando[,\s][^{]*\{\s*animation: none;/);
   });
 });

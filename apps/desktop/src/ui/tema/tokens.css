@@ -125,6 +125,46 @@
   --wg-radio-anillo-foco-interruptor: calc(var(--wg-radio-interruptor) + var(--wg-separacion-foco));
 }
 
+/* TK-06 · Movimiento (docs/implementacion/ANIMACIONES.md §3): la escala única de duraciones, curvas y distancias.
+   Toda `transition` y `animation` sale de aquí (§7, prueba global, punto 3). No hay --dur-largo ni --ease-entrada.
+   El tope de una sola vez es 400 ms (duración + retraso); los lazos (--dur-giro, --dur-parpadeo), 1500 ms. */
+:root {
+  /* Duraciones */
+  --dur-instante: 100ms;
+  --dur-corto: 150ms;
+  --dur-medio: 200ms;
+  --dur-giro: 1000ms;
+  --dur-parpadeo: 1200ms;
+  /* Curvas */
+  --ease-salida: cubic-bezier(0, 0, 0.58, 1);
+  --ease-estandar: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-lineal: linear;
+  --ease-parpadeo: cubic-bezier(0.42, 0, 0.58, 1);
+  /* Distancias */
+  --mov-corto: 8px;
+  --mov-aviso: 12px;
+  --mov-panel: 24px;
+}
+
+/* TK-06 · «Reducir movimiento» (ANIMACIONES.md §4, regla 10): el único bloque de la aplicación, sin excepciones por
+   componente. Sin desplazamiento, toda transición en fundido de 100 ms y los lazos quietos. Quitar `transform` de los
+   FLIP, la perilla y el progreso lo hace la pieza de cada uno (AN-*), aquí mismo. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --mov-corto: 0px;
+    --mov-aviso: 0px;
+    --mov-panel: 0px;
+    --dur-corto: 100ms;
+    --dur-medio: 100ms;
+  }
+  .wg-resultado,
+  .wg-cargando,
+  .wg-icono--girando,
+  .wg-ojos-de-windi--parpadeando .wg-ojos-de-windi__ojo {
+    animation: none;
+  }
+}
+
 body {
   margin: 0;
   background: var(--wg-marco);
@@ -482,12 +522,6 @@ body {
   to {
     opacity: 1;
     transform: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .wg-resultado {
-    animation: none;
   }
 }
 
@@ -1021,12 +1055,6 @@ button.wg-tarjeta__titulo:focus-visible {
     transform: rotate(360deg);
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .wg-cargando {
-    animation: none;
-  }
-}
-
 /* Pantalla de edición de la distribución (C-03, HE-05): la barra superior y el borde de cada widget, que indica
    que se puede mover y redimensionar (HE-05-HU01-ET03); en rojo mientras se superpone a otro (HE-05-HU02-ET04). */
 .wg-edicion {
@@ -1218,12 +1246,6 @@ button.wg-tarjeta__titulo:focus-visible {
 .wg-icono--girando {
   animation: wg-girar 1s linear infinite;
 }
-@media (prefers-reduced-motion: reduce) {
-  .wg-icono--girando {
-    animation: none;
-  }
-}
-
 /* Configuración (HE-16): las opciones en columna, separadas, sin estirarse al ancho de la pantalla. */
 .wg-configuracion {
   display: flex;
@@ -1422,12 +1444,6 @@ button.wg-tarjeta__titulo:focus-visible {
     transform: scaleY(0.1);
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .wg-ojos-de-windi--parpadeando .wg-ojos-de-windi__ojo {
-    animation: none;
-  }
-}
-
 /* Widget de escritorio «Windi» (RD-71): el dibujo de Windi centrado (MB-27, C3-05), sin otro contenido. */
 .wg-widget-windi {
   display: grid;

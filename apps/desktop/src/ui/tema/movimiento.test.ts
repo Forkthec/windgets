@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 // F6-04a · Prueba global de animaciones (docs/implementacion/ANIMACIONES.md §7, «Prueba global», puntos 1 a 7; §3 y
 // §4). Lee todos los CSS de src/ sin navegador.
 //
-// Mientras falten los tokens de movimiento (TK-06) y las piezas AN-01 a AN-07, la prueba no exige cero hallazgos:
-// exige que los hallazgos sean exactamente los de PENDIENTES (lo que falta, escrito abajo). Cada pieza quita sus
-// líneas; TK-06v la cierra con la lista vacía. Un hallazgo nuevo, o uno que ya no está, hace fallar la prueba.
+// Los tokens de movimiento ya están (TK-06). Mientras falten las piezas AN-01 a AN-07, la prueba no exige cero
+// hallazgos: exige que los hallazgos sean exactamente los de PENDIENTES (lo que falta, escrito abajo). Cada pieza quita
+// sus líneas; TK-06v la cierra con la lista vacía. Un hallazgo nuevo, o uno que ya no está, hace fallar la prueba.
 
 const CSS = import.meta.glob('/src/**/*.css', { query: '?raw', import: 'default', eager: true }) as Record<
   string,
@@ -229,23 +229,8 @@ function hallazgos(): string[] {
   return salida;
 }
 
-// Lo que falta el 27-nov-2026 (ANIMACIONES.md §2 y §6). Lo cierran TK-06 y AN-01 a AN-07.
+// Lo que falta el 27-nov-2026 (ANIMACIONES.md §2 y §6). Lo cierran AN-01 a AN-07 (TK-06 ya quitó sus líneas).
 const PENDIENTES: string[] = [
-  // TK-06: los tokens de §3 y el bloque reduced-motion de la regla 10.
-  '4 falta el token --dur-instante',
-  '4 falta el token --dur-corto',
-  '4 falta el token --dur-medio',
-  '4 falta el token --dur-giro',
-  '4 falta el token --dur-parpadeo',
-  '4 falta el token --ease-salida',
-  '4 falta el token --ease-estandar',
-  '4 falta el token --ease-lineal',
-  '4 falta el token --ease-parpadeo',
-  '6 reduced-motion no pone --mov-corto a 0px',
-  '6 reduced-motion no pone --mov-aviso a 0px',
-  '6 reduced-motion no pone --mov-panel a 0px',
-  '6 reduced-motion no pone --dur-corto a 100ms',
-  '6 reduced-motion no pone --dur-medio a 100ms',
   // AN-02: el aviso entra con `transition`, no con @keyframes (regla 8; hoy 200ms ease-out).
   '3 literal: ui/tema/tokens.css «.wg-resultado»',
   // AN-06: el giro de carga con --dur-giro y --ease-lineal (hoy 1s linear).
