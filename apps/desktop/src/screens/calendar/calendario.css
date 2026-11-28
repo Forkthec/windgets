@@ -133,6 +133,16 @@
   border-radius: 6px;
   background: var(--wgm-columna);
 }
+/* A-20 (AN-07): el día se resalta al pasar el puntero (decisión de Paula; color `superficie_baja`, CONSISTENCIA E18),
+   en las vistas mensual y semanal. Los días con vencidas o pendientes conservan su relleno de estado. El cambio de mes o
+   de semana no tiene transición (A-21, como el Figma). */
+.wg-calendario-pantalla .wg-calendario__celda {
+  transition: background-color var(--dur-corto) var(--ease-salida);
+}
+.wg-calendario-pantalla
+  .wg-calendario__celda:not(.wg-calendario__dia--pendiente):not(.wg-calendario__dia--vencida):hover {
+  background: var(--wg-superficie-baja);
+}
 .wg-calendario-pantalla .wg-calendario-semana h3 {
   margin: 0 0 4px;
   font-size: 12px;

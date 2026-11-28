@@ -1,5 +1,5 @@
-import { cleanup, render } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { cleanup, fireEvent, render } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import estilos from '@/ui/tema/tokens.css?raw';
 import { tokensDeLosColores } from '@/ui/tema/derivar';
 import { aplicarTokens } from '@/ui/tema/tokens';
@@ -113,5 +113,41 @@ describe('C3-05 · DibujoDeWindi (MB-05 §3)', () => {
       'M20.0505 30.0292H24.5685',
     );
     expect(ojos(container).dataset.estado).toBe('cerrados');
+  });
+});
+
+// AN-07 · A-22 (docs/implementacion/ANIMACIONES.md): el parpadeo con sus tokens y el fin del ciclo abierto.
+describe('AN-07 · A-22 parpadeo de los ojos', () => {
+  const parpadea = (c: HTMLElement) => ojos(c).classList.contains('wg-ojos-de-windi--parpadeando');
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('al dejar de parpadear, la clase sigue hasta el fin del ciclo (animationiteration) y luego se quita', () => {
+    const { container, rerender } = render(<OjosDeWindi tamano={28} parpadeando />);
+    rerender(<OjosDeWindi tamano={28} parpadeando={false} />);
+    expect(parpadea(container)).toBe(true);
+    fireEvent.animationIteration(ojos(container).querySelector('ellipse') as Element);
+    expect(parpadea(container)).toBe(false);
+  });
+
+  it('si vuelve a parpadear antes del fin del ciclo, sigue parpadeando', () => {
+    const { container, rerender } = render(<OjosDeWindi tamano={28} parpadeando />);
+    rerender(<OjosDeWindi tamano={28} parpadeando={false} />);
+    rerender(<OjosDeWindi tamano={28} parpadeando />);
+    fireEvent.animationIteration(ojos(container));
+    expect(parpadea(container)).toBe(true);
+  });
+
+  it('con «reducir movimiento», la clase se quita de inmediato', () => {
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('reduce') }) as MediaQueryList);
+    const { container, rerender } = render(<OjosDeWindi tamano={28} parpadeando />);
+    rerender(<OjosDeWindi tamano={28} parpadeando={false} />);
+    expect(parpadea(container)).toBe(false);
+  });
+
+  it('el lazo usa `--dur-parpadeo` y `--ease-parpadeo`', () => {
+    expect(estilos).toMatch(
+      /\.wg-ojos-de-windi--parpadeando \.wg-ojos-de-windi__ojo \{\s*animation: wg-parpadeo var\(--dur-parpadeo\) var\(--ease-parpadeo\) infinite;/,
+    );
   });
 });

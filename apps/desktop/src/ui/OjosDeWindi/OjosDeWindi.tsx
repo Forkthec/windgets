@@ -3,7 +3,10 @@
 // encima de la cara. Color fijo #27152B en todos los temas (D2/C7; reemplaza el color de acción de RD-70).
 // Estados (F0b §3): en reposo, dos óvalos en la caja (14, 23.5) de 18,5×4,5; escribiendo, 2 px a la derecha; sin
 // conexión o con error, cerrados (dos arcos de trazo 1,2). Parpadean mientras Windi responde (A-22); con «reducir
-// movimiento» no parpadean.
+// movimiento» no parpadean. Al dejar de parpadear terminan el ciclo en curso (A-22, AN-07): la clase sigue hasta el
+// siguiente `animationiteration`, para que los ojos no se queden a medio cerrar; con «reducir movimiento», se quita ya.
+import { useState } from 'react';
+
 export type EstadoDeLosOjos = 'reposo' | 'escribiendo' | 'cerrados';
 
 export interface OjosDeWindiProps {
@@ -23,10 +26,17 @@ export function OjosDeWindi({
   parpadeando = false,
   className = '',
 }: OjosDeWindiProps) {
+  // `terminando`: ya no parpadea, pero el ciclo abierto sigue hasta su fin.
+  const [previo, setPrevio] = useState(parpadeando);
+  const [terminando, setTerminando] = useState(false);
+  if (previo !== parpadeando) {
+    setPrevio(parpadeando);
+    setTerminando(!parpadeando && !reducirMovimiento());
+  }
   const clases = [
     'wg-ojos-de-windi',
     estado === 'escribiendo' && 'wg-ojos-de-windi--escribiendo',
-    estado !== 'cerrados' && parpadeando && 'wg-ojos-de-windi--parpadeando',
+    estado !== 'cerrados' && (parpadeando || terminando) && 'wg-ojos-de-windi--parpadeando',
     className,
   ].filter(Boolean);
   return (
@@ -38,6 +48,7 @@ export function OjosDeWindi({
       height={tamano}
       viewBox="0 0 48 48"
       aria-hidden="true"
+      onAnimationIteration={terminando ? () => setTerminando(false) : undefined}
     >
       {estado === 'cerrados' ? (
         <g fill="none" stroke={COLOR_DE_LOS_OJOS} strokeWidth="1.2" strokeLinecap="round">
@@ -57,5 +68,11 @@ export function OjosDeWindi({
         </g>
       )}
     </svg>
+  );
+}
+
+function reducirMovimiento(): boolean {
+  return (
+    typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
   );
 }
