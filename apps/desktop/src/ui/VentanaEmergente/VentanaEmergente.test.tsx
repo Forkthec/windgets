@@ -276,7 +276,7 @@ describe('AN-01 · A-01, A-02 y A-02b ventana emergente', () => {
     expect(copia?.hasAttribute('inert')).toBe(true);
     expect(copia?.classList.contains('wg-fondo-emergente--saliendo')).toBe(true);
     expect(copia?.querySelector('.wg-emergente')?.classList.contains('wg-emergente--saliendo')).toBe(true);
-    expect(copia?.querySelector('[id]')).toBeNull();
+    expect(copia?.querySelector('[id], [role], [aria-modal]')).toBeNull();
     // En jsdom no hay transitionend: corre el seguro (duración calculada + 50 ms; aquí la hoja no está cargada).
     vi.advanceTimersByTime(200);
     expect(document.querySelector('[data-saliendo]')).toBeNull();

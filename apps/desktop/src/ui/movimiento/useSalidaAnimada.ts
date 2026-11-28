@@ -124,7 +124,7 @@ const copias = new Set<HTMLElement>();
 
 /**
  * Salida de lo que su padre desmonta en el acto (la ventana emergente, A-02): una copia del elemento queda en su
- * lugar, inerte y fuera del árbol accesible, sin `id` repetidos, con las clases de salida, y se quita al terminar la
+ * lugar, inerte y fuera del árbol accesible, sin `id` repetidos ni roles, con las clases de salida, y se quita al terminar la
  * transición de `objetivo` (el selector de la parte que más dura). Se llama antes de que React quite el original.
  */
 export function salirConCopia(
@@ -134,7 +134,13 @@ export function salirConCopia(
 ): void {
   if (!original?.parentNode) return;
   const copia = original.cloneNode(true) as HTMLElement;
-  for (const conId of [copia, ...Array.from(copia.querySelectorAll('[id]'))]) conId.removeAttribute('id');
+  // Sin `id`, `role` ni `aria-modal`: nada la confunde con la ventana viva (p. ej. el Esc del panel de Windi, que no
+  // cierra si hay un `[role="dialog"]`).
+  for (const el of [copia, ...Array.from(copia.querySelectorAll('[id], [role], [aria-modal]'))]) {
+    el.removeAttribute('id');
+    el.removeAttribute('role');
+    el.removeAttribute('aria-modal');
+  }
   copia.setAttribute('aria-hidden', 'true');
   copia.setAttribute('inert', '');
   copia.setAttribute(ATRIBUTO_DE_SALIDA, '');
