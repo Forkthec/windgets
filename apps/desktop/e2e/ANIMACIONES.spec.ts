@@ -96,13 +96,8 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const)
       .getByRole('status', { name: 'Indicador de sincronización' })
       .locator('.wg-indicador-sincronizacion__estado');
     await expect(texto).toHaveText('Sincronizado');
-    const estilo = await texto.evaluate((el) => {
-      const s = getComputedStyle(el);
-      return { propiedad: s.transitionProperty, duracion: s.transitionDuration, opacidad: s.opacity };
-    });
-    expect(estilo).toEqual({
-      propiedad: 'opacity',
-      duracion: reducedMotion === 'reduce' ? '0.1s' : '0.15s',
-      opacidad: '1',
-    });
+    await expect(texto).toHaveCSS('transition-property', 'opacity');
+    await expect(texto).toHaveCSS('transition-duration', reducedMotion === 'reduce' ? '0.1s' : '0.15s');
+    // Termina el fundido y el texto queda del todo visible.
+    await expect(texto).toHaveCSS('opacity', '1');
   });
