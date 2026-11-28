@@ -503,7 +503,7 @@ body[data-sesion] .wg-formulario--tarjeta {
 }
 
 /* ---------- Windi (RD-70; rediseno_final_prototipos.md §4.3) ---------- */
-/* Botón flotante de 40 px con los ojos del color de acción del tema, abajo a la derecha. */
+/* Botón flotante de 40 px con el dibujo de Windi (colores fijos, MB-27), abajo a la derecha. El de 48 es de C3-03. */
 .wg-windi-flotante {
   position: fixed;
   right: 16px;

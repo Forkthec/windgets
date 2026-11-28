@@ -1386,7 +1386,16 @@ button.wg-tarjeta__titulo:focus-visible {
   background: var(--wg-superficie-alta);
 }
 
-/* Los ojos de Windi (RD-70): parpadean mientras Windi responde. */
+/* El dibujo de Windi (MB-05, C3-05): colores fijos salvo el trazo del cuerpo, que es `borde` (F0b §3). El cuerpo sale
+   de la caja de 48 y se recorta, como en el Figma. */
+.wg-dibujo-de-windi {
+  overflow: hidden;
+}
+.wg-dibujo-de-windi__cuerpo {
+  stroke: var(--wg-borde);
+}
+
+/* Los ojos de Windi (MB-27, A-22): parpadean mientras Windi responde. */
 .wg-ojos-de-windi__ojo {
   transform-box: fill-box;
   transform-origin: center;
@@ -1410,7 +1419,7 @@ button.wg-tarjeta__titulo:focus-visible {
   }
 }
 
-/* Widget de escritorio «Windi» (RD-71): los ojos centrados, del color de acción del tema, sin otro contenido. */
+/* Widget de escritorio «Windi» (RD-71): el dibujo de Windi centrado (MB-27, C3-05), sin otro contenido. */
 .wg-widget-windi {
   display: grid;
   place-items: center;
