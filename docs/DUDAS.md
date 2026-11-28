@@ -446,6 +446,9 @@ Un bloque por área. Cada pieza escribe solo en el de su área (docs/implementac
 
 ### Marco y componentes base (MB, C3, L4, AN)
 
+- **C3-06 · dibujo del ícono «Sincronizando»** · MB-28 pide un ícono giratorio de sincronización, pero el Figma no lo dibuja (incoherencia 5 de MB-04). Valor neutro: un arco de tres cuartos de 20×20 con trazo 1,6 que gira en 1 s, lineal (A-31), como el indicador de carga `.wg-cargando`. Destino: Paula o el Figma.
+- **C3-06 · título de la pieza** · `COLA.md` la llama «Íconos del clima», pero su spec (MB-28) son Sincronizado, Sin conexión, Alerta y el giro. Se construyó MB-28. Los íconos del clima siguen en P43b-407 y P43b-408 (sin dibujo en el Figma).
+
 ### Planificador (PL)
 
 ### Personalización y widgets (PW, MG)
