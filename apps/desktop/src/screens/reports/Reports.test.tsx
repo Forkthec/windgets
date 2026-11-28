@@ -147,10 +147,12 @@ describe('HE-13-HU02 · Gráfica de tarjetas completadas', () => {
           }) as unknown as Result<CompletedReport>,
       ),
     );
-    // ET15: el título y un indicador de carga de inmediato.
+    // ET15: el título y la sección ocupada de inmediato; el esqueleto de carga, si el cálculo pasa de 200 ms
+    // (ANIMACIONES.md A-32, docs/rediseno.md RD-110).
     const s = await screen.findByRole('region', { name: 'Tarjetas completadas' });
     expect(within(s).getByRole('heading', { name: 'Tarjetas completadas' })).toBeTruthy();
-    expect(within(s).getByRole('status', { name: 'Cargando' })).toBeTruthy();
+    expect(s.getAttribute('aria-busy')).toBe('true');
+    expect(await within(s).findByRole('status', { name: 'Cargando' })).toBeTruthy();
     // ET16: se muestra apenas termina su cálculo.
     await act(async () => soltar());
     await waitFor(() => expect(within(s).queryByRole('status')).toBeNull());

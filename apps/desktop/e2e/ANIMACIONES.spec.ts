@@ -85,3 +85,19 @@ for (const tamano of TAMANOS)
         [...PENDIENTES[reducedMotion]].sort(),
       );
     });
+
+// AN-06 · A-36: el texto del indicador de sincronización entra con un fundido de opacidad de 150 ms (100 ms con
+// «reducir movimiento»).
+for (const reducedMotion of ['no-preference', 'reduce'] as const)
+  test(`AN-06 · A-36 fundido del indicador de sincronización (${reducedMotion})`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion });
+    await entrar(page);
+    const texto = page
+      .getByRole('status', { name: 'Indicador de sincronización' })
+      .locator('.wg-indicador-sincronizacion__estado');
+    await expect(texto).toHaveText('Sincronizado');
+    await expect(texto).toHaveCSS('transition-property', 'opacity');
+    await expect(texto).toHaveCSS('transition-duration', reducedMotion === 'reduce' ? '0.1s' : '0.15s');
+    // Termina el fundido y el texto queda del todo visible.
+    await expect(texto).toHaveCSS('opacity', '1');
+  });

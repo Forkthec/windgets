@@ -80,7 +80,10 @@ export function IndicadorSincronizacion() {
   const pendientes = estado.status === 'offline' ? textoDePendientes(estado.pending_count) : null;
   return (
     <div className="wg-indicador-sincronizacion" role="status" aria-label="Indicador de sincronización">
-      <span>{TEXTO[estado.status]}</span>
+      {/* A-36: la clave cambia con el estado, así el texto nuevo entra con su fundido. */}
+      <span key={estado.status} className="wg-indicador-sincronizacion__estado">
+        {TEXTO[estado.status]}
+      </span>
       {pendientes && <span>{pendientes}</span>}
     </div>
   );

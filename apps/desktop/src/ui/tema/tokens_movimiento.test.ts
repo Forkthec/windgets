@@ -69,7 +69,6 @@ describe('TK-06 · «reducir movimiento» (ANIMACIONES.md §4, regla 10)', () =>
     const quietos = reducido.match(/([^{}]+)\{\s*animation: none;\s*\}/)?.[1] ?? '';
     expect(quietos.split(',').map((s) => s.trim())).toEqual([
       '.wg-resultado',
-      '.wg-cargando',
       '.wg-icono--girando',
       '.wg-ojos-de-windi--parpadeando .wg-ojos-de-windi__ojo',
     ]);
