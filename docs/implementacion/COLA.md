@@ -64,7 +64,7 @@ Ninguna pieza de esta fase depende de una de la fase 7 (`PLAN.md:123-137`). Las 
 | [ ] | C3-03 | `Panel` | M | `SPEC_Marco…:227` (MB-05) | `ventana_principal/marco.css`, panel de Windi | C3-01, SEED-01 | — | Prueba del módulo; geometría |
 | [ ] | C3-04 | Mensajes arriba a la derecha; ruta R32 (`tipoDelTexto`) | M | `SPEC_Marco…:292` (MB-06), `:718` (MB-24); `ERRORES_Y_PRUEBAS.md` R32; A-05, A-06b | `ui/MensajeResultado`, `ui/Aviso`, `tokens.css` | C3-01, SEED-01 | V-04 | Pila de hasta 3; 4 s y 6 s; sin `tipo` ya no se infiere del prefijo (R32); geometría |
 | [x] | C3-05 | Ojos de Windi | S | `SPEC_Marco…:761` (MB-27); `SPEC_Windi.md:214-221` | `ui/OjosDeWindi` | — | — | Prueba del módulo; geometría |
-| [ ] | C3-06 | Íconos del clima | S | `SPEC_Marco…:776` (MB-28); `SPEC_Escritorio_y_capa.md:113` (EC-03) | `ui/Iconos` | — | — | Prueba del módulo |
+| [x] | C3-06 | Íconos del clima | S | `SPEC_Marco…:776` (MB-28); `SPEC_Escritorio_y_capa.md:113` (EC-03) | `ui/Iconos` | — | — | Prueba del módulo |
 
 ### 3.2 Los cuatro temas y sus tokens (migración 0013 compartida)
 

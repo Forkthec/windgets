@@ -250,6 +250,8 @@ const PENDIENTES: string[] = [
   '3 literal: ui/tema/tokens.css «.wg-resultado»',
   // AN-06: el giro de carga con --dur-giro y --ease-lineal (hoy 1s linear).
   '3 literal: ui/tema/tokens.css «.wg-cargando»',
+  // AN-06 también: el giro de «Sincronizando…» (C3-06, MB-28) con los mismos tokens (hoy 1s linear).
+  '3 literal: ui/tema/tokens.css «.wg-icono--girando»',
   // AN-07: el parpadeo de los ojos con --dur-parpadeo y --ease-parpadeo (hoy 1.2s ease-in-out).
   '3 literal: ui/tema/tokens.css «.wg-ojos-de-windi--parpadeando .wg-ojos-de-windi__ojo»',
 ];

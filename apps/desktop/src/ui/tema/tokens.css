@@ -1214,6 +1214,15 @@ button.wg-tarjeta__titulo:focus-visible {
 .wg-icono {
   flex: none;
 }
+/* «Sincronizando…» (MB-28, A-31): el ícono gira en 1 s, lineal; con «reducir movimiento», quieto. */
+.wg-icono--girando {
+  animation: wg-girar 1s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wg-icono--girando {
+    animation: none;
+  }
+}
 
 /* Configuración (HE-16): las opciones en columna, separadas, sin estirarse al ancho de la pantalla. */
 .wg-configuracion {

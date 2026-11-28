@@ -1,12 +1,13 @@
 // Íconos de estado (interfaz.md, R-12: el significado no depende solo del color). Vencida lleva el ícono de alerta
 // y pendiente el de reloj (HE-10-HU05-ET13, ET17).
-// DUDA: HE-10-HU05 el dibujo de los íconos no está definido. Valor usado: un triángulo de alerta y un reloj
-// simples, en el color del texto (docs/DUDAS.md).
+// DUDA: HE-10-HU05 el dibujo del reloj no está definido. Valor usado: un reloj simple, en el color del texto
+// (docs/DUDAS.md). La alerta es la del Figma (C3-06).
 // Íconos de acciones (docs/rediseno.md RD-101, IM-03), para los botones de solo ícono: 18 × 18 con trazo de 1,44 px,
 // como los del menú principal, en el color del texto. Dentro de `Boton variante="icono"` se ven de 20 px
 // (tokens.css).
 // DUDA: P44 el dibujo de los íconos de acciones no está definido. Valor usado: trazos simples (docs/DUDAS.md).
 
+import type { ReactNode } from 'react';
 import { TRAZO_DEL_MENU } from '../MenuPrincipal/IconosDelMenu';
 
 interface IconoProps {
@@ -18,18 +19,71 @@ function propiedades(nombre: string | undefined) {
   return nombre ? { role: 'img', 'aria-label': nombre } : { 'aria-hidden': true };
 }
 
+/**
+ * `Icono / Alerta` (Figma `80:57`; SPEC_Marco_y_componentes_base.md MB-28, C3-06): el triángulo del Figma, unificado
+ * a 20×20 con trazo 1,6 como los íconos de estado (incoherencia 4: el Figma lo dibuja a 32 con trazo 3).
+ */
 export function IconoAlerta({ nombre }: IconoProps) {
   return (
-    <svg className="wg-icono" viewBox="0 0 16 16" width="1em" height="1em" {...propiedades(nombre)}>
-      <path
-        d="M8 1.5 15 14.5H1Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <path d="M8 6v4M8 11.5v1.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    <IconoDeEstado nombre={nombre}>
+      <path d="M10 7.5V12.5M10 14.375V15.875M10 1.875L18.75 18.125H1.25L10 1.875Z" />
+    </IconoDeEstado>
+  );
+}
+
+/** Íconos de estado de MB-28: caja de 20×20 y trazo de 1,6 en el color del texto; se escalan con la letra (1em). */
+function IconoDeEstado({
+  nombre,
+  children,
+  girando = false,
+}: IconoProps & { children: ReactNode; girando?: boolean }) {
+  return (
+    <svg
+      className={girando ? 'wg-icono wg-icono--girando' : 'wg-icono'}
+      viewBox="0 0 20 20"
+      width="1em"
+      height="1em"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...propiedades(nombre)}
+    >
+      {children}
     </svg>
+  );
+}
+
+/** `Icono / Sincronizado` (Figma `2003:187`, MB-28): nube con la marca de listo. */
+export function IconoSincronizado({ nombre }: IconoProps) {
+  return (
+    <IconoDeEstado nombre={nombre}>
+      <path d="M7.6 11.4L9.4 13.2L12.6 9.8M6 15.5H14.5C16.3333 15.5 17.8 14 17.8 12.2C17.8 10.5 16.6 9.1 14.9 8.9C14.6 6.4 12.5 4.5 10 4.5C7.8 4.5 5.9 6 5.3 8C3.4 8.2 2.2 9.8 2.2 11.7C2.2 13.8 3.9 15.5 6 15.5Z" />
+    </IconoDeEstado>
+  );
+}
+
+/** `Icono / Sin conexión` (Figma `2251:4951`, MB-28): nube tachada. */
+export function IconoSinConexion({ nombre }: IconoProps) {
+  return (
+    <IconoDeEstado nombre={nombre}>
+      <path d="M6 15C3.8 15 2.5 13.5 2.5 11.7C2.5 10 3.7 8.8 5.2 8.6C5.5 6.2 7.5 4.5 10 4.5C12.4 4.5 14.2 6 14.7 8.2C16.4 8.4 17.5 9.8 17.5 11.5C17.5 13.4 16.1 15 14.2 15H6Z" />
+      <path d="M3.5 3.5L16.5 16.5" />
+    </IconoDeEstado>
+  );
+}
+
+/**
+ * Ícono giratorio de «Sincronizando…» (MB-28, A-31): gira en 1 s, lineal; con «reducir movimiento» queda quieto.
+ * DUDA: C3-06 el Figma no dibuja este ícono (incoherencia 5). Valor usado: un arco de tres cuartos, como el
+ * indicador de carga (`.wg-cargando`) (docs/DUDAS.md).
+ */
+export function IconoSincronizando({ nombre }: IconoProps) {
+  return (
+    <IconoDeEstado nombre={nombre} girando>
+      <path d="M10 2.8A7.2 7.2 0 1 1 2.8 10" />
+    </IconoDeEstado>
   );
 }
 
